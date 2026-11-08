@@ -42,7 +42,8 @@ class NuevaOrden:
     creada_por: str | None = None
     notas: str | None = None
     politica_viajes: str | None = None
-    permitir_receta_provisional: bool = False
+    # Ratificado 2026-11-08: una receta PROVISIONAL nunca bloquea una venta.
+    permitir_receta_provisional: bool = True
     mixer_codigo: str | None = None
     chofer_nombre: str | None = None
 
@@ -66,6 +67,7 @@ def _payload_base(
     resistencia: str,
     mixer_codigo: str | None,
     chofer_nombre: str | None,
+    receta_provisional: bool,
 ) -> dict[str, Any]:
     return {
         "dispatch_id": str(dispatch_id),
@@ -75,6 +77,9 @@ def _payload_base(
         "chofer_nombre": chofer_nombre,
         "volumen_m3": float(volumen),
         "resistencia": resistencia,
+        # Ajuste ratificado 2026-11-08: el viaje declara en el contrato JSON
+        # si su consumo se calculo con una receta sin validar por Julio.
+        "receta_provisional": receta_provisional,
         "estado_actual": "PROGRAMADO",
         "juez_binario_jeb": {
             "despacho_validado": False,
@@ -197,6 +202,7 @@ async def crear_orden(pool: asyncpg.Pool, datos: NuevaOrden) -> ResultadoOrden:
                     resistencia=datos.resistencia,
                     mixer_codigo=mixer.get("codigo"),
                     chofer_nombre=datos.chofer_nombre,
+                    receta_provisional=not receta.confirmado,
                 )
 
                 consumo_viaje = None
@@ -274,7 +280,9 @@ async def crear_orden(pool: asyncpg.Pool, datos: NuevaOrden) -> ResultadoOrden:
     if not receta.confirmado:
         advertencias.append(
             f"La receta {receta.resistencia} esta PROVISIONAL (confirmado=false). "
-            "El kardex teorico queda marcado como 'provisional' hasta que Julio valide la dosificacion."
+            "La orden y el despacho siguen habilitados (politica ratificada 2026-11-08); "
+            "los viajes quedan marcados con receta_provisional=true y el Centinela lo "
+            "reporta como WARNING hasta que Julio valide la dosificacion."
         )
 
     return ResultadoOrden(

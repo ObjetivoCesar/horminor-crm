@@ -414,32 +414,132 @@ async def check_viajes_en_ruta(
 
 
 async def check_riesgo_termico(pool: asyncpg.Pool) -> CheckResult:
-    """Detecta viajes cuyo limite termico de fraguado ya vencio."""
+    """Clasifica los viajes en ruta con el reloj de fraguado.
+
+    Dos umbrales ratificados (migracion 040), medidos desde
+    ``operacion.reloj_termico_minutos`` (150 min en el PDR):
+
+    - ``ALERTA_TEMPRANA``    -> quedan <= 60 min (minuto 90 del viaje) => WARN.
+    - ``POR_VENCER_CRITICO`` -> quedan <= 30 min (minuto 120)         => CRITICO.
+    - ``VENCIDO``            -> el limite ya paso                    => CRITICO.
+
+    Solo se miran viajes sin confirmacion del cliente: si el cliente ya sello
+    la recepcion, el reloj deja de importar.
+    """
     inicio = perf_counter()
+    temprana = int(
+        await setting(pool, "operacion.alerta_temprana_minutos_antes", 60) or 60
+    )
+    critico = int(
+        await setting(pool, "operacion.por_vencer_critico_minutos_antes", 30) or 30
+    )
+    # Si alguien invierte los umbrales en la base, se normaliza.
+    if critico > temprana:
+        temprana, critico = critico, temprana
+
     fila = await pool.fetchrow(
         """
-        SELECT count(*) AS total
+        SELECT
+            count(*) FILTER (
+                WHERE limite_termico_fraguado < now()
+            ) AS vencidos,
+            count(*) FILTER (
+                WHERE limite_termico_fraguado >= now()
+                  AND limite_termico_fraguado < now() + ($1::int * INTERVAL '1 minute')
+            ) AS por_vencer_criticos,
+            count(*) FILTER (
+                WHERE limite_termico_fraguado >= now() + ($1::int * INTERVAL '1 minute')
+                  AND limite_termico_fraguado < now() + ($2::int * INTERVAL '1 minute')
+            ) AS alerta_temprana
         FROM v_dispatch_timeline
         WHERE limite_termico_fraguado IS NOT NULL
-          AND limite_termico_fraguado < now()
           AND confirmacion_whatsapp_cliente IS NULL
-        """
+        """,
+        critico,
+        temprana,
     )
-    total = int(fila["total"] or 0) if fila else 0
+    vencidos = int(fila["vencidos"] or 0) if fila else 0
+    criticos = int(fila["por_vencer_criticos"] or 0) if fila else 0
+    tempranos = int(fila["alerta_temprana"] or 0) if fila else 0
     latencia = _ms_desde(inicio)
-    if total > 0:
+
+    datos: dict[str, Any] = {
+        # `total` conserva el significado historico: viajes ya vencidos.
+        "total": vencidos,
+        "vencidos": vencidos,
+        "por_vencer_criticos": criticos,
+        "alerta_temprana": tempranos,
+        "umbral_alerta_temprana_min": temprana,
+        "umbral_por_vencer_critico_min": critico,
+    }
+
+    if vencidos > 0:
         estado: Estado = CRITICO
-        detalle = f"{total} viaje(s) con limite termico vencido sin confirmar"
+        detalle = f"{vencidos} viaje(s) con limite termico vencido sin confirmar"
+    elif criticos > 0:
+        estado = CRITICO
+        detalle = (
+            f"{criticos} viaje(s) a {critico} min o menos del limite termico "
+            "sin confirmar (POR_VENCER_CRITICO)"
+        )
+    elif tempranos > 0:
+        estado = WARN
+        detalle = (
+            f"{tempranos} viaje(s) a {temprana} min o menos del limite termico "
+            "sin confirmar (ALERTA_TEMPRANA)"
+        )
     else:
         estado = OK
-        detalle = "sin viajes con limite termico vencido"
+        detalle = "sin viajes en riesgo termico"
+
     return CheckResult(
         id="riesgo_termico",
         categoria=OPERACION,
         estado=estado,
         detalle=detalle,
         latencia_ms=latencia,
-        datos={"total": total},
+        datos=datos,
+    )
+
+
+async def check_recetas_provisionales(pool: asyncpg.Pool) -> CheckResult:
+    """Reporta viajes despachados con una receta aun no validada por Julio.
+
+    Ajuste ratificado 2026-11-08: la receta PROVISIONAL no bloquea la venta,
+    pero el Centinela debe avisar para que la dosificacion se valide. Se
+    miran los viajes sin salida (pendientes) y los de los ultimos 7 dias:
+    un viaje viejo ya no requiere accion.
+    """
+    inicio = perf_counter()
+    fila = await pool.fetchrow(
+        """
+        SELECT count(*) AS total
+        FROM v_dispatch_timeline
+        WHERE (tracking_payload ->> 'receta_provisional')::boolean IS TRUE
+          AND (
+                salida_planta IS NULL
+                OR salida_planta >= now() - INTERVAL '7 days'
+              )
+        """
+    )
+    total = int(fila["total"] or 0) if fila else 0
+    latencia = _ms_desde(inicio)
+    if total > 0:
+        estado: Estado = WARN
+        detalle = (
+            f"{total} viaje(s) con receta PROVISIONAL en los ultimos 7 dias o "
+            "pendientes de despacho; Julio debe validar la dosificacion"
+        )
+    else:
+        estado = OK
+        detalle = "sin viajes con receta provisional"
+    return CheckResult(
+        id="recetas_provisionales",
+        categoria=OPERACION,
+        estado=estado,
+        detalle=detalle,
+        latencia_ms=latencia,
+        datos={"total": total, "ventana_dias": 7},
     )
 
 

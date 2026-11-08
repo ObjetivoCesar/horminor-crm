@@ -1,6 +1,7 @@
 """Modulo 2 - Fachada publica."""
 
 from .dosificador import (
+    ESTADOS_TERMICOS,
     Consumo,
     ErrorPlanta,
     PlanViajes,
@@ -12,11 +13,13 @@ from .dosificador import (
     calcular_consumo,
     dividir_en_viajes,
     estado_termico,
+    evaluar_ventana_termica,
     limite_termico,
     seleccionar_mixer,
 )
 
 __all__ = [
+    "ESTADOS_TERMICOS",
     "Consumo",
     "ErrorPlanta",
     "PlanViajes",
@@ -28,6 +31,7 @@ __all__ = [
     "calcular_consumo",
     "dividir_en_viajes",
     "estado_termico",
+    "evaluar_ventana_termica",
     "limite_termico",
     "seleccionar_mixer",
 ]

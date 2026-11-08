@@ -1,7 +1,8 @@
 # Decisiones pendientes y datos que el PDR no trae
 
 Última actualización: 2026-11-08
-Estado: **Hito 1 construido y verificado localmente; candado aún abierto.**
+Estado: **Hitos 1, 2 y 3 construidos y verificados localmente; candados aún
+abiertos solo por datos de negocio y credenciales.**
 
 Este documento existe porque el PDR v4.0 define la arquitectura pero **no**
 define varios datos de negocio. Nada de lo que falta se rellenó con supuestos:
@@ -31,9 +32,12 @@ El 7.5 y el 1.2 **no son una receta**: salen del único ejemplo numérico del
 PDR (`60 sacos` y `9.6 L` para `8 m³`), y están marcados `confirmado = false`
 con esa fuente escrita al lado.
 
-**Efecto:** el motor determinístico lanza `RecetaNoConfirmadaError` y **no**
-genera kardex teórico. Esto es intencional: preferimos un sistema bloqueado a
-un inventario silenciosamente equivocado.
+**Efecto (actualizado 2026-11-08):** la orden **sí se crea** y la venta sigue
+(`permitir_receta_provisional = True`); el viaje queda marcado con
+`"receta_provisional": true` en su `tracking_payload`, **no** se genera kardex
+teórico y el Centinela lo reporta como `WARN` en `recetas_provisionales`. Se
+descartó bloquear la venta: detener una operación real por un dato
+administrativo pendiente cuesta más que el aviso visible.
 
 **Cómo se cierra:**
 
@@ -108,47 +112,50 @@ no puede calcular facturación todavía.
 
 ---
 
-## B. Bloqueantes para el Hito 3 (WhatsApp)
+## B. Hito 3 (WhatsApp) — decisiones ratificadas y bloqueos restantes
 
-### B1. Identificación de quién escribe (crítico)
+> **Ratificado 2026-11-08.** B1, B2 y B3 quedaron resueltos por Dirección y ya
+> están implementados en `services/core-api/app/m1_whatsapp/` y en la migración
+> `040_ratificacion_hito3.sql`. El detalle histórico se conserva abajo; los
+> puntos que siguen abiertos son solo B4 (credenciales y teléfonos reales).
 
-El PDR dice que **todo** entra por un único número corporativo: bodeguero,
-chofer, cliente y desconocidos. Pero los Gates #1, #2 y #3 dependen de saber
-quién habla. El documento no define cómo se resuelve esa identidad.
+### B1. Identificación de quién escribe — RESUELTO
 
-**Qué hay hoy:** `whatsapp.staff = {}` (vacío) y `whatsapp.grupo_operativo =
-null`. **No se inventaron números ni roles.**
+Regla implementada (no se inventaron números):
 
-**Opciones a decidir (elige una o combina):**
-1. Números registrados: `clients.telefono_whatsapp` + un mapa `whatsapp.staff`
-   teléfono → rol (`BODEGUERO`, `CHOFER`, `GERENCIA`).
-2. Código en el mensaje: el bodeguero escribe `SALIDA #104 V2` y el bot enruta
-   por número de orden/viaje.
-3. Grupo operativo: bodeguero y choferes en un grupo, clientes en chat privado.
+1. **Primaria:** teléfono registrado. `clients.telefono_whatsapp` (clientes) y
+   `system_settings['whatsapp.staff']` (personal) definen el rol:
+   `SUPERADMIN`, `CAJA_SECRETARIA`, `BODEGA_PLANTA`, `CHOFER_MIXER`, `CLIENTE`.
+2. **Fallback:** prefijo en el texto del mensaje (`#M1`, `#BODEGA`, `#CAJA`,
+   `#ADMIN`). Los códigos de operador ganan sobre la referencia a un mixer.
+   `#CLIENTE` no se acepta: un cliente se identifica por su número registrado.
+3. **Sin coincidencia:** `LEAD_DESCONOCIDO` y Gate #4 (prospecto).
 
-Sin esta decisión no se puede implementar el Módulo 1 sin adivinar.
+Un número desconocido que escribe como bodeguero no se trata como personal: se
+marca como lead salvo que use un código de operador.
 
-### B2. Gate #2 cuando el cliente confirma y se queja a la vez
+### B2. Gate #2 cuando el cliente confirma y se queja a la vez — RESUELTO
 
-"Ya llegó pero tarde" no es ni `true` limpio ni `false` limpio con el contrato
-`{cumple: bool, codigo_accion}`. Hay que decidir: ¿gana la alerta? ¿Se guarda
-el sello y además se abre incidencia? (Recomendación de ingeniería: sellar
-recepción y marcar `incidencia_detectada = true`, pero es decisión de negocio).
+Si el mensaje contiene un reclamo, **no se sella la recepción**: el viaje pasa
+a `INCIDENCIA_RECLAMO`, se marca `incidencia_detectada = true` y se alerta al
+Centinela (que lo registra en `error_logs` y lo empuja al CRM si hay webhook).
 
-### B3. Gate #3 con archivo inválido
+### B3. Gate #3 con archivo inválido — RESUELTO
 
-Si el juez binario dice NO, ¿el archivo se sube igual a Bunny para revisión
-humana de la secretaria, o se descarta y se le pide al chofer que reenvíe?
-El PDR solo describe el camino `true`.
+Si el chofer reporta llegada **sin adjunto**, el Juez devuelve
+`EVIDENCIA_FALTANTE`: el viaje queda en `EVIDENCIA_PENDIENTE` y se le pide
+reenviar. Si el adjunto existe pero Bunny falla o no está configurado, se
+registra `EVIDENCIA_BUNNY_FALLIDA` como incidencia; no se finge una URL.
 
-### B4. Credenciales e instancias existentes
+### B4. Credenciales e instancias existentes — ABIERTO
 
 - Evolution API: URL, nombre de instancia, API key (hoy vacíos).
 - Bunny.net: Storage Zone, host CDN, API key (hoy vacíos).
-- Número de WhatsApp de prueba para el Hito 3 y ventana de corte si el número
-  actual ya está en producción.
+- Gemini: API key (sin ella se usa el juez determinístico).
+- Teléfonos reales del personal y número de WhatsApp de prueba.
 
-Sin esto, el Centinela los reporta correctamente como `NO_CONFIGURADO`.
+Sin esto, el Centinela los reporta correctamente como `NO_CONFIGURADO` y el
+Módulo 1 funciona en local con el juez determinístico.
 
 ---
 
@@ -159,11 +166,11 @@ Sin esto, el Centinela los reporta correctamente como `NO_CONFIGURADO`.
 | C1 | Cierre de caja | ¿Es inmutable? ¿Quién puede reabrirlo? ¿Qué pasa con un abono que llega después de cerrar? | `cash_closures` (tabla creada, sin endpoints aún) |
 | C2 | Cuota de mercado | ¿Año calendario o 12 meses móviles? ¿Qué precio se usa para valorizar lo que factura la competencia? ¿A qué año corresponden los 120.000 / 95.000 m³? | `market_benchmarks.anio` está en NULL |
 | C3 | Simulador bancario | Confirmar amortización francesa, 11,2 % nominal anual capitalizable mensual, y **sobre qué período de flujo** se calcula el DSCR | Hito 5; los valores 3.283,35 / 77,3 m³ / 2,33x se usarán como test de regresión |
-| C4 | Facturación electrónica SRI | ¿Está en alcance? El PDR habla de ERP y RUC pero no hay módulo de comprobantes | Ninguna tabla de facturación existe a propósito |
+| C4 | Facturación electrónica SRI | **Fuera de alcance del PDR v4.0 (ratificado 2026-11-08).** No se implementa en este proyecto | Ninguna tabla de facturación existe a propósito |
 | C5 | Panel web | Stack real de Aquatech a reutilizar; usuarios y roles; dominio/subdominio y TLS (la lista de contenedores del PDR no incluye proxy inverso) | Hito 4 |
 | C6 | Webhook del CRM | URL real (el PDR trae `crm-tu-empresa.com` como marcador) | Módulo 5 push |
 | C7 | Respaldos | Política de backup de PostgreSQL y retención de `error_logs` | Operación del VPS |
-| C8 | Aviso térmico | Hoy `POR_VENCER` se marca 30 min antes del límite (parámetro `operacion.umbral_por_vencer_minutos`, propuesto por ingeniería) | Solo color del panel |
+| C8 | Aviso térmico | **Reemplazado (ratificado 2026-11-08) por dos bandas** sobre `max_fraguado_minutes = 150`: `ALERTA_TEMPRANA` a 60 min antes (minuto 90, WARN) y `POR_VENCER_CRITICO` a 30 min antes (minuto 120, CRÍTICO). Parámetros: `operacion.alerta_temprana_minutos_antes` y `operacion.por_vencer_critico_minutos_antes` | Centinela (`riesgo_termico`) y panel |
 
 ---
 
@@ -185,9 +192,13 @@ Sin esto, el Centinela los reporta correctamente como `NO_CONFIGURADO`.
    (`America/Guayaquil`) vive en `system_settings`, no en el código.
 6. **Migraciones SQL planas** con `schema_migrations` y advisory lock. Sin ORM
    ni Alembic: el contrato es SQL, no el framework.
-7. **El motor se niega a operar con recetas no confirmadas.** Se puede forzar
-   solo desde script, con `--provisional`, y el kardex queda marcado como
-   `referencia = 'provisional'` para poder purgarlo después.
+7. **Una receta no confirmada no bloquea la venta (ratificado 2026-11-08).**
+   `crear_orden` acepta `permitir_receta_provisional = True` por defecto y el
+   viaje declara `"receta_provisional": true` en su `tracking_payload`. El
+   kardex teórico no se genera y el Centinela reporta `WARN` en
+   `recetas_provisionales`; el aviso queda visible, pero la operación sigue.
+   El viejo comportamiento (bloquear la orden) se descartó porque detenía una
+   venta real por un dato administrativo pendiente.
 8. **Latencia del Centinela.** En caliente responde 20–25 ms (el PDR exige
    <200 ms). La primera llamada tras arrancar tarda ~250–400 ms porque abre
    conexiones; se puede eliminar con un precalentamiento en el `lifespan`.

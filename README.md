@@ -1,8 +1,13 @@
-# ORMINORTH — Núcleo Centinela (Hitos 1 y 2)
+# ORMINORTH — Núcleo Centinela (Hitos 1, 2 y 3)
 
-Implementación del **Módulo 0 (PostgreSQL + JSONB)**, **Módulo 2 (motor determinístico de planta)** y **Módulo 5 (Nodo Centinela)** del PDR v4.0.
+Implementación del **Módulo 0 (PostgreSQL + JSONB)**, **Módulo 1 (WhatsApp:
+debounce + Juez Binario + Bunny.net)**, **Módulo 2 (motor determinístico de
+planta)** y **Módulo 5 (Nodo Centinela)** del PDR v4.0.
 
-Estado actual: **Hito 1 ejecutado localmente**. La estructura responde y los tests pasan; el candado definitivo depende de que Julio entregue las recetas reales (ver `docs/00_DECISIONES_PENDIENTES.md`).
+Estado actual: **Hitos 1, 2 y 3 construidos y verificados en local** (134 tests,
+candados 8/8 y 26/26). Los candados siguen abiertos solo por datos que dependen
+de Julio y de la agencia: recetas reales, teléfonos del personal y credenciales
+de Evolution/Bunny/Gemini. Ver `docs/00_DECISIONES_PENDIENTES.md`.
 
 ## Estructura
 
@@ -13,8 +18,10 @@ orminorth/
 │  ├─ 001_init.sql             esquema (12 tablas + 3 vistas de contrato)
 │  ├─ 010_seed_settings.sql    parámetros maestros (system_settings)
 │  ├─ 020_seed_recipes.sql     recetas + materiales (con datos PENDIENTES marcados)
-│  └─ 030_umbral_termico.sql   parámetro de aviso térmico
+│  ├─ 030_umbral_termico.sql   parámetro de aviso térmico (legado)
+│  └─ 040_ratificacion_hito3.sql  dos umbrales térmicos + códigos de operador
 ├─ services/core-api/
+│  ├─ app/m1_whatsapp/         webhook, debounce, identidad, Juez "Jeb", Bunny
 │  ├─ app/m2_planta/           motor determinístico (dosificador, kardex)
 │  ├─ app/m5_sentinel/         salud de infraestructura, canales y operación
 │  ├─ app/services/            alta de órdenes (M0 + M2)
@@ -22,7 +29,8 @@ orminorth/
 │  └─ tests/                   pytest
 ├─ scripts/
 │  ├─ db_migrate.py            aplica migraciones a mano
-│  └─ hito1_lock_test.py       Test de Candado del Hito 1 (pedido Ing. Reyes)
+│  ├─ hito1_lock_test.py       Test de Candado del Hito 1 (pedido Ing. Reyes)
+│  └─ hito3_lock_test.py       Test de Candado del Hito 3 (3 celulares simulados)
 └─ docs/                       decisiones pendientes y modelo de datos
 ```
 
@@ -40,7 +48,7 @@ docker compose up -d --build
 ## Tests
 
 ```powershell
-# unitarios del motor (sin base de datos)
+# unitarios de los Módulos 1, 2 y 5 (sin base de datos)
 docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto
 
 # Test de Candado del Hito 1 contra la base real
@@ -48,6 +56,9 @@ docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py
 
 # mismo test calculando el kardex con la receta provisional derivada del PDR
 docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py --provisional
+
+# Test de Candado del Hito 3: bodega, chofer y cliente contra PostgreSQL real
+docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py
 ```
 
 ## Endpoints
@@ -61,6 +72,10 @@ docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py --p
 | POST | `/api/v1/orders` | crea orden + viajes + kardex teórico |
 | GET | `/api/v1/orders/{id}` | orden + timeline de viajes |
 | GET | `/api/v1/inventory` | stock y estado de alerta |
+| POST | `/api/v1/whatsapp/webhook` | recibe eventos de Evolution API (responde de inmediato) |
+| POST | `/api/v1/whatsapp/simulate` | inyecta un mensaje para QA (header `X-Agency-Master-Key`) |
+| POST | `/api/v1/whatsapp/flush` | fuerza el procesamiento del debounce (header `X-Agency-Master-Key`) |
+| GET | `/api/v1/whatsapp/health` | estado del Módulo 1 sin exponer secretos |
 | GET | `/api/v1/sentinel/daily-audit` | diagnóstico para el CRM de la agencia (header `X-Agency-Master-Key`) |
 
 ## Memoria del proyecto (`.agents/`)
@@ -75,7 +90,10 @@ de tocar nada:
 Al terminar, toda sesión se registra en la bitácora. Si no está ahí, no pasó.
 Índice completo en `.agents/README.md`.
 
-## Principios que el código respeta1. **Nada de negocio en el código.** Recetas, precios, teléfonos, flota y umbrales viven en `system_settings` / `concrete_recipes`.
+## Principios que el código respeta
+
+1. **Nada de negocio en el código.** Recetas, precios, teléfonos, flota y umbrales viven en `system_settings` / `concrete_recipes`.
 2. **El JSONB es el contrato.** `mixer_dispatches.tracking_payload` manda; las columnas planas las sincroniza un trigger y existen solo para consultar.
-3. **La IA no calcula.** El Módulo 2 es aritmética con `Decimal`; si una receta no está confirmada, el motor se niega a operar.
+3. **La IA no calcula.** El Módulo 2 es aritmética con `Decimal`. El Juez Binario solo responde sí/no; la matemática nunca pasa por un LLM. Una receta provisional no bloquea la venta, pero el kardex no se genera y el Centinela lo reporta como WARNING.
 4. **El Centinela no tumba la API.** Cada chequeo degrada a `NO_CONFIGURADO` en vez de lanzar excepciones.
+5. **Sin credenciales no se finge.** Evolution, Bunny y Gemini degradan a `NO_CONFIGURADO` o al juez determinístico, y las alertas quedan en `error_logs`.

@@ -24,7 +24,8 @@ class OrdenCreate(BaseModel):
     creada_por: str | None = None
     notas: str | None = None
     politica_viajes: str | None = None
-    permitir_receta_provisional: bool = False
+    # Ratificado 2026-11-08: por defecto se permite vender con receta provisional.
+    permitir_receta_provisional: bool = True
     mixer_codigo: str | None = None
     chofer_nombre: str | None = None
 

@@ -16,9 +16,10 @@ decorativa: son reglas operativas.
   `docs/PDR_v4.0.txt` (PDR v4.0). Si algo no está ahí, no se asume: se pregunta.
 - **Stack:** PostgreSQL 15 + Redis 7 + FastAPI + Evolution API + Bunny.net,
   todo en Docker. Objetivo final: VPS Linux.
-- **Estado:** Hito 1 (Módulo 0) y Hito 2 (Módulo 2 + 5) construidos y
-  verificados en local. Candado del Hito 1 **abierto** por falta de recetas
-  reales. Ver `.agents/ESTADO.md`.
+- **Estado:** Hitos 1 (Módulo 0), 2 (Módulos 2 + 5) y 3 (Módulo 1: WhatsApp)
+  construidos y verificados en local. Los candados siguen **abiertos** solo por
+  datos de negocio y credenciales (recetas, teléfonos del personal, Evolution,
+  Bunny, Gemini). Ver `.agents/ESTADO.md`.
 - **Datos que faltan:** `docs/00_DECISIONES_PENDIENTES.md`.
 
 ## 2. Arranque de sesión (obligatorio, en este orden)
@@ -83,6 +84,9 @@ docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asy
 # Test de Candado del Hito 1
 docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py
 
+# Test de Candado del Hito 3 (bodega, chofer y cliente)
+docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py
+
 # Centinela
 curl.exe -H "X-Agency-Master-Key: $env:AGENCY_MASTER_KEY" http://localhost:8000/api/v1/sentinel/daily-audit
 
@@ -95,12 +99,14 @@ docker compose stop
 | Ruta | Qué es |
 |---|---|
 | `db/migrations/` | Esquema y seeds versionados (se aplican al arrancar) |
+| `services/core-api/app/m1_whatsapp/` | WhatsApp: webhook, debounce, identidad, Juez "Jeb", Bunny |
 | `services/core-api/app/m2_planta/` | Motor determinístico (dosificador, kardex) |
-| `services/core-api/app/m5_sentinel/` | Centinela (11 chequeos) |
+| `services/core-api/app/m5_sentinel/` | Centinela (12 chequeos) |
 | `services/core-api/app/services/ordenes.py` | Alta de orden: M0 + M2 |
 | `services/core-api/app/routers/` | HTTP: health, catálogo, órdenes |
-| `services/core-api/tests/` | pytest |
+| `services/core-api/tests/` | pytest (134 tests) |
 | `scripts/hito1_lock_test.py` | Test de Candado del Hito 1 |
+| `scripts/hito3_lock_test.py` | Test de Candado del Hito 3 |
 | `docs/` | Decisiones pendientes y modelo de datos |
 | `.agents/` | Memoria, procesos, skills y evidencias |
 
@@ -121,8 +127,9 @@ No lo asumas ni lo simules:
 - Flota real (hoy solo hay `MIXER-01` de 8 m³ como ejemplo).
 - Precios por m³.
 - Stock inicial.
-- Identificación de remitentes de WhatsApp (bodeguero/chofer/cliente).
-- Credenciales de Evolution API ni Bunny.net.
+- Teléfonos reales del personal (`whatsapp.staff` vacío); la regla de
+  identidad ya está implementada, faltan los datos.
+- Credenciales reales de Evolution API, Bunny.net ni Gemini.
 - Despliegue en VPS, proxy inverso, TLS ni backups.
-- Facturación electrónica SRI.
+- Facturación electrónica SRI (**fuera de alcance**, ratificado 2026-11-08).
 - Panel web (Módulo 3) y dashboard (Módulo 4).

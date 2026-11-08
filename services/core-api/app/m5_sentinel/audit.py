@@ -166,35 +166,7 @@ async def ejecutar_auditoria(
     ayer = _dia_anterior(zona)
     timeout = _timeout(settings)
 
-    fabricas: list[tuple[str, Categoria, Callable[[], Awaitable[CheckResult]]]] = [
-        ("db", checks.INFRAESTRUCTURA, lambda: checks.check_db(pool, settings)),
-        ("redis", checks.INFRAESTRUCTURA, lambda: checks.check_redis(settings)),
-        ("infra", checks.INFRAESTRUCTURA, lambda: checks.check_infra()),
-        (
-            "evolution",
-            checks.CANAL,
-            lambda: checks.check_evolution(pool, settings),
-        ),
-        ("bunny", checks.CANAL, lambda: checks.check_bunny(pool, settings)),
-        (
-            "viajes_en_ruta",
-            checks.OPERACION,
-            lambda: checks.check_viajes_en_ruta(pool, ayer),
-        ),
-        (
-            "riesgo_termico",
-            checks.OPERACION,
-            lambda: checks.check_riesgo_termico(pool),
-        ),
-        ("caja", checks.OPERACION, lambda: checks.check_caja(pool, ayer)),
-        ("merma", checks.OPERACION, lambda: checks.check_merma(pool, ayer, zona)),
-        ("errores", checks.OPERACION, lambda: checks.check_errores(pool)),
-        (
-            "despachos_ayer",
-            checks.OPERACION,
-            lambda: checks.check_despachos_ayer(pool, ayer, zona),
-        ),
-    ]
+    fabricas = construir_fabricas(pool, settings, ayer, zona)
 
     resultados = await asyncio.gather(
         *(
@@ -212,3 +184,50 @@ async def ejecutar_auditoria(
         "checks": [r.to_dict() for r in resultados],
         "resumen_operativo": construir_resumen_operativo(resultados),
     }
+
+
+def construir_fabricas(
+    pool: asyncpg.Pool,
+    settings: Settings,
+    dia: date,
+    zona: ZoneInfo,
+) -> list[tuple[str, Categoria, Callable[[], Awaitable[CheckResult]]]]:
+    """Registro de checks del Centinela, en orden de contrato.
+
+    Esta funcion existe para que el conjunto de chequeos sea inspeccionable
+    por los tests sin abrir conexiones a base de datos.
+    """
+    return [
+        ("db", checks.INFRAESTRUCTURA, lambda: checks.check_db(pool, settings)),
+        ("redis", checks.INFRAESTRUCTURA, lambda: checks.check_redis(settings)),
+        ("infra", checks.INFRAESTRUCTURA, lambda: checks.check_infra()),
+        (
+            "evolution",
+            checks.CANAL,
+            lambda: checks.check_evolution(pool, settings),
+        ),
+        ("bunny", checks.CANAL, lambda: checks.check_bunny(pool, settings)),
+        (
+            "viajes_en_ruta",
+            checks.OPERACION,
+            lambda: checks.check_viajes_en_ruta(pool, dia),
+        ),
+        (
+            "riesgo_termico",
+            checks.OPERACION,
+            lambda: checks.check_riesgo_termico(pool),
+        ),
+        (
+            "recetas_provisionales",
+            checks.OPERACION,
+            lambda: checks.check_recetas_provisionales(pool),
+        ),
+        ("caja", checks.OPERACION, lambda: checks.check_caja(pool, dia)),
+        ("merma", checks.OPERACION, lambda: checks.check_merma(pool, dia, zona)),
+        ("errores", checks.OPERACION, lambda: checks.check_errores(pool)),
+        (
+            "despachos_ayer",
+            checks.OPERACION,
+            lambda: checks.check_despachos_ayer(pool, dia, zona),
+        ),
+    ]

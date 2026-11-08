@@ -3,9 +3,12 @@
 Regla de oro: aqui NO hay IA. Solo aritmetica con Decimal.
 Toda la informacion de negocio (recetas) llega desde la base de datos.
 
-Si una receta no esta confirmada por el cliente, el motor se niega a
-calcular (RecetaNoConfirmadaError) salvo que el llamador pida
-explicitamente `permitir_provisional=True` (solo scripts de diagnostico).
+Politica vigente (ratificada 2026-11-08): una receta PROVISIONAL no bloquea
+la venta. El servicio de ordenes llama con ``permitir_provisional=True`` por
+defecto, marca ``"receta_provisional": true`` en el tracking_payload y el Nodo
+Centinela lo reporta como WARNING hasta que Julio valide la dosificacion.
+``calcular_consumo`` mantiene el bloqueo por defecto para que un llamador
+descuide no pueda inventariar en silencio.
 """
 
 from __future__ import annotations
@@ -239,12 +242,62 @@ def estado_termico(
     *,
     umbral_por_vencer_minutos: int = 30,
 ) -> str:
-    """Devuelve OK | POR_VENCER | VENCIDO."""
+    """Devuelve OK | POR_VENCER | VENCIDO.
+
+    API heredada del Hito 1/2. Se conserva intacta por compatibilidad; el
+    codigo nuevo debe usar :func:`evaluar_ventana_termica`, que distingue los
+    dos avisos ratificados por Direccion.
+    """
     restante = (limite - ahora).total_seconds() / 60
     if restante <= 0:
         return "VENCIDO"
     if restante <= umbral_por_vencer_minutos:
         return "POR_VENCER"
+    return "OK"
+
+
+# Estados del reloj termico con dos avisos previos (ratificado 2026-11-08).
+ESTADOS_TERMICOS = (
+    "OK",
+    "ALERTA_TEMPRANA",
+    "POR_VENCER_CRITICO",
+    "VENCIDO",
+)
+
+
+def evaluar_ventana_termica(
+    ahora: datetime,
+    limite: datetime,
+    *,
+    alerta_temprana_minutos: int = 60,
+    por_vencer_critico_minutos: int = 30,
+) -> str:
+    """Clasifica el viaje en ``OK | ALERTA_TEMPRANA | POR_VENCER_CRITICO | VENCIDO``.
+
+    Con el limite ratificado de 150 min:
+
+    - ``ALERTA_TEMPRANA``     -> quedan 60 min o menos (minuto 90 del viaje).
+    - ``POR_VENCER_CRITICO``  -> quedan 30 min o menos (minuto 120 del viaje).
+    - ``VENCIDO``             -> el limite ya paso.
+
+    Si los umbrales llegan invertidos desde ``system_settings`` (por ejemplo
+    90 y 30 al reves) se normalizan en vez de lanzar: el menor se interpreta
+    como critico y el mayor como alerta temprana. El reloj nunca debe tumbar
+    el procesamiento de un mensaje real.
+    """
+    critico = max(0, int(por_vencer_critico_minutos))
+    temprano = max(0, int(alerta_temprana_minutos))
+    if critico > temprano:
+        # Umbrales invertidos en system_settings: el menor es el critico.
+        critico, temprano = temprano, critico
+
+    restante = (limite - ahora).total_seconds() / 60
+    if restante <= 0:
+        return "VENCIDO"
+    if restante <= critico:
+        return "POR_VENCER_CRITICO"
+    if restante <= temprano:
+        return "ALERTA_TEMPRANA"
     return "OK"
 
 

@@ -190,6 +190,7 @@ async def test_clave_valida_responde_200(monkeypatch: pytest.MonkeyPatch) -> Non
             _check("bunny", "NO_CONFIGURADO", {}, "CANAL"),
             _check("viajes_en_ruta", "WARN", {"total_en_ruta": 4}),
             _check("riesgo_termico", "OK", {"total": 0}),
+            _check("recetas_provisionales", "WARN", {"total": 2}),
             _check("caja", "WARN", {"faltantes": 1}),
             _check("merma", "NO_CONFIGURADO", {}),
             _check("errores", "OK", {"total": 0}),
@@ -220,7 +221,7 @@ async def test_clave_valida_responde_200(monkeypatch: pytest.MonkeyPatch) -> Non
     cuerpo = respuesta.json()
     assert cuerpo["cliente"] == "ORMINORTH"
     assert cuerpo["estado_global"] == "WARN"
-    assert len(cuerpo["checks"]) == 11
+    assert len(cuerpo["checks"]) == 12
     assert {c["id"] for c in cuerpo["checks"]} >= {"db", "redis", "infra"}
     assert cuerpo["resumen_operativo"] == {
         "viajes_despachados_ayer": 6,
