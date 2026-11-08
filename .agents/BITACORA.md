@@ -103,3 +103,58 @@ datos para no reescribir el bot después.
 `AGENTS.md`, `.agents/**`, `db/migrations/*.sql`, `docker-compose.yml`,
 `.env.example`, `services/core-api/**`, `scripts/*.py`, `docs/*.md`,
 `README.md`, `pytest.ini`.
+
+---
+
+## 2026-11-08 (cierre) — Repo GitHub, incidente de git y traspaso
+
+**Agente:** DeepSeek V4.1 Flash Free (OpenCode)
+
+### Hecho
+
+1. Repo creado por César: `https://github.com/CesarReyesJaramillo/horinor`
+2. PDR copiado dentro del repo (`docs/PDR_v4.0.pdf` y `docs/PDR_v4.0.txt`) y
+   referencias actualizadas en `AGENTS.md`.
+3. Creado `.agents/traspaso/2026-11-08_handoff.md`: brief listo para pegar en el
+   chat de dirección, con estado, decisiones a ratificar, datos que faltan y
+   próximos pasos.
+4. `git init` en `orminorth/`, commit inicial de 56 archivos. `.env` y
+   `__pycache__` quedaron fuera (verificado).
+5. Push **falló**: las credenciales de Windows corresponden a la cuenta
+   `ObjetivoCesar`, que no tiene permiso sobre `CesarReyesJaramillo/horinor`
+   (HTTP 403). Pendiente autenticarse con la cuenta correcta o un PAT.
+
+### Incidente (documentado para no repetirlo)
+
+- **Qué pasó:** se ejecutó `git reset --hard` en un repositorio **sin commit
+  inicial** (HEAD inexistente). Git borró del disco los 55 archivos que estaban
+  en el índice; sobrevivieron solo los ignorados (`.env`, `__pycache__`).
+- **Recuperación:** los blobs seguían en `.git/objects`. Se listaron 56 objetos
+  inalcanzables con `git fsck --unreachable`, se identificaron por contenido y
+  se restauraron a su ruta con un script de mapeo. La imagen Docker sirvió como
+  segunda fuente de verificación para `app/`, `db/` y `scripts/`.
+- **Verificación:** 57 archivos en disco, `33 passed`, commit rehecho con 56
+  archivos, `.env` intacto.
+- **Regla nueva:** nunca `git reset --hard` en un repo sin HEAD. Para
+  desestagear: `git rm -r --cached .` o iniciar de nuevo el repo.
+
+### Evidencia
+
+| Comando | Resultado |
+|---|---|
+| `git fsck --unreachable --no-reflogs` | 56 blobs recuperables |
+| `docker compose run ... pytest /app/tests` | **33 passed** |
+| `git ls-files` | 56 archivos versionados |
+| `git log --oneline` | `7a67f13` commit inicial |
+
+### Decisión
+
+El repositorio se inicializó en `orminorth/` (no en la carpeta padre) para que
+`git clone` + `docker compose up` funcione directo en el VPS. El PDR viaja
+copiado en `docs/`.
+
+### Próximo paso exacto
+
+Autenticar git con la cuenta dueña del repo y ejecutar `git push -u origin main`;
+luego enviar el contenido de `.agents/traspaso/2026-11-08_handoff.md` al chat de
+dirección.
