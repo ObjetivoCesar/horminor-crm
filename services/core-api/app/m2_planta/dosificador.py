@@ -31,6 +31,32 @@ CAMPOS_RECETA = (
 
 POLITICAS_VIAJE = ("ultimo_parcial", "ultimo_completo", "distribucion_uniforme")
 
+# Direccion 2026-11-08: el Superadmin muestra nombres cortos (PARCIAL,
+# COMPLETO, UNIFORME). El motor conserva los nombres largos y acepta ambos.
+POLITICAS_ALIAS = {
+    "PARCIAL": "ultimo_parcial",
+    "COMPLETO": "ultimo_completo",
+    "UNIFORME": "distribucion_uniforme",
+    "ULTIMO_PARCIAL": "ultimo_parcial",
+    "ULTIMO_COMPLETO": "ultimo_completo",
+    "DISTRIBUCION_UNIFORME": "distribucion_uniforme",
+}
+
+
+def normalizar_politica(politica: str | None) -> str:
+    """Devuelve el nombre canonico del motor o lanza si no existe."""
+    crudo = str(politica or "").strip().upper()
+    if not crudo:
+        return POLITICAS_VIAJE[0]
+    canonica = POLITICAS_ALIAS.get(crudo, crudo.lower())
+    if canonica not in POLITICAS_VIAJE:
+        raise PoliticaViajeInvalidaError(
+            f"Politica '{politica}' no valida. Use una de: "
+            f"{', '.join(POLITICAS_VIAJE)} (o PARCIAL / COMPLETO / UNIFORME)"
+        )
+    return canonica
+
+
 
 class ErrorPlanta(ValueError):
     """Error de negocio del motor de planta."""
@@ -72,6 +98,9 @@ class Receta:
     saco_kg: Decimal | None
     confirmado: bool
     fuente: str | None = None
+    precio_m3: Decimal | None = None
+    iva_pct: Decimal | None = None
+    uso_comercial: str | None = None
 
     @classmethod
     def from_row(cls, row: Mapping[str, Any]) -> "Receta":
@@ -89,6 +118,9 @@ class Receta:
             saco_kg=d("saco_kg"),
             confirmado=bool(row["confirmado"]),
             fuente=row.get("fuente"),
+            precio_m3=d("precio_m3"),
+            iva_pct=d("iva_pct"),
+            uso_comercial=row.get("uso_comercial"),
         )
 
     def faltantes(self) -> list[str]:
@@ -200,10 +232,7 @@ def dividir_en_viajes(
         raise VolumenInvalidoError("El volumen debe ser mayor que 0 m3")
     if capacidad <= 0:
         raise VolumenInvalidoError("La capacidad del mixer debe ser mayor que 0 m3")
-    if politica not in POLITICAS_VIAJE:
-        raise PoliticaViajeInvalidaError(
-            f"Politica '{politica}' no valida. Use una de: {', '.join(POLITICAS_VIAJE)}"
-        )
+    politica = normalizar_politica(politica)
 
     llenos = int(volumen // capacidad)
     resto = _q3(volumen - (capacidad * llenos))

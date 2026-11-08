@@ -16,6 +16,8 @@ from .m5_sentinel.router import router as sentinel_router
 from .routers import catalog, health, orders
 from .services.ordenes import OrdenInvalidaError
 from .settings import get_settings
+from .superadmin.router import router as superadmin_router
+from .superadmin.store import PostgresConfigStore
 
 log = logging.getLogger("orminorth")
 
@@ -29,6 +31,7 @@ async def lifespan(app: FastAPI):
     )
     app.state.settings = settings
     app.state.whatsapp = None
+    app.state.config_store = None
 
     pool = await create_pool(settings.database_url)
     app.state.pool = pool
@@ -36,6 +39,8 @@ async def lifespan(app: FastAPI):
         aplicadas = await run_migrations(pool, settings.migrations_dir)
         if aplicadas:
             log.info("migraciones aplicadas: %s", ", ".join(aplicadas))
+
+    app.state.config_store = PostgresConfigStore(pool)
 
     runtime: WhatsAppRuntime | None = None
     if settings.whatsapp_worker_enabled:
@@ -80,4 +85,5 @@ app.include_router(health.router)
 app.include_router(catalog.router)
 app.include_router(orders.router)
 app.include_router(whatsapp_router)
+app.include_router(superadmin_router)
 app.include_router(sentinel_router)

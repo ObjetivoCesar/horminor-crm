@@ -77,6 +77,10 @@ class RepositorioWhatsApp(Protocol):
 
     async def parametro(self, clave: str, por_defecto: Any = None) -> Any: ...
 
+    async def recetas_publicas(self) -> list[dict[str, Any]]:
+        """Recetas confirmadas y con precio: insumo del bot de atencion."""
+        ...
+
 
 _SQL_BUSCAR = """
 SELECT d.id::text                AS dispatch_id,
@@ -224,6 +228,52 @@ class PostgresRepositorio:
     async def parametro(self, clave: str, por_defecto: Any = None) -> Any:
         return await setting(self._pool, clave, por_defecto)
 
+    async def recetas_publicas(self) -> list[dict[str, Any]]:
+        """Recetas confirmadas con precio; el bot nunca inventa una faltante."""
+        filas = await self._pool.fetch(
+            """
+            SELECT resistencia, precio_m3, iva_pct, uso_comercial,
+                   cemento_sacos_m3, arena_m3_m3, ripio_m3_m3,
+                   agua_litros_m3, retardante_litros_m3, saco_kg
+              FROM concrete_recipes
+             WHERE confirmado AND precio_m3 IS NOT NULL
+             ORDER BY resistencia
+            """
+        )
+        return [
+            {
+                "resistencia": fila["resistencia"],
+                "precio_m3": (
+                    None if fila["precio_m3"] is None else float(fila["precio_m3"])
+                ),
+                "iva_pct": None if fila["iva_pct"] is None else float(fila["iva_pct"]),
+                "uso_comercial": fila["uso_comercial"],
+                "cemento_sacos_m3": (
+                    None
+                    if fila["cemento_sacos_m3"] is None
+                    else float(fila["cemento_sacos_m3"])
+                ),
+                "arena_m3_m3": (
+                    None if fila["arena_m3_m3"] is None else float(fila["arena_m3_m3"])
+                ),
+                "ripio_m3_m3": (
+                    None if fila["ripio_m3_m3"] is None else float(fila["ripio_m3_m3"])
+                ),
+                "agua_litros_m3": (
+                    None
+                    if fila["agua_litros_m3"] is None
+                    else float(fila["agua_litros_m3"])
+                ),
+                "retardante_litros_m3": (
+                    None
+                    if fila["retardante_litros_m3"] is None
+                    else float(fila["retardante_litros_m3"])
+                ),
+                "saco_kg": None if fila["saco_kg"] is None else float(fila["saco_kg"]),
+            }
+            for fila in filas
+        ]
+
 
 @dataclass
 class MemoriaRepositorio:
@@ -238,6 +288,7 @@ class MemoriaRepositorio:
     leads: list[dict[str, Any]] = field(default_factory=list)
     logs: list[dict[str, Any]] = field(default_factory=list)
     actualizaciones: list[str] = field(default_factory=list)
+    recetas: list[dict[str, Any]] = field(default_factory=list)
 
     async def buscar_viaje(
         self,
@@ -322,3 +373,10 @@ class MemoriaRepositorio:
 
     async def parametro(self, clave: str, por_defecto: Any = None) -> Any:
         return self.parametros.get(clave, por_defecto)
+
+    async def recetas_publicas(self) -> list[dict[str, Any]]:
+        return [
+            dict(receta)
+            for receta in self.recetas
+            if receta.get("confirmado", True) and receta.get("precio_m3") is not None
+        ]

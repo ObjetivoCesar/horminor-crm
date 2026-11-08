@@ -36,6 +36,8 @@ from .models import MessageBatch, ReferenciaViaje, Rol, extraer_referencia
 from .notifications import Notifier, SentinelAlerter
 from .repositorio import RepositorioWhatsApp, ViajeObjetivo
 
+from ..superadmin.secciones import componer_respuesta_lead
+
 log = logging.getLogger(__name__)
 
 ZONA_POR_DEFECTO = "America/Guayaquil"
@@ -65,6 +67,7 @@ class ResultadoLote:
     estado_actual: str | None = None
     acciones: list[str] = field(default_factory=list)
     alerta: dict[str, Any] | None = None
+    respuesta: str | None = None
     error: str | None = None
 
     def a_dict(self) -> dict[str, Any]:
@@ -78,6 +81,7 @@ class ResultadoLote:
             "estado_actual": self.estado_actual,
             "acciones": self.acciones,
             "alerta": self.alerta,
+            "respuesta": self.respuesta,
             "error": self.error,
         }
 
@@ -450,6 +454,18 @@ class WhatsAppPipeline:
         resultado.acciones.append("PROSPECTO_CREADO" if lead else "PROSPECTO_SIN_CAMBIOS")
         if cliente_id:
             resultado.acciones.append("CLIENTE_EXISTENTE_ACTUALIZADO")
+
+        # Gate #4 responde con el ADN publico y las recetas confirmadas leidas
+        # en vivo de PostgreSQL. El Juez solo decidio que era una cotizacion;
+        # el texto lo arma el codigo con datos de negocio, no el LLM.
+        config = await self.repo.parametro("empresa.bot_publico", {})
+        recetas = await self.repo.recetas_publicas()
+        respuesta = componer_respuesta_lead(config, recetas)
+        resultado.respuesta = respuesta
+        enviado = await self.notifier.enviar_texto(lote.telefono, respuesta)
+        resultado.acciones.append(
+            "RESPUESTA_BOT_ENVIADA" if enviado else "RESPUESTA_BOT_NO_ENVIADA"
+        )
 
 
 __all__ = [

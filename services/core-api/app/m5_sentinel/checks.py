@@ -509,17 +509,25 @@ async def check_recetas_provisionales(pool: asyncpg.Pool) -> CheckResult:
     pero el Centinela debe avisar para que la dosificacion se valide. Se
     miran los viajes sin salida (pendientes) y los de los ultimos 7 dias:
     un viaje viejo ya no requiere accion.
+
+    Cierre Hito 1 (2026-11-08): la semilla oficial confirmo las 5 recetas.
+    El chequeo cruza contra ``concrete_recipes.confirmado`` para no dejar un
+    WARN eterno por viajes historicos cuyo payload nacio con la bandera en
+    true. Si la receta ya fue validada, no hay accion pendiente.
     """
     inicio = perf_counter()
     fila = await pool.fetchrow(
         """
         SELECT count(*) AS total
-        FROM v_dispatch_timeline
-        WHERE (tracking_payload ->> 'receta_provisional')::boolean IS TRUE
-          AND (
-                salida_planta IS NULL
-                OR salida_planta >= now() - INTERVAL '7 days'
-              )
+          FROM v_dispatch_timeline t
+          JOIN orders o ON o.id = t.order_id
+          JOIN concrete_recipes r ON r.resistencia = o.resistencia
+         WHERE r.confirmado IS NOT TRUE
+           AND (t.tracking_payload ->> 'receta_provisional')::boolean IS TRUE
+           AND (
+                 t.salida_planta IS NULL
+                 OR t.salida_planta >= now() - INTERVAL '7 days'
+               )
         """
     )
     total = int(fila["total"] or 0) if fila else 0

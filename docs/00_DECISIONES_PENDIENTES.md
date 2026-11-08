@@ -1,8 +1,9 @@
 # Decisiones pendientes y datos que el PDR no trae
 
 Última actualización: 2026-11-08
-Estado: **Hitos 1, 2 y 3 construidos y verificados localmente; candados aún
-abiertos solo por datos de negocio y credenciales.**
+Estado: **Hitos 1, 2 y 3 construidos y verificados localmente. Hito 1 CERRADO
+con semilla oficial; el Hito 3 sigue abierto solo por credenciales y teléfonos
+reales. El Centro de Configuración Superadmin opera sin login en esta etapa.**
 
 Este documento existe porque el PDR v4.0 define la arquitectura pero **no**
 define varios datos de negocio. Nada de lo que falta se rellenó con supuestos:
@@ -11,108 +12,106 @@ usarlo. Aquí está el inventario exacto de lo que falta y dónde se corrige.
 
 ---
 
-## A. Bloqueantes para cerrar el Hito 1
+## A. Hito 1 — CERRADO con semilla oficial (2026-11-08)
 
-### A1. Recetas de hormigón (la más importante)
+> **Decisión de Dirección (2026-11-08):** no se esperó la entrega manual de
+> Julio. Todos los parámetros de negocio pasan a ser dinámicos y editables
+> desde el **Centro de Configuración Superadmin**; la migración
+> `050_seed_oficial_superadmin.sql` carga el punto de partida oficial. El
+> candado del Hito 1 se ejecutó y terminó en `[CANDADO CERRADO]`.
 
-**Qué falta:** la dosificación real por m³ de FC-180, FC-210, FC-280 y FC-350:
-sacos de cemento, m³ de arena, m³ de ripio, litros de agua y litros de
-retardante. También el **peso del saco** (¿50 kg?).
+### A1. Recetas de hormigón — RESUELTO
 
-**Qué hay hoy** en `concrete_recipes`:
+La semilla oficial de Orellana/Sucumbíos quedó cargada con sacos de 50 kg:
 
-| Resistencia | Cemento sacos/m³ | Retardante L/m³ | Arena/Ripio/Agua | Estado |
-|---|---|---|---|---|
-| FC-180 | NULL | NULL | NULL | PROVISIONAL |
-| FC-210 | 7.500 | 1.200 | NULL | PROVISIONAL |
-| FC-280 | NULL | NULL | NULL | PROVISIONAL |
-| FC-350 | NULL | NULL | NULL | PROVISIONAL |
+| Resistencia | Cemento sacos/m³ | Arena m³/m³ | Ripio m³/m³ | Agua L/m³ | Retardante L/m³ | Precio/m³ sin IVA | Uso comercial |
+|---|---|---|---|---|---|---|---|
+| FC-180 | 6.500 | 0.5600 | 0.6800 | 190 | 1.000 | $108.00 | Contrapisos, veredas y obras livianas |
+| FC-210 | 7.500 | 0.5200 | 0.6800 | 185 | 1.200 | $118.00 | Losas, vigas, columnas residenciales y muros |
+| FC-240 | 8.500 | 0.5000 | 0.6600 | 182 | 1.400 | $126.00 | Galpones industriales y pavimentos urbanos |
+| FC-280 | 9.500 | 0.4800 | 0.6500 | 178 | 1.600 | $136.00 | Puentes, vías de carga pesada y plataformas |
+| FC-350 | 11.000 | 0.4500 | 0.6200 | 172 | 2.000 | $158.00 | Plataformas petroleras y cimentaciones especiales |
 
-El 7.5 y el 1.2 **no son una receta**: salen del único ejemplo numérico del
-PDR (`60 sacos` y `9.6 L` para `8 m³`), y están marcados `confirmado = false`
-con esa fuente escrita al lado.
+Las cinco quedan `confirmado = true`, con `iva_pct = 15.00` editable y
+`uso_comercial` para el bot. Se pueden cambiar sin tocar código desde
+`PUT /api/v1/superadmin/config/formulas_y_precios` o el CRUD de recetas.
 
-**Efecto (actualizado 2026-11-08):** la orden **sí se crea** y la venta sigue
-(`permitir_receta_provisional = True`); el viaje queda marcado con
-`"receta_provisional": true` en su `tracking_payload`, **no** se genera kardex
-teórico y el Centinela lo reporta como `WARN` en `recetas_provisionales`. Se
-descartó bloquear la venta: detener una operación real por un dato
-administrativo pendiente cuesta más que el aviso visible.
+**Evidencia:** `hito1_lock_test.py` reporta 5 recetas confirmadas, precio y
+dosificación completa, y **235 movimientos de kardex** generados para el pedido
+del Ing. Reyes (320 m³ FC-210 + 52 m³ FC-350).
 
-**Cómo se cierra:**
+### A2. Flota real de mixers — RESUELTO (placas y choferes pendientes)
 
-```sql
-UPDATE concrete_recipes
-   SET cemento_sacos_m3     = :sacos,
-       arena_m3_m3          = :arena,
-       ripio_m3_m3          = :ripio,
-       agua_litros_m3       = :agua,
-       retardante_litros_m3 = :retardante,
-       saco_kg              = :kg,
-       confirmado           = true,
-       fuente               = 'Dosificación validada por Julio Villavicencio el :fecha'
- WHERE resistencia = 'FC-210';
-```
+`flota.mixers` arranca con `MIXER-01` (8.0 m³), `MIXER-02` (8.0 m³) y
+`MIXER-03` (7.0 m³), todos activos. `placa` y `chofer_asignado` quedan `null`
+porque Julio no los entregó: son editables en
+`flota_y_operacion`. No se inventó ninguna placa.
 
-Luego: `python scripts/hito1_lock_test.py` debe mostrar `kardex generado: 80`
-(40 viajes × cemento + retardante) sin el aviso de provisional.
+### A3. Política de reparto del último viaje — RESUELTO
 
-### A2. Flota real de mixers
+`operacion.politica_redondeo_viajes = "PARCIAL"` (52 m³ → 6×8 + 4). El API
+acepta los alias `PARCIAL | COMPLETO | UNIFORME`, editables en caliente.
 
-**Qué falta:** cuántos mixers hay, sus códigos y su capacidad (el PDR menciona
-7 m³ y 8 m³, pero solo nombra `MIXER-01`).
+### A4. Inventario inicial y umbrales — RESUELTO
 
-**Qué hay hoy:** `system_settings['flota.mixers']` con un solo mixer de 8 m³,
-marcado como ejemplo del PDR.
+Planta Central El Coca: cemento 3500/500/$8.20, arena 450/80/$14.00, ripio
+550/100/$16.50 y retardante 600/100/$3.80. La llave
+`bodega.umbrales_por_planta` permite ajustar por sucursal.
 
-**Cómo se cierra:** actualizar el JSON:
+### A5. Precios — RESUELTO
 
-```sql
-UPDATE system_settings
-   SET value = '[{"codigo":"MIXER-01","capacidad_m3":8,"activo":true},
-                 {"codigo":"MIXER-02","capacidad_m3":7,"activo":true}]'::jsonb
- WHERE key = 'flota.mixers';
-```
+`concrete_recipes.precio_m3` guarda el precio **sin IVA** y `iva_pct` el
+porcentaje aplicable (15%). `orders.total` ya puede calcularse; el Frontend
+decide cuándo mostrar el precio con impuesto.
 
-### A3. Política de reparto del último viaje
+### A6. Reloj térmico — RESUELTO
 
-**Qué falta:** qué hace Orminorth cuando el volumen no es múltiplo de la
-capacidad del mixer. El PDR solo dice "40 viajes de 8 m³" para 320 m³.
-
-**Qué hay hoy:** `operacion.politica_redondeo_viajes = "ultimo_parcial"`.
-Consecuencia: 52 m³ → 6 viajes de 8 + 1 de 4. Alternativas ya implementadas:
-`ultimo_completo` (7 viajes de 8, reporta 4 m³ de excedente) y
-`distribucion_uniforme` (7 viajes de 7.43 m³).
-
-**Cómo se cierra:** cambiar el parámetro. No se toca código.
-
-### A4. Inventario inicial y umbrales
-
-**Qué falta:** stock físico inicial, stock mínimo y unidad real de cada
-material (¿el saco es de 50 kg? ¿arena y ripio en m³ sueltos o compactados?).
-
-**Qué hay hoy:** los 5 materiales existen con `stock_actual = NULL` y
-`stock_minimo = NULL`. La vista `v_inventario` los reporta como
-`SIN_LEVANTAR` / `SIN_UMBRAL`. **No se asumió stock 0** porque 0 es un dato
-falso que dispararía alertas.
-
-**Cómo se cierra:**
-
-```sql
-UPDATE materials SET stock_actual = 1200, stock_minimo = 300 WHERE codigo = 'CEMENTO';
-UPDATE materials SET stock_actual = 45.5, stock_minimo = 10  WHERE codigo = 'ARENA';
-```
-
-### A5. Precios
-
-**Qué falta:** precio por m³ de cada resistencia (y si incluye IVA).
-
-**Qué hay hoy:** `precios.hormigon = {}` y `orders.total = NULL`. El dashboard
-no puede calcular facturación todavía.
+`max_fraguado_minutes = 150`, `alerta_temprana_min = 90` (faltando 60) y
+`alerta_critica_min = 120` (faltando 30). Internamente se guardan los minutos
+“antes” que consumen el pipeline y el Centinela; la API expone los absolutos
+editables.
 
 ---
 
-## B. Hito 3 (WhatsApp) — decisiones ratificadas y bloqueos restantes
+## B. Centro de Configuración Superadmin (sin login en esta etapa)
+
+> **Ratificado 2026-11-08.** La autenticación de usuarios queda desacoplada para
+> el final del proyecto. Las rutas de Superadmin y Secretaría operan abiertas en
+> local/desarrollo; solo el endpoint externo del Centinela conserva
+> `X-Agency-Master-Key`.
+
+### B1. Qué se puede editar en caliente
+
+| Sección | Contenido | Persistencia |
+|---|---|---|
+| `formulas_y_precios` | CRUD de recetas: dosificación, precio/m³, IVA, uso comercial | `concrete_recipes` |
+| `whatsapp_evolution_y_cdn` | URL/instancia/API key de Evolution, debounce, zona/API/CDN de Bunny | `system_settings` |
+| `empresa_bot_publico` | Nombre, RUC, planta, cobertura, horario, planta móvil, bancos, servicios | `system_settings` |
+| `flota_y_operacion` | CRUD de mixers, política `PARCIAL/COMPLETO/UNIFORME`, reloj térmico | `system_settings` |
+| `directorio_roles_whatsapp` | Teléfono → rol y códigos PIN de fallback | `system_settings` |
+| `bodega_y_umbrales` | Stock, mínimo y costo por material y por planta | `materials` + `system_settings` |
+| `finanzas_y_ases_gerenciales` | Tope de crédito, simulador bancario, benchmarks | `system_settings` + `market_benchmarks` |
+
+### B2. Efecto en vivo
+
+Al guardar una sección, el router avisa al Módulo 1: se recarga la ventana de
+debounce y se invalida la caché de identidad. La siguiente petición ya usa el
+valor nuevo, sin reiniciar el servidor. El Gate #4 lee
+`empresa.bot_publico` y las recetas confirmadas en cada respuesta.
+
+**Evidencia:** `PUT .../config/whatsapp_evolution_y_cdn` con
+`debounce_seconds=9` → `GET /api/v1/whatsapp/health` devuelve
+`ventana_segundos=9.0`; al restaurar 14 vuelve a `14.0`.
+
+### B3. Datos que siguen `NULL` a propósito
+
+`empresa.ruc`, `empresa.business_hours`, `empresa.bank_accounts`,
+`flota.placa`, `flota.chofer_asignado` y `finanzas.tope_credito_auto` no fueron
+entregados. El bot omite esas líneas en lugar de inventarlas.
+
+---
+
+## Bbis. Hito 3 (WhatsApp) — decisiones ratificadas y bloqueos restantes
 
 > **Ratificado 2026-11-08.** B1, B2 y B3 quedaron resueltos por Dirección y ya
 > están implementados en `services/core-api/app/m1_whatsapp/` y en la migración
@@ -199,6 +198,10 @@ Módulo 1 funciona en local con el juez determinístico.
    `recetas_provisionales`; el aviso queda visible, pero la operación sigue.
    El viejo comportamiento (bloquear la orden) se descartó porque detenía una
    venta real por un dato administrativo pendiente.
+   **Actualización 2026-11-08:** la semilla oficial confirmó las 5 recetas, así
+   que en operación normal `receta_provisional` es `false` y el kardex sí se
+   genera. El Centinela cruza contra `concrete_recipes.confirmado` para no
+   dejar un WARN eterno por viajes históricos.
 8. **Latencia del Centinela.** En caliente responde 20–25 ms (el PDR exige
    <200 ms). La primera llamada tras arrancar tarda ~250–400 ms porque abre
    conexiones; se puede eliminar con un precalentamiento en el `lifespan`.

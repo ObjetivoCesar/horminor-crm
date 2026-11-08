@@ -265,3 +265,113 @@ tests originales y sin inventar datos de negocio.
    el Hito 3 en `ESTADO.md`.
 4. En paralelo, insistir con Julio por las recetas para cerrar el Hito 1.
 
+---
+
+## 2026-11-08 (Cierre Hito 1 + Superadmin) — Semilla oficial y configuración en caliente
+
+**Agente:** DeepSeek V4.1 Flash Free (OpenCode)
+**Duración:** sesión única
+**Objetivo:** cerrar el Hito 1 sin esperar los datos manuales de Julio, construir
+el Centro de Configuración Superadmin de 7 secciones y hacer que el Módulo 1
+lea toda su configuración en vivo desde PostgreSQL.
+
+### Hecho
+
+1. **Migración `050_seed_oficial_superadmin.sql`** (no se editaron migraciones
+   aplicadas): 5 recetas confirmadas con dosificación completa, saco de 50 kg,
+   precio/m³ sin IVA, IVA editable y uso comercial; stock y costos de Planta
+   Central El Coca; flota `MIXER-01/02/03`; política `PARCIAL`; reloj térmico
+   `150/90/120`; `empresa.bot_publico`; umbrales por planta; simulador y
+   benchmarks.
+2. **Columnas comerciales** en `concrete_recipes`: `precio_m3`, `iva_pct`
+   (default 15%) y `uso_comercial`. `Receta` las expone y `Receta.from_row` las
+   lee.
+3. **Centro de Configuración Superadmin** en `app/superadmin/`:
+   - `GET /api/v1/superadmin/config`
+   - `GET/PUT /api/v1/superadmin/config/{section}` (con alias de sección)
+   - CRUD `GET/POST/PUT/DELETE /api/v1/superadmin/recetas`
+   - CRUD `GET/POST/PUT/DELETE /api/v1/superadmin/flota`
+4. **Sin autenticación** en Superadmin (ratificado): solo el Centinela conserva
+   `X-Agency-Master-Key`. La autenticación se desacopla para el final.
+5. **Dos backends del mismo contrato**: `PostgresConfigStore` real y
+   `MemoryConfigStore` para tests, inyectable por `app.state.config_store`.
+6. **Recarga en caliente**: al guardar una sección, el router llama
+   `WhatsAppRuntime.recargar_config()`, que ajusta la ventana de debounce y
+   invalida la caché de identidad. Sin reiniciar el servidor.
+7. **Alias de política de viajes**: `PARCIAL | COMPLETO | UNIFORME` se
+   normalizan a `ultimo_parcial | ultimo_completo | distribucion_uniforme`.
+8. **Gate #4 con respuesta dinámica**: `RepositorioWhatsApp.recetas_publicas()`
+   lee las recetas confirmadas con precio; `componer_respuesta_lead()` arma el
+   texto con `empresa.bot_publico` + precios y el notificador lo envía al lead.
+   El LLM solo decide SÍ/NO; no calcula precios ni inventa datos.
+9. **Ajuste del Centinela**: `check_recetas_provisionales` cruza contra
+   `concrete_recipes.confirmado`, para no dejar un `WARN` eterno por viajes
+   históricos creados antes de la semilla. El contrato de 12 checks y el
+   resumen de 5 llaves no cambió.
+10. **Candado Hito 1 adaptado y cerrado**: verifica 5 recetas confirmadas,
+    dosificación completa, precio/uso y kardex > 0. Termina en
+    `[CANDADO CERRADO]`.
+11. **Candado Hito 3 adaptado**: `receta_provisional=false` y una cuarta
+    simulación (lead desconocido) que prueba el Gate #4 contra PostgreSQL real.
+12. **Tests nuevos** en `tests/test_superadmin_config.py`: 23 casos de las 7
+    secciones, CRUD, endpoints abiertos, recarga en vivo y Gate #4 dinámico.
+    **157 tests pasan** (los 134 previos siguen intactos).
+13. **Documentación**: `README.md`, `AGENTS.md`, `docs/00_DECISIONES_PENDIENTES.md`,
+    `ESTADO.md`, skill del candado y nuevo handoff de Dirección.
+
+### Evidencia (reproducible)
+
+| Comando | Resultado | Archivo |
+|---|---|---|
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **157 passed** | `.agents/evidencias/pytest_cierre_hito1.txt` |
+| `docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py` | **17 `[OK]` / 0 `[FALLA]` → `[CANDADO CERRADO]`**, 235 movimientos de kardex | `.agents/evidencias/hito1_lock_cierre.txt` |
+| `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py` | **34 `[OK]` / 0 `[FALLA]` → CANDADO ABIERTO** (solo faltan credenciales/teléfonos) | `.agents/evidencias/hito3_lock_cierre_hito1.txt` |
+| `GET /api/v1/superadmin/config` | 7 secciones, 5 recetas, política `PARCIAL`, reloj `150/90/120` | `.agents/evidencias/superadmin_config.txt` |
+| `PUT .../whatsapp_evolution_y_cdn` + `GET /whatsapp/health` | debounce `14 → 9 → 14` sin reiniciar | `.agents/evidencias/superadmin_config.txt` |
+| `GET /api/v1/sentinel/daily-audit` | 12 checks; `recetas_provisionales=OK` | `.agents/evidencias/centinela_cierre_hito1.json` |
+
+### Decisiones (con alternativa descartada)
+
+1. **Semilla en migración nueva 050, no editar 010/020/040.** Se descartó
+   reescribir migraciones aplicadas: rompería la trazabilidad y el runner.
+2. **El precio base no incluye IVA; el IVA es una columna editable.** Se
+   descartó guardar el precio con impuesto: el PDR y la Dirección hablan de
+   precio/m³ sin IVA y el Frontend decide cuándo mostrarlo.
+3. **Sin login en Superadmin por ahora.** Se descartó montar JWT antes del
+   Frontend: frenaría las pruebas de API. Se deja aislado para el final y se
+   documenta el riesgo de no exponerlo a Internet.
+4. **La respuesta del bot se arma en código con datos de BD.** Se descartó
+   dejar que Gemini redacte precios: un LLM puede inventar cifras. El Juez solo
+   decide si el mensaje es una cotización.
+5. **Alias de política en el motor, no en el frontend.** Se descartó obligar al
+   panel a conocer `ultimo_parcial`; `normalizar_politica()` acepta ambos.
+6. **El Centinela mira la receta actual, no solo el payload histórico.** Se
+   descartó dejar el WARN: la receta ya está validada y el aviso eterno
+   degradaría la señal.
+7. **`PostgresConfigStore` y `MemoryConfigStore` comparten contrato.** Se
+   descartó mockear SQL en los tests: el store en memoria ejercita la misma
+   lógica de secciones y CRUD sin infraestructura.
+
+### Bloqueos
+
+- **Credenciales reales** de Evolution API, Bunny.net y Gemini.
+- **Teléfonos reales del personal** para `whatsapp.staff` (ya editables en
+  `directorio_roles_whatsapp`).
+- **Datos no entregados**: RUC, horario, cuentas bancarias, placas, choferes y
+  tope de crédito automático. Quedan `NULL`/vacíos a propósito.
+- **`git push` con 403** por credenciales de Windows de `ObjetivoCesar`. El
+  commit local sí se hace.
+
+### Próximo paso exacto
+
+1. Hacer `git add` + commit local de este cierre (migración, Superadmin, tests,
+   candados y documentación).
+2. El usuario corrige credenciales y ejecuta:
+   `git credential-manager logout https://github.com`
+   `git remote set-url origin https://CesarReyesJaramillo@github.com/CesarReyesJaramillo/horinor.git`
+   `git push -u origin main`
+3. Entregar a Dirección `.agents/traspaso/2026-11-08_handoff_cierre_hito1_superadmin.md`.
+4. Cuando la agencia entregue credenciales/teléfonos, cargarlos desde el
+   Superadmin, repetir `hito3_lock_test.py` con servicios reales y cerrar el
+   Hito 3 en `ESTADO.md`.
+

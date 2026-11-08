@@ -16,10 +16,11 @@ decorativa: son reglas operativas.
   `docs/PDR_v4.0.txt` (PDR v4.0). Si algo no está ahí, no se asume: se pregunta.
 - **Stack:** PostgreSQL 15 + Redis 7 + FastAPI + Evolution API + Bunny.net,
   todo en Docker. Objetivo final: VPS Linux.
-- **Estado:** Hitos 1 (Módulo 0), 2 (Módulos 2 + 5) y 3 (Módulo 1: WhatsApp)
-  construidos y verificados en local. Los candados siguen **abiertos** solo por
-  datos de negocio y credenciales (recetas, teléfonos del personal, Evolution,
-  Bunny, Gemini). Ver `.agents/ESTADO.md`.
+- **Estado:** Hito 1 **cerrado** con la semilla oficial (5 recetas confirmadas)
+  y el Centro de Configuración Superadmin de 7 secciones. Hitos 2 y 3
+  construidos y verificados en local. El candado del Hito 3 sigue **abierto**
+  solo por credenciales reales (Evolution, Bunny, Gemini) y teléfonos del
+  personal. Ver `.agents/ESTADO.md`.
 - **Datos que faltan:** `docs/00_DECISIONES_PENDIENTES.md`.
 
 ## 2. Arranque de sesión (obligatorio, en este orden)
@@ -100,11 +101,12 @@ docker compose stop
 |---|---|
 | `db/migrations/` | Esquema y seeds versionados (se aplican al arrancar) |
 | `services/core-api/app/m1_whatsapp/` | WhatsApp: webhook, debounce, identidad, Juez "Jeb", Bunny |
+| `services/core-api/app/superadmin/` | Configuración en caliente: 7 secciones + CRUD recetas/flota |
 | `services/core-api/app/m2_planta/` | Motor determinístico (dosificador, kardex) |
 | `services/core-api/app/m5_sentinel/` | Centinela (12 chequeos) |
 | `services/core-api/app/services/ordenes.py` | Alta de orden: M0 + M2 |
 | `services/core-api/app/routers/` | HTTP: health, catálogo, órdenes |
-| `services/core-api/tests/` | pytest (134 tests) |
+| `services/core-api/tests/` | pytest (157 tests) |
 | `scripts/hito1_lock_test.py` | Test de Candado del Hito 1 |
 | `scripts/hito3_lock_test.py` | Test de Candado del Hito 3 |
 | `docs/` | Decisiones pendientes y modelo de datos |
@@ -123,13 +125,13 @@ docker compose stop
 
 No lo asumas ni lo simules:
 
-- Recetas reales validadas.
-- Flota real (hoy solo hay `MIXER-01` de 8 m³ como ejemplo).
-- Precios por m³.
-- Stock inicial.
-- Teléfonos reales del personal (`whatsapp.staff` vacío); la regla de
-  identidad ya está implementada, faltan los datos.
+- Autenticación/login de usuarios en Superadmin y Secretaría (desacoplada para
+  el final; no exponer esas rutas a Internet mientras sigan abiertas).
 - Credenciales reales de Evolution API, Bunny.net ni Gemini.
+- Teléfonos reales del personal (`whatsapp.staff` vacío); la regla de identidad
+  ya está implementada, faltan los datos.
+- RUC, horario, cuentas bancarias, placas y choferes reales (quedan `NULL` y el
+  bot omite esas líneas).
 - Despliegue en VPS, proxy inverso, TLS ni backups.
 - Facturación electrónica SRI (**fuera de alcance**, ratificado 2026-11-08).
 - Panel web (Módulo 3) y dashboard (Módulo 4).

@@ -168,20 +168,52 @@ async def main(provisional: bool) -> int:
             TAG,
         )
         print(f"  Movimientos de kardex generados: {kardex}")
+        fallos += not _check(kardex > 0, "El kardex teorico se genero con recetas confirmadas")
 
-        _linea("ESTADO DE LAS RECETAS (dato que el PDR NO trae)")
+        _linea("ESTADO DE LAS RECETAS (semilla oficial)")
         recetas = await pool.fetch(
-            "SELECT resistencia, cemento_sacos_m3, retardante_litros_m3, confirmado, fuente"
+            "SELECT resistencia, cemento_sacos_m3, arena_m3_m3, ripio_m3_m3,"
+            "       agua_litros_m3, retardante_litros_m3, confirmado,"
+            "       precio_m3, iva_pct, uso_comercial, fuente"
             "  FROM concrete_recipes ORDER BY resistencia"
         )
         for r in recetas:
             estado = "CONFIRMADA" if r["confirmado"] else "PROVISIONAL"
             print(
                 f"  {r['resistencia']}: cemento={r['cemento_sacos_m3']} sacos/m3, "
-                f"retardante={r['retardante_litros_m3']} L/m3 -> {estado}"
+                f"retardante={r['retardante_litros_m3']} L/m3, "
+                f"precio=${r['precio_m3']}/m3 (IVA {r['iva_pct']}%) -> {estado}"
             )
             if not r["confirmado"]:
                 print(f"      {PEND} {r['fuente']}")
+
+        fallos += not _check(
+            len(recetas) == 5, "Existen las 5 recetas oficiales (FC-180 a FC-350)"
+        )
+        fallos += not _check(
+            all(r["confirmado"] for r in recetas),
+            "Las 5 recetas estan confirmadas (candado de datos de negocio cerrado)",
+        )
+        fallos += not _check(
+            all(
+                r["precio_m3"] is not None
+                and Decimal(str(r["precio_m3"])) > 0
+                and r["uso_comercial"]
+                for r in recetas
+            ),
+            "Las 5 recetas tienen precio por m3 y uso comercial para el bot",
+        )
+        fallos += not _check(
+            all(
+                r["cemento_sacos_m3"] is not None
+                and r["arena_m3_m3"] is not None
+                and r["ripio_m3_m3"] is not None
+                and r["agua_litros_m3"] is not None
+                and r["retardante_litros_m3"] is not None
+                for r in recetas
+            ),
+            "Las 5 recetas tienen dosificacion completa (sin campos NULL)",
+        )
 
         consumo_210 = orden_210.consumo_orden
         if consumo_210:
@@ -196,8 +228,8 @@ async def main(provisional: bool) -> int:
 
         _linea("RESULTADO")
         if fallos == 0:
-            print("  [CANDADO ABIERTO] La estructura del Modulo 0 responde sin error.")
-            print("  Para CERRAR el Hito 1 falta que Julio valide las recetas reales.")
+            print("  [CANDADO CERRADO] El Modulo 0 opera con la semilla oficial:")
+            print("  5 recetas confirmadas, precios por m3 y kardex generado.")
             return 0
         print(f"  [CANDADO BLOQUEADO] {fallos} verificacion(es) fallaron.")
         return 1

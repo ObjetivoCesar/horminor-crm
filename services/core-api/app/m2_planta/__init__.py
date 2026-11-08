@@ -2,6 +2,8 @@
 
 from .dosificador import (
     ESTADOS_TERMICOS,
+    POLITICAS_ALIAS,
+    POLITICAS_VIAJE,
     Consumo,
     ErrorPlanta,
     PlanViajes,
@@ -15,11 +17,14 @@ from .dosificador import (
     estado_termico,
     evaluar_ventana_termica,
     limite_termico,
+    normalizar_politica,
     seleccionar_mixer,
 )
 
 __all__ = [
     "ESTADOS_TERMICOS",
+    "POLITICAS_ALIAS",
+    "POLITICAS_VIAJE",
     "Consumo",
     "ErrorPlanta",
     "PlanViajes",
@@ -33,5 +38,6 @@ __all__ = [
     "estado_termico",
     "evaluar_ventana_termica",
     "limite_termico",
+    "normalizar_politica",
     "seleccionar_mixer",
 ]

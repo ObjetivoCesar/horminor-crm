@@ -4,10 +4,12 @@ Implementación del **Módulo 0 (PostgreSQL + JSONB)**, **Módulo 1 (WhatsApp:
 debounce + Juez Binario + Bunny.net)**, **Módulo 2 (motor determinístico de
 planta)** y **Módulo 5 (Nodo Centinela)** del PDR v4.0.
 
-Estado actual: **Hitos 1, 2 y 3 construidos y verificados en local** (134 tests,
-candados 8/8 y 26/26). Los candados siguen abiertos solo por datos que dependen
-de Julio y de la agencia: recetas reales, teléfonos del personal y credenciales
-de Evolution/Bunny/Gemini. Ver `docs/00_DECISIONES_PENDIENTES.md`.
+Estado actual: **Hitos 1, 2 y 3 construidos y verificados en local** (157 tests,
+candado del Hito 1 **CERRADO** y candado del Hito 3 con 34/34). El Hito 1 quedó
+cerrado con la semilla oficial de Dirección (5 recetas confirmadas) y el **Centro
+de Configuración Superadmin** de 7 secciones, editable en caliente. El Hito 3
+sigue abierto solo por credenciales reales de Evolution/Bunny/Gemini y los
+teléfonos del personal. Ver `docs/00_DECISIONES_PENDIENTES.md`.
 
 ## Estructura
 
@@ -19,10 +21,12 @@ orminorth/
 │  ├─ 010_seed_settings.sql    parámetros maestros (system_settings)
 │  ├─ 020_seed_recipes.sql     recetas + materiales (con datos PENDIENTES marcados)
 │  ├─ 030_umbral_termico.sql   parámetro de aviso térmico (legado)
-│  └─ 040_ratificacion_hito3.sql  dos umbrales térmicos + códigos de operador
+│  ├─ 040_ratificacion_hito3.sql  dos umbrales térmicos + códigos de operador
+│  └─ 050_seed_oficial_superadmin.sql  semilla oficial + Centro de Configuración
 ├─ services/core-api/
 │  ├─ app/m1_whatsapp/         webhook, debounce, identidad, Juez "Jeb", Bunny
 │  ├─ app/m2_planta/           motor determinístico (dosificador, kardex)
+│  ├─ app/superadmin/          configuración en caliente (7 secciones, sin login)
 │  ├─ app/m5_sentinel/         salud de infraestructura, canales y operación
 │  ├─ app/services/            alta de órdenes (M0 + M2)
 │  ├─ app/routers/             health, catálogo, órdenes

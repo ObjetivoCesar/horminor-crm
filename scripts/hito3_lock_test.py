@@ -8,7 +8,8 @@ compuertas, y verifica que:
 2. El trigger ``trg_dispatch_project`` proyecte el estado a las columnas planas.
 3. El limite termico sea exactamente el reloj de fraguado configurado.
 4. Un reclamo del cliente quede como incidencia y en ``error_logs``.
-5. La receta PROVISIONAL no haya bloqueado la venta y quede marcada.
+5. La receta oficial (confirmada) haya generado el consumo y quede marcada
+   como ``receta_provisional=false`` en el contrato.
 
 No usa Evolution, Gemini ni Bunny reales: usa el Juez deterministico, un
 notificador en memoria y un Bunny en memoria. La base de datos si es la real.
@@ -36,7 +37,11 @@ from app.m1_whatsapp.bunny import MemoryBunnyStorageClient
 from app.m1_whatsapp.debounce import DebounceAccumulator, MemoryBufferStore
 from app.m1_whatsapp.identity import IdentityResolver
 from app.m1_whatsapp.judges import DeterministicRuleMockJudge
-from app.m1_whatsapp.models import IncomingMessage, MediaAttachment
+from app.m1_whatsapp.models import (
+    IncomingMessage,
+    MediaAttachment,
+    normalizar_telefono,
+)
 from app.m1_whatsapp.notifications import RecordingNotifier, SentinelAlerter
 from app.m1_whatsapp.pipeline import WhatsAppPipeline
 from app.m1_whatsapp.repositorio import PostgresRepositorio
@@ -50,6 +55,7 @@ CLIENTE = "Cliente Prueba Hito 3 (WhatsApp)"
 TEL_BODEGA = "0990000001"
 TEL_CHOFER = "0990000002"
 TEL_CLIENTE = "0990000003"
+TEL_LEAD = "0990000004"
 
 OK = "[OK]"
 FALLA = "[FALLA]"
@@ -162,7 +168,7 @@ async def main() -> int:
         )
         print(
             f"  Orden #{orden.orden_numero}: 16 m3 FC-210 -> "
-            f"{orden.total_viajes} viajes (receta provisional permitida)"
+            f"{orden.total_viajes} viajes (receta oficial confirmada)"
         )
 
         repo = PostgresRepositorio(pool)
@@ -187,8 +193,8 @@ async def main() -> int:
         estado = await _dispatches(pool, orden.orden_id)
         fallos += not _check(len(estado) == 2, "La orden genero 2 viajes de 8 m3")
         fallos += not _check(
-            all(d["payload"].get("receta_provisional") is True for d in estado),
-            "Ambos viajes declaran receta_provisional=true en el contrato JSON",
+            all(d["payload"].get("receta_provisional") is False for d in estado),
+            "Ambos viajes declaran receta_provisional=false (receta confirmada)",
         )
         viaje_1 = estado[0]["dispatch_id"]
         viaje_2 = estado[1]["dispatch_id"]
@@ -252,8 +258,8 @@ async def main() -> int:
             "Juez Binario marco despacho_validado=true",
         )
         fallos += not _check(
-            payload_1["receta_provisional"] is True,
-            "La venta siguio con receta PROVISIONAL marcada en el JSON",
+            payload_1["receta_provisional"] is False,
+            "La venta corrio con receta confirmada (receta_provisional=false)",
         )
         fallos += not _check(
             len(notifier.enviados) == 1
@@ -435,9 +441,57 @@ async def main() -> int:
         )
 
         # -----------------------------------------------------------------
+        # Celular 4: LEAD desconocido -> Gate #4 (bot de atencion publico).
+        # -----------------------------------------------------------------
+        _linea("5. LEAD -> Gate #4 (respuesta con ADN y precios en vivo)")
+        await acumulador.agregar(
+            _msg(
+                TEL_LEAD,
+                "Buenas tardes, necesito cotizacion de hormigon para 20 m3",
+                mensaje_id="H3-LEAD-1",
+            ),
+            ahora=datetime.now(timezone.utc) - timedelta(seconds=1),
+        )
+        resultados = await worker.tick()
+        lead = resultados[0] if resultados else None
+        fallos += not _check(
+            lead is not None and lead.rol == "LEAD_DESCONOCIDO",
+            "Numero desconocido entra como LEAD_DESCONOCIDO",
+        )
+        fallos += not _check(
+            lead is not None and lead.compuerta == "GATE_4_LEAD",
+            "Gate #4 califico el mensaje como solicitud de cotizacion",
+        )
+        respuesta = (lead.respuesta if lead else "") or ""
+        fallos += not _check(
+            "Orminorth Hormigones" in respuesta and "FC-210" in respuesta,
+            "La respuesta usa empresa.bot_publico y las recetas de la base",
+        )
+        fallos += not _check(
+            "$118.00" in respuesta and "Orellana" in respuesta,
+            "La respuesta incluye precio FC-210 y cobertura de Orellana",
+        )
+        fallos += not _check(
+            any(
+                normalizar_telefono(envio["telefono"]) == normalizar_telefono(TEL_LEAD)
+                and "Orminorth" in envio["texto"]
+                for envio in notifier.enviados
+            ),
+            "El bot respondio al telefono del lead por WhatsApp",
+        )
+        prospecto = await pool.fetchrow(
+            "SELECT estado FROM clients WHERE telefono_whatsapp = $1",
+            normalizar_telefono(TEL_LEAD),
+        )
+        fallos += not _check(
+            prospecto is not None and prospecto["estado"] == "PROSPECTO",
+            "El lead quedo registrado como PROSPECTO para Secretaria",
+        )
+
+        # -----------------------------------------------------------------
         # Verificacion final del trigger en los dos viajes.
         # -----------------------------------------------------------------
-        _linea("5. CONTRATO JSONB vs COLUMNAS PLANAS")
+        _linea("6. CONTRATO JSONB vs COLUMNAS PLANAS")
         filas = await pool.fetch(
             """
             SELECT id::text AS dispatch_id,

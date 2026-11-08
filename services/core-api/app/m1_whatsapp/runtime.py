@@ -76,6 +76,28 @@ class WhatsAppRuntime:
             except Exception:  # nunca tumbar el apagado
                 log.warning("no se pudo cerrar el cliente Redis del Modulo 1")
 
+    async def recargar_config(self) -> dict[str, Any]:
+        """Aplica en caliente lo que el Superadmin acaba de guardar.
+
+        No reinicia el worker ni toca Redis: solo cambia la ventana que el
+        acumulador usa en el proximo ``tick`` y tira la cache de identidad para
+        que el siguiente mensaje vea el directorio nuevo.
+        """
+        valor = await self.repo.parametro("operacion.debounce_segundos", None)
+        if valor is not None:
+            try:
+                ventana = max(float(valor), 0.0)
+            except (TypeError, ValueError):
+                ventana = self.ventana_segundos
+            self.accumulator.ventana_segundos = ventana
+            self.ventana_segundos = ventana
+
+        identidad = getattr(self.pipeline, "identidad", None)
+        invalidar = getattr(identidad, "invalidar_cache", None)
+        if callable(invalidar):
+            invalidar()
+        return self.estado()
+
 
 async def _ventana(pool: asyncpg.Pool, settings: Settings) -> float:
     valor = settings.debounce_seconds
