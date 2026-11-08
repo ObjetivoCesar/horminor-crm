@@ -205,3 +205,10 @@ Módulo 1 funciona en local con el juez determinístico.
 8. **Latencia del Centinela.** En caliente responde 20–25 ms (el PDR exige
    <200 ms). La primera llamada tras arrancar tarda ~250–400 ms porque abre
    conexiones; se puede eliminar con un precalentamiento en el `lifespan`.
+9. **Repositorio solo local hasta el VPS (ratificado 2026-11-08).** El destino
+   real es el VPS Linux; GitHub no es requisito para avanzar y el `push` dejó
+   de considerarse bloqueo. Se conservan los commits locales como historial y
+   red de seguridad. Se descartó insistir con la cuenta `ObjetivoCesar` porque
+   no aporta al producto. **Contrapartida asumida:** sin copia fuera de la
+   máquina, hay que respaldar el repo periódicamente (otra unidad o nube) hasta
+   que exista el VPS.

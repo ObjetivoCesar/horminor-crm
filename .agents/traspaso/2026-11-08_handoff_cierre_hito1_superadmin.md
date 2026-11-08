@@ -82,13 +82,15 @@ CRUD /api/v1/superadmin/flota
 3. **Datos que Julio no entregó:** RUC, horario, cuentas bancarias, placas,
    choferes y tope de crédito automático. Quedan `NULL`/vacíos a propósito.
 4. **Frontend** del Centro de Configuración (consumir los endpoints ya listos).
-5. **`git push`**: las credenciales de Windows son de `ObjetivoCesar`, sin
-   permiso sobre `CesarReyesJaramillo/horinor`. El commit local sí está hecho.
+5. **Despliegue en VPS:** el código se queda en local hasta entonces; el
+   repositorio remoto (GitHub) no es requisito para avanzar. Solo hace falta
+   respaldar el repo en otra unidad mientras tanto.
 
 ## 6. Próximo paso exacto
 
-1. Corregir credenciales de git y hacer `git push`.
-2. Entregar credenciales de Evolution/Bunny/Gemini y los teléfonos del personal.
-3. Cargarlos desde el Superadmin y repetir `hito3_lock_test.py` con servicios
+1. Entregar credenciales de Evolution/Bunny/Gemini y los teléfonos del personal.
+2. Cargarlos desde el Superadmin y repetir `hito3_lock_test.py` con servicios
    reales para cerrar el Hito 3.
-4. Arrancar el Frontend del panel con los endpoints de la sección 3.
+3. Arrancar el Frontend del panel con los endpoints de la sección 3.
+4. Cuando exista el VPS: copiar/publicar el repo, levantar el stack y rotar
+   `.env`. Ahí entra Git remoto.

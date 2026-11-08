@@ -422,3 +422,53 @@ git push -u origin main
 Luego entregar a Dirección
 `.agents/traspaso/2026-11-08_handoff_cierre_hito1_superadmin.md`.
 
+---
+
+## 2026-11-08 (Decisión) — Repositorio solo local hasta el VPS
+
+**Agente:** DeepSeek V4.1 Flash Free (OpenCode)
+
+### Objetivo
+
+Cerrar la discusión sobre Git: Dirección decidió que el sistema vivirá en un VPS
+y que **no hace falta publicar en GitHub para avanzar**.
+
+### Decisión
+
+1. **El repositorio se queda local.** Los commits en `orminorth/` son la fuente
+   de verdad, el historial y la red de seguridad. Se siguen haciendo al cerrar
+   cada sesión.
+2. **`git push` deja de ser un bloqueo.** No aparece más como pendiente en
+   `ESTADO.md` ni en el handoff; cuando exista el VPS se copia/publica el repo
+   y ahí entra Git remoto.
+3. **Se mantiene el `.git`.** Borrarlo no simplifica nada y quitaría la
+   posibilidad de revertir cambios o auditar qué se entregó.
+4. **Contrapartida asumida:** al no haber copia remota, todo el proyecto vive en
+   un solo disco. Se recomienda respaldar el repo a otra unidad o carpeta en la
+   nube hasta que exista el VPS. Queda como riesgo abierto, no como bloqueo.
+
+**Alternativa descartada:** insistir con las credenciales de `ObjetivoCesar` o
+abrir otra cuenta. No aporta al producto y consume tiempo de sesión.
+
+### Evidencia
+
+- `.agents/ESTADO.md`: bloqueo #4 eliminado; nueva nota de repositorio local y
+  riesgo de disco único.
+- `.agents/traspaso/2026-11-08_handoff_cierre_hito1_superadmin.md`: secciones 5
+  y 6 reescritas sin `git push`.
+- `docs/00_DECISIONES_PENDIENTES.md`: decisión D9 con el porqué y la alternativa
+  descartada.
+
+### Bloqueos
+
+- Ninguno por Git. Los bloqueos reales siguen siendo datos y accesos:
+  credenciales de Evolution/Bunny/Gemini, teléfonos del personal y datos
+  administrativos de Julio.
+
+### Próximo paso exacto
+
+1. Commit local de esta decisión.
+2. Pedir a la agencia el paquete de credenciales y teléfonos (ver §5 del handoff)
+   para cerrar el Hito 3.
+3. Respaldar el repo en otra unidad mientras el VPS no exista.
+

@@ -43,13 +43,16 @@ Se pueden regenerar con los scripts.
 3. **Datos que Julio todavía no entregó:** RUC, horario, cuentas bancarias,
    placas, choferes y tope de crédito automático. Quedan `NULL`/vacíos y el bot
    omite esas líneas; no se inventaron.
-4. **`git push` bloqueado con 403** por credenciales de otra cuenta
-   (`ObjetivoCesar`). El commit local sí se hace.
+
+> **Repositorio: solo local (ratificado 2026-11-08).** El código vivirá en el
+> VPS; GitHub no es requisito para avanzar. Los commits locales en `orminorth/`
+> son la fuente de verdad y el respaldo. `git push` deja de ser un bloqueo y
+> pasa a ser una tarea opcional del despliegue (clonar el repo en el VPS).
 
 ## Próximo paso exacto
 
-> **Commit local del cierre: `16e0456`.** Árbol de trabajo limpio. El `push`
-> sigue bloqueado con 403 (credenciales de `ObjetivoCesar`).
+> **Commit local del cierre: `16e0456` + `25c424c`.** Árbol de trabajo limpio.
+> Sin pendientes de Git.
 
 1. **Ruta A (Hito 3):** la agencia entrega credenciales de Evolution/Bunny/Gemini
    y los teléfonos del personal → cargarlos en el Superadmin o `.env` →
@@ -57,9 +60,8 @@ Se pueden regenerar con los scripts.
 2. **Ruta B (Frontend):** consumir
    `GET /api/v1/superadmin/config` para construir el panel de las 7 secciones.
    La autenticación se agrega al final, como acordado.
-3. **En paralelo:** el usuario corrige las credenciales de git y hace
-   `git push -u origin main` (ver bitácora 2026-11-08: hoy falla con 403 por
-   cuenta equivocada).
+3. **Ruta C (despliegue):** cuando exista el VPS, copiar el repo (o publicarlo
+   entonces) y levantar el stack. Ahí sí entra Git remoto.
 
 ## Decisiones de arquitectura vigentes
 
@@ -85,7 +87,10 @@ Se pueden regenerar con los scripts.
 - Sin backups de PostgreSQL definidos (se van a generar carpetas bancarias).
 - Sin proxy inverso ni TLS: no se puede exponer el webhook de Evolution.
 - `.env` con clave de desarrollo: **no usar en producción** (rotar antes del VPS).
-- El push a GitHub está bloqueado por credenciales de otra cuenta (`ObjetivoCesar`).
+- **Todo el proyecto vive en un solo disco.** Al no usar repositorio remoto, no
+  hay copia fuera de la máquina: hacer respaldo periódico del repo (otra unidad,
+  disco externo o carpeta en la nube). Esta es la única deuda real de "solo
+  local".
 - Las rutas Superadmin están abiertas: **no exponerlas a Internet** hasta que
   exista autenticación.
 - La primera llamada al Centinela puede tardar más por apertura del pool; en
