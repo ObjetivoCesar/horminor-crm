@@ -12,12 +12,15 @@ from .db import create_pool, run_migrations
 from .m1_whatsapp.router import router as whatsapp_router
 from .m1_whatsapp.runtime import WhatsAppRuntime, construir_runtime
 from .m2_planta import ErrorPlanta
+from .m3_secretaria.router import router as secretaria_router
+from .m4_dashboard.router import router as dashboard_router
 from .m5_sentinel.router import router as sentinel_router
 from .routers import catalog, health, orders
 from .services.ordenes import OrdenInvalidaError
 from .settings import get_settings
 from .superadmin.router import router as superadmin_router
 from .superadmin.store import PostgresConfigStore
+from .web.panel import router as panel_router
 
 log = logging.getLogger("orminorth")
 
@@ -63,9 +66,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Orminorth Core API",
-    version="0.2.0",
+    version="0.3.0",
     description=(
-        "Modulos 0 (datos), 1 (WhatsApp), 2 (planta) y 5 (centinela) de Orminorth."
+        "Modulos 0 (datos), 1 (WhatsApp), 2 (planta), 3 (Secretaria), "
+        "4 (Dashboard) y 5 (Centinela) de Orminorth."
     ),
     lifespan=lifespan,
 )
@@ -86,4 +90,7 @@ app.include_router(catalog.router)
 app.include_router(orders.router)
 app.include_router(whatsapp_router)
 app.include_router(superadmin_router)
+app.include_router(secretaria_router)
+app.include_router(dashboard_router)
 app.include_router(sentinel_router)
+app.include_router(panel_router)

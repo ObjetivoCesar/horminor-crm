@@ -17,10 +17,12 @@ decorativa: son reglas operativas.
 - **Stack:** PostgreSQL 15 + Redis 7 + FastAPI + Evolution API + Bunny.net,
   todo en Docker. Objetivo final: VPS Linux.
 - **Estado:** Hito 1 **cerrado** con la semilla oficial (5 recetas confirmadas)
-  y el Centro de Configuración Superadmin de 7 secciones. Hitos 2 y 3
-  construidos y verificados en local. El candado del Hito 3 sigue **abierto**
-  solo por credenciales reales (Evolution, Bunny, Gemini) y teléfonos del
-  personal. Ver `.agents/ESTADO.md`.
+  y el Centro de Configuración Superadmin de 7 secciones. Hito 3 **cerrado en
+  modo SANDBOX** (WhatsApp encolado, Bunny simulado, Juez determinístico).
+  Módulos 3 (Secretaría + Caja) y 4 (Dashboard de Julio y Ases) construidos y
+  verificados en local. La producción real solo espera credenciales y
+  teléfonos, que se cargan desde el Superadmin sin reiniciar. Ver
+  `.agents/ESTADO.md`.
 - **Datos que faltan:** `docs/00_DECISIONES_PENDIENTES.md`.
 
 ## 2. Arranque de sesión (obligatorio, en este orden)
@@ -103,10 +105,14 @@ docker compose stop
 | `services/core-api/app/m1_whatsapp/` | WhatsApp: webhook, debounce, identidad, Juez "Jeb", Bunny |
 | `services/core-api/app/superadmin/` | Configuración en caliente: 7 secciones + CRUD recetas/flota |
 | `services/core-api/app/m2_planta/` | Motor determinístico (dosificador, kardex) |
+| `services/core-api/app/m3_secretaria/` | Ventanilla, carpeta forense y cierre de caja |
+| `services/core-api/app/m4_dashboard/` | KPIs, cuota de mercado, simulador y dossier |
 | `services/core-api/app/m5_sentinel/` | Centinela (12 chequeos) |
+| `services/core-api/app/sandbox.py` | Adaptadores SANDBOX (WhatsApp, Bunny, Juez) |
+| `services/core-api/app/web/` | Panel HTML en `/panel` (3 vistas, sin build) |
 | `services/core-api/app/services/ordenes.py` | Alta de orden: M0 + M2 |
 | `services/core-api/app/routers/` | HTTP: health, catálogo, órdenes |
-| `services/core-api/tests/` | pytest (157 tests) |
+| `services/core-api/tests/` | pytest (180 tests) |
 | `scripts/hito1_lock_test.py` | Test de Candado del Hito 1 |
 | `scripts/hito3_lock_test.py` | Test de Candado del Hito 3 |
 | `docs/` | Decisiones pendientes y modelo de datos |
@@ -127,11 +133,15 @@ No lo asumas ni lo simules:
 
 - Autenticación/login de usuarios en Superadmin y Secretaría (desacoplada para
   el final; no exponer esas rutas a Internet mientras sigan abiertas).
-- Credenciales reales de Evolution API, Bunny.net ni Gemini.
-- Teléfonos reales del personal (`whatsapp.staff` vacío); la regla de identidad
-  ya está implementada, faltan los datos.
-- RUC, horario, cuentas bancarias, placas y choferes reales (quedan `NULL` y el
-  bot omite esas líneas).
+- Credenciales reales de Evolution API, Bunny.net ni Gemini: en SANDBOX los
+  adaptadores de `app/sandbox.py` cubren el flujo; al cargarlas se apaga el
+  switch y pasan los clientes reales.
+- Teléfonos reales del personal: `whatsapp.staff` tiene semillas de
+  demostración; la regla de identidad ya está implementada y se edita en
+  caliente desde el Superadmin.
+- RUC, horario, cuentas bancarias, placas y choferes reales (las semillas están
+  marcadas como provisionales y son editables).
+- Precio de mercado por provincia y umbral de merma: el PDR no fija las cifras;
+  quedan `NULL`/`NO_CONFIGURADO` hasta que Julio los entregue.
 - Despliegue en VPS, proxy inverso, TLS ni backups.
 - Facturación electrónica SRI (**fuera de alcance**, ratificado 2026-11-08).
-- Panel web (Módulo 3) y dashboard (Módulo 4).

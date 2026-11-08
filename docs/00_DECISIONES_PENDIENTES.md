@@ -1,9 +1,11 @@
 # Decisiones pendientes y datos que el PDR no trae
 
 Última actualización: 2026-11-08
-Estado: **Hitos 1, 2 y 3 construidos y verificados localmente. Hito 1 CERRADO
-con semilla oficial; el Hito 3 sigue abierto solo por credenciales y teléfonos
-reales. El Centro de Configuración Superadmin opera sin login en esta etapa.**
+Estado: **Hitos 1 y 3 cerrados; el Hito 3 en modo SANDBOX. Módulos 3
+(Secretaría + Caja) y 4 (Dashboard de Julio y Ases) construidos y verificados
+localmente. El Centro de Configuración Superadmin opera sin login en esta
+etapa.** Las credenciales reales y los teléfonos ya no bloquean: se cargan en
+caliente y se apaga el switch SANDBOX.
 
 Este documento existe porque el PDR v4.0 define la arquitectura pero **no**
 define varios datos de negocio. Nada de lo que falta se rellenó con supuestos:
@@ -40,12 +42,14 @@ Las cinco quedan `confirmado = true`, con `iva_pct = 15.00` editable y
 dosificación completa, y **235 movimientos de kardex** generados para el pedido
 del Ing. Reyes (320 m³ FC-210 + 52 m³ FC-350).
 
-### A2. Flota real de mixers — RESUELTO (placas y choferes pendientes)
+### A2. Flota real de mixers — RESUELTO (semilla de demostración)
 
 `flota.mixers` arranca con `MIXER-01` (8.0 m³), `MIXER-02` (8.0 m³) y
-`MIXER-03` (7.0 m³), todos activos. `placa` y `chofer_asignado` quedan `null`
-porque Julio no los entregó: son editables en
-`flota_y_operacion`. No se inventó ninguna placa.
+`MIXER-03` (7.0 m³), todos activos. La migración 060 carga además las placas
+`OAA-1024`, `OAA-1088` y `PBA-4512` con los choferes Pedro Andy, Carlos Grefa y
+Luis Zambrano, y una cuarta unidad. Son **datos de demostración entregados para
+la puesta en marcha**, editables en `flota_y_operacion`; reemplazarlos por la
+flota definitiva antes de operar.
 
 ### A3. Política de reparto del último viaje — RESUELTO
 
@@ -103,11 +107,15 @@ valor nuevo, sin reiniciar el servidor. El Gate #4 lee
 `debounce_seconds=9` → `GET /api/v1/whatsapp/health` devuelve
 `ventana_segundos=9.0`; al restaurar 14 vuelve a `14.0`.
 
-### B3. Datos que siguen `NULL` a propósito
+### B3. Semillas administrativas y datos aún abiertos
 
-`empresa.ruc`, `empresa.business_hours`, `empresa.bank_accounts`,
-`flota.placa`, `flota.chofer_asignado` y `finanzas.tope_credito_auto` no fueron
-entregados. El bot omite esas líneas en lugar de inventarlas.
+La migración 060 carga la razón social `ORMINORTH HORMIGONES Y PREFABRICADOS
+S.A.S.`, RUC `2290000000001`, dirección y horario, cuentas de Banco Pichincha y
+BanEcuador, placas/choferes y `finanzas.tope_credito_auto` (cupo por defecto
+$1.500, mora máxima 15 días). Son **datos de puesta en marcha**, editables en
+caliente. Siguen `NULL`/`NO_CONFIGURADO` el precio de mercado por provincia, el
+umbral de merma y el webhook real del CRM; el bot y el panel los omiten en
+lugar de inventarlos.
 
 ---
 
@@ -146,30 +154,33 @@ Si el chofer reporta llegada **sin adjunto**, el Juez devuelve
 reenviar. Si el adjunto existe pero Bunny falla o no está configurado, se
 registra `EVIDENCIA_BUNNY_FALLIDA` como incidencia; no se finge una URL.
 
-### B4. Credenciales e instancias existentes — ABIERTO
+### B4. Credenciales e instancias existentes — ABIERTO, ya no bloqueante
 
-- Evolution API: URL, nombre de instancia, API key (hoy vacíos).
-- Bunny.net: Storage Zone, host CDN, API key (hoy vacíos).
+- Evolution API: URL, nombre de instancia, API key (hoy `SANDBOX`).
+- Bunny.net: Storage Zone, host CDN, API key (hoy `SANDBOX`).
 - Gemini: API key (sin ella se usa el juez determinístico).
 - Teléfonos reales del personal y número de WhatsApp de prueba.
 
-Sin esto, el Centinela los reporta correctamente como `NO_CONFIGURADO` y el
-Módulo 1 funciona en local con el juez determinístico.
+En SANDBOX el WhatsApp se encola en `sandbox_outbox`, Bunny devuelve URLs
+deterministas bajo `/sandbox/` y el Juez es determinístico; el Centinela lo
+publica como `modo=SANDBOX` y `judge_mode=DETERMINISTIC_FALLBACK`. Al cargar
+las credenciales y apagar los switches, los mismos contratos pasan a
+producción sin tocar el pipeline.
 
 ---
 
-## C. Decisiones para Hitos 4 y 5
+## C. Decisiones de Hitos 4 y 5 — RESUELTAS (2026-11-08)
 
-| # | Tema | Qué falta decidir | Dónde impacta |
+| # | Tema | Decisión vigente | Implementación |
 |---|---|---|---|
-| C1 | Cierre de caja | ¿Es inmutable? ¿Quién puede reabrirlo? ¿Qué pasa con un abono que llega después de cerrar? | `cash_closures` (tabla creada, sin endpoints aún) |
-| C2 | Cuota de mercado | ¿Año calendario o 12 meses móviles? ¿Qué precio se usa para valorizar lo que factura la competencia? ¿A qué año corresponden los 120.000 / 95.000 m³? | `market_benchmarks.anio` está en NULL |
-| C3 | Simulador bancario | Confirmar amortización francesa, 11,2 % nominal anual capitalizable mensual, y **sobre qué período de flujo** se calcula el DSCR | Hito 5; los valores 3.283,35 / 77,3 m³ / 2,33x se usarán como test de regresión |
+| C1 | Cierre de caja | Un cierre por día con snapshot inmutable del resumen; se guarda `efectivo_contado` y `diferencia`. Reabrir un cierre requiere una decisión explícita que todavía no se implementa | `cash_closures` + `/api/v1/secretaria/cierre-caja` |
+| C2 | Cuota de mercado | Selector `12_MESES_MOVILES` / `ANIO_CALENDARIO`; benchmarks Orellana 120.000 m³ y Sucumbíos 95.000 m³ para 2025/2026; valorización a $118.00/m³ (FC-210); las ventas sin provincia se informan en `sin_provincia_m3` y no se reparten | `/api/v1/dashboard/mercado`, migración 060 |
+| C3 | Simulador bancario | Amortización francesa, 11,2 % nominal anual capitalizable mensual, 36 meses/$100.000 y 48 meses/$240.000, margen $42.50/m³, 180 y 450 m³ extra; DSCR activo e histórico | `m4_dashboard/calculos.py`, `/api/v1/dashboard/simulador` |
 | C4 | Facturación electrónica SRI | **Fuera de alcance del PDR v4.0 (ratificado 2026-11-08).** No se implementa en este proyecto | Ninguna tabla de facturación existe a propósito |
-| C5 | Panel web | Stack real de Aquatech a reutilizar; usuarios y roles; dominio/subdominio y TLS (la lista de contenedores del PDR no incluye proxy inverso) | Hito 4 |
-| C6 | Webhook del CRM | URL real (el PDR trae `crm-tu-empresa.com` como marcador) | Módulo 5 push |
-| C7 | Respaldos | Política de backup de PostgreSQL y retención de `error_logs` | Operación del VPS |
-| C8 | Aviso térmico | **Reemplazado (ratificado 2026-11-08) por dos bandas** sobre `max_fraguado_minutes = 150`: `ALERTA_TEMPRANA` a 60 min antes (minuto 90, WARN) y `POR_VENCER_CRITICO` a 30 min antes (minuto 120, CRÍTICO). Parámetros: `operacion.alerta_temprana_minutos_antes` y `operacion.por_vencer_critico_minutos_antes` | Centinela (`riesgo_termico`) y panel |
+| C5 | Panel web | HTML/CSS/JS propio servido por FastAPI en `/panel`, sin build ni CDN; selector Secretaría/Gerencial/Superadmin; usuarios/roles y TLS quedan para la etapa de autenticación | `services/core-api/app/web/` |
+| C6 | Webhook del CRM | **ABIERTA:** URL real (el PDR trae `crm-tu-empresa.com` como marcador) | Módulo 5 push |
+| C7 | Respaldos | **ABIERTA:** política de backup de PostgreSQL y retención de `error_logs` | Operación del VPS |
+| C8 | Aviso térmico | **Reemplazado (ratificado 2026-11-08) por dos bandas** sobre `max_fraguado_minutes = 150`: `ALERTA_TEMPRANA` a 60 min antes (minuto 90, WARN) y `POR_VENCER_CRITICO` a 30 min antes (minuto 120, CRÍTICO) | Centinela (`riesgo_termico`) y panel |
 
 ---
 
@@ -212,3 +223,29 @@ Módulo 1 funciona en local con el juez determinístico.
    no aporta al producto. **Contrapartida asumida:** sin copia fuera de la
    máquina, hay que respaldar el repo periódicamente (otra unidad o nube) hasta
    que exista el VPS.
+10. **Modo SANDBOX por adaptadores inyectables (2026-11-08).** `app/sandbox.py`
+    implementa `SandboxNotifier` (outbox en PostgreSQL/memoria),
+    `SandboxBunnyStorageClient` (URL determinista bajo `/sandbox/`) y el Juez
+    determinístico. El pipeline no tiene ramas de sandbox: se inyecta el
+    adaptador. Se descartó llenar el código de `if settings.sandbox`.
+11. **Outbox persistido, no logs.** `sandbox_outbox` guarda canal, destino,
+    tipo, contenido, metadatos y estado `ENCOLADO`; el panel y el candado leen
+    lo mismo. Se descartó un mock solo en memoria porque no era auditable.
+12. **Cupo de crédito: alerta, no bloqueo.** Si `saldo + orden > cupo`, la
+    orden se registra con `excede_cupo_credito=true` y se avisa al Centinela.
+    Se descartó bloquear la venta por un parámetro administrativo.
+13. **Precio de orden: explícito o de receta.** Si ninguno existe, `total`
+    queda `NULL` y la orden se registra; nunca se rellena con un precio
+    "razonable". Se descartó rechazar la orden.
+14. **`clients.provincia` para la cuota de mercado.** Las ventas sin provincia
+    se reportan aparte (`sin_provincia_m3`) y no se reparten por inferencia.
+    Se descartó adivinar la provincia por el nombre del cliente.
+15. **Panel HTML único, sin build ni CDN.** Sirve en local y en el VPS sin
+    toolchain de frontend; se puede migrar a React/Aquatech cuando se decida.
+    Se descartó montar Vite/React en esta etapa.
+16. **Centinela sin llamadas externas en SANDBOX.** Evolution y Bunny devuelven
+    `OK` con detalle de sandbox; antes el `HEAD` al CDN real daba 403 y
+    confundía la salud global. Se descartó dejar el WARN artificial.
+17. **Migración 061 separada.** La 060 ya estaba aplicada y no se edita una
+    migración aplicada; la limpieza de benchmarks heredados (`anio NULL`) va en
+    su propio archivo. Se descartó borrar filas a mano en producción.

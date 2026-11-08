@@ -472,3 +472,145 @@ abrir otra cuenta. No aporta al producto y consume tiempo de sesión.
    para cerrar el Hito 3.
 3. Respaldar el repo en otra unidad mientras el VPS no exista.
 
+---
+
+## 2026-11-08 — Cierre Hito 3 en SANDBOX + Módulos 3 y 4
+
+**Agente:** DeepSeek V4.1 Flash Free (OpenCode)
+**Objetivo:** Cerrar el Hito 3 sin credenciales externas (modo SANDBOX) y
+construir los Módulos 3 (Secretaría + Superadmin) y 4 (Dashboard de Julio y
+Ases), con tests, candados y commit local.
+
+### Hecho
+
+1. **Modo SANDBOX conmutable.** `app/sandbox.py` añade `SandboxNotifier`
+   (encola en `sandbox_outbox`, no finge un envío), `SandboxBunnyStorageClient`
+   (URL determinista bajo `/sandbox/`, sin red) y el fallback
+   `DeterministicRuleMockJudge`. `/health` y el Centinela publican
+   `modo=SANDBOX` y `judge_mode=DETERMINISTIC_FALLBACK`. Al cargar credenciales
+   reales y apagar el switch, los mismos contratos pasan a producción.
+2. **Migración 060** (`060_modulos_3_4_sandbox.sql`): `clients.credit_limit_usd`,
+   `clients.provincia`, `orders.excede_cupo_credito`, `sandbox_outbox`, semillas
+   administrativas/flota/staff, integraciones sandbox, Juez, cupo de crédito,
+   parámetros del simulador, benchmarks 2025/2026 y valorización FC-210.
+3. **Migración 061** (`061_benchmarks_limpieza.sql`): elimina los benchmarks
+   heredados con `anio NULL` de Orellana y Sucumbíos. `/dashboard/benchmarks`
+   devuelve exactamente 4 filas.
+4. **Módulo 3 (Secretaría + Caja).** `calcular_resumen_caja`,
+   `PostgresSecretariaStore` y `MemorySecretariaStore`; endpoints de clientes,
+   carpeta forense, opciones del formulario, alta de orden, cierre de caja y
+   cierres. El alta de orden marca `excede_cupo_credito` sin bloquear la venta.
+5. **Módulo 4 (Dashboard).** Amortización francesa, DSCR, cuota de mercado y
+   periodos `12_MESES_MOVILES` / `ANIO_CALENDARIO`; KPIs de caja/cartera,
+   operación/riesgo térmico y bodega/autonomía; dossier HTML imprimible
+   "Dossier Financiero de Pre-Calificación Bancaria — Orminorth".
+6. **Superadmin ampliado.** `GET /simulador/remitentes`,
+   `POST /simulador-whatsapp` y `GET /sandbox/outbox`; las 7 secciones se
+   editan en caliente.
+7. **Panel web** servido por FastAPI en `/panel` (también `/`): selector
+   Secretaría / Gerencial / Superadmin, carpeta forense, nueva orden, cierre de
+   caja, KPIs, cuota de mercado, simulador, configuración y simulador de
+   WhatsApp con outbox. HTML/CSS/JS propios, sin build ni CDN.
+8. **Correcciones de esta sesión:**
+   - `crear_orden` insertaba `datos.precio_m3` (NULL si no venía explícito).
+     Ahora usa el precio de la receta; si la receta tampoco tiene precio, queda
+     NULL (nunca se inventa). Los KPIs de fiado/cartera dejaron de salir en 0.
+   - El cierre de caja calculaba `diferencia` sin `efectivo_contado`; corregido
+     en ambos stores.
+   - `_d()` del dashboard acepta valor por defecto (causaba 500 en `/mercado`
+     y `/dossier`).
+   - `_json_dict()` tolera `metadatos` devuelto como texto por asyncpg.
+   - En SANDBOX, los checks Evolution/Bunny del Centinela devuelven `OK` sin
+     llamadas externas (antes Bunny hacía `HEAD` al CDN real y daba 403/WARN).
+   - `hito3_lock_test.py`: teléfonos de prueba movidos a `0990000011/12/13/14`
+     para no chocar con las semillas de `whatsapp.staff` (la identidad por
+     teléfono manda sobre el código) y comparación case-insensitive.
+   - `hito1_lock_test.py`: verifica que las órdenes sin precio explícito toman
+     el de la receta y quedan valoradas.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `docker compose run ... pytest /app/tests -q` | **180 passed**, exit 0 (`evidencias/hito3_4_pytest_2026-11-08.txt`) |
+| `python scripts/hito1_lock_test.py` | exit 0, `[CANDADO CERRADO]`; 320 m³ × $118 = $37.760 y 52 m³ × $158 = $8.216 (`evidencias/hito1_lock_2026-11-08.txt`) |
+| `python scripts/hito3_lock_test.py` | exit 0, `[CANDADO CERRADO EN SANDBOX]` (`evidencias/hito3_lock_2026-11-08.txt`) |
+| `db_migrate.py` | `+ 060_modulos_3_4_sandbox.sql`, `+ 061_benchmarks_limpieza.sql` |
+| `GET /health` | `{"status":"ok","db":"ok"}` |
+| `GET /api/v1/whatsapp/health` | `estado=OK modo=SANDBOX judge=DETERMINISTIC_FALLBACK store=redis notifier=sandbox` |
+| `GET /api/v1/dashboard/hero-kpis` | `fiado_hoy=47864.0`, `por_cobrar_total=47864.0`, `ordenes_fiado_excedidas=3` |
+| `GET /api/v1/dashboard/mercado?periodo=12_MESES_MOVILES&anio=2026` | Orellana 372/120.000 m³ = **0.31%**; Sucumbíos 16/95.000 m³ = **0.02%**; sin provincia 16 m³; precio $118.00 |
+| `GET /api/v1/dashboard/benchmarks` | 4 filas: Orellana 2025/2026 = 120.000 m³; Sucumbíos 2025/2026 = 95.000 m³ |
+| `GET /api/v1/dashboard/simulador` | Pluma $100k/36m cuota **$3.283,35**, DSCR **2,33x**; Combo $240k/48m cuota **$6.226,26**, DSCR **3,07x**; ambos VERDE |
+| `GET /panel` | HTTP 200; contiene las tres vistas y el simulador |
+| `POST /api/v1/superadmin/simulador-whatsapp` | `LEAD_DESCONOCIDO` → `GATE_4_LEAD`, `modo=SANDBOX`, respuesta `ENCOLADO` en outbox |
+| `GET /api/v1/sentinel/daily-audit` | `WARN` global (caja de ayer, merma sin umbral, 1 error 24 h); **Evolution y Bunny en OK SANDBOX** |
+
+Evidencia live completa: `.agents/evidencias/hito3_4_live_2026-11-08.txt`.
+
+### Decisiones tomadas
+
+1. **SANDBOX por adaptadores inyectables, no por `if` en el pipeline.** Motivo:
+   el mismo contrato pasa a producción al cargar credenciales; se descartó
+   hardcodear mocks dentro de los módulos.
+2. **Outbox persistido en PostgreSQL (`sandbox_outbox`) y en memoria.** Motivo:
+   el simulador y el candado deben verse igual en local y en tests; se descartó
+   loggear solo en consola.
+3. **Inmigración 061 separada.** Motivo: la 060 ya estaba aplicada y no se
+   edita una migración aplicada; se descartó borrar filas a mano.
+4. **`clients.provincia` para la cuota de mercado.** Motivo: la demanda es
+   provincial; las ventas sin provincia se informan en `sin_provincia_m3` y no
+   se reparten artificialmente. Se descartó inferir la provincia por nombre de
+   cliente.
+5. **Panel único HTML sin build ni CDN.** Motivo: funciona en el VPS y en local
+   sin toolchain de frontend; se descartó montar React/Vite en esta etapa.
+6. **Centinela sin llamadas externas en SANDBOX.** Motivo: un WARN por el CDN
+   real confundía el estado del sistema; se descartó dejar que el check de
+   Bunny siguiera haciendo `HEAD`.
+7. **Precio de orden = precio explícito o precio de receta.** Motivo: las
+   ventas deben quedar valoradas sin inventar precios; si no hay precio en
+   ninguno de los dos lados, el total queda NULL y pendiente. Se descartó
+   bloquear el alta o rellenar con un precio "razonable".
+8. **Repositorio solo local hasta el VPS.** Se mantiene la decisión del
+   2026-11-08: commits locales, sin `git push`, con respaldo externo pendiente.
+
+### Bloqueos / preguntas al cliente
+
+1. **Credenciales reales** de Evolution API, Bunny.net y Gemini. Ya **no
+   bloquean** demos ni cierre lógico: se cargan desde Superadmin y se apaga el
+   switch SANDBOX.
+2. **Teléfonos reales del personal** y datos administrativos (RUC, horario,
+   cuentas bancarias, placas, choferes). Editables en caliente; las semillas
+   actuales son de demostración.
+3. **Autenticación** de Superadmin/Secretaría: las rutas siguen abiertas; no
+   exponerlas a Internet hasta implementarla.
+4. **Respaldo externo:** todo el repositorio y la base viven en un solo disco.
+
+### Próximo paso exacto
+
+1. Cargar credenciales reales en `PUT /api/v1/superadmin/config/whatsapp_evolution_y_cdn`,
+   poner `evolution_sandbox=false` y `bunny_sandbox=false`.
+2. Repetir `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py`
+   contra los servicios reales y guardar la salida en `.agents/evidencias/`.
+3. Implementar login antes de publicar `/panel`, `/api/v1/secretaria/*` y
+   `/api/v1/superadmin/*` en el VPS.
+
+### Archivos tocados
+
+- `services/core-api/app/sandbox.py` (nuevo)
+- `services/core-api/app/m3_secretaria/` (nuevo)
+- `services/core-api/app/m4_dashboard/` (nuevo)
+- `services/core-api/app/web/` (nuevo)
+- `services/core-api/app/main.py`, `settings.py`, `services/ordenes.py`
+- `services/core-api/app/superadmin/{router,store}.py`
+- `services/core-api/app/m1_whatsapp/{identity,repositorio,runtime}.py`
+- `services/core-api/app/m5_sentinel/{audit,checks}.py`
+- `services/core-api/app/routers/catalog.py`
+- `db/migrations/060_modulos_3_4_sandbox.sql`, `061_benchmarks_limpieza.sql`
+- `services/core-api/tests/test_m3_secretaria.py`, `test_m4_dashboard.py`,
+  `test_sandbox.py`
+- `scripts/hito1_lock_test.py`, `scripts/hito3_lock_test.py`
+- `.agents/evidencias/hito3_4_pytest_2026-11-08.txt`,
+  `hito3_4_live_2026-11-08.txt`, `hito1_lock_2026-11-08.txt`,
+  `hito3_lock_2026-11-08.txt`
+

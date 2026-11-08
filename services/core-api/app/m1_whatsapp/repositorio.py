@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Callable, Protocol, Sequence
 
 import asyncpg
@@ -24,6 +25,16 @@ from ..obs import log_event
 from .models import ReferenciaViaje, normalizar_codigo_mixer, normalizar_telefono
 
 log = logging.getLogger(__name__)
+
+
+def _json_dict(valor: Any) -> dict[str, Any]:
+    """asyncpg devuelve ``jsonb`` como texto si no hay codec registrado."""
+    if isinstance(valor, str):
+        try:
+            valor = json.loads(valor)
+        except ValueError:
+            return {}
+    return dict(valor) if isinstance(valor, dict) else {}
 
 
 @dataclass(frozen=True)
@@ -79,6 +90,22 @@ class RepositorioWhatsApp(Protocol):
 
     async def recetas_publicas(self) -> list[dict[str, Any]]:
         """Recetas confirmadas y con precio: insumo del bot de atencion."""
+        ...
+
+    async def registrar_outbox(
+        self,
+        *,
+        canal: str,
+        destino: str,
+        tipo: str,
+        contenido: str,
+        metadatos: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Encola una salida del modo SANDBOX (WhatsApp / Bunny / CRM)."""
+        ...
+
+    async def listar_outbox(self, limite: int = 50) -> list[dict[str, Any]]:
+        """Ultimas salidas simuladas, para la UI del Superadmin."""
         ...
 
 
@@ -274,6 +301,63 @@ class PostgresRepositorio:
             for fila in filas
         ]
 
+    async def registrar_outbox(
+        self,
+        *,
+        canal: str,
+        destino: str,
+        tipo: str,
+        contenido: str,
+        metadatos: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        fila = await self._pool.fetchrow(
+            """
+            INSERT INTO sandbox_outbox
+                (canal, destino, tipo, contenido, metadatos)
+            VALUES ($1, $2, $3, $4, $5::jsonb)
+            RETURNING id, canal, destino, tipo, contenido, estado, created_at
+            """,
+            canal,
+            destino,
+            tipo,
+            contenido,
+            json.dumps(metadatos or {}, ensure_ascii=False, default=str),
+        )
+        return {
+            "id": int(fila["id"]),
+            "canal": fila["canal"],
+            "destino": fila["destino"],
+            "tipo": fila["tipo"],
+            "contenido": fila["contenido"],
+            "metadatos": dict(metadatos or {}),
+            "estado": fila["estado"],
+            "created_at": fila["created_at"].isoformat(),
+        }
+
+    async def listar_outbox(self, limite: int = 50) -> list[dict[str, Any]]:
+        filas = await self._pool.fetch(
+            """
+            SELECT id, canal, destino, tipo, contenido, metadatos, estado, created_at
+              FROM sandbox_outbox
+             ORDER BY created_at DESC, id DESC
+             LIMIT $1
+            """,
+            max(1, min(int(limite), 500)),
+        )
+        return [
+            {
+                "id": int(fila["id"]),
+                "canal": fila["canal"],
+                "destino": fila["destino"],
+                "tipo": fila["tipo"],
+                "contenido": fila["contenido"],
+                "metadatos": _json_dict(fila["metadatos"]),
+                "estado": fila["estado"],
+                "created_at": fila["created_at"].isoformat(),
+            }
+            for fila in filas
+        ]
+
 
 @dataclass
 class MemoriaRepositorio:
@@ -289,6 +373,7 @@ class MemoriaRepositorio:
     logs: list[dict[str, Any]] = field(default_factory=list)
     actualizaciones: list[str] = field(default_factory=list)
     recetas: list[dict[str, Any]] = field(default_factory=list)
+    outbox: list[dict[str, Any]] = field(default_factory=list)
 
     async def buscar_viaje(
         self,
@@ -380,3 +465,28 @@ class MemoriaRepositorio:
             for receta in self.recetas
             if receta.get("confirmado", True) and receta.get("precio_m3") is not None
         ]
+
+    async def registrar_outbox(
+        self,
+        *,
+        canal: str,
+        destino: str,
+        tipo: str,
+        contenido: str,
+        metadatos: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        item = {
+            "id": len(self.outbox) + 1,
+            "canal": canal,
+            "destino": destino,
+            "tipo": tipo,
+            "contenido": contenido,
+            "metadatos": dict(metadatos or {}),
+            "estado": "ENCOLADO",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self.outbox.insert(0, item)
+        return item
+
+    async def listar_outbox(self, limite: int = 50) -> list[dict[str, Any]]:
+        return [dict(item) for item in self.outbox[: max(1, int(limite))]]

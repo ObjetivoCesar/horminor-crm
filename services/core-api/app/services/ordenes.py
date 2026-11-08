@@ -26,6 +26,19 @@ from ..m2_planta.kardex import registrar_consumo_teorico
 
 FORMAS_PAGO = ("EFECTIVO", "TRANSFERENCIA", "ABONO", "FIADO")
 
+# Directriz 2026-11-08: el cupo de fiado NO bloquea la venta. Si se excede,
+# la orden se registra igual y queda marcada para el Centinela y Julio.
+_CUPO_POR_DEFECTO = Decimal("1500.00")
+
+
+def _decimal(valor: Any, por_defecto: Decimal | None = None) -> Decimal | None:
+    if valor is None or valor == "":
+        return por_defecto
+    try:
+        return Decimal(str(valor))
+    except (TypeError, ValueError):
+        return por_defecto
+
 
 class OrdenInvalidaError(ValueError):
     pass
@@ -56,6 +69,9 @@ class ResultadoOrden:
     viajes: list[dict[str, Any]] = field(default_factory=list)
     advertencias: list[str] = field(default_factory=list)
     consumo_orden: dict[str, Any] | None = None
+    excede_cupo_credito: bool = False
+    cupo_credito_usd: Decimal | None = None
+    saldo_cliente_usd: Decimal | None = None
 
 
 def _payload_base(
@@ -137,6 +153,12 @@ async def crear_orden(pool: asyncpg.Pool, datos: NuevaOrden) -> ResultadoOrden:
     capacidad = Decimal(str(mixer["capacidad_m3"]))
     plan = dividir_en_viajes(datos.volumen_m3, capacidad, politica)
 
+    # Config de cupo se lee antes de abrir la conexion (evita pedir dos
+    # conexiones al pool dentro de la misma transaccion).
+    cupo_cfg = await setting(pool, "finanzas.tope_credito_auto", {}) or {}
+    if not isinstance(cupo_cfg, dict):
+        cupo_cfg = {}
+
     advertencias: list[str] = []
     if plan.excedente_m3 > 0:
         advertencias.append(
@@ -163,12 +185,63 @@ async def crear_orden(pool: asyncpg.Pool, datos: NuevaOrden) -> ResultadoOrden:
                 raise OrdenInvalidaError(f"Resistencia no registrada: {datos.resistencia}")
             receta = Receta.from_row(dict(receta_row))
 
+            # Precio de la orden: si no viene explicito se usa el de la receta.
+            # Si la receta tampoco tiene precio, queda NULL (nunca se inventa):
+            # la orden se registra igual y el total queda pendiente de valorar.
+            precio_ref = _decimal(
+                datos.precio_m3, _decimal(receta_row["precio_m3"])
+            )
+
+            # Cupo de credito (Directriz 2026-11-08): se marca la orden, nunca
+            # se bloquea la venta. El aviso al Centinela va en advertencias.
+            excede_cupo = False
+            cupo_usd: Decimal | None = None
+            saldo_usd: Decimal | None = None
+            if datos.forma_pago == "FIADO":
+                if cupo_cfg.get("enabled", True):
+                    cliente_row = await conn.fetchrow(
+                        """
+                        SELECT c.credit_limit_usd,
+                               COALESCE(s.saldo_pendiente, 0) AS saldo_pendiente
+                          FROM clients c
+                          LEFT JOIN v_cliente_saldo s ON s.id = c.id
+                         WHERE c.id = $1
+                        """,
+                        datos.cliente_id,
+                    )
+                    if cliente_row is not None:
+                        cupo_usd = _decimal(
+                            cliente_row["credit_limit_usd"],
+                            _decimal(
+                                cupo_cfg.get("default_credit_limit_usd"),
+                                _CUPO_POR_DEFECTO,
+                            ),
+                        )
+                        saldo_usd = _decimal(cliente_row["saldo_pendiente"], Decimal("0"))
+                    total_orden = (
+                        Decimal("0")
+                        if precio_ref is None
+                        else (precio_ref * datos.volumen_m3).quantize(Decimal("0.01"))
+                    )
+                    if (
+                        cupo_usd is not None
+                        and saldo_usd is not None
+                        and saldo_usd + total_orden > cupo_usd
+                    ):
+                        excede_cupo = True
+                        advertencias.append(
+                            "ALERTA DE CREDITO: la orden supera el cupo de fiado "
+                            f"del cliente (saldo ${saldo_usd:,.2f} + orden "
+                            f"${total_orden:,.2f} > cupo ${cupo_usd:,.2f}). "
+                            "La venta se registra; el Centinela y Julio reciben el aviso."
+                        )
+
             orden = await conn.fetchrow(
                 """
                 INSERT INTO orders
                     (cliente_id, resistencia, volumen_m3, planta_id, forma_pago,
-                     precio_m3, creada_por, notas)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                     precio_m3, creada_por, notas, excede_cupo_credito)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 RETURNING id::text, numero, total
                 """,
                 datos.cliente_id,
@@ -176,9 +249,10 @@ async def crear_orden(pool: asyncpg.Pool, datos: NuevaOrden) -> ResultadoOrden:
                 datos.volumen_m3,
                 planta["id"],
                 datos.forma_pago,
-                datos.precio_m3,
+                precio_ref,
                 datos.creada_por,
                 datos.notas,
+                excede_cupo,
             )
 
             consumo_orden = None
@@ -303,4 +377,7 @@ async def crear_orden(pool: asyncpg.Pool, datos: NuevaOrden) -> ResultadoOrden:
             "campos_faltantes": list(consumo_orden.campos_faltantes),
             "provisional": consumo_orden.provisional,
         },
+        excede_cupo_credito=excede_cupo,
+        cupo_credito_usd=cupo_usd,
+        saldo_cliente_usd=saldo_usd,
     )

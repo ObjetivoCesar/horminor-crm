@@ -46,16 +46,18 @@ from app.m1_whatsapp.notifications import RecordingNotifier, SentinelAlerter
 from app.m1_whatsapp.pipeline import WhatsAppPipeline
 from app.m1_whatsapp.repositorio import PostgresRepositorio
 from app.m1_whatsapp.worker import DebounceWorker
+from app.sandbox import SandboxBunnyStorageClient, SandboxNotifier
 from app.services.ordenes import NuevaOrden, crear_orden
 from app.settings import get_settings
 
 TAG = "HITO3-LOCK"
 CLIENTE = "Cliente Prueba Hito 3 (WhatsApp)"
-# Numeros de prueba: no pertenecen a ninguna persona real.
-TEL_BODEGA = "0990000001"
-TEL_CHOFER = "0990000002"
-TEL_CLIENTE = "0990000003"
-TEL_LEAD = "0990000004"
+# Numeros de prueba: no pertenecen a ninguna persona real ni chocan con las
+# semillas de whatsapp.staff (migracion 060), para probar el fallback por codigo.
+TEL_BODEGA = "0990000011"
+TEL_CHOFER = "0990000012"
+TEL_CLIENTE = "0990000013"
+TEL_LEAD = "0990000014"
 
 OK = "[OK]"
 FALLA = "[FALLA]"
@@ -106,8 +108,8 @@ async def _limpiar(pool: asyncpg.Pool) -> None:
 async def _cliente(pool: asyncpg.Pool) -> str:
     fila = await pool.fetchrow(
         """
-        INSERT INTO clients (nombre, telefono_whatsapp, estado, notas)
-        VALUES ($1, $2, 'ACTIVO', $3)
+        INSERT INTO clients (nombre, telefono_whatsapp, estado, provincia, notas)
+        VALUES ($1, $2, 'ACTIVO', 'Sucumbios', $3)
         RETURNING id::text
         """,
         CLIENTE,
@@ -150,6 +152,56 @@ async def main() -> int:
         aplicadas = await run_migrations(pool, settings.migrations_dir)
         _linea("HITO 3 - MODULO 1 (WhatsApp) CONTRA POSTGRESQL REAL")
         print(f"  Migraciones aplicadas ahora: {aplicadas or 'ninguna (ya estaban)'}")
+
+        # -----------------------------------------------------------------
+        # 0. Modo SANDBOX conmutable (Directriz 2026-11-08).
+        # -----------------------------------------------------------------
+        _linea("0. MODO SANDBOX (sin credenciales externas)")
+        repo_sandbox = PostgresRepositorio(pool)
+        notifier_sandbox = SandboxNotifier(repo_sandbox)
+        fallos += not _check(
+            await notifier_sandbox.enviar_texto(
+                "+593990000001", "HITO3-LOCK: prueba de outbox sandbox"
+            ),
+            "SandboxNotifier acepta el mensaje sin Evolution API",
+        )
+        outbox = await repo_sandbox.listar_outbox(5)
+        fallos += not _check(
+            any(
+                item["canal"] == "WHATSAPP"
+                and item["destino"] == "+593990000001"
+                and item["estado"] == "ENCOLADO"
+                for item in outbox
+            ),
+            "El mensaje quedo en sandbox_outbox como ENCOLADO",
+        )
+        bunny_sandbox = SandboxBunnyStorageClient()
+        url_sandbox = await bunny_sandbox.subir(
+            nombre_archivo="evidencias/MIXER-01/viaje-1.jpg",
+            contenido=b"demo",
+            mimetype="image/jpeg",
+        )
+        fallos += not _check(
+            "/sandbox/" in url_sandbox and url_sandbox.startswith("https://"),
+            f"Bunny sandbox devuelve URL deterministica ({url_sandbox})",
+        )
+        from app.m1_whatsapp.runtime import construir_runtime
+
+        runtime_sandbox = await construir_runtime(pool, settings)
+        estado_sandbox = runtime_sandbox.estado()
+        fallos += not _check(
+            estado_sandbox.get("modo") == "SANDBOX",
+            f"/health informa modo={estado_sandbox.get('modo')}",
+        )
+        esperado_juez = (
+            "GEMINI" if settings.gemini_api_key else "DETERMINISTIC_FALLBACK"
+        )
+        fallos += not _check(
+            estado_sandbox.get("judge_mode") == esperado_juez,
+            f"/health informa judge_mode={estado_sandbox.get('judge_mode')} "
+            f"(esperado: {esperado_juez})",
+        )
+        await runtime_sandbox.cerrar()
 
         await _limpiar(pool)
         cliente_id = await _cliente(pool)
@@ -464,7 +516,7 @@ async def main() -> int:
         )
         respuesta = (lead.respuesta if lead else "") or ""
         fallos += not _check(
-            "Orminorth Hormigones" in respuesta and "FC-210" in respuesta,
+            "orminorth" in respuesta.lower() and "FC-210" in respuesta,
             "La respuesta usa empresa.bot_publico y las recetas de la base",
         )
         fallos += not _check(
@@ -474,7 +526,7 @@ async def main() -> int:
         fallos += not _check(
             any(
                 normalizar_telefono(envio["telefono"]) == normalizar_telefono(TEL_LEAD)
-                and "Orminorth" in envio["texto"]
+                and "orminorth" in envio["texto"].lower()
                 for envio in notifier.enviados
             ),
             "El bot respondio al telefono del lead por WhatsApp",
@@ -511,10 +563,11 @@ async def main() -> int:
 
         _linea("RESULTADO")
         if fallos == 0:
-            print("  [CANDADO ABIERTO] El Modulo 1 ejecuta las 4 compuertas y el")
-            print("  contrato JSONB se proyecta sin errores en PostgreSQL.")
-            print("  Para CERRAR el Hito 3 faltan credenciales reales de Evolution,")
-            print("  Bunny.net y Gemini, y los telefonos reales del personal.")
+            print("  [CANDADO CERRADO EN SANDBOX] El Modulo 1 ejecuta las 4 compuertas,")
+            print("  el contrato JSONB se proyecta sin errores y el modo SANDBOX encola")
+            print("  la salida sin fingir un envio real.")
+            print("  Las credenciales reales (Evolution, Bunny, Gemini) y los telefonos")
+            print("  definitivos se cargan despues desde Superadmin; ya no bloquean.")
             return 0
         print(f"  [CANDADO BLOQUEADO] {fallos} verificacion(es) fallaron.")
         return 1

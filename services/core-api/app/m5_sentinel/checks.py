@@ -245,9 +245,31 @@ async def _config_evolution(
     return url, instancia, api_key
 
 
+async def _modo_sandbox(pool: asyncpg.Pool, settings: Settings) -> bool:
+    """Lee el switch SANDBOX de la integracion; por defecto el de entorno."""
+    datos = await _leer_json(pool, "integraciones.evolution")
+    if "sandbox" in datos:
+        return bool(datos.get("sandbox"))
+    return bool(getattr(settings, "sandbox_mode", True))
+
+
 async def check_evolution(pool: asyncpg.Pool, settings: Settings) -> CheckResult:
     """Consulta el estado de la instancia de Evolution API (WhatsApp)."""
     inicio = perf_counter()
+    sandbox = await _modo_sandbox(pool, settings)
+    if sandbox:
+        return CheckResult(
+            id="evolution",
+            categoria=CANAL,
+            estado=OK,
+            detalle=(
+                "SANDBOX: sin llamadas externas. Los mensajes salientes se "
+                "encolan en sandbox_outbox y se ven en el panel."
+            ),
+            latencia_ms=_ms_desde(inicio),
+            datos={"modo": "SANDBOX", "outbox": "sandbox_outbox"},
+        )
+
     url, instancia, api_key = await _config_evolution(pool, settings)
     if not (url and instancia and api_key):
         return CheckResult(
@@ -256,7 +278,7 @@ async def check_evolution(pool: asyncpg.Pool, settings: Settings) -> CheckResult
             estado=NO_CONFIGURADO,
             detalle="Evolution API sin url, instancia o api_key",
             latencia_ms=_ms_desde(inicio),
-            datos={},
+            datos={"modo": "PRODUCCION"},
         )
 
     endpoint = f"{url.rstrip('/')}/instance/connectionState/{instancia}"
@@ -317,8 +339,23 @@ async def _host_bunny(pool: asyncpg.Pool, settings: Settings) -> str:
 
 
 async def check_bunny(pool: asyncpg.Pool, settings: Settings) -> CheckResult:
-    """Hace ``HEAD`` al host del CDN de Bunny.net."""
+    """Hace ``HEAD`` al host del CDN de Bunny.net (nunca en SANDBOX)."""
     inicio = perf_counter()
+    cfg = await _leer_json(pool, "integraciones.bunny")
+    sandbox = bool(cfg.get("sandbox", getattr(settings, "sandbox_mode", True)))
+    if sandbox:
+        return CheckResult(
+            id="bunny",
+            categoria=CANAL,
+            estado=OK,
+            detalle=(
+                "SANDBOX: sin llamadas externas. Las evidencias reciben una URL "
+                "deterministica bajo /sandbox/ en la Carpeta del Cliente."
+            ),
+            latencia_ms=_ms_desde(inicio),
+            datos={"modo": "SANDBOX", "generador": "url_simulada"},
+        )
+
     host = await _host_bunny(pool, settings)
     if not host:
         return CheckResult(
@@ -327,7 +364,7 @@ async def check_bunny(pool: asyncpg.Pool, settings: Settings) -> CheckResult:
             estado=NO_CONFIGURADO,
             detalle="bunny_cdn_host no configurado",
             latencia_ms=_ms_desde(inicio),
-            datos={},
+            datos={"modo": "PRODUCCION"},
         )
 
     limpio = host.removeprefix("https://").removeprefix("http://").strip("/")

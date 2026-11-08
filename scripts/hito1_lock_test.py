@@ -62,11 +62,18 @@ async def _limpiar(pool: asyncpg.Pool) -> None:
 async def _cliente_id(pool: asyncpg.Pool) -> str:
     row = await pool.fetchrow("SELECT id::text FROM clients WHERE nombre = $1", CLIENTE)
     if row:
+        # Provincia de FIXTURE (no es un dato de negocio): permite verificar
+        # la cuota de mercado del Modulo 4 con las ordenes de este candado.
+        await pool.execute(
+            "UPDATE clients SET provincia = COALESCE(provincia, 'Orellana')"
+            " WHERE id = $1::uuid",
+            row["id"],
+        )
         return row["id"]
     return await pool.fetchval(
         """
-        INSERT INTO clients (nombre, estado, notas)
-        VALUES ($1, 'ACTIVO', 'Creado por scripts/hito1_lock_test.py')
+        INSERT INTO clients (nombre, estado, provincia, notas)
+        VALUES ($1, 'ACTIVO', 'Orellana', 'Creado por scripts/hito1_lock_test.py')
         RETURNING id::text
         """,
         CLIENTE,
@@ -146,6 +153,31 @@ async def main(provisional: bool) -> int:
             orden_210.orden_id,
         )
         fallos += not _check(viajes_db == 40, "PostgreSQL devuelve 40 filas en mixer_dispatches")
+
+        valoradas = await pool.fetch(
+            """
+            SELECT numero, volumen_m3, precio_m3, total
+              FROM orders
+             WHERE id = ANY($1::uuid[])
+             ORDER BY numero
+            """,
+            [orden_210.orden_id, orden_350.orden_id],
+        )
+        for fila in valoradas:
+            print(
+                f"  Orden #{fila['numero']}: {fila['volumen_m3']} m3 x "
+                f"${fila['precio_m3']} = ${fila['total']}"
+            )
+        fallos += not _check(
+            len(valoradas) == 2
+            and all(
+                fila["precio_m3"] is not None
+                and fila["total"] is not None
+                and Decimal(str(fila["total"])) > 0
+                for fila in valoradas
+            ),
+            "Las ordenes sin precio explicito toman el precio de la receta y quedan valoradas",
+        )
 
         timeline = await pool.fetch(
             "SELECT * FROM v_dispatch_timeline WHERE order_id = $1::uuid ORDER BY viaje_numero",

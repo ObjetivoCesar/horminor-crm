@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orminorth · Centinela</title>
+<style>
+  :root{
+    --ink:#111820; --muted:#5a6675; --line:#dde3ea; --paper:#f4f6f8; --card:#ffffff;
+    --navy:#0b3157; --navy-2:#123f6d; --accent:#0b6bcb; --green:#067647; --green-bg:#e8f6ee;
+    --amber:#a15c07; --amber-bg:#fdf3e2; --red:#b42318; --red-bg:#fdeceb;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.07);
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--paper);color:var(--ink);font-size:14px}
+  button,input,select,textarea{font:inherit}
+  button{cursor:pointer}
+  .app-header{position:sticky;top:0;z-index:30;background:var(--navy);color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+  .app-header .bar{max-width:1320px;margin:0 auto;display:flex;align-items:center;gap:18px;padding:12px 20px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;min-width:240px}
+  .brand .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#fff 0 48%,#7fb2e5 48% 100%);display:grid;place-items:center;color:var(--navy);font-weight:800}
+  .brand h1{font-size:16px;margin:0;letter-spacing:.02em}
+  .brand small{display:block;font-weight:400;opacity:.72;font-size:11px}
+  .role-switch{display:flex;gap:6px;background:rgba(255,255,255,.1);padding:4px;border-radius:999px}
+  .role-switch button{background:transparent;border:0;color:#dbe7f4;padding:8px 13px;border-radius:999px;font-weight:600;font-size:12.5px;white-space:nowrap}
+  .role-switch button.active{background:#fff;color:var(--navy)}
+  .status{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:12px}
+  .pill{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18)}
+  .pill.sandbox{background:#f5b73d;color:#3b2600;border-color:#f5b73d;font-weight:700}
+  .pill.prod{background:#39b97c;color:#04240f;font-weight:700}
+  main{max-width:1320px;margin:0 auto;padding:22px 20px 60px}
+  .view{display:none}
+  .view.active{display:block}
+  .grid{display:grid;gap:16px}
+  .grid.two{grid-template-columns:minmax(280px,360px) minmax(0,1fr)}
+  .grid.kpis{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  @media(max-width:900px){.grid.two{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .card h2,.card h3{margin:0 0 10px}
+  .card h2{font-size:15px;letter-spacing:.01em}
+  .card h3{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  .right{text-align:right}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .spread{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .btn{background:var(--navy);color:#fff;border:0;border-radius:9px;padding:9px 14px;font-weight:600}
+  .btn:hover{background:var(--navy-2)}
+  .btn.ghost{background:#fff;color:var(--navy);border:1px solid #b9c6d4}
+  .btn.ghost:hover{background:#f0f5fa}
+  .btn.small{padding:6px 10px;font-size:12px}
+  .btn.warn{background:var(--amber)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=search],input[type=number],input[type=date],select,textarea{
+    width:100%;border:1px solid #c6d0da;border-radius:8px;padding:8px 10px;background:#fff;color:var(--ink)}
+  textarea{min-height:76px;resize:vertical}
+  label.field{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .field-row{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+  .cliente-item{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .cliente-item:hover{border-color:#9fb6cc;background:#f8fbfe}
+  .cliente-item.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(11,107,203,.14)}
+  .cliente-item strong{display:block;font-size:13.5px}
+  .cliente-item span{font-size:12px;color:var(--muted)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.03em}
+  .badge.ok{background:var(--green-bg);color:var(--green)}
+  .badge.warn{background:var(--amber-bg);color:var(--amber)}
+  .badge.bad{background:var(--red-bg);color:var(--red)}
+  .badge.neutral{background:#eef2f6;color:#3c4a5a}
+  .big{font-size:24px;font-weight:800;letter-spacing:-.01em}
+  .kpi-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+  .kpi-value{font-size:26px;font-weight:800;margin:4px 0 2px}
+  .kpi-sub{font-size:12.5px;color:var(--muted)}
+  .semaforo{width:11px;height:11px;border-radius:50%;display:inline-block;background:#aeb8c3;box-shadow:0 0 0 3px rgba(174,184,195,.18)}
+  .semaforo.VERDE{background:#12a15b;box-shadow:0 0 0 3px rgba(18,161,91,.18)}
+  .semaforo.AMBAR{background:#e29a1a;box-shadow:0 0 0 3px rgba(226,154,26,.18)}
+  .semaforo.ROJO{background:#d92d20;box-shadow:0 0 0 3px rgba(217,45,32,.18)}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:#f8fafc}
+  tr:last-child td{border-bottom:0}
+  .bar-track{height:10px;border-radius:999px;background:#e7ecf1;overflow:hidden}
+  .bar-fill{height:100%;background:linear-gradient(90deg,#0b6bcb,#38a3f1);border-radius:999px}
+  .bar-fill.warn{background:linear-gradient(90deg,#d98911,#f2b53f)}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+  .shot{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#f8fafc}
+  .shot .ph{height:96px;display:grid;place-items:center;background:repeating-linear-gradient(45deg,#eef3f8,#eef3f8 10px,#e6edf5 10px,#e6edf5 20px);color:#6b7d90;font-size:11px}
+  .shot .meta{padding:7px 9px;font-size:11px;color:var(--muted)}
+  .timeline{list-style:none;margin:0;padding:0}
+  .timeline li{position:relative;padding:0 0 14px 20px;border-left:2px solid #d6e0ea}
+  .timeline li:last-child{border-left-color:transparent;padding-bottom:0}
+  .timeline li:before{content:"";position:absolute;left:-6px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid #fff}
+  .timeline time{display:block;font-size:11px;color:var(--muted)}
+  .notice{padding:10px 12px;border-radius:9px;font-size:12.5px;margin-top:10px}
+  .notice.info{background:#eef6ff;color:#134d86;border:1px solid #cbe1f8}
+  .notice.ok{background:var(--green-bg);color:var(--green);border:1px solid #b7e4c9}
+  .notice.warn{background:var(--amber-bg);color:var(--amber);border:1px solid #f2d9ac}
+  .notice.bad{background:var(--red-bg);color:var(--red);border:1px solid #f5c6c2}
+  dialog{border:0;border-radius:14px;padding:0;width:min(620px,94vw);box-shadow:0 24px 60px rgba(16,24,40,.28)}
+  dialog::backdrop{background:rgba(9,20,33,.55)}
+  .dialog-head{background:var(--navy);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+  .dialog-head h2{margin:0;font-size:15px}
+  .dialog-body{padding:18px}
+  .dialog-foot{padding:14px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .tabs button{border:1px solid #c6d0da;background:#fff;color:#33465a;border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:600}
+  .tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .toast-wrap{position:fixed;right:18px;bottom:18px;z-index:80;display:flex;flex-direction:column;gap:8px}
+  .toast{background:#101c2b;color:#fff;padding:10px 14px;border-radius:9px;font-size:13px;box-shadow:var(--shadow);max-width:420px}
+  .toast.ok{background:#075e3d}
+  .toast.bad{background:#8f1d14}
+  pre{background:#0f1a26;color:#d8e4f0;border-radius:10px;padding:12px;overflow:auto;font-size:12px;max-height:320px}
+  .chat{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto;padding-right:4px}
+  .bubble{max-width:86%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.4;white-space:pre-wrap}
+  .bubble.out{background:#e8f1fb;align-self:flex-start;border-bottom-left-radius:3px}
+  .bubble.in{background:#075e54;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
+  .bubble .who{display:block;font-size:10.5px;opacity:.7;margin-bottom:3px}
+  .mono{font-family:Consolas,"Cascadia Code",monospace}
+  .section-tab{display:none}
+  .section-tab.active{display:block}
+  details summary{cursor:pointer;color:var(--muted);font-size:12.5px;margin-top:6px}
+  .divider{height:1px;background:var(--line);margin:12px 0}
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div class="bar">
+    <div class="brand">
+      <div class="mark">O</div>
+      <div>
+        <h1>ORMINORTH · CENTINELA</h1>
+        <small>Hormigón premezclado · El Coca, Orellana</small>
+      </div>
+    </div>
+    <nav class="role-switch" aria-label="Selector rápido de vista por rol">
+      <button data-role-btn="secretaria" class="active" onclick="setView('secretaria')">💼 Secretaría y Caja</button>
+      <button data-role-btn="gerencial" onclick="setView('gerencial')">📊 Gerencial Julio</button>
+      <button data-role-btn="superadmin" onclick="setView('superadmin')">⚙️ Superadmin y WhatsApp</button>
+    </nav>
+    <div class="status">
+      <span class="pill" id="modo-pill">SANDBOX</span>
+      <span class="pill" id="judge-pill">Juez: —</span>
+      <span class="pill" id="db-pill">DB: —</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== SECRETARIA ===================== -->
+  <section class="view active" data-view="secretaria">
+    <div class="grid two">
+      <div class="stack">
+        <div class="card">
+          <div class="spread">
+            <h2>Clientes</h2>
+            <button class="btn small ghost" onclick="abrirCliente()">+ Nuevo</button>
+          </div>
+          <input type="search" id="buscar-cliente" placeholder="Buscar por nombre o constructora…" oninput="filtrarClientes()">
+          <div id="lista-clientes" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <div class="spread"><h2>Cierre de Caja</h2><span class="badge neutral" id="cierre-estado">—</span></div>
+          <label class="field">Fecha</label>
+          <input type="date" id="cierre-fecha" onchange="cargarCierre()">
+          <div id="cierre-resumen" class="small" style="margin-top:10px"></div>
+          <label class="field" style="margin-top:10px">Efectivo contado (USD)</label>
+          <input type="number" id="cierre-contado" step="0.01" min="0" placeholder="0.00">
+          <label class="field" style="margin-top:10px">Cerrado por</label>
+          <input type="text" id="cierre-por" value="Secretaría" >
+          <button class="btn" style="margin-top:10px;width:100%" onclick="cerrarCaja()">Cerrar caja del día</button>
+          <div id="cierre-resultado"></div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card" id="carpeta-card">
+          <h2>Carpeta Forense del Cliente</h2>
+          <p class="muted small">Selecciona un cliente para ver su línea de tiempo, el estado del Juez Binario “Jeb” y las evidencias Bunny.net.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== GERENCIAL ===================== -->
+  <section class="view" data-view="gerencial">
+    <div class="card" style="margin-bottom:16px">
+      <div class="row">
+        <div><label class="field">Fecha</label><input type="date" id="ger-fecha" onchange="cargarGerencial()"></div>
+        <div><label class="field">Planta</label>
+          <select id="ger-planta" onchange="cargarGerencial()">
+            <option value="">Todas</option>
+            <option value="PLANTA-COCA">Planta Fija El Coca</option>
+            <option value="PLANTA-MOVIL">Planta Móvil Campamento</option>
+          </select>
+        </div>
+        <div style="margin-left:auto;align-self:end">
+          <a class="btn ghost" href="/api/v1/dashboard/dossier" target="_blank" rel="noopener">🖨️ Dossier Bancario</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid kpis" id="hero-kpis"></div>
+
+    <div class="grid two" style="margin-top:16px">
+      <div class="card">
+        <div class="spread">
+          <h2>Cuota de Mercado</h2>
+          <span class="badge neutral" id="mercado-periodo"></span>
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <select id="mercado-modo" onchange="cargarMercado()" style="max-width:220px">
+            <option value="12_MESES_MOVILES">12 meses móviles</option>
+            <option value="ANIO_CALENDARIO">Año calendario</option>
+          </select>
+          <input type="number" id="mercado-anio" value="2026" min="2020" max="2100" style="max-width:110px" onchange="cargarMercado()">
+        </div>
+        <div id="mercado-panel"></div>
+      </div>
+      <div class="card">
+        <div class="spread"><h2>Simulador Bancario</h2><span class="badge neutral">Francesa · 11.2%</span></div>
+        <div id="simulador-panel"></div>
+        <p class="small muted" style="margin-bottom:0">DSCR proyectado = flujo incremental del equipo / cuota. DSCR histórico suma el flujo operativo de los últimos 90 días.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SUPERADMIN ===================== -->
+  <section class="view" data-view="superadmin">
+    <div class="grid two">
+      <div class="stack">
+        <div class="card">
+          <h2>Simulador de WhatsApp en Pantalla</h2>
+          <label class="field">¿Quién escribe?</label>
+          <select id="sim-remitente"></select>
+          <label class="field" style="margin-top:8px">Mensaje</label>
+          <textarea id="sim-texto" placeholder="Ej: #BODEGA salió el mixer MIXER-01 de la orden 1001"></textarea>
+          <label class="row small" style="margin-top:8px"><input type="checkbox" id="sim-foto" style="width:auto"> Adjuntar foto simulada (Bunny sandbox)</label>
+          <button class="btn" style="margin-top:10px;width:100%" onclick="enviarSimulacion()">Enviar al pipeline</button>
+          <div id="sim-resultado" style="margin-top:12px"></div>
+        </div>
+        <div class="card">
+          <div class="spread"><h2>Outbox Sandbox</h2><button class="btn small ghost" onclick="cargarOutbox()">Refrescar</button></div>
+          <div id="outbox-panel" class="small muted">Sin mensajes.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="spread">
+          <h2>Configuración en caliente</h2>
+          <button class="btn small ghost" onclick="cargarSuperadmin()">Recargar</button>
+        </div>
+        <div class="tabs" id="config-tabs"></div>
+        <div id="config-panel"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg-cliente">
+  <div class="dialog-head"><h2>Nuevo cliente</h2><button class="btn small ghost" onclick="document.getElementById('dlg-cliente').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <label class="field">Nombre *</label><input type="text" id="cli-nombre">
+    <label class="field">Constructora</label><input type="text" id="cli-constructora">
+    <label class="field">RUC</label><input type="text" id="cli-ruc">
+    <label class="field">WhatsApp</label><input type="text" id="cli-telefono" placeholder="+593...">
+    <label class="field">Provincia de la obra</label>
+    <select id="cli-provincia"><option value="">Sin asignar</option><option>Orellana</option><option>Sucumbíos</option></select>
+    <div id="cli-error"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-cliente').close()">Cancelar</button>
+    <button class="btn" onclick="crearCliente()">Guardar cliente</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-orden">
+  <div class="dialog-head"><h2>Nueva Orden de Hormigón</h2><button class="btn small ghost" onclick="document.getElementById('dlg-orden').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <div class="field-row">
+      <div><label class="field">Cliente</label><select id="ord-cliente"></select></div>
+      <div><label class="field">Resistencia</label><select id="ord-resistencia" onchange="calcularOrden()"></select></div>
+      <div><label class="field">Volumen (m³)</label><input type="number" id="ord-volumen" min="0.5" step="0.5" value="8" oninput="calcularOrden()"></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Planta</label><select id="ord-planta"></select></div>
+      <div><label class="field">Forma de pago</label><select id="ord-pago"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>ABONO</option><option>FIADO</option></select></div>
+      <div><label class="field">Precio $/m³ (opcional)</label><input type="number" id="ord-precio" step="0.01" min="0" oninput="calcularOrden()"></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Mixer</label><select id="ord-mixer"><option value="">Automático</option></select></div>
+      <div><label class="field">Chofer</label><input type="text" id="ord-chofer" placeholder="Nombre del chofer"></div>
+      <div><label class="field">Notas</label><input type="text" id="ord-notas"></div>
+    </div>
+    <div id="ord-calculo" class="notice info" style="margin-top:12px">Completa volumen y resistencia.</div>
+    <div id="ord-resultado"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-orden').close()">Cancelar</button>
+    <button class="btn" id="ord-submit" onclick="crearOrden()">Registrar orden</button>
+  </div>
+</dialog>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+const state = {
+  view:'secretaria', clientes:[], carpeta:null, opciones:null,
+  kpis:null, mercado:null, simulador:null, config:null, seccionConfig:null,
+  remitentes:[], outbox:[], cierre:null
+};
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+const money = v => (v===null||v===undefined||v==='') ? '—' : '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = v => (v===null||v===undefined||v==='') ? '—' : Number(v).toLocaleString('en-US',{maximumFractionDigits:2});
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hoy = () => new Date().toISOString().slice(0,10);
+
+function toast(msg, kind='') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), 5200);
+}
+
+async function api(path, options={}) {
+  const opts = Object.assign({headers:{'Content-Type':'application/json'}}, options);
+  if (opts.body && typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
+  const res = await fetch(path, opts);
+  const texto = await res.text();
+  let data = null;
+  try { data = texto ? JSON.parse(texto) : null; } catch(e) { data = texto; }
+  if (!res.ok) {
+    const detalle = data && data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : texto;
+    throw new Error(detalle || ('HTTP ' + res.status));
+  }
+  return data;
+}
+
+function setView(v) {
+  state.view = v;
+  $$('.view').forEach(el => el.classList.toggle('active', el.dataset.view === v));
+  $$('[data-role-btn]').forEach(el => el.classList.toggle('active', el.dataset.roleBtn === v));
+  if (v === 'secretaria') cargarSecretaria();
+  if (v === 'gerencial') cargarGerencial();
+  if (v === 'superadmin') cargarSuperadmin();
+}
+
+async function cargarSalud() {
+  try {
+    const h = await api('/api/v1/whatsapp/health');
+    const modo = h.modo || 'SANDBOX';
+    $('#modo-pill').textContent = modo;
+    $('#modo-pill').className = 'pill ' + (modo === 'SANDBOX' ? 'sandbox' : 'prod');
+    $('#judge-pill').textContent = 'Juez: ' + (h.judge_mode || h.juez || '—');
+    $('#db-pill').textContent = 'DB: OK';
+  } catch(e) {
+    $('#db-pill').textContent = 'DB: —';
+  }
+}
+
+/* ----------------------------- SECRETARIA ----------------------------- */
+async function cargarSecretaria() {
+  const fecha = $('#cierre-fecha').value || hoy();
+  $('#cierre-fecha').value = fecha;
+  try {
+    const [clientes, opciones] = await Promise.all([
+      api('/api/v1/secretaria/clientes'),
+      api('/api/v1/secretaria/opciones').catch(() => ({recetas:[],plantas:[],mixers:[]}))
+    ]);
+    state.clientes = clientes.clientes || [];
+    state.opciones = opciones;
+    renderClientes();
+    llenarOpcionesOrden();
+  } catch(e) { toast('No se pudo cargar clientes: ' + e.message, 'bad'); }
+  cargarCierre();
+}
+
+function renderClientes() {
+  const q = ($('#buscar-cliente').value || '').toLowerCase();
+  const lista = state.clientes.filter(c =>
+    !q || String(c.nombre).toLowerCase().includes(q) || String(c.constructora||'').toLowerCase().includes(q));
+  $('#lista-clientes').innerHTML = lista.length ? lista.map(c => `
+    <button class="cliente-item ${state.carpeta && state.carpeta.cliente.cliente_id === c.cliente_id ? 'active':''}"
+            onclick="seleccionarCliente('${esc(c.cliente_id)}')">
+      <strong>${esc(c.nombre)}</strong>
+      <span>${esc(c.constructora || 'Sin constructora')} · Saldo ${money(c.saldo_pendiente)}</span>
+    </button>`).join('') : '<p class="muted small">Sin resultados.</p>';
+}
+
+function filtrarClientes(){ renderClientes(); }
+
+async function seleccionarCliente(id) {
+  try {
+    state.carpeta = await api('/api/v1/secretaria/clientes/' + id + '/carpeta');
+    renderCarpeta();
+    renderClientes();
+  } catch(e) { toast('No se pudo abrir la carpeta: ' + e.message, 'bad'); }
+}
+
+function renderCarpeta() {
+  const c = state.carpeta;
+  if (!c) return;
+  const cliente = c.cliente, saldo = c.saldo || {};
+  const semaforoJuez = (c.viajes || []).some(v => v.juez && v.juez.incidencia_detectada) ? 'bad'
+    : (c.viajes || []).some(v => v.juez && v.juez.despacho_validado) ? 'ok' : 'neutral';
+  const textoJuez = semaforoJuez === 'bad' ? 'Incidencia detectada' : semaforoJuez === 'ok' ? 'Despachos validados' : 'Sin veredicto';
+  $('#carpeta-card').innerHTML = `
+    <div class="spread">
+      <div>
+        <h2 style="margin:0">${esc(cliente.nombre)}</h2>
+        <p class="muted small" style="margin:4px 0 0">${esc(cliente.constructora || 'Sin constructora')} · RUC ${esc(cliente.ruc || '—')} · ${esc(cliente.telefono || 'sin WhatsApp')}</p>
+      </div>
+      <div class="right">
+        <span class="badge ${cliente.estado === 'ACTIVO' ? 'ok':'neutral'}">${esc(cliente.estado)}</span>
+        <span class="badge ${semaforoJuez}">Jeb: ${textoJuez}</span>
+      </div>
+    </div>
+    <div class="grid kpis" style="margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div><div class="kpi-label">Saldo pendiente</div><div class="big">${money(saldo.saldo_pendiente)}</div><div class="kpi-sub">Cupo ${money(cliente.credit_limit_usd)}</div></div>
+      <div><div class="kpi-label">Facturado</div><div class="big">${money(saldo.total_facturado)}</div><div class="kpi-sub">${num(saldo.total_m3)} m³ acumulados</div></div>
+      <div><div class="kpi-label">Cobrado</div><div class="big">${money(saldo.total_cobrado)}</div><div class="kpi-sub">Fiado ${money(saldo.total_fiado)}</div></div>
+    </div>
+    <div class="divider"></div>
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">Órdenes</h3>
+      <button class="btn small" onclick="abrirOrden()">+ Nueva orden</button>
+    </div>
+    <div style="overflow:auto;margin-top:8px">
+      <table>
+        <thead><tr><th>#</th><th>Resistencia</th><th>m³</th><th>Pago</th><th>Total</th><th>Estado</th></tr></thead>
+        <tbody>
+        ${(c.ordenes||[]).map(o => `<tr>
+          <td>${o.numero}</td><td>${esc(o.resistencia)}</td><td>${num(o.volumen_m3)}</td>
+          <td>${esc(o.forma_pago)}${o.excede_cupo_credito ? ' <span class="badge bad">cupo</span>':''}</td>
+          <td>${money(o.total)}</td><td><span class="badge neutral">${esc(o.estado)}</span></td>
+        </tr>`).join('') || '<tr><td colspan="6" class="muted">Sin órdenes.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+    <div class="divider"></div>
+    <div class="grid two" style="grid-template-columns:1fr 1fr">
+      <div>
+        <h3>Línea de tiempo forense</h3>
+        <ul class="timeline">
+          ${(c.timeline||[]).map(t => `<li><time>${new Date(t.fecha).toLocaleString('es-EC')}</time>${esc(t.tipo)} <span class="muted">· ${esc(t.detalle)}</span></li>`).join('') || '<li class="muted">Sin eventos registrados.</li>'}
+        </ul>
+      </div>
+      <div>
+        <h3>Galería Bunny.net</h3>
+        <div class="gallery">
+          ${(c.evidencias||[]).map(ev => `<a class="shot" href="${esc(ev.url)}" target="_blank" rel="noopener">
+            <div class="ph">evidencia sandbox</div>
+            <div class="meta">Orden #${ev.orden_numero} · viaje ${ev.viaje_numero} · ${esc(ev.vehiculo||'')}</div>
+          </a>`).join('') || '<p class="muted small">Sin evidencias todavía.</p>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+function llenarOpcionesOrden() {
+  const op = state.opciones || {};
+  $('#ord-resistencia').innerHTML = (op.recetas||[]).map(r => `<option value="${esc(r.resistencia)}">${esc(r.resistencia)} · ${money(r.precio_m3)}/m³</option>`).join('') || '<option value="FC-210">FC-210</option>';
+  $('#ord-planta').innerHTML = (op.plantas||[]).map(p => `<option value="${esc(p.codigo)}">${esc(p.nombre)}</option>`).join('') || '<option value="PLANTA-COCA">Planta Fija El Coca</option>';
+  $('#ord-mixer').innerHTML = '<option value="">Automático</option>' + (op.mixers||[]).map(m => `<option value="${esc(m.codigo)}">${esc(m.codigo)} · ${num(m.capacidad_m3)} m³${m.placa ? ' · '+esc(m.placa):''}</option>`).join('');
+  $('#ord-cliente').innerHTML = state.clientes.map(c => `<option value="${esc(c.cliente_id)}">${esc(c.nombre)}</option>`).join('');
+}
+
+function abrirOrden() {
+  if (!state.clientes.length) { toast('Primero registra un cliente.', 'bad'); return; }
+  if (!state.carpeta) { toast('Selecciona un cliente en la lista.', 'bad'); return; }
+  $('#ord-cliente').value = state.carpeta.cliente.cliente_id;
+  $('#ord-resultado').innerHTML = '';
+  $('#dlg-orden').showModal();
+  calcularOrden();
+}
+
+function calcularOrden() {
+  const resistencia = $('#ord-resistencia').value;
+  const receta = ((state.opciones||{}).recetas||[]).find(r => r.resistencia === resistencia) || {};
+  const m3 = Number($('#ord-volumen').value || 0);
+  const precio = Number($('#ord-precio').value || receta.precio_m3 || 0);
+  const sacos = receta.cemento_sacos_m3 ? (m3 * receta.cemento_sacos_m3) : null;
+  const retardante = receta.retardante_litros_m3 ? (m3 * receta.retardante_litros_m3) : null;
+  const cap = Math.max(...((state.opciones||{}).mixers||[]).map(m => Number(m.capacidad_m3||0)), 0) || 8;
+  const viajes = m3 > 0 ? Math.ceil(m3 / cap) : 0;
+  $('#ord-calculo').innerHTML = `
+    <strong>${m3 || 0} m³ de ${esc(resistencia || '—')}</strong> ·
+    ${sacos ? num(sacos)+' sacos de cemento' : 'consumo sin receta completa'} ·
+    ${retardante ? num(retardante)+' L retardante' : 'retardante pendiente'} ·
+    ${viajes} viaje(s) estimados de hasta ${cap} m³ ·
+    total aprox. <strong>${money(m3 * precio)}</strong>`;
+}
+
+async function crearOrden() {
+  const body = {
+    cliente_id: $('#ord-cliente').value,
+    resistencia: $('#ord-resistencia').value,
+    volumen_m3: Number($('#ord-volumen').value),
+    planta_codigo: $('#ord-planta').value,
+    forma_pago: $('#ord-pago').value,
+    precio_m3: $('#ord-precio').value ? Number($('#ord-precio').value) : null,
+    mixer_codigo: $('#ord-mixer').value || null,
+    chofer_nombre: $('#ord-chofer').value || null,
+    notas: $('#ord-notas').value || null,
+    creada_por: 'Secretaría (panel)'
+  };
+  $('#ord-submit').disabled = true;
+  try {
+    const r = await api('/api/v1/secretaria/ordenes', {method:'POST', body});
+    const alerta = r.excede_cupo_credito
+      ? `<div class="notice bad"><strong>ALERTA DE CRÉDITO:</strong> la orden supera el cupo de fiado. Quedó registrada y marcada para el Centinela. Saldo actual ${money(r.saldo_cliente_usd)} · cupo ${money(r.cupo_credito_usd)}.</div>` : '';
+    $('#ord-resultado').innerHTML = `<div class="notice ok">Orden #${r.numero} registrada · ${r.total_viajes} viaje(s).</div>${alerta}`;
+    toast('Orden #' + r.numero + ' registrada', 'ok');
+    state.carpeta = null;
+    await cargarSecretaria();
+    if ($('#ord-cliente').value) seleccionarCliente($('#ord-cliente').value);
+  } catch(e) {
+    $('#ord-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+    toast('No se pudo registrar la orden', 'bad');
+  } finally { $('#ord-submit').disabled = false; }
+}
+
+function abrirCliente(){
+  ['cli-nombre','cli-constructora','cli-ruc','cli-telefono'].forEach(id => $('#'+id).value = '');
+  $('#cli-error').innerHTML = '';
+  $('#dlg-cliente').showModal();
+}
+
+async function crearCliente() {
+  const body = {
+    nombre: $('#cli-nombre').value.trim(),
+    constructora: $('#cli-constructora').value.trim() || null,
+    ruc: $('#cli-ruc').value.trim() || null,
+    telefono_whatsapp: $('#cli-telefono').value.trim() || null,
+    provincia: $('#cli-provincia').value || null
+  };
+  if (!body.nombre) { $('#cli-error').innerHTML = '<div class="notice bad">El nombre es obligatorio.</div>'; return; }
+  try {
+    await api('/api/v1/clients', {method:'POST', body});
+    $('#dlg-cliente').close();
+    toast('Cliente creado', 'ok');
+    await cargarSecretaria();
+  } catch(e) { $('#cli-error').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`; }
+}
+
+async function cargarCierre() {
+  const fecha = $('#cierre-fecha').value || hoy();
+  try {
+    const r = await api('/api/v1/secretaria/cierre-caja?fecha=' + fecha);
+    state.cierre = r;
+    $('#cierre-estado').textContent = r.cerrado ? 'CERRADO' : 'ABIERTO';
+    $('#cierre-estado').className = 'badge ' + (r.cerrado ? 'ok' : 'warn');
+    $('#cierre-resumen').innerHTML = `
+      <div class="spread"><span>Efectivo cobrado</span><strong>${money(r.cobros.efectivo)}</strong></div>
+      <div class="spread"><span>Transferencias</span><strong>${money(r.cobros.transferencia)}</strong></div>
+      <div class="spread"><span>Fiado otorgado</span><strong>${money(r.ventas.fiado)}</strong></div>
+      <div class="spread"><span>Caja chica</span><strong>− ${money(r.caja_chica)}</strong></div>
+      <div class="divider" style="margin:8px 0"></div>
+      <div class="spread"><span><strong>Efectivo esperado</strong></span><strong>${money(r.efectivo_sistema)}</strong></div>`;
+    if (r.cierre && r.cierre.efectivo_contado !== null && r.cierre.efectivo_contado !== undefined) {
+      $('#cierre-contado').value = r.cierre.efectivo_contado;
+      $('#cierre-resultado').innerHTML = `<div class="notice ${Math.abs(r.cierre.diferencia||0) < 0.01 ? 'ok':'warn'}">Cierre guardado. Diferencia: ${money(r.cierre.diferencia)}</div>`;
+    }
+  } catch(e) { toast('Cierre no disponible: ' + e.message, 'bad'); }
+}
+
+async function cerrarCaja() {
+  const fecha = $('#cierre-fecha').value || hoy();
+  const contado = $('#cierre-contado').value;
+  try {
+    const r = await api('/api/v1/secretaria/cierre-caja', {method:'POST', body:{
+      fecha, efectivo_contado: contado === '' ? null : Number(contado), cerrado_por: $('#cierre-por').value
+    }});
+    const clase = Math.abs(r.diferencia || 0) < 0.01 ? 'ok' : 'warn';
+    $('#cierre-resultado').innerHTML = `<div class="notice ${clase}">Caja cerrada. Diferencia: ${money(r.diferencia)}</div>`;
+    toast('Cierre de caja guardado', 'ok');
+    cargarCierre();
+  } catch(e) { toast('No se pudo cerrar caja: ' + e.message, 'bad'); }
+}
+
+/* ----------------------------- GERENCIAL ----------------------------- */
+async function cargarGerencial() {
+  if (!$('#ger-fecha').value) $('#ger-fecha').value = hoy();
+  const fecha = $('#ger-fecha').value;
+  const planta = $('#ger-planta').value;
+  try {
+    const [kpis, simulador] = await Promise.all([
+      api('/api/v1/dashboard/hero-kpis?fecha=' + fecha + (planta ? '&planta=' + encodeURIComponent(planta) : '')),
+      api('/api/v1/dashboard/simulador').catch(e => ({error:e.message}))
+    ]);
+    state.kpis = kpis; state.simulador = simulador;
+    renderKpis();
+    renderSimulador();
+  } catch(e) { toast('Dashboard no disponible: ' + e.message, 'bad'); }
+  cargarMercado();
+}
+
+function renderKpis() {
+  const k = state.kpis; if (!k) return;
+  const caja = k.kpi_caja, op = k.kpi_operacion, bodega = k.kpi_bodega;
+  const sem = op.semaforo_termico || 'SIN_DATOS';
+  $('#hero-kpis').innerHTML = `
+    <div class="card">
+      <div class="kpi-label">KPI 1 · Pulso de caja y cartera hoy</div>
+      <div class="kpi-value">${money(caja.cobrado_hoy)}</div>
+      <div class="kpi-sub">Efectivo ${money(caja.efectivo_hoy)} · Transferencias ${money(caja.transferencias_hoy)}</div>
+      <div class="divider"></div>
+      <div class="spread"><span class="small">Total en la calle (fiados)</span><strong>${money(caja.por_cobrar_total)}</strong></div>
+      <div class="spread small muted"><span>Clientes con saldo</span><span>${caja.clientes_con_saldo}</span></div>
+      ${caja.ordenes_fiado_excedidas ? `<div class="notice warn">${caja.ordenes_fiado_excedidas} orden(es) de hoy exceden cupo de crédito.</div>` : ''}
+    </div>
+    <div class="card">
+      <div class="kpi-label">KPI 2 · Operación y riesgo térmico</div>
+      <div class="kpi-value">${num(op.m3_hoy)} m³ <span class="muted" style="font-size:13px;font-weight:600">hoy</span></div>
+      <div class="kpi-sub">${num(op.m3_mes)} m³ en el mes · ${op.mixers_en_ruta} mixer(s) en ruta</div>
+      <div class="divider"></div>
+      <div class="spread"><span class="small">Reloj térmico de fraguado</span><span><span class="semaforo ${sem}"></span> <strong>${sem}</strong></span></div>
+      <div class="small muted" style="margin-top:6px">VERDE &lt; 90 min · ÁMBAR 90–120 min · ROJO &gt; 120 min</div>
+      <div style="margin-top:8px">
+        ${(op.detalle_mixers||[]).map(m => `<div class="spread small"><span>${esc(m.mixer_codigo)} · ${esc(m.chofer||'sin chofer')}</span><span><span class="semaforo ${m.semaforo}"></span> ${m.minutos_en_ruta ?? '—'} min</span></div>`).join('') || '<span class="muted small">Sin mixers en ruta.</span>'}
+      </div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">KPI 3 · Bodega y autonomía</div>
+      <div class="kpi-value">${num(bodega.m3_fc210_disponibles)} m³</div>
+      <div class="kpi-sub">Autonomía de FC-210 antes de parar planta</div>
+      <div class="divider"></div>
+      <div class="spread small"><span>Cemento</span><strong>${num(bodega.cemento_sacos)} sacos</strong></div>
+      <div class="spread small"><span>Retardante</span><strong>${num(bodega.retardante_litros)} L</strong></div>
+      <div class="spread small"><span>Merma cemento (30 d)</span><strong>${num(bodega.merma_cemento_sacos_30d)} sacos</strong></div>
+      ${bodega.alerta_merma ? '<div class="notice warn">Alerta de merma: el consumo real supera el teórico.</div>' : ''}
+    </div>`;
+}
+
+async function cargarMercado() {
+  const modo = $('#mercado-modo').value;
+  const anio = Number($('#mercado-anio').value || 2026);
+  try {
+    const r = await api('/api/v1/dashboard/mercado?periodo=' + modo + '&anio=' + anio);
+    state.mercado = r;
+    renderMercado();
+  } catch(e) { toast('Cuota de mercado no disponible: ' + e.message, 'bad'); }
+}
+
+function renderMercado() {
+  const r = state.mercado; if (!r) return;
+  $('#mercado-periodo').textContent = r.periodo + ' · ' + r.desde + ' → ' + r.hasta;
+  $('#mercado-panel').innerHTML = (r.provincias||[]).map(p => {
+    const cuota = Math.max(0, Math.min(100, Number(p.cuota_pct || 0)));
+    const clase = cuota >= 15 ? '' : 'warn';
+    return `
+      <div style="margin-bottom:14px">
+        <div class="spread"><strong>${esc(p.provincia)}</strong><span>${p.cuota_pct === null ? '—' : Number(p.cuota_pct).toFixed(2)+'%'}</span></div>
+        <div class="bar-track" style="margin:6px 0"><div class="bar-fill ${clase}" style="width:${cuota}%"></div></div>
+        <div class="spread small muted"><span>Ventas ${num(p.ventas_m3)} m³ / demanda ${num(p.demanda_m3)} m³</span><span>Competencia: ${money(p.competencia_usd)}</span></div>
+        <p class="small" style="margin:6px 0 0">${esc(p.mensaje)}</p>
+      </div>`;
+  }).join('') + `<div class="notice info">Valorización a ${money(r.precio_valorizacion_m3)}/m³ (${esc(r.resistencia_valorizacion)}). ${r.sin_provincia_m3 ? 'Ventas sin provincia: '+num(r.sin_provincia_m3)+' m³.' : ''}</div>`;
+}
+
+function renderSimulador() {
+  const s = state.simulador;
+  if (!s || s.error) { $('#simulador-panel').innerHTML = `<div class="notice bad">${esc(s ? s.error : 'Sin datos')}</div>`; return; }
+  $('#simulador-panel').innerHTML = (s.escenarios||[]).map(e => `
+    <div class="card" style="box-shadow:none;margin-bottom:10px;padding:12px">
+      <div class="spread"><strong>${esc(e.nombre)}</strong><span class="badge ${e.semaforo === 'VERDE' ? 'ok' : e.semaforo === 'AMBAR' ? 'warn':'bad'}">${e.semaforo}</span></div>
+      <div class="kpi-value" style="font-size:22px">${money(e.cuota_mensual)}<span class="muted" style="font-size:12px;font-weight:600"> /mes</span></div>
+      <div class="small muted">${money(e.monto_usd)} · ${e.plazo_meses} meses · intereses ${money(e.total_intereses)}</div>
+      <div class="divider" style="margin:9px 0"></div>
+      <div class="spread small"><span>DSCR activo (${num(e.m3_extra_mes)} m³ extra)</span><strong>${e.dscr_proyectado ?? '—'}x</strong></div>
+      <div class="spread small"><span>DSCR histórico + proyección</span><strong>${e.dscr_historico ?? '—'}x</strong></div>
+    </div>`).join('');
+}
+
+/* ----------------------------- SUPERADMIN ----------------------------- */
+const SECCIONES = [
+  ['formulas_y_precios','Fórmulas'],
+  ['whatsapp_evolution_y_cdn','WhatsApp y CDN'],
+  ['empresa_bot_publico','Empresa'],
+  ['flota_y_operacion','Flota'],
+  ['directorio_roles_whatsapp','Directorio'],
+  ['bodega_y_umbrales','Bodega'],
+  ['finanzas_y_ases_gerenciales','Finanzas']
+];
+
+const CAMPOS = {
+  empresa_bot_publico: [
+    {k:'company_name', l:'Razón social'},
+    {k:'trade_name', l:'Nombre comercial'},
+    {k:'ruc', l:'RUC'},
+    {k:'main_plant_address', l:'Dirección planta'},
+    {k:'business_hours', l:'Horario'},
+    {k:'mobile_plant_pitch', l:'Mensaje planta móvil'},
+    {k:'coverage_zones', l:'Zonas de cobertura', t:'lista'},
+    {k:'bank_accounts', l:'Cuentas bancarias', t:'lineas'}
+  ],
+  whatsapp_evolution_y_cdn: [
+    {k:'evolution_api_url', l:'Evolution API URL'},
+    {k:'evolution_instance_name', l:'Instancia'},
+    {k:'evolution_api_key', l:'API key Evolution'},
+    {k:'evolution_sandbox', l:'Evolution en SANDBOX', t:'bool'},
+    {k:'bunny_storage_zone', l:'Storage Zone Bunny'},
+    {k:'bunny_api_key', l:'API key Bunny'},
+    {k:'bunny_cdn_domain', l:'CDN Bunny'},
+    {k:'bunny_sandbox', l:'Bunny en SANDBOX', t:'bool'},
+    {k:'debounce_seconds', l:'Debounce (s)', t:'num'},
+    {k:'judge_model', l:'Modelo del Juez'}
+  ],
+  directorio_roles_whatsapp: [
+    {k:'staff', l:'Staff (teléfono → rol/mixer/PIN)', t:'json'},
+    {k:'codigos_operador', l:'Códigos de operador', t:'json'},
+    {k:'pin_operador', l:'PIN opcional', t:'json'}
+  ],
+  flota_y_operacion: [
+    {k:'mixers', l:'Flota (JSON)', t:'json'},
+    {k:'politica_ultimo_viaje', l:'Política último viaje', t:'opciones', o:['PARCIAL','COMPLETO','UNIFORME']},
+    {k:'reloj_termico', l:'Reloj térmico', t:'json'}
+  ],
+  bodega_y_umbrales: [
+    {k:'materiales', l:'Materiales (solo lectura)', t:'readonly'},
+    {k:'por_planta', l:'Umbrales por planta', t:'json'}
+  ],
+  finanzas_y_ases_gerenciales: [
+    {k:'tope_credito_auto', l:'Cupo de crédito automático', t:'json'},
+    {k:'simulador', l:'Simulador bancario', t:'json'},
+    {k:'mercado_valorizacion', l:'Valorización de mercado', t:'json'},
+    {k:'benchmarks', l:'Benchmarks por provincia', t:'json'}
+  ],
+  formulas_y_precios: [
+    {k:'recetas', l:'Recetas (JSON, upsert por resistencia)', t:'json'}
+  ]
+};
+
+async function cargarSuperadmin() {
+  if (!$('#cierre-fecha')) return;
+  try {
+    const [config, remitentes, outbox] = await Promise.all([
+      api('/api/v1/superadmin/config'),
+      api('/api/v1/superadmin/simulador/remitentes').catch(e => ({remitentes:[]})),
+      api('/api/v1/superadmin/sandbox/outbox').catch(e => ({outbox:[]}))
+    ]);
+    state.config = config;
+    state.remitentes = remitentes.remitentes || [];
+    state.outbox = outbox.outbox || [];
+    if (!state.seccionConfig) state.seccionConfig = SECCIONES[0][0];
+    renderRemitentes();
+    renderConfigTabs();
+    renderConfig();
+    renderOutbox();
+  } catch(e) { toast('Superadmin no disponible: ' + e.message, 'bad'); }
+}
+
+function renderRemitentes() {
+  $('#sim-remitente').innerHTML = state.remitentes.map(r =>
+    `<option value="${esc(r.telefono)}">${esc(r.nombre)} · ${esc(r.rol)}${r.mixer ? ' · '+esc(r.mixer):''}</option>`
+  ).join('') || '<option value="+593990000999">Lead Nuevo</option>';
+}
+
+function renderConfigTabs() {
+  $('#config-tabs').innerHTML = SECCIONES.map(([id,label]) =>
+    `<button class="${state.seccionConfig===id?'active':''}" onclick="cambiarSeccion('${id}')">${label}</button>`
+  ).join('');
+}
+
+function cambiarSeccion(id){ state.seccionConfig = id; renderConfigTabs(); renderConfig(); }
+
+function renderConfig() {
+  const id = state.seccionConfig;
+  const datos = (state.config||{})[id] || {};
+  const campos = CAMPOS[id] || [];
+  $('#config-panel').innerHTML = `
+    <p class="small muted">Los datos marcados como provisionales son semilla editable. Guardar aquí aplica el cambio en la siguiente petición, sin reiniciar.</p>
+    ${campos.map(c => {
+      if (c.t === 'bool') return `<label class="row small" style="margin:8px 0"><input type="checkbox" data-campo="${c.k}" ${datos[c.k]?'checked':''} style="width:auto"> ${c.l}</label>`;
+      if (c.t === 'json' || c.t === 'readonly') return `
+        <label class="field" style="margin-top:8px">${c.l}</label>
+        <textarea class="mono" data-campo="${c.k}" data-json="1" ${c.t === 'readonly' ? 'readonly':''}>${esc(JSON.stringify(datos[c.k] ?? (c.t==='json'?{}:[]), null, 2))}</textarea>`;
+      if (c.t === 'opciones') return `<label class="field" style="margin-top:8px">${c.l}</label>
+        <select data-campo="${c.k}">${c.o.map(o => `<option ${datos[c.k]===o?'selected':''}>${o}</option>`).join('')}</select>`;
+      const valor = c.t === 'lista' ? (datos[c.k]||[]).join(', ') : c.t === 'lineas' ? (datos[c.k]||[]).join('\n') : (datos[c.k] ?? '');
+      if (c.t === 'lineas') return `<label class="field" style="margin-top:8px">${c.l} (una por línea)</label><textarea data-campo="${c.k}" data-lineas="1">${esc(valor)}</textarea>`;
+      return `<label class="field" style="margin-top:8px">${c.l}</label><input type="text" data-campo="${c.k}" value="${esc(valor)}">`;
+    }).join('')}
+    <button class="btn" style="margin-top:12px" onclick="guardarSeccion()">Guardar ${SECCIONES.find(s=>s[0]===id)[1]}</button>
+    <div id="config-resultado"></div>`;
+}
+
+function leerCampo(el) {
+  if (el.type === 'checkbox') return el.checked;
+  if (el.dataset.json) return JSON.parse(el.value || '{}');
+  if (el.dataset.lineas) return el.value.split('\n').map(s => s.trim()).filter(Boolean);
+  const campo = el.dataset.campo;
+  if (campo === 'coverage_zones') return el.value.split(',').map(s => s.trim()).filter(Boolean);
+  if (campo === 'debounce_seconds') return Number(el.value);
+  return el.value;
+}
+
+async function guardarSeccion() {
+  const id = state.seccionConfig;
+  const body = {};
+  try {
+    $$('#config-panel [data-campo]').forEach(el => {
+      if (el.hasAttribute('readonly')) return;
+      body[el.dataset.campo] = leerCampo(el);
+    });
+  } catch(e) { toast('JSON inválido: ' + e.message, 'bad'); return; }
+  try {
+    const r = await api('/api/v1/superadmin/config/' + id, {method:'PUT', body});
+    state.config[id] = r;
+    $('#config-resultado').innerHTML = '<div class="notice ok">Guardado y aplicado en caliente.</div>';
+    toast('Configuración guardada', 'ok');
+    cargarSalud();
+  } catch(e) {
+    $('#config-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+async function enviarSimulacion() {
+  const telefono = $('#sim-remitente').value;
+  const texto = $('#sim-texto').value.trim();
+  if (!texto) { toast('Escribe un mensaje.', 'bad'); return; }
+  const media = $('#sim-foto').checked ? [{
+    tipo:'imagen', mimetype:'image/jpeg', nombre:'evidencia-demo.jpg',
+    url_origen:'https://orminorth.b-cdn.net/sandbox/evidencia-demo.jpg'
+  }] : [];
+  try {
+    const r = await api('/api/v1/superadmin/simulador-whatsapp', {method:'POST', body:{telefono, texto, media}});
+    const clase = r.error ? 'bad' : (r.acciones && r.acciones.length ? 'ok' : 'info');
+    $('#sim-resultado').innerHTML = `
+      <div class="notice ${clase}">
+        <strong>${esc(r.rol)}</strong> · compuerta ${esc(r.compuerta || '—')} · estado ${esc(r.estado_actual || '—')}
+        ${r.respuesta ? '<div class="bubble in" style="margin-top:8px"><span class="who">respuesta al cliente</span>'+esc(r.respuesta)+'</div>' : ''}
+      </div>
+      <details><summary>Ver JSON del pipeline</summary><pre>${esc(JSON.stringify(r, null, 2))}</pre></details>`;
+    toast('Mensaje procesado por el pipeline', 'ok');
+    await cargarOutbox();
+    if (state.carpeta) seleccionarCliente(state.carpeta.cliente.cliente_id);
+  } catch(e) {
+    $('#sim-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+    toast('El simulador no pudo procesar el mensaje', 'bad');
+  }
+}
+
+async function cargarOutbox() {
+  try {
+    const r = await api('/api/v1/superadmin/sandbox/outbox');
+    state.outbox = r.outbox || [];
+    renderOutbox();
+  } catch(e) { /* silencioso: el panel de outbox es auxiliar */ }
+}
+
+function renderOutbox() {
+  $('#outbox-panel').innerHTML = state.outbox.length ? state.outbox.map(o => `
+    <div style="border-bottom:1px solid var(--line);padding:8px 0">
+      <div class="spread"><strong>${esc(o.canal)} → ${esc(o.destino)}</strong><span class="badge neutral">${esc(o.estado)}</span></div>
+      <div class="small">${esc(o.contenido)}</div>
+      <div class="small muted">${new Date(o.created_at).toLocaleString('es-EC')} · ${esc(o.tipo)}</div>
+    </div>`).join('') : '<p class="muted">Sin mensajes encolados.</p>';
+}
+
+/* ----------------------------- INIT ----------------------------- */
+setView('secretaria');
+cargarSalud();
+setInterval(cargarSalud, 60000);
+</script>
+</body>
+</html>

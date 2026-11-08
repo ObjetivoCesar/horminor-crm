@@ -176,14 +176,37 @@ async def ejecutar_auditoria(
     )
 
     latencia_total = round((perf_counter() - inicio) * 1000, 1)
+    modo, judge_mode = await _modo_y_juez(pool, settings)
     return {
         "cliente": CLIENTE,
         "generado_at": datetime.now(zona).isoformat(timespec="seconds"),
         "latencia_total_ms": latencia_total,
+        "modo_operacion": modo,
+        "judge_mode": judge_mode,
         "estado_global": agregar_estado_global([r.estado for r in resultados]),
         "checks": [r.to_dict() for r in resultados],
         "resumen_operativo": construir_resumen_operativo(resultados),
     }
+
+
+async def _modo_y_juez(
+    pool: asyncpg.Pool, settings: Settings
+) -> tuple[str, str]:
+    """Publica el modo de integracion y el Juez efectivo sin exponer claves."""
+    try:
+        evolution = await setting(pool, "integraciones.evolution", {}) or {}
+    except Exception:
+        evolution = {}
+    sandbox = bool(
+        evolution.get("sandbox", getattr(settings, "sandbox_mode", True))
+        if isinstance(evolution, dict)
+        else getattr(settings, "sandbox_mode", True)
+    )
+    tiene_gemini = bool((settings.gemini_api_key or "").strip())
+    return (
+        "SANDBOX" if sandbox else "PRODUCCION",
+        "GEMINI" if tiene_gemini else "DETERMINISTIC_FALLBACK",
+    )
 
 
 def construir_fabricas(

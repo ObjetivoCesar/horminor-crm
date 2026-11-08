@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from typing import Any, Mapping, Protocol
 
 import asyncpg
@@ -369,15 +370,24 @@ class PostgresConfigStore:
         if seccion == SECCION_WHATSAPP:
             evolution = await self._setting("integraciones.evolution", {}) or {}
             bunny = await self._setting("integraciones.bunny", {}) or {}
+            juez = await self._setting("ia.juez", {}) or {}
             debounce = await self._setting("operacion.debounce_segundos", 14)
+            api_key_juez = bool(os.environ.get("GEMINI_API_KEY", "").strip())
             return {
                 "evolution_api_url": evolution.get("url"),
                 "evolution_instance_name": evolution.get("instancia"),
                 "evolution_api_key": evolution.get("api_key"),
+                "evolution_sandbox": bool(evolution.get("sandbox", True)),
                 "debounce_seconds": _num(debounce) or 14.0,
                 "bunny_storage_zone": bunny.get("storage_zone"),
                 "bunny_api_key": bunny.get("api_key"),
                 "bunny_cdn_domain": bunny.get("cdn_host"),
+                "bunny_sandbox": bool(bunny.get("sandbox", True)),
+                "judge_model": juez.get("model") or "gemini-2.5-flash",
+                "judge_mode": (
+                    "GEMINI" if api_key_juez else "DETERMINISTIC_FALLBACK"
+                ),
+                "judge_mode_config": juez.get("modo") or "AUTO",
             }
 
         if seccion == SECCION_EMPRESA:
@@ -414,6 +424,13 @@ class PostgresConfigStore:
                 "staff": dict(await self._setting("whatsapp.staff", {}) or {}),
                 "codigos_operador": dict(
                     await self._setting("whatsapp.codigos_operador", {}) or {}
+                ),
+                "pin_operador": dict(
+                    await self._setting(
+                        "whatsapp.pin_operador",
+                        {"require_pin": False, "pines": {}},
+                    )
+                    or {}
                 ),
             }
 
@@ -458,6 +475,9 @@ class PostgresConfigStore:
                 "simulador": dict(
                     await self._setting("finanzas.simulador", {}) or {}
                 ),
+                "mercado_valorizacion": dict(
+                    await self._setting("mercado.valorizacion", {}) or {}
+                ),
                 "benchmarks": [
                     {
                         "provincia": fila["provincia"],
@@ -491,6 +511,7 @@ class PostgresConfigStore:
         elif seccion == SECCION_WHATSAPP:
             evolution = await self._setting("integraciones.evolution", {}) or {}
             bunny = await self._setting("integraciones.bunny", {}) or {}
+            juez = await self._setting("ia.juez", {}) or {}
             mapa = {
                 "evolution_api_url": ("url", evolution),
                 "evolution_instance_name": ("instancia", evolution),
@@ -502,6 +523,14 @@ class PostgresConfigStore:
             for campo, (destino, contenedor) in mapa.items():
                 if campo in cuerpo:
                     contenedor[destino] = _texto(cuerpo.get(campo))
+            if "evolution_sandbox" in cuerpo:
+                evolution["sandbox"] = _booleano(cuerpo.get("evolution_sandbox"))
+            if "bunny_sandbox" in cuerpo:
+                bunny["sandbox"] = _booleano(cuerpo.get("bunny_sandbox"))
+            if cuerpo.get("judge_model"):
+                juez["model"] = _texto(cuerpo.get("judge_model"))
+            if cuerpo.get("judge_mode_config"):
+                juez["modo"] = _texto(cuerpo.get("judge_mode_config")).upper()
             if "debounce_seconds" in cuerpo:
                 numero = _num(cuerpo.get("debounce_seconds"))
                 if numero is not None and numero >= 0:
@@ -510,6 +539,7 @@ class PostgresConfigStore:
                     )
             await self._guardar_setting("integraciones.evolution", evolution)
             await self._guardar_setting("integraciones.bunny", bunny)
+            await self._guardar_setting("ia.juez", juez)
 
         elif seccion == SECCION_EMPRESA:
             actual = dict(await self._setting("empresa.bot_publico", {}) or {})
@@ -555,6 +585,16 @@ class PostgresConfigStore:
                 await self._guardar_setting(
                     "whatsapp.codigos_operador", dict(codigos)
                 )
+            if isinstance(cuerpo.get("pin_operador"), Mapping):
+                actual = dict(
+                    await self._setting(
+                        "whatsapp.pin_operador",
+                        {"require_pin": False, "pines": {}},
+                    )
+                    or {}
+                )
+                actual.update(cuerpo["pin_operador"])
+                await self._guardar_setting("whatsapp.pin_operador", actual)
 
         elif seccion == SECCION_BODEGA:
             materiales = cuerpo.get("materiales")
@@ -591,6 +631,12 @@ class PostgresConfigStore:
                 actual = dict(await self._setting("finanzas.simulador", {}) or {})
                 actual.update(cuerpo["simulador"])
                 await self._guardar_setting("finanzas.simulador", actual)
+            if isinstance(cuerpo.get("mercado_valorizacion"), Mapping):
+                actual = dict(
+                    await self._setting("mercado.valorizacion", {}) or {}
+                )
+                actual.update(cuerpo["mercado_valorizacion"])
+                await self._guardar_setting("mercado.valorizacion", actual)
             benchmarks = cuerpo.get("benchmarks")
             if isinstance(benchmarks, list):
                 for benchmark in benchmarks:
@@ -704,14 +750,17 @@ class MemoryConfigStore:
             "operacion.debounce_segundos": 14,
             "integraciones.evolution": {
                 "url": None,
-                "instancia": None,
+                "instancia": "orminorth-main",
                 "api_key": None,
+                "sandbox": True,
             },
             "integraciones.bunny": {
-                "storage_zone": None,
-                "cdn_host": None,
+                "storage_zone": "orminorth-media",
+                "cdn_host": "https://orminorth.b-cdn.net",
                 "api_key": None,
+                "sandbox": True,
             },
+            "ia.juez": {"model": "gemini-2.5-flash", "modo": "AUTO"},
             "empresa.bot_publico": {
                 "company_name": "Orminorth Hormigones",
                 "ruc": None,
@@ -730,27 +779,58 @@ class MemoryConfigStore:
                 "#BODEGA": "BODEGA_PLANTA",
                 "#CAJA": "CAJA_SECRETARIA",
                 "#ADMIN": "SUPERADMIN",
+                "#M1": "CHOFER_MIXER",
+                "#M2": "CHOFER_MIXER",
+                "#M3": "CHOFER_MIXER",
             },
+            "whatsapp.pin_operador": {"require_pin": False, "pines": {}},
             "bodega.umbrales_por_planta": {"PLANTA-COCA": {}},
-            "finanzas.tope_credito_auto": None,
+            "finanzas.tope_credito_auto": {
+                "enabled": True,
+                "default_credit_limit_usd": 1500.00,
+                "max_overdue_days": 15,
+            },
             "finanzas.simulador": {
                 "pluma_monto_usd": 100000,
                 "combo_china_monto_usd": 240000,
                 "tasa_anual_pct": 11.2,
                 "plazos_meses": [36, 48],
+                "margen_neto_m3": 42.50,
+                "m3_extra_pluma": 180,
+                "m3_extra_combo": 450,
+            },
+            "mercado.valorizacion": {
+                "precio_m3": 118.00,
+                "resistencia": "FC-210",
+                "periodo_default": "12_MESES_MOVILES",
+                "anio_actual": 2026,
             },
         }
         self.benchmarks: list[dict[str, Any]] = [
             {
                 "provincia": "Orellana",
-                "anio": None,
+                "anio": 2025,
+                "demanda_m3": 120000.0,
+                "precio_promedio_m3": None,
+                "fuente": "prueba",
+            },
+            {
+                "provincia": "Orellana",
+                "anio": 2026,
                 "demanda_m3": 120000.0,
                 "precio_promedio_m3": None,
                 "fuente": "prueba",
             },
             {
                 "provincia": "Sucumbios",
-                "anio": None,
+                "anio": 2025,
+                "demanda_m3": 95000.0,
+                "precio_promedio_m3": None,
+                "fuente": "prueba",
+            },
+            {
+                "provincia": "Sucumbios",
+                "anio": 2026,
                 "demanda_m3": 95000.0,
                 "precio_promedio_m3": None,
                 "fuente": "prueba",
@@ -814,16 +894,25 @@ class MemoryConfigStore:
         if seccion == SECCION_WHATSAPP:
             evolution = self.settings["integraciones.evolution"]
             bunny = self.settings["integraciones.bunny"]
+            juez = self.settings["ia.juez"]
+            api_key_juez = bool(os.environ.get("GEMINI_API_KEY", "").strip())
             return {
                 "evolution_api_url": evolution.get("url"),
                 "evolution_instance_name": evolution.get("instancia"),
                 "evolution_api_key": evolution.get("api_key"),
+                "evolution_sandbox": bool(evolution.get("sandbox", True)),
                 "debounce_seconds": float(
                     self.settings["operacion.debounce_segundos"]
                 ),
                 "bunny_storage_zone": bunny.get("storage_zone"),
                 "bunny_api_key": bunny.get("api_key"),
                 "bunny_cdn_domain": bunny.get("cdn_host"),
+                "bunny_sandbox": bool(bunny.get("sandbox", True)),
+                "judge_model": juez.get("model") or "gemini-2.5-flash",
+                "judge_mode": (
+                    "GEMINI" if api_key_juez else "DETERMINISTIC_FALLBACK"
+                ),
+                "judge_mode_config": juez.get("modo") or "AUTO",
             }
         if seccion == SECCION_EMPRESA:
             return copy.deepcopy(self.settings["empresa.bot_publico"])
@@ -855,6 +944,9 @@ class MemoryConfigStore:
                 "codigos_operador": copy.deepcopy(
                     self.settings["whatsapp.codigos_operador"]
                 ),
+                "pin_operador": copy.deepcopy(
+                    self.settings["whatsapp.pin_operador"]
+                ),
             }
         if seccion == SECCION_BODEGA:
             return {
@@ -884,6 +976,9 @@ class MemoryConfigStore:
             return {
                 "tope_credito_auto": self.settings["finanzas.tope_credito_auto"],
                 "simulador": copy.deepcopy(self.settings["finanzas.simulador"]),
+                "mercado_valorizacion": copy.deepcopy(
+                    self.settings["mercado.valorizacion"]
+                ),
                 "benchmarks": copy.deepcopy(self.benchmarks),
             }
         raise ValueError(f"Seccion no soportada: {seccion}")
@@ -905,6 +1000,7 @@ class MemoryConfigStore:
         elif seccion == SECCION_WHATSAPP:
             evolution = self.settings["integraciones.evolution"]
             bunny = self.settings["integraciones.bunny"]
+            juez = self.settings["ia.juez"]
             mapa = {
                 "evolution_api_url": ("url", evolution),
                 "evolution_instance_name": ("instancia", evolution),
@@ -916,6 +1012,14 @@ class MemoryConfigStore:
             for campo, (destino, contenedor) in mapa.items():
                 if campo in cuerpo:
                     contenedor[destino] = _texto(cuerpo.get(campo))
+            if "evolution_sandbox" in cuerpo:
+                evolution["sandbox"] = _booleano(cuerpo.get("evolution_sandbox"))
+            if "bunny_sandbox" in cuerpo:
+                bunny["sandbox"] = _booleano(cuerpo.get("bunny_sandbox"))
+            if cuerpo.get("judge_model"):
+                juez["model"] = _texto(cuerpo.get("judge_model"))
+            if cuerpo.get("judge_mode_config"):
+                juez["modo"] = _texto(cuerpo.get("judge_mode_config")).upper()
             if "debounce_seconds" in cuerpo:
                 numero = _num(cuerpo.get("debounce_seconds"))
                 if numero is not None and numero >= 0:
@@ -953,6 +1057,10 @@ class MemoryConfigStore:
             codigos = cuerpo.get("codigos_operador", cuerpo.get("codigos"))
             if isinstance(codigos, Mapping):
                 self.settings["whatsapp.codigos_operador"] = dict(codigos)
+            if isinstance(cuerpo.get("pin_operador"), Mapping):
+                actual = dict(self.settings["whatsapp.pin_operador"])
+                actual.update(cuerpo["pin_operador"])
+                self.settings["whatsapp.pin_operador"] = actual
         elif seccion == SECCION_BODEGA:
             if isinstance(cuerpo.get("por_planta"), Mapping):
                 self.settings["bodega.umbrales_por_planta"] = dict(
@@ -967,6 +1075,10 @@ class MemoryConfigStore:
                 actual = dict(self.settings["finanzas.simulador"])
                 actual.update(cuerpo["simulador"])
                 self.settings["finanzas.simulador"] = actual
+            if isinstance(cuerpo.get("mercado_valorizacion"), Mapping):
+                actual = dict(self.settings["mercado.valorizacion"])
+                actual.update(cuerpo["mercado_valorizacion"])
+                self.settings["mercado.valorizacion"] = actual
             if isinstance(cuerpo.get("benchmarks"), list):
                 self.benchmarks = copy.deepcopy(cuerpo["benchmarks"])
         else:

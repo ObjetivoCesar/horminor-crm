@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     gemini_timeout: float = 8.0
 
+    # Modo SANDBOX (Direccion 2026-11-08): sin credenciales reales, WhatsApp
+    # encola en sandbox_outbox, Bunny devuelve URLs simuladas y el Juez cae al
+    # deterministico. Se apaga por .env o desde Superadmin.
+    sandbox_mode: bool = True
+
     # Modulo 1 - Debounce. Si es None, manda system_settings.
     debounce_seconds: float | None = None
     debounce_poll_seconds: float = 1.0

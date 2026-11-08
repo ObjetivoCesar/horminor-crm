@@ -50,12 +50,24 @@ class ClienteRegistrado:
 
 
 @dataclass(frozen=True)
+class StaffRegistrado:
+    """Metadatos opcionales del personal (nombre, mixer y PIN)."""
+
+    rol: Rol
+    nombre: str | None = None
+    mixer_codigo: str | None = None
+    pin: str | None = None
+
+
+@dataclass(frozen=True)
 class RegistroIdentidad:
     """Foto de los telefonos conocidos. Se recarga cada pocos segundos."""
 
     staff: dict[str, Rol] = field(default_factory=dict)
     clientes: dict[str, ClienteRegistrado] = field(default_factory=dict)
     codigos: dict[str, str] = field(default_factory=lambda: dict(CODIGOS_POR_DEFECTO))
+    staff_meta: dict[str, StaffRegistrado] = field(default_factory=dict)
+    require_pin: bool = False
 
 
 @dataclass(frozen=True)
@@ -104,6 +116,13 @@ def _codigos_desde_settings(valor: Any) -> dict[str, str]:
     return limpio or dict(CODIGOS_POR_DEFECTO)
 
 
+def _pin_presente(texto: str | None, pin: str) -> bool:
+    """El PIN viaja dentro del mensaje (4 digitos), nunca en un campo aparte."""
+    if not texto:
+        return False
+    return re.search(rf"(?<!\d){re.escape(pin)}(?!\d)", texto) is not None
+
+
 class IdentityResolver:
     """Resuelve telefono + texto a un rol operativo."""
 
@@ -136,12 +155,57 @@ class IdentityResolver:
             except ValueError:
                 staff_raw = {}
         staff: dict[str, Rol] = {}
+        staff_meta: dict[str, StaffRegistrado] = {}
         if isinstance(staff_raw, Mapping):
             for telefono, rol_crudo in staff_raw.items():
-                rol = Rol.desde_texto(rol_crudo)
+                nombre = None
+                mixer = None
+                pin = None
+                if isinstance(rol_crudo, Mapping):
+                    rol = Rol.desde_texto(
+                        rol_crudo.get("rol") or rol_crudo.get("role")
+                    )
+                    nombre = str(rol_crudo.get("nombre") or "").strip() or None
+                    mixer = normalizar_codigo_mixer(
+                        rol_crudo.get("mixer") or rol_crudo.get("mixer_codigo")
+                    ) if (rol_crudo.get("mixer") or rol_crudo.get("mixer_codigo")) else None
+                    pin_crudo = rol_crudo.get("pin")
+                    pin = str(pin_crudo).strip() if pin_crudo not in (None, "") else None
+                else:
+                    rol = Rol.desde_texto(rol_crudo)
                 clave = normalizar_telefono(telefono)
                 if rol is not None and clave:
                     staff[clave] = rol
+                    staff_meta[clave] = StaffRegistrado(
+                        rol=rol, nombre=nombre, mixer_codigo=mixer, pin=pin
+                    )
+
+        # PIN opcional (Direccion 2026-11-08): desactivado por defecto. El mapa
+        # whatsapp.pin_operador puede sobrescribir el PIN por telefono.
+        pin_cfg = await setting(self._pool, "whatsapp.pin_operador", {}) or {}
+        if isinstance(pin_cfg, str):
+            try:
+                pin_cfg = json.loads(pin_cfg)
+            except ValueError:
+                pin_cfg = {}
+        require_pin = False
+        if isinstance(pin_cfg, Mapping):
+            require_pin = bool(pin_cfg.get("require_pin"))
+            pines = pin_cfg.get("pines")
+            if isinstance(pines, Mapping):
+                for telefono, pin_crudo in pines.items():
+                    clave = normalizar_telefono(telefono)
+                    if not clave or pin_crudo in (None, ""):
+                        continue
+                    actual = staff_meta.get(clave)
+                    if actual is None:
+                        continue
+                    staff_meta[clave] = StaffRegistrado(
+                        rol=actual.rol,
+                        nombre=actual.nombre,
+                        mixer_codigo=actual.mixer_codigo,
+                        pin=str(pin_crudo).strip(),
+                    )
 
         clientes: dict[str, ClienteRegistrado] = {}
         filas = await self._pool.fetch(
@@ -165,7 +229,13 @@ class IdentityResolver:
             await setting(self._pool, "whatsapp.codigos_operador", CODIGOS_POR_DEFECTO)
         )
 
-        self._cache = RegistroIdentidad(staff=staff, clientes=clientes, codigos=codigos)
+        self._cache = RegistroIdentidad(
+            staff=staff,
+            clientes=clientes,
+            codigos=codigos,
+            staff_meta=staff_meta,
+            require_pin=require_pin,
+        )
         self._cache_at = ahora
         return self._cache
 
@@ -180,10 +250,20 @@ class IdentityResolver:
         registro = await self._cargar()
 
         if clave and clave in registro.staff:
+            meta = registro.staff_meta.get(clave)
+            if registro.require_pin and meta is not None and meta.pin:
+                if not _pin_presente(texto, meta.pin):
+                    return Identidad(
+                        rol=Rol.LEAD_DESCONOCIDO,
+                        telefono=telefono,
+                        origen="pin_requerido",
+                    )
             return Identidad(
                 rol=registro.staff[clave],
                 telefono=telefono,
                 origen="registro_staff",
+                nombre=meta.nombre if meta is not None else None,
+                mixer_codigo=meta.mixer_codigo if meta is not None else None,
             )
 
         if clave and clave in registro.clientes:

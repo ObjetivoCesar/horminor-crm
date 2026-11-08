@@ -12,10 +12,11 @@ servidor.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 import asyncpg
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, Body, HTTPException, Query, Request
 
 from .secciones import SECCIONES, SeccionDesconocidaError, normalizar_seccion
 from .store import ConfigStore, PostgresConfigStore
@@ -181,3 +182,103 @@ async def eliminar_mixer(request: Request, codigo: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"mixer inexistente: {codigo}")
     await _refrescar_modulo_1(request)
     return {"eliminado": True, "codigo": codigo.upper()}
+
+
+# ---------------------------------------------------------------------------
+# Simulador de WhatsApp en pantalla (Directriz 2026-11-08)
+# ---------------------------------------------------------------------------
+def _runtime(request: Request) -> Any:
+    runtime = getattr(request.app.state, "whatsapp", None)
+    if runtime is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Modulo 1 no inicializado: no hay worker ni pipeline para simular. "
+                "Revisar /health y las credenciales del entorno."
+            ),
+        )
+    return runtime
+
+
+@router.get("/simulador/remitentes")
+async def remitentes_simulador(request: Request) -> dict[str, Any]:
+    """Opciones del selector: staff real (o semilla) + lead nuevo."""
+    directorio = await _store(request).leer_seccion("directorio_roles_whatsapp")
+    staff = directorio.get("staff") or {}
+    opciones: list[dict[str, Any]] = []
+    for telefono, crudo in staff.items():
+        if isinstance(crudo, dict):
+            rol = crudo.get("rol")
+            nombre = crudo.get("nombre") or telefono
+            mixer = crudo.get("mixer")
+        else:
+            rol = crudo
+            nombre = telefono
+            mixer = None
+        opciones.append(
+            {
+                "telefono": telefono,
+                "nombre": nombre,
+                "rol": rol,
+                "mixer": mixer,
+            }
+        )
+    opciones.append(
+        {
+            "telefono": "+593990000999",
+            "nombre": "Lead Nuevo",
+            "rol": "LEAD_DESCONOCIDO",
+            "mixer": None,
+        }
+    )
+    return {"remitentes": opciones}
+
+
+@router.post("/simulador-whatsapp")
+async def simular_whatsapp(
+    request: Request, datos: dict[str, Any] = Body(...)
+) -> dict[str, Any]:
+    """Dispara el webhook interno (pipeline completo) sin Evolution API."""
+    from ..m1_whatsapp.models import IncomingMessage, MediaAttachment, MessageBatch
+
+    telefono = str(datos.get("telefono") or "").strip()
+    texto = str(datos.get("texto") or "")
+    if not telefono:
+        raise HTTPException(status_code=422, detail="telefono es obligatorio")
+
+    media = tuple(
+        MediaAttachment(
+            tipo=str(adjunto.get("tipo") or "imagen"),
+            mimetype=adjunto.get("mimetype"),
+            nombre=adjunto.get("nombre"),
+            url_origen=adjunto.get("url_origen"),
+            base64=adjunto.get("base64"),
+            transcripcion=adjunto.get("transcripcion"),
+        )
+        for adjunto in (datos.get("media") or [])
+        if isinstance(adjunto, dict)
+    )
+    mensaje = IncomingMessage(
+        mensaje_id=f"sim-{int(datetime.now(timezone.utc).timestamp() * 1000)}",
+        telefono=telefono,
+        texto=texto,
+        media=media,
+        nombre_contacto=datos.get("nombre_contacto"),
+    )
+    runtime = _runtime(request)
+    resultado = await runtime.pipeline.procesar(
+        MessageBatch(telefono=telefono, mensajes=(mensaje,))
+    )
+    salida = resultado.a_dict()
+    salida["judge_mode"] = runtime.estado().get("judge_mode")
+    salida["modo"] = runtime.estado().get("modo")
+    return salida
+
+
+@router.get("/sandbox/outbox")
+async def leer_outbox(
+    request: Request, limite: int = Query(default=50, ge=1, le=200)
+) -> dict[str, Any]:
+    """Mensajes que el modo SANDBOX encolo en lugar de enviar por WhatsApp."""
+    runtime = _runtime(request)
+    return {"outbox": await runtime.repo.listar_outbox(limite)}

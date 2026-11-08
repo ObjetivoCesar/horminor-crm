@@ -23,6 +23,7 @@ class ClienteCreate(BaseModel):
     constructora: str | None = None
     ruc: str | None = None
     telefono_whatsapp: str | None = None
+    provincia: str | None = None
     estado: str = "ACTIVO"
 
 
@@ -59,14 +60,16 @@ async def crear_cliente(request: Request, body: ClienteCreate):
     try:
         row = await pool.fetchrow(
             """
-            INSERT INTO clients (nombre, constructora, ruc, telefono_whatsapp, estado)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id::text, nombre, constructora, ruc, estado
+            INSERT INTO clients
+                (nombre, constructora, ruc, telefono_whatsapp, provincia, estado)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id::text, nombre, constructora, ruc, provincia, estado
             """,
             body.nombre,
             body.constructora,
             body.ruc,
             body.telefono_whatsapp,
+            body.provincia,
             body.estado,
         )
     except asyncpg.UniqueViolationError as exc:
