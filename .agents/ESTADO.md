@@ -48,14 +48,18 @@ Se pueden regenerar con los scripts.
 
 ## Próximo paso exacto
 
+> **Commit local del cierre: `16e0456`.** Árbol de trabajo limpio. El `push`
+> sigue bloqueado con 403 (credenciales de `ObjetivoCesar`).
+
 1. **Ruta A (Hito 3):** la agencia entrega credenciales de Evolution/Bunny/Gemini
    y los teléfonos del personal → cargarlos en el Superadmin o `.env` →
    repetir `hito3_lock_test.py` con los servicios reales y cerrar Hito 3.
 2. **Ruta B (Frontend):** consumir
    `GET /api/v1/superadmin/config` para construir el panel de las 7 secciones.
    La autenticación se agrega al final, como acordado.
-3. **En paralelo:** corregir las credenciales de git y hacer `git push` (ver
-   bitácora 2026-11-08: hoy falla con 403 por cuenta equivocada).
+3. **En paralelo:** el usuario corrige las credenciales de git y hace
+   `git push -u origin main` (ver bitácora 2026-11-08: hoy falla con 403 por
+   cuenta equivocada).
 
 ## Decisiones de arquitectura vigentes
 

@@ -375,3 +375,50 @@ lea toda su configuración en vivo desde PostgreSQL.
    Superadmin, repetir `hito3_lock_test.py` con servicios reales y cerrar el
    Hito 3 en `ESTADO.md`.
 
+---
+
+## 2026-11-08 (Cierre de sesión) — Commit local del cierre Hito 1
+
+**Agente:** DeepSeek V4.1 Flash Free (OpenCode)
+
+### Hecho
+
+1. **Commit local `16e0456`** con la migración 050, el paquete
+   `app/superadmin/`, los tests nuevos, los dos candados adaptados y toda la
+   documentación. Árbol de trabajo limpio después del commit.
+2. **Verificación final de la base**: 5 recetas `confirmado=t`, precios
+   `108/118/126/136/158` con `iva_pct=15.00`; flota `MIXER-01/02/03`
+   (`8, 8, 7 m³`). Las entidades de prueba (`FC-999`, `MIXER-TEST`) fueron
+   creadas y eliminadas por la API, sin residuos.
+3. **Push intentado y rechazado** con la evidencia real:
+   `remote: Permission to CesarReyesJaramillo/horinor.git denied to
+   ObjetivoCesar.` → `403`.
+
+### Evidencia
+
+| Comando | Resultado |
+|---|---|
+| `git commit` | `16e0456 Cierre Hito 1: semilla oficial y Centro de Configuracion Superadmin` |
+| `git status --short` | sin cambios pendientes |
+| `git push -u origin main` | **403**, credenciales de `ObjetivoCesar` |
+| `psql` sobre `concrete_recipes` | 5 recetas confirmadas, IVA 15% |
+| `psql` sobre `flota.mixers` | `MIXER-01/02/03` activos |
+
+### Bloqueos
+
+- `git push` sigue bloqueado por la cuenta equivocada en el Credential Manager
+  de Windows. **No** es un problema del repositorio ni del código.
+
+### Próximo paso exacto
+
+El usuario ejecuta, en `orminorth/`:
+
+```powershell
+git credential-manager logout https://github.com
+git remote set-url origin https://CesarReyesJaramillo@github.com/CesarReyesJaramillo/horinor.git
+git push -u origin main
+```
+
+Luego entregar a Dirección
+`.agents/traspaso/2026-11-08_handoff_cierre_hito1_superadmin.md`.
+
