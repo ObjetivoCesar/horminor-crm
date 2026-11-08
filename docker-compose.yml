@@ -1,0 +1,62 @@
+name: orminorth
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: orminorth-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-orminorth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orminorth}
+      POSTGRES_DB: ${POSTGRES_DB:-orminorth}
+      TZ: America/Guayaquil
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - orminorth-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orminorth} -d ${POSTGRES_DB:-orminorth}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: orminorth-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - orminorth-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  core-api:
+    build:
+      context: .
+      dockerfile: services/core-api/Dockerfile
+    container_name: orminorth-core-api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-orminorth}:${POSTGRES_PASSWORD:-orminorth}@postgres:5432/${POSTGRES_DB:-orminorth}
+      REDIS_URL: redis://redis:6379/0
+      MIGRATIONS_DIR: /app/db/migrations
+      AUTO_MIGRATE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./db:/app/db:ro
+      - ./scripts:/app/scripts:ro
+      - ./services/core-api/tests:/app/tests:ro
+
+volumes:
+  orminorth-pgdata:
+  orminorth-redisdata:

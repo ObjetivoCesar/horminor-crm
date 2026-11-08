@@ -1,0 +1,406 @@
+DOCUMENTO DE REQUISITOS DE PRODUCTO Y
+ARQUITECTURA DE INGENIERÍA (PDR v4.0)
+Proyecto: Sistema ERP/CRM Modular, Automatización WhatsApp y Telemetría
+Centinela — ORMINORTH
+Cliente: Julio Villavicencio (Orminorth — El Coca / Orellana & Sucumbíos)
+Dirección de Proyecto y Estrategia: Nohan
+Ingeniería de Software y Arquitectura: Arquitecto Senior IA & Equipo de Desarrollo (Abel)
+Infraestructura Destino: VPS Linux (Docker + PostgreSQL 15 + Redis + FastAPI + Evolution API + Bunny.net CDN)
+1. RESUMEN EJECUTIVO Y FILOSOFÍA DE ARQUITECTURA
+Este Documento de Requisitos de Producto y Diseño Preliminar (PDR) establece el plano definitivo de
+construcción para el ecosistema digital de Orminorth. El sistema ha sido diseñado bajo tres principios
+innegociables:
+1.  Principio Abierto/Cerrado (Arquitectura de Cajas Negras): El software se divide en 6 Módulos
+Independientes que se comunican exclusivamente a través de contratos de datos (JSONB y tablas
+relacionales en PostgreSQL). Cuando un módulo supera su prueba de validación ("Test de
+Candado"), queda cerrado. Las mejoras o cambios futuros en un módulo jamás obligarán a reescribir
+ni desbaratar los demás módulos.
+2.  Cero Fricción Operativa en Campo ("Manos Sucias"): Se elimina por completo el desarrollo de
+aplicaciones móviles nativas (Android/iOS) para choferes o bodegueros. Toda la operación de planta
+y ruta ocurre dentro de WhatsApp (vía Evolution API), mientras que la Secretaria y Gerencia operan
+desde un Panel Web Responsivo ultraligero inspirado en los componentes ya probados de
+Aquatech.
+3.  Inteligencia Híbrida (Matemática Determinística + Clasificador Binario IA Tipo "Jeb" / Gemini
+Judge): Todo cálculo de dosificación de hormigón, inventario, cierres de caja y simulaciones
+financieras se ejecuta mediante código matemático determinístico (cero alucinaciones). La
+Inteligencia Artificial se utiliza como Juez Binario Determinístico (SÍ / NO — CUMPLE / NO
+CUMPLE) mediante salidas estructuradas (response_schema booleano en Gemini Flash /
+clasificador binario) para validar intenciones, confirmar entregas forenses y auditar reglas operativas
+en milisegundos.
+2. ARQUITECTURA DE 6 MÓDULOS INMUTABLES ("CAJAS NEGRAS")
+Módulo
+Módulo 0
+Nombre Técnico
+Núcleo de Datos y
+Configuración Dinámica
+(PostgreSQL + JSONB)
+Función Principal
+Nivel de Aislamiento (Por qué no
+se rompe)
+Almacena clientes, órdenes, viajes de
+mixer, inventario, cierres de caja y la
+tabla maestra de parámetros
+(system_settings).
+Ninguna receta de hormigón, precio o
+teléfono está fijo en el código. Si Julio
+cambia una dosificación o agrega una
+planta móvil, solo se actualiza una fila
+en base de datos.
+Módulo Nombre Técnico Función Principal Nivel de Aislamiento (Por qué no
+se rompe)
+Módulo 1 Motor de Comunicaciones
+(Evolution API +
+Redis Debounce 14s +
+Bunny.net)
+Recibe textos, audios, fotos y videos de
+un único número de WhatsApp
+corporativo. Agrupa mensajes
+fragmentados durante 14 segundos,
+sube multimedia directo a Bunny.net y
+escribe el resultado en el contrato
+JSON del viaje.
+No conoce el diseño de las pantallas
+web. Solo recibe eventos de
+WhatsApp, consulta al Juez Binario IA
+(SÍ/NO) y actualiza el JSON en
+PostgreSQL.
+Módulo 2 Cerebro Determinístico de
+Planta (Dosificador +
+Kardex + Reloj
+Térmico)
+Calcula con precisión matemática los
+sacos de cemento, m3 de arena/ripio y
+litros de retardante por orden total y por
+cada viaje de mixer (7 m3 u 8 m3).
+Controla la ventana máxima de
+fraguado (150 min).
+Es 100% matemático. No usa IA
+generativa para sumar ni multiplicar.
+Una vez validado el cálculo en el Hito
+2, no requiere mantenimiento.
+Módulo 3 Ventanilla de Secretaría y
+Caja (UI Basada en
+Aquatech)
+Interfaz web limpia Maestro-Detalle:
+Lista de clientes, Carpeta Única del
+Cliente (con línea de tiempo y fotos de
+Bunny.net), creación de órdenes y
+Cierre de Caja Diario (Efectivo,
+Transferencia, Fiado, Caja Chica).
+Lee y escribe únicamente sobre el
+Módulo 0. Cualquier cambio estético
+pedido por la secretaria jamás afecta
+al bot ni al cálculo de planta.
+Módulo 4 Cabina Gerencial de Julio
++ Los 2 Ases Estratégicos
+Dashboard de solo lectura con filtros
+dinámicos (Fecha, Planta Fija vs. Móvil,
+Estado de Pago) + Velocímetro de
+Cuota de Mercado
+(Orellana/Sucumbíos) + Simulador
+Bancario para la Pluma de Hormigón.
+Módulo 100% de lectura (SELECT).
+Permite agregar nuevos gráficos o
+reportes PDF sin riesgo de alterar
+cobros ni despachos.
+Módulo 5 Nodo Centinela y API de
+Telemetría Externa
+(Health & Watchdog
+API)
+Escanea permanentemente la salud del
+VPS, conexión de Evolution API, stock
+crítico, mixers con riesgo de
+desfraguado y errores de usuarios.
+Expone una API REST segura para el
+CRM Central de la Agencia (Nohan &
+Abel) y un canal espejo en Telegram.
+Funciona como un observador
+externo. Permite que el Agente
+Experto de Monitoreo de tu empresa
+audite a Orminorth (y a otros clientes)
+todos los días sin intervención
+humana.
+3. MOTOR DE VALIDACIÓN BINARIA IA ("JEB" / GEMINI BOOLEAN JUDGE) Y
+REGLAS DETERMINÍSTICAS
+Para garantizar velocidad extrema, costo casi nulo y cero errores en la toma de decisiones, el sistema
+separa estrictamente la Matemática Determinística del Juez Binario IA (SÍ / NO).
+3.1. ¿Dónde actúa el Código Determinístico (Cero IA)?
+•  Multiplicación de recetas por metro cúbico (FC-180, FC-210, FC-280, FC-350).
+•  División de una orden grande (ej. 320 m3) en viajes exactos de camión mixer (40 viajes de 8 m3).
+•  Descuento de inventario teórico vs. real en bodega y alertas de umbral mínimo.
+•  Sumatorias de cierre de caja diario, saldos de cuentas por cobrar (fiados) y fórmulas financieras
+bancarias (cuota mensual, punto de equilibrio y ratio DSCR).
+3.2. ¿Dónde actúa el Juez Binario IA ("Jeb" / Gemini Structured Boolean Gate)?
+Cada vez que entra un mensaje de texto o transcripción de voz desde WhatsApp (tras el debounce de 14
+segundos en Redis), no usamos un chatbot conversacional abierto que pueda inventar respuestas. En su
+lugar, pasamos el texto por compuertas binarias ultrarrápidas (Gemini 2.5 Flash con
+response_mime_type="application/json" forzado exclusivamente a {"cumple":
+true/false, "codigo_accion": "..."}):
+Compuerta Binaria
+("Jeb Gate")
+Entrada
+Analizada
+Pregunta Cerrada al
+Modelo Binario
+Salida
+Estricta
+Acción Determinística Disparada
+Gate #1:
+Confirmación de
+Despacho en Planta
+Mensaje/Audio
+del Bodeguero
+¿El bodeguero está
+confirmando que un camión
+mixer acaba de salir de
+planta hacia la obra?
+true /
+false
+Si es true: Registra hora exacta de
+salida (left_plant_at), activa el
+reloj térmico de 150 min y envía
+alerta WhatsApp al cliente.
+Gate #2: Sello
+Forense de
+Recepción del
+Cliente
+Respuesta del
+Cliente en
+WhatsApp
+¿El cliente confirma
+explícitamente que recibió el
+hormigón/mixer conforme y
+sin reclamos de retraso?
+true /
+false
+Si es true: Sella
+client_confirmed_at con el ID
+forense del mensaje. Si es false
+(queja o demora): Dispara alerta
+inmediata al Nodo Centinela
+(Módulo 5) y a Julio.
+Gate #3: Validación
+de Evidencia
+Multimedia
+Foto/Video
+enviado por el
+Chofer
+¿El archivo recibido
+corresponde a evidencia
+válida de obra/guía de
+remisión o vaciado de
+hormigón?
+true /
+false
+Si es true: Sube el archivo a
+Bunny.net Storage y anexa el link
+CDN al JSON de la carpeta del
+cliente.
+Gate #4: Detector
+de Intención de
+Compra / Lead
+Mensaje de
+número no
+registrado
+¿El remitente solicita
+cotización de hormigón
+premezclado o alquiler de
+planta móvil?
+true /
+false
+Si es true: Crea el prospecto en la
+bandeja de la Secretaria para
+cotización inmediata.
+(Nota de Arquitectura: En la Fase 2 del proyecto, cada una de estas compuertas se empaquetará como un Skill
+modular independiente para cada departamento).
+4. ESPECIFICACIÓN DEL MÓDULO 5: NODO CENTINELA Y CONEXIÓN API
+CON EL CRM DE TU EMPRESA
+Siguiendo tu directriz estratégica, el software de Orminorth incluirá un Módulo Centinela interno que
+escanea el sistema las 24 horas y se comunica vía API con el Agente Experto en Monitoreo del CRM
+Central que están construyendo tú y Abel.
+4.1. ¿Qué audita automáticamente el Nodo Centinela dentro de Orminorth?
+1.  Salud de Infraestructura (VPS & Contenedores): Uso de CPU, RAM, espacio en disco, estado de
+PostgreSQL y latencia de Redis.
+2.  Salud de Canales de Comunicación: Verifica cada 5 minutos si la sesión de Evolution API
+(WhatsApp) está conectada (status: open) y si Bunny.net Storage responde con código 200
+OK.
+3.  Auditoría Operativa del Negocio:
+•  ¿Hay algún viaje de mixer en ruta que lleve más de 90 minutos sin confirmar llegada (riesgo de
+desfraguado)?
+•  ¿Hay alguna diferencia anormal entre el cemento teórico de las recetas y el cemento real
+reportado por bodega (alerta de merma o robo)?
+•  ¿Cerró caja la secretaria antes de las 19:00?
+4.  Registro de Errores de Usuario o Código (error_logs): Cualquier excepción en Python o
+mensaje incomprensible de un chofer queda registrado con contexto completo.
+4.2. Contrato de Conexión API (Para el Agente Monitoreador de tu Empresa)
+El Módulo 5 expone dos mecanismos listos para conectarse a tu CRM maestro:
+1.  Pull Endpoint (Escaneo Diario Programado):
+•  GET /api/v1/sentinel/daily-audit (Protegido con X-Agency-Master-Key).
+•  Tu Agente Experto entra cada mañana a este endpoint en Orminorth (y en todos tus demás
+clientes), lee el JSON de diagnóstico y genera tu informe diario: "Orminorth: 100% operativo,
+WhatsApp conectado, 14 viajes despachados ayer, 0 errores críticos".
+2.  Push Webhook (Alerta Instantánea en Tiempo Real):
+•  POST https://crm-tu-empresa.com/webhooks/client-sentinel-alert
+•  Si en cualquier momento se desconecta el WhatsApp de Orminorth, falla una subida a Bunny.net o
+se detecta una anomalía crítica, el Módulo 5 de Julio dispara inmediatamente un JSON de alerta a
+tu CRM Central (y en paralelo a tu Telegram de respaldo). Tu CRM evalúa si lo resuelve
+automáticamente o si le envía un aviso preventivo a Julio.
+5. DISEÑO FUNCIONAL DE LA CARPETA DEL CLIENTE Y CONTRATO JSON
+5.1. ¿Qué ve exactamente la Secretaria en su Pantalla (Módulo 3)?
+Inspirado en la simplicidad probada de Aquatech, la secretaria trabaja en una sola vista dividida en tres
+paneles alimentados dinámicamente por la base de datos:
+•  Panel Izquierdo (Ficha Financiera y Creación Rápida):-  Buscador instantáneo de clientes por Nombre, Constructora o RUC.-  Indicadores financieros claros: Total Histórico Comprado ($ y m3) y Saldo Pendiente por
+Cobrar (Fiado) resaltado en rojo.-  Botón [+ Nueva Orden de Hormigón]: Selecciona resistencia (FC-210, FC-280, FC-350),
+cantidad en m3, planta de salida (Fija El Coca o Móvil Campamento), forma de pago (Efectivo,
+Transferencia, Abono o Fiado) y lanza la orden a planta con un clic.-  Botón [Cierre de Caja Diario]: Cuadre automático de efectivo, transferencias, créditos
+otorgados en el día y gastos de caja chica.
+•  Panel Central (Línea de Tiempo de Órdenes y Mixers en Vivo):-  Muestra el progreso de cada pedido (ej. Ing. Reyes — 320 m3 FC-210 — Avance: 6 / 40 viajes).-  Cada viaje muestra sus sellos de tiempo inalterables: Hora de dosificación en planta -> Hora de
+salida -> Hora límite de fraguado -> Hora de llegada -> Confirmación oficial del cliente vía
+WhatsApp.
+•  Panel Derecho (Bóveda Multimedia Bunny.net):-  Galería visual con las fotos de guías firmadas y videos de vaciado enviados por los choferes al
+WhatsApp de la empresa. Ningún archivo ocupa disco en el VPS; todo se reproduce directamente
+desde b-cdn.net con botón de descarga directa para que Julio suba contenido a TikTok.
+5.2. El Contrato JSON Estándar (tracking_payload)
+Para que el Módulo 1 (Bot) y el Módulo 3 (Pantallas) jamás dependan uno del otro, ambos leen y escriben
+este esquema JSON inmutable en la tabla mixer_dispatches:
+{
+  "dispatch_id": "uuid-viaje-002",
+  "viaje_numero": 2,
+  "total_viajes_orden": 40,
+  "mixer_codigo": "MIXER-01",
+  "chofer_nombre": "Pedro",
+  "volumen_m3": 8.0,
+  "resistencia": "FC-210",
+  "estado_actual": "CONFIRMADO_CLIENTE",
+  "juez_binario_jeb": {
+    "despacho_validado": true,
+    "recepcion_cliente_validada": true,
+    "incidencia_detectada": false
+  },
+  "tiempos_forenses": {
+    "dosificado_planta": "2025-05-15T08:45:00-05:00",
+    "salida_planta": "2025-05-15T08:52:00-05:00",
+    "limite_termico_fraguado": "2025-05-15T11:22:00-05:00",
+    "llegada_obra_chofer": "2025-05-15T09:28:00-05:00",
+    "confirmacion_whatsapp_cliente": "2025-05-15T09:33:12-05:00"
+  },
+  "consumo_materiales": {
+    "cemento_sacos_teorico": 60.0,
+    "cemento_sacos_real": 60.0,
+    "retardante_litros": 9.6
+  },
+  "evidencias_bunny_cdn": [
+    "https://orminorth.b-cdn.net/ordenes/104/viaje_2_vaciado.mp4",
+    "https://orminorth.b-cdn.net/ordenes/104/viaje_2_guia_firmada.jpg"
+  ],
+  "mensaje_literal_cliente": "Ya llegó el mixer 2 a la plataforma, todo bien",
+  "whatsapp_msg_id_forense": "wamid.HBgMNTkzOTkxMjM0NTY3FQIAERgSQT..."
+}
+6. ESPECIFICACIÓN DE LOS DOS "ASES BAJO LA MANGA" (MÓDULO 4)
+1.  As #1 — El Espejo de Ambición (Widget de Cuota de Mercado en Orellana y Sucumbíos):
+•  Cruza los metros cúbicos despachados por Orminorth contra la demanda anual proyectada en la
+tabla market_benchmarks (120,000 m3/año en Orellana y 95,000 m3/año en Sucumbíos).
+•  Muestra a Julio su porcentaje actual de dominio regional y el dinero exacto que la competencia
+está facturando por no tener posicionada en Google su Planta Móvil para proyectos de +1,000
+m3. Este módulo actúa como disparador psicológico automático para cerrar el contrato de su
+página web ($500 USD) y el plan de marketing mensual ($250 USD/mes).
+2.  As #2 — Generador Automático de Carpeta Bancaria y Simulador de la Pluma China:
+•  Botón exclusivo en el panel de Julio que empaqueta el flujo de caja histórico auditado por el
+sistema y calcula en vivo la viabilidad de importar la Pluma de Hormigón ($100,000 USD) o el
+Combo Pluma + 2 Mixers Chinos ($240,000 USD) al 11.2% anual:-  Escenario $100,000 USD (36 meses): Cuota de $3,283.35/mes, punto de equilibrio de apenas
+77.3 m3/mes adicionales y Ratio de Cobertura de Deuda Bancaria (DSCR) de 2.33x.
+-  Escenario $240,000 USD (48 meses): Cuota de $6,226.26/mes, punto de equilibrio de 146.5
+m3/mes y DSCR de 3.07x.
+7. PLAN DE IMPLEMENTACIÓN PASO A PASO (HITOS CON "TEST DE
+CANDADO")
+Siguiendo la metodología Planificar -> Construir -> Probar -> Cerrar con Candado, avanzaremos hito
+por hito. Tú me irás pasando los resultados reales de configuración en el VPS y no abriremos el siguiente
+hito hasta dejar sellado el anterior:
+Hito Módulo a Construir Entregable Práctico en el VPS Test de Candado (Criterio para Cerrar
+y No Tocar)
+Hito 1 (Días
+1–3)
+Módulo 0: Base de Datos
+y Configuración
+Contenedor PostgreSQL + Redis
+corriendo en el VPS con las 10
+tablas creadas, las recetas de
+hormigón cargadas y el contrato
+JSONB listo.
+Insertar por script el pedido real del Ing.
+Reyes (320 m3 de 210 y 52 m3 de 350) y
+verificar que las consultas devuelvan el
+inventario y los viajes sin error.
+Hito 2 (Días
+4–7)
+Módulo 2 + Módulo 5:
+Motor Matemático y
+Nodo Centinela API
+Servicio FastAPI en el VPS con el
+calculador de dosificaciones y el
+endpoint /api/v1/sentinel/d
+aily-audit activo.
+Tu CRM Central (o una prueba desde
+Postman/Telegram) se conecta vía API al
+VPS de Orminorth, solicita el reporte de
+salud y recibe el JSON de diagnóstico en
+menos de 200ms.
+Hito 3 (Días
+8–13)
+Módulo 1: Central
+WhatsApp (Evolution
+API + Debounce 14s +
+Juez Binario "Jeb" +
+Bunny.net)
+Webhook conectado al WhatsApp
+de prueba. Implementación de las
+4 compuertas binarias (SÍ/NO) y
+subida directa de videos a
+Bunny.net.
+Simular desde 3 celulares: 1) Bodeguero
+despacha mixer, 2) Chofer manda video
+de vaciado, 3) Cliente manda 4 mensajes
+seguidos confirmando llegada. Verificar
+que a los 14s el JSON en PostgreSQL
+quede lleno y el video cargue desde
+b-cdn.net.
+Hito 4 (Días
+14–19)
+Módulo 3: Ventanilla
+Web de Secretaría (Base
+Aquatech)
+Interfaz web conectada al Módulo
+0: Lista de clientes, Carpeta Única
+con reproductor Bunny.net,
+formulario de nueva orden y
+Cierre de Caja.
+La secretaria (o tú en la prueba) crea una
+orden en la web -> el Módulo 1 manda el
+WhatsApp automático al bodeguero -> se
+registra un abono y cuadra el cierre de
+caja diario.
+Hito 5 (Días
+20–24)
+Módulo 4: Dashboard de
+Julio + Los 2 Ases
+Estratégicos
+Vista gerencial con filtros
+dinámicos, velocímetro de Cuota
+de Mercado en
+Orellana/Sucumbíos y exportador
+PDF de Carpeta Bancaria.
+Filtrar ventas por sucursal/planta y
+generar con 1 clic el PDF bancario con el
+cálculo de DSCR listo para presentar al
+oficial de crédito.
+8. CONDICIONES TÉCNICAS DEL DESPLIEGUE EN VPS (CHECKLIST INICIAL)
+Para arrancar el Hito 1, el entorno en el VPS quedará estandarizado con la siguiente estructura de
+contenedores Docker aislados (para que actualizar un contenedor jamás apague a los demás):
+1.  orminorth-postgres (PostgreSQL 15 Alpine con volumen persistente).
+2.  orminorth-redis (Redis 7 Alpine para la ventana de debounce de 14 segundos y colas de
+alertas).
+3.  orminorth-core-api (FastAPI Python: Motor Determinístico + Compuertas Binarias IA "Jeb" +
+Nodo Centinela API).
+4.  orminorth-web-panel (Frontend Secretaría y Dashboard Julio basado en la arquitectura de
+Aquatech)
+5.  Conexión a instancia existente de Evolution API y Storage Zone en Bunny.net
