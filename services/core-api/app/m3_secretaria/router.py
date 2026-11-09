@@ -153,6 +153,13 @@ async def crear_orden_secretaria(
             ),
             mixer_codigo=datos.get("mixer_codigo"),
             chofer_nombre=datos.get("chofer_nombre"),
+            aplica_iva=datos.get("aplica_iva"),
+            abono_inicial_monto=(
+                None
+                if datos.get("abono_inicial_monto") in (None, "")
+                else Decimal(str(datos["abono_inicial_monto"]))
+            ),
+            abono_inicial_metodo=datos.get("abono_inicial_metodo"),
         )
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=f"orden invalida: {exc}") from exc
@@ -176,6 +183,20 @@ async def crear_orden_secretaria(
                 None
                 if resultado.saldo_cliente_usd is None
                 else float(resultado.saldo_cliente_usd)
+            ),
+            "total": None if resultado.total is None else float(resultado.total),
+            "iva_pct": float(resultado.iva_pct),
+            "iva_monto": float(resultado.iva_monto),
+            "total_con_iva": (
+                None
+                if resultado.total_con_iva is None
+                else float(resultado.total_con_iva)
+            ),
+            "cobro_inicial_id": resultado.cobro_inicial_id,
+            "cobro_inicial_monto": (
+                None
+                if resultado.cobro_inicial_monto is None
+                else float(resultado.cobro_inicial_monto)
             ),
         }
     return dict(resultado) if isinstance(resultado, dict) else {"orden": resultado}

@@ -4,10 +4,11 @@
 Estado: **Hitos 1 y 3 cerrados; el Hito 3 en modo SANDBOX. Módulos 3
 (Secretaría + Caja) y 4 (Dashboard de Julio y Ases) construidos y verificados
 localmente. La especificación del Custodio v4.3 (`063`/`064`) está aplicada en
-la base real; el código de ventas, caja y kardex todavía debe refactorizarse
-para usarla.** El Centro de Configuración Superadmin opera sin login en esta
-etapa. Las credenciales reales y los teléfonos ya no bloquean: se cargan en
-caliente y se apaga el switch SANDBOX.
+la base real y el código de ventas, caja y dashboard ya la consume; quedan
+pendientes el kardex y los servicios ejecutables del Custodio.** El Centro de
+Configuración Superadmin opera sin login en esta etapa. Las credenciales reales
+y los teléfonos ya no bloquean: se cargan en caliente y se apaga el switch
+SANDBOX.
 
 Este documento existe porque el PDR v4.0 define la arquitectura pero **no**
 define varios datos de negocio. Nada de lo que falta se rellenó con supuestos:
@@ -198,8 +199,8 @@ producción sin tocar el pipeline.
 
 | # | Tema | Decisión vigente | Implementación |
 |---|---|---|---|
-| E1 | Cobro de contado | Cada venta `EFECTIVO`, `TRANSFERENCIA` o `ABONO` inicial genera un `payments` tipo `COBRO` por el total con IVA. `FIADO` no genera `COBRO`: queda como deuda | `063` deja la tabla lista; **falta** refactorizar `crear_orden` |
-| E2 | IVA | 15 % por defecto para ventas nuevas, tomado de `concrete_recipes.iva_pct`. Saldo, cupo y cartera usan `total_con_iva` (bruto) | `063` agrega columnas y CHECK; `064` usa `COALESCE(total_con_iva, total)` |
+| E1 | Cobro de contado | Cada venta `EFECTIVO`, `TRANSFERENCIA` o `ABONO` inicial genera un `payments` tipo `COBRO` por el total con IVA. `FIADO` no genera `COBRO`: queda como deuda | **Aplicado** en `crear_orden` (refactor 2026-11-09); verificado en el clon con `refactor_v43_check.py` |
+| E2 | IVA | 15 % por defecto para ventas nuevas, tomado de `concrete_recipes.iva_pct`. Saldo, cupo y cartera usan `total_con_iva` (bruto) | `063` agrega columnas y CHECK; `crear_orden` escribe `aplica_iva`, `iva_pct`, `iva_monto` y `total_con_iva`; `064` usa `COALESCE(total_con_iva, total)` para históricos |
 | E3 | Costo de inventario | Promedio ponderado para COGS y valor de inventario | `finanzas.costo_inventario_metodo = "PROMEDIO_PONDERADO"`; **falta** refactorizar kardex y recepción |
 | E4 | Datos maestros | El Gate puede crear proveedores, activos fijos y pasivos bancarios | `CREATE_SUPPLIER`, `CREATE_FIXED_ASSET` y `CREATE_FINANCIAL_LIABILITY` en contratos v1.3.0 |
 | E5 | Fecha de conteo | No se inventa: `materials.ultimo_levantamiento_at` queda `NULL` hasta que Julio entregue la fecha real | `063` la deja nullable; `v_stock_proyectado` marca `SIN_FECHA_CONTEO` |
@@ -208,11 +209,11 @@ producción sin tocar el pipeline.
 
 | # | Tema | Qué falta | Dueño |
 |---|---|---|---|
-| P1 | IVA histórico | Confirmar si las órdenes anteriores al 2026-11-09 se backfillean al 15 % o quedan sin IVA | Julio |
+| P1 | IVA histórico | Confirmar si la orden #9 (y cualquier orden anterior al 2026-11-09) se backfillea al 15 % o queda sin IVA. Las órdenes nuevas ya nacen con bruto | Julio |
 | P2 | Fecha de conteo | Entregar la fecha del último levantamiento físico de los 5 materiales | Julio |
 | P3 | Valoración 10 años / DSCR | El PDR trae escenarios y parámetros, pero no la fórmula completa; no se creó vista especulativa | Julio / Dirección |
 | P4 | Rol `CONTADORA` | Decidir si se agrega a la base o si el Custodio queda solo en `SUPERADMIN` | Julio / Dirección |
-| P5 | Refactor del código | `crear_orden` (IVA + COBRO), kardex (promedio + `ANULACION`), caja/dashboard (`deleted_at`) y Gate/testigo | Desarrollo |
+| P5 | Refactor pendiente | Kardex (promedio + `ANULACION` + `costo_unitario_snapshot`) y Gate/testigo (`gate.py`, `witness.py`, `catalog_hygiene.py`) | Desarrollo |
 
 ---
 

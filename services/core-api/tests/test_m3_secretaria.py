@@ -79,6 +79,25 @@ def test_resumen_caja_suma_ventas_cobros_y_gastos() -> None:
     assert len(resumen["detalle"]) == 3
 
 
+def test_resumen_caja_usa_el_total_con_iva_cuando_existe() -> None:
+    resumen = calcular_resumen_caja(
+        fecha=date(2026, 11, 9),
+        ordenes=[
+            {
+                "forma_pago": "EFECTIVO",
+                "total": "100.00",
+                "total_con_iva": "115.00",
+            },
+            {"forma_pago": "FIADO", "total": "200.00"},
+        ],
+        movimientos=[],
+    )
+
+    assert resumen["ventas"]["efectivo"] == 115.0
+    # Historico sin total_con_iva: conserva el neto, no se inventa IVA.
+    assert resumen["ventas"]["fiado"] == 200.0
+
+
 def test_resumen_caja_sin_contado_no_inventa_diferencia() -> None:
     resumen = calcular_resumen_caja(
         fecha=date(2026, 11, 8), ordenes=[], movimientos=[]

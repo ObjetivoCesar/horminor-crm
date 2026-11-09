@@ -28,6 +28,10 @@ class OrdenCreate(BaseModel):
     permitir_receta_provisional: bool = True
     mixer_codigo: str | None = None
     chofer_nombre: str | None = None
+    # v4.3: IVA y abono inicial.
+    aplica_iva: bool | None = None
+    abono_inicial_monto: Decimal | None = Field(default=None, ge=0)
+    abono_inicial_metodo: str | None = None
 
 
 def _pool(request: Request) -> asyncpg.Pool:
@@ -56,6 +60,9 @@ async def nueva_orden(request: Request, body: OrdenCreate):
                 permitir_receta_provisional=body.permitir_receta_provisional,
                 mixer_codigo=body.mixer_codigo,
                 chofer_nombre=body.chofer_nombre,
+                aplica_iva=body.aplica_iva,
+                abono_inicial_monto=body.abono_inicial_monto,
+                abono_inicial_metodo=body.abono_inicial_metodo,
             ),
         )
     except OrdenInvalidaError as exc:

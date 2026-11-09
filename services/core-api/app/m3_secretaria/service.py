@@ -56,7 +56,9 @@ def calcular_resumen_caja(
     for orden in ordenes:
         forma = str(orden.get("forma_pago") or "").upper()
         if forma in ventas:
-            ventas[forma] += _d(orden.get("total"))
+            # v4.3: el cierre muestra el total facturado con IVA. Las ordenes
+            # historicas sin total_con_iva conservan su total neto.
+            ventas[forma] += _d(orden.get("total_con_iva") or orden.get("total"))
 
     cobros = {"EFECTIVO": Decimal("0"), "TRANSFERENCIA": Decimal("0"), "FIADO": Decimal("0")}
     caja_chica = Decimal("0")
@@ -300,7 +302,8 @@ class PostgresSecretariaStore:
             """
             SELECT o.id::text, o.numero, o.cliente_id::text, c.nombre AS cliente,
                    o.resistencia, o.volumen_m3, p.nombre AS planta,
-                   o.forma_pago, o.precio_m3, o.total, o.estado,
+                   o.forma_pago, o.precio_m3, o.total, o.total_con_iva,
+                   o.iva_pct, o.iva_monto, o.estado,
                    o.excede_cupo_credito, o.creada_por, o.created_at
               FROM orders o
               JOIN clients c ON c.id = o.cliente_id
@@ -321,6 +324,7 @@ class PostgresSecretariaStore:
                    tipo_movimiento, metodo, monto, referencia, created_at
               FROM payments
              WHERE fecha = $1
+               AND deleted_at IS NULL
              ORDER BY created_at
             """,
             fecha,
@@ -332,7 +336,8 @@ class PostgresSecretariaStore:
             """
             SELECT o.id::text, o.numero, o.cliente_id::text, c.nombre AS cliente,
                    o.resistencia, o.volumen_m3, p.nombre AS planta,
-                   o.forma_pago, o.precio_m3, o.total, o.estado,
+                   o.forma_pago, o.precio_m3, o.total, o.total_con_iva,
+                   o.iva_pct, o.iva_monto, o.estado,
                    o.excede_cupo_credito, o.creada_por, o.created_at
               FROM orders o
               JOIN clients c ON c.id = o.cliente_id
@@ -478,6 +483,9 @@ def _orden_dict(fila: Mapping[str, Any]) -> dict[str, Any]:
         "forma_pago": fila["forma_pago"],
         "precio_m3": _f(fila["precio_m3"]),
         "total": _f(fila["total"]),
+        "total_con_iva": _f(fila.get("total_con_iva")),
+        "iva_pct": _f(fila.get("iva_pct")),
+        "iva_monto": _f(fila.get("iva_monto")),
         "estado": fila["estado"],
         "excede_cupo_credito": bool(fila.get("excede_cupo_credito")),
         "creada_por": fila.get("creada_por"),

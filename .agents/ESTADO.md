@@ -1,9 +1,9 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-09** (Custodio v4.3 aplicado: 11 migraciones,
-> 28 tablas, 6 vistas, 26 cuentas; 180 tests y los 2 candados en verde. El
-> código de ventas/caja/kardex todavía no consume las columnas nuevas)
+> Última actualización: **2026-11-09** (Custodio v4.3 aplicado y consumido por
+> ventas/caja/dashboard: 11 migraciones, 28 tablas, 6 vistas, 26 cuentas;
+> 192 tests y los 2 candados en verde. Quedan kardex y Gate/testigo)
 
 ## Hitos
 
@@ -11,11 +11,11 @@
 |---|---|---|---|---|
 | 1 | M0 — Datos y configuración | 🟢 **Cerrado** con semilla oficial | `evidencias/hito1_lock_2026-11-08.txt`: `[CANDADO CERRADO]`, 235 movimientos de kardex, órdenes valoradas ($37.760 y $8.216) | Nada bloqueante. Re-verificar si se editan recetas |
 | — | Superadmin — Configuración en caliente | 🟢 Construido y editable desde el panel | 7 secciones, CRUD de recetas/flota, simulador de WhatsApp y outbox | Autenticación antes de exponerlo a Internet |
-| 2 | M2 — Motor determinístico | 🟡 Construido, verificado local | `evidencias/hito3_4_pytest_2026-11-08.txt`: **180 tests** + candado Hito 1 | Probar desde el CRM de la agencia en el VPS |
+| 2 | M2 — Motor determinístico | 🟡 Construido, verificado local | `evidencias/pytest_refactor_v43_2026-11-09.txt`: **192 tests** + candado Hito 1 | Probar desde el CRM de la agencia en el VPS |
 | 2 | M5 — Nodo Centinela | 🟡 Construido, verificado local | `evidencias/hito3_4_live_2026-11-08.txt`: 12 checks, `modo=SANDBOX`, `judge_mode=DETERMINISTIC_FALLBACK`; Evolution/Bunny en OK | Webhook real del CRM; umbral de merma que defina Julio |
 | 3 | M1 — WhatsApp (Evolution + Jeb + Bunny) | 🟢 **Cerrado en SANDBOX** | `evidencias/hito3_lock_2026-11-08.txt`: `[CANDADO CERRADO EN SANDBOX]`; 4 compuertas, JSONB y outbox | Producción real: cargar credenciales, apagar SANDBOX y repetir el candado |
 | 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 Construido y verificado local | `/panel` (tab Secretaría), carpeta forense con 47 viajes de mixer, `GET .../carpeta` 200 tras fix JSONB; tests `test_m3_secretaria.py` | Autenticación; validación con la secretaria real; POST de pagos/abonos |
-| 5 | M4 — Dashboard de Julio + Ases | 🟢 Construido y verificado local | *Dashboard Julio* con 3 tarjetas iguales: mercado El Coca **0.31% (372/120,000 m³)**, ventas **404 m³ / $47,864 / 51 viajes**, y provincias **Orellana 372 + Sucumbíos 16 + sin provincia 16**; Banca **215,000 / 404 / 0.19% / 214,596 m³**; 2 escenarios; tests `test_m4_dashboard.py` | Validar con Julio el ángulo de mercado; auth para exponer |
+| 5 | M4 — Dashboard de Julio + Ases | 🟢 Construido y verificado local | *Dashboard Julio* con 3 tarjetas iguales: mercado El Coca **0.31% (372/120,000 m³)**, ventas **404 m³ / $55,043.60 / 51 viajes** (la captura aprobada 2026-11-08 mostraba $47,864 sin IVA), y provincias **Orellana 372 + Sucumbíos 16 + sin provincia 16**; Banca **215,000 / 404 / 0.19% / 214,596 m³**; 2 escenarios; tests `test_m4_dashboard.py` | Validar con Julio el ángulo de mercado; auth para exponer |
 | — | Despliegue en VPS | ⚪ No iniciado | — | VPS, dominio, TLS, proxy, backups |
 
 Leyenda: ⚪ no iniciado · 🟡 en curso / candado abierto · 🟢 cerrado y congelado
@@ -36,8 +36,23 @@ scripts de candado.
 
 ## Evidencia de la última sesión
 
-- **Custodio v4.3 aplicado el 2026-11-09.** `.agents/evidencias/revision_v43_2026-11-09.txt`: 11 migraciones, 28 tablas, 6 vistas, 26 cuentas, `por_cobrar 47,864 / 2 clientes / fiado 47,864`; respaldo previo `pre_v43_orminorth.dump`.
-- `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` → **180 passed**, exit 0 (`.agents/evidencias/pytest_v43_2026-11-09.txt`).
+- **Refactor v4.3 aplicado y verificado el 2026-11-09.** `crear_orden` lee
+  `finanzas.iva_default_aplica` y el `iva_pct` de la receta, escribe
+  `aplica_iva`/`iva_pct`/`iva_monto`/`total_con_iva` e inserta el `COBRO` de
+  contado o abono en la misma transacción; `FIADO` no genera `COBRO`.
+  `scripts/refactor_v43_check.py` contra `orminorth_v43` →
+  **REFACTOR V4.3: OK** (4 ventas, cartera, `deleted_at`, caja y dashboard;
+  0 registros de prueba al terminar). Evidencia:
+  `.agents/evidencias/refactor_v43_check_2026-11-09.txt`.
+- `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` → **192 passed**, exit 0 (`.agents/evidencias/pytest_refactor_v43_2026-11-09.txt`).
+- Hito 1 → `[CANDADO CERRADO]`, 235 movimientos de kardex (`.agents/evidencias/hito1_lock_refactor_v43_2026-11-09.txt`).
+- Hito 3 → `[CANDADO CERRADO EN SANDBOX]` (`.agents/evidencias/hito3_lock_refactor_v43_2026-11-09.txt`).
+- Órdenes reales #43/#44/#45 con IVA 15 % y bruto **$43,424.00 / $9,448.40 /
+  $2,171.20** (los candados las recrean con el código nuevo); cartera real
+  **55,043.60 / 2 clientes / fiado 55,043.60**; `payments` sigue en 0 porque las
+  tres son FIADO. La #9 histórica conserva `total`/`total_con_iva` `NULL`.
+- **Custodio v4.3 aplicado el 2026-11-09.** `.agents/evidencias/revision_v43_2026-11-09.txt`: 11 migraciones, 28 tablas, 6 vistas, 26 cuentas, `por_cobrar 47,864 / 2 clientes / fiado 47,864` (foto previa al refactor); respaldo previo `pre_v43_orminorth.dump`.
+- `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` (pre-refactor) → **180 passed**, exit 0 (`.agents/evidencias/pytest_v43_2026-11-09.txt`).
 - Hito 1 → `[CANDADO CERRADO]`, 235 movimientos de kardex (`.agents/evidencias/hito1_lock_v43_2026-11-09.txt`).
 - Hito 3 → `[CANDADO CERRADO EN SANDBOX]` (`.agents/evidencias/hito3_lock_v43_2026-11-09.txt`).
 - Pruebas SQL en `orminorth_v43` → 7 guardas OK, 0 FALLO (`.agents/evidencias/sql_tests_v43_2026-11-09.txt`).
@@ -78,10 +93,9 @@ scripts de candado.
    `docs/BASE_DE_DATOS.md`, sección 5).
 8. **Respaldo externo.** Todo el proyecto y la base viven en un solo disco. Hay
    un respaldo manual previo a v4.3, pero no política automática.
-9. **Código desactualizado respecto de la base v4.3.** `crear_orden` todavía no
-   escribe IVA/`total_con_iva` ni inserta el `COBRO` de contado; kardex no
-   maneja `ANULACION` ni promedio ponderado; caja/dashboard no filtran
-   `payments.deleted_at`; faltan `gate.py`, `witness.py` y
+9. **Código pendiente en kardex y Custodio ejecutable.** `crear_orden`, caja y
+   dashboard ya consumen v4.3; el kardex todavía no maneja `ANULACION` ni costo
+   promedio ponderado, y faltan `gate.py`, `witness.py` y
    `catalog_hygiene.py`.
 10. **IVA histórico, fecha de conteo, fórmula 10 años/DSCR y rol `CONTADORA`
     siguen pendientes de Julio/Dirección.** No se inventaron: los históricos
@@ -95,20 +109,14 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **Refactorizar el código para consumir v4.3** (prioridad):
-   - `services/core-api/app/services/ordenes.py`: leer `iva_pct` de la receta,
-     escribir `aplica_iva`, `iva_pct`, `iva_monto` y `total_con_iva`; insertar
-     el `COBRO` de contado/abono dentro de la misma transacción.
+1. **Refactorizar el kardex para consumir v4.3** (prioridad):
    - `services/core-api/app/m2_planta/kardex.py`: costo promedio ponderado,
      `ANULACION` como reversa y `costo_unitario_snapshot`.
-   - `services/core-api/app/m3_secretaria/service.py` y
-     `m4_dashboard/service.py`: filtrar `payments.deleted_at` y usar el bruto
-     donde corresponda.
-   - Pruebas nuevas + **180 tests + Hito 1 + Hito 3** después del refactor.
+   - Pruebas nuevas + **192 tests + Hito 1 + Hito 3** después del refactor.
 2. **Implementar el Custodio ejecutable:** `gate.py`, `witness.py`,
    `catalog_hygiene.py` y sus pruebas contra los contratos v1.3.0.
-3. **Confirmar con Julio/Dirección:** IVA histórico, fecha de conteo, fórmula
-   de valoración 10 años/DSCR y rol `CONTADORA`.
+3. **Confirmar con Julio/Dirección:** IVA histórico de la orden #9, fecha de
+   conteo, fórmula de valoración 10 años/DSCR y rol `CONTADORA`.
 4. **Dashboard V2 aprobado por Julio (2026-11-08).** La captura de referencia es
    `.agents/evidencias/panel_horminor_dashboard_v2_dark_2026-11-08.png`; el
    ángulo comercial es **372 m³ vendidos de 120,000 m³ (0.31%)** en El Coca.
@@ -156,12 +164,13 @@ scripts de candado.
 | 26 | **Corrección de marca en migración 062** | Las migraciones 050/060 ya estaban aplicadas; se corrige el ADN público y Bunny sin editar el pasado |
 | 27 | **Panel con shell ShikshaQ y jerarquía número-primero** | Top header fijo, sidebar de 6 tabs, donut/actividad/calendario y 3 obras; los párrafos se reemplazan por cifras grandes y barras. Se conservan IDs, `data-*`, rutas y contratos; cero build y cero CDN. Alternativa descartada: copiar los textos largos del API, que cansan la lectura |
 | 28 | **`_json_objeto()` normaliza JSONB en M3** | `obtener_carpeta` hacía `dict(tracking_payload)` y devolvía 500 cuando asyncpg entrega JSONB como texto. El helper acepta texto o mapping y devuelve `{}` si no se puede parsear; la carpeta forense volvió a 200 sin tocar el contrato |
-| 29 | **Dashboard V2 número-primero con el mercado como ancla comercial** | Tres tarjetas iguales (Mercado El Coca, Ventas 2026, Dónde vendes) que responden qué necesita Julio; agenda y actividad bajan a una fila inferior; caja/mixers/bodega quedan en `<details>`. La tarjeta de mercado muestra **0.31% / 372 m³ / 120,000 m³** y la de Banca **215,000 / 404 / 0.19% / 214,596 m³** sin párrafos. Se conservan IDs, `data-*`, rutas API y los 180 tests; ilustraciones SVG locales sin build ni CDN. Alternativa descartada: seguir mostrando el anillo de eficiencia (2/51 viajes) como protagonista, que no vende posicionamiento |
+| 29 | **Dashboard V2 número-primero con el mercado como ancla comercial** | Tres tarjetas iguales (Mercado El Coca, Ventas 2026, Dónde vendes) que responden qué necesita Julio; agenda y actividad bajan a una fila inferior; caja/mixers/bodega quedan en `<details>`. La tarjeta de mercado muestra **0.31% / 372 m³ / 120,000 m³** y la de Banca **215,000 / 404 / 0.19% / 214,596 m³** sin párrafos. Se conservan IDs, `data-*`, rutas API y los 192 tests; ilustraciones SVG locales sin build ni CDN. Alternativa descartada: seguir mostrando el anillo de eficiencia (2/51 viajes) como protagonista, que no vende posicionamiento |
 | 30 | **`v_cliente_saldo` conserva las 8 columnas originales** | Los 3 consumidores y `catalog.py` dependen de `id, nombre, estado, total_m3, total_facturado, total_cobrado, total_fiado, saldo_pendiente`; v4.3 agrega `ruc`, `credit_limit_usd` y `saldo_a_favor` al final. Alternativa descartada: reordenar o cambiar tipos, que rompía consumidores |
-| 31 | **Fallback `COALESCE(total_con_iva, total)` en la vista** | Permite que una orden creada por código viejo siga visible mientras se refactoriza `crear_orden`; no se inventa el IVA de históricos. Se retirará el fallback cuando todo el código escriba el bruto |
-| 32 | **IVA 15 % solo para ventas nuevas; históricos sin IVA** | La decisión de Julio fue default 15 % en ventas nuevas; las anteriores quedan `total_con_iva = total` y `finanzas.iva_historico_confirmado=false` hasta confirmación retroactiva |
+| 31 | **Fallback `COALESCE(total_con_iva, total)` en la vista** | Mantiene visibles las órdenes históricas sin bruto (la #9) sin inventarles IVA. Las ventas nuevas ya escriben `total_con_iva`; el fallback queda permanentemente para históricos |
+| 32 | **IVA 15 % solo para ventas nuevas; históricos sin IVA** | La decisión de Julio fue default 15 % en ventas nuevas; la #9 anterior queda con `total_con_iva = total`/`NULL` y `finanzas.iva_historico_confirmado=false` hasta confirmación retroactiva |
 | 33 | **Inventario por promedio ponderado** | Confirmado el 2026-11-09; `inventory_movements.costo_unitario_snapshot` guarda el costo vigente y el kardex calculará COGS con esa base |
 | 34 | **Gate idempotente + ledger/testigo inmutables** | `processed_requests` guarda `request_id` + hash; `ledger_entries` y `audit_witness_log` solo permiten INSERT y las correcciones se hacen con reversa/testigo. Alternativa descartada: `UPDATE` directo, que borra la trazabilidad |
+| 35 | **IVA y COBRO inicial en la transacción de la orden** | `crear_orden` valida el abono contra el bruto y escribe orden + `payments` juntos: si falla el pago, no queda una venta contada como cobrada. El router no inserta pagos por su cuenta. Alternativa descartada: un segundo `INSERT` desde el endpoint, que dejaba ventas huérfanas si fallaba |
 
 ## Riesgos abiertos
 

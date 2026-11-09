@@ -41,7 +41,7 @@ orminorth/
 │  ├─ app/web/                 panel HTML en `/panel` + estáticos (Poppins, logo)
 │  ├─ app/services/            alta de órdenes (M0 + M2)
 │  ├─ app/routers/             health, catálogo, órdenes
-│  └─ tests/                   pytest (180 tests)
+│  └─ tests/                   pytest (192 tests)
 ├─ scripts/
 │  ├─ db_migrate.py            aplica migraciones a mano
 │  ├─ hito1_lock_test.py       Test de Candado del Hito 1 (pedido Ing. Reyes)

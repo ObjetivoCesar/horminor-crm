@@ -137,9 +137,11 @@ aplicó después de probarla en el clon `orminorth_v43` y de guardar el respaldo
 
 **Compatibilidad de `v_cliente_saldo`:** la vista usa
 `COALESCE(total_con_iva, total)` para `total_facturado` y `total_fiado`. Así una
-orden creada por el código actual —que todavía no escribe `total_con_iva`— no
-desaparece del saldo. `total_cobrado` solo suma `payments` con
-`tipo_movimiento = 'COBRO'`, `metodo <> 'FIADO'` y `deleted_at IS NULL`.
+orden histórica sin `total_con_iva` no desaparece del saldo. Desde el refactor
+del 2026-11-09, `crear_orden` escribe siempre el bruto en ventas nuevas; el
+fallback queda solo para las órdenes anteriores. `total_cobrado` solo suma
+`payments` con `tipo_movimiento = 'COBRO'`, `metodo <> 'FIADO'` y
+`deleted_at IS NULL`.
 
 La definición de las 3 vistas originales está en `db/migrations/001_init.sql`;
 las 3 nuevas y la versión v4.3 de `v_cliente_saldo` están en
@@ -213,25 +215,26 @@ calcula:
 
 ### 4.4 Estado real del código hoy
 
-La base ya soporta el modelo v4.3, pero **el código todavía no lo usa
-completo**. Esta separación es deliberada para no documentar como hecho algo
-que aún no ocurre:
+El código de ventas, caja y dashboard **ya consume v4.3** desde el refactor del
+2026-11-09. Lo que sigue pendiente es el kardex y el Custodio ejecutable:
 
 | Pieza | Base v4.3 | Código actual | Qué falta |
 |---|---|---|---|
-| IVA en la orden | Columnas y CHECK listos | `crear_orden` no escribe `aplica_iva`, `iva_pct`, `iva_monto` ni `total_con_iva`; las órdenes nuevas quedan con los defaults | Refactorizar `services/core-api/app/services/ordenes.py` |
-| COBRO automático de contado | `payments` acepta `COBRO`, bolsa y cuenta | `crear_orden` no inserta ningún `payments` | Refactorizar `crear_orden` dentro de la misma transacción |
+| IVA en la orden | Columnas y CHECK listos | `crear_orden` lee `finanzas.iva_default_aplica` y el `iva_pct` de `concrete_recipes`, y escribe `aplica_iva`, `iva_pct`, `iva_monto` y `total_con_iva` | Nada para ventas nuevas |
+| COBRO automático de contado | `payments` acepta `COBRO`, bolsa y cuenta | `crear_orden` inserta el `COBRO` de `EFECTIVO`/`TRANSFERENCIA` y el abono inicial de `ABONO` en la misma transacción; `FIADO` no genera cobro | Nada para ventas nuevas |
 | Endpoint de pagos/abonos | Tabla lista | No existe `POST /api/v1/secretaria/pagos` | Implementar router + reglas de abono parcial y permisos |
-| Cierre de caja | `payments.deleted_at` disponible | `_movimientos()` no filtra `deleted_at`; `ventas_*` usa `orders.total` (neto) | Filtrar borrados y decidir si el cierre muestra bruto o neto |
-| Dashboard | `v_cliente_saldo` ya usa bruto y filtra borrados | `hero_kpis()` y `flujo_operativo_mensual()` consultan `payments` sin `deleted_at` | Agregar el filtro |
+| Cierre de caja | `payments.deleted_at` disponible | `_movimientos()` filtra `deleted_at`; `ventas_*` usa `total_con_iva` con fallback a `total` | Nada; sigue sin POST de pagos |
+| Dashboard | `v_cliente_saldo` ya usa bruto y filtra borrados | `hero_kpis()` y `flujo_operativo_mensual()` filtran `deleted_at`; `fiado_hoy` usa el bruto | Nada |
 | Kardex | `ANULACION`, `costo_unitario_snapshot` y promedio disponibles | `kardex.py` solo inserta `TEORICO`, `REAL`, `COMPRA` y `AJUSTE`; no calcula promedio ni anulación | Refactorizar kardex y recepción de compras |
 | Gate y testigo | Tablas, triggers y contratos v1.3.0 listos | No existe `gate.py`, `witness.py` ni `catalog_hygiene.py` | Implementar los servicios y sus pruebas |
 
-**Consecuencia verificada hoy:** las 4 órdenes reales tienen
-`total_con_iva = NULL` porque 3 las recrearon los candados con el código
-anterior y la #9 es histórica. La vista usa el fallback y sigue mostrando
-**47,864 / 2 clientes / fiado 47,864**. En cuanto se refactorice `crear_orden`,
-las ventas nuevas escribirán el bruto y el fallback quedará solo para históricos.
+**Consecuencia verificada hoy:** las 4 órdenes reales son la #9 histórica
+(`total` y `total_con_iva` `NULL`, FIADO) y las #43/#44/#45 recreadas por los
+candados con el código nuevo. Las tres ya tienen IVA 15 % y bruto:
+**$43,424.00**, **$9,448.40** y **$2,171.20**. La cartera subió a
+**55,043.60 / 2 clientes / fiado 55,043.60** porque ahora el candado del Hito 1
+también valoriza las órdenes de prueba con IVA. El fallback de la vista queda
+solo para la #9 y para cualquier orden histórica sin bruto.
 
 ### 4.5 Qué falta para registrar ingresos desde la aplicación
 
@@ -244,8 +247,9 @@ las ventas nuevas escribirán el bruto y el fallback quedará solo para históri
 4. **Permisos:** hoy `/api/v1/secretaria/*` no tiene login.
 
 Sin esas definiciones no se implementa el endpoint, para no inventar reglas de
-cobro. La regla de contado/abono inicial/fiado ya está confirmada y se aplicará
-en el refactor de `crear_orden`.
+cobro. La regla de contado/abono inicial/fiado ya está aplicada en
+`crear_orden` (refactor 2026-11-09): la venta de contado y el abono inicial
+generan su `COBRO` en la misma transacción; el fiado no genera cobro.
 
 ---
 
@@ -287,19 +291,22 @@ sí se puede probar:
    persiste y existe un respaldo manual previo a v4.3
    (`.agents/evidencias/pre_v43_orminorth.dump`), pero no hay política
    automática de backup/restauración ni retención.
-3. **Código desactualizado respecto de la base v4.3.** `crear_orden` todavía no
-   escribe IVA/`total_con_iva` ni inserta el `COBRO` de contado; caja y dashboard
-   no filtran `payments.deleted_at`; el kardex no maneja `ANULACION` ni costo
-   promedio. La tabla completa está en la sección 4.4.
+3. **Código desactualizado solo en kardex y Custodio ejecutable.**
+   `crear_orden`, caja y dashboard ya consumen v4.3; el kardex todavía no maneja
+   `ANULACION` ni costo promedio y faltan `gate.py`, `witness.py` y
+   `catalog_hygiene.py`. La tabla completa está en la sección 4.4.
 4. **Sin endpoint de pagos/abonos** (sección 4.5). Mientras no exista, un cobro
    posterior solo se puede insertar por SQL.
 5. **Credenciales por defecto** (`orminorth`/`orminorth`). Antes de producción
    hay que cambiarlas en `.env`.
-6. **`payments` vacía** (0 filas) y `cash_closures` vacía (0 filas): la lógica
-   existe, pero aún no hay cobros reales registrados.
-7. **IVA histórico sin confirmar.** Las órdenes anteriores al 2026-11-09 y las
-   que recrean los candados tienen `total_con_iva = NULL`; la vista las muestra
-   con fallback, pero Julio debe decidir si se backfillean al 15 %.
+6. **`payments` vacía** (0 filas) y `cash_closures` vacía (0 filas). No es un
+   error: las 3 órdenes reales de los candados son FIADO y el fiado no genera
+   `COBRO`. El camino de contado/abono se verificó en el clon
+   `orminorth_v43` con `scripts/refactor_v43_check.py`.
+7. **IVA histórico sin confirmar.** La orden #9 (histórica) sigue con
+   `total`/`total_con_iva` `NULL`; las órdenes #43/#44/#45 ya se crearon con IVA
+   15 % y bruto. Julio debe decidir si la #9 y cualquier orden anterior se
+   backfillean al 15 % o quedan sin IVA.
 8. **Fecha de conteo sin confirmar.** `materials.ultimo_levantamiento_at` sigue
    `NULL` en los 5 materiales; por eso `v_stock_proyectado` no aplica consumos
    teóricos y marca `SIN_FECHA_CONTEO`.
@@ -336,7 +343,10 @@ docker compose run --rm --no-deps core-api python scripts/db_migrate.py
 
 La evidencia completa está en
 `.agents/evidencias/revision_v43_2026-11-09.txt`, con los logs separados de
-pytest, candados, pruebas SQL y contratos. Resumen de comandos y salida real:
+pytest, candados, pruebas SQL y contratos. El refactor del código dejó además
+`refactor_v43_check_2026-11-09.txt`, `pytest_refactor_v43_2026-11-09.txt`,
+`hito1_lock_refactor_v43_2026-11-09.txt` y
+`hito3_lock_refactor_v43_2026-11-09.txt`. Resumen de comandos y salida real:
 
 ```text
 docker ps --filter name=orminorth
@@ -361,17 +371,18 @@ SELECT count(*) FROM pg_views WHERE schemaname='public';
 SELECT count(*) FROM accounting_accounts;
 → 26
 
-SELECT numero, total, total_con_iva, forma_pago, estado, creada_por
+SELECT numero, total, iva_pct, iva_monto, total_con_iva, forma_pago, creada_por
   FROM orders ORDER BY numero;
-→ #9  (histórica, total NULL, FIADO)
-→ #37 $37,760.00 (total_con_iva NULL, FIADO, hito1_lock_test)
-→ #38  $8,216.00 (total_con_iva NULL, FIADO, hito1_lock_test)
-→ #39  $1,888.00 (total_con_iva NULL, FIADO, hito3_lock_test)
+→ #9  (histórica, total/total_con_iva NULL, FIADO)
+→ #43 $37,760.00 + IVA 5,664.00 = $43,424.00 (FIADO, hito1_lock_test)
+→ #44  $8,216.00 + IVA 1,232.40 =  $9,448.40 (FIADO, hito1_lock_test)
+→ #45  $1,888.00 + IVA   283.20 =  $2,171.20 (FIADO, hito3_lock_test)
 
 SELECT sum(saldo_pendiente), count(*) FILTER (WHERE saldo_pendiente > 0),
-       sum(total_fiado)
+       sum(total_fiado), sum(total_facturado), sum(total_cobrado)
   FROM v_cliente_saldo;
-→ por_cobrar = 47,864.00 · clientes = 2 · fiado = 47,864.00
+→ por_cobrar = 55,043.60 · clientes = 2 · fiado = 55,043.60
+→ facturado = 55,043.60 · cobrado = 0.00 (las 3 órdenes reales son FIADO)
 
 SELECT codigo, stock_real_fisico, stock_proyectado_disponible,
        estado_alerta_proyectada
@@ -387,13 +398,22 @@ SELECT ordinal_position, column_name FROM information_schema.columns
 → 11 columnas: las 8 originales + ruc, credit_limit_usd, saldo_a_favor
 
 docker compose run --rm --no-deps core-api python -m pytest /app/tests -q
-→ 180 passed, EXIT=0
+→ 192 passed, EXIT=0
 
 docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py
 → [CANDADO CERRADO], 235 movimientos de kardex, EXIT=0
 
 docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py
 → [CANDADO CERRADO EN SANDBOX], EXIT=0
+
+Refactor v4.3 en el clon orminorth_v43
+→ scripts/refactor_v43_check.py: REFACTOR V4.3: OK
+→ 4 ventas de 2 m³: EFECTIVO, TRANSFERENCIA y ABONO generan COBRO;
+   FIADO no genera COBRO; IVA 15 % = 35.40 y bruto = 271.40
+→ cartera: facturado 1,085.60 · cobrado 642.80 · fiado 271.40 ·
+   saldo 442.80; pago con deleted_at baja el cobrado y sube el saldo
+→ cierre y dashboard: el COBRO borrado no aparece; fiado_hoy usa el bruto
+→ 0 registros de prueba al terminar (limpieza verificada)
 
 Pruebas SQL en el clon orminorth_v43
 → 7 guardas OK, 0 FALLO

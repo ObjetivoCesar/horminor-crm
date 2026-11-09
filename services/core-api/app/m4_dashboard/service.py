@@ -96,6 +96,7 @@ class PostgresDashboardStore:
                   WHERE tipo_movimiento = 'GASTO_CAJA_CHICA'), 0) AS caja_chica
               FROM payments
              WHERE fecha = $1
+               AND deleted_at IS NULL
             """,
             dia,
         )
@@ -109,7 +110,7 @@ class PostgresDashboardStore:
         )
         fiado = await self._pool.fetchrow(
             """
-            SELECT COALESCE(SUM(COALESCE(o.total, 0)), 0) AS monto,
+            SELECT COALESCE(SUM(COALESCE(o.total_con_iva, o.total, 0)), 0) AS monto,
                    COUNT(*) AS ordenes,
                    COUNT(*) FILTER (WHERE o.excede_cupo_credito) AS excedidas
               FROM orders o
@@ -293,6 +294,7 @@ class PostgresDashboardStore:
                        WHERE tipo_movimiento = 'GASTO_CAJA_CHICA'), 0) AS flujo
               FROM payments
              WHERE fecha >= $1
+               AND deleted_at IS NULL
             """,
             desde,
         )
@@ -460,7 +462,11 @@ class MemoryDashboardStore:
     ) -> dict[str, Any]:
         dia = (fecha or date.today()).isoformat()
         planta = (planta_codigo or "").strip() or None
-        pagos = [p for p in self.pagos if str(p["fecha"])[:10] == dia]
+        pagos = [
+            p
+            for p in self.pagos
+            if str(p["fecha"])[:10] == dia and not p.get("deleted_at")
+        ]
         efectivo = sum(
             _d(p["monto"])
             for p in pagos
@@ -481,7 +487,11 @@ class MemoryDashboardStore:
             and o["estado"] != "ANULADA"
             and (planta is None or o["planta_codigo"] == planta)
         ]
-        fiado_hoy = sum(_d(o.get("total")) for o in ordenes_hoy if o["forma_pago"] == "FIADO")
+        fiado_hoy = sum(
+            _d(o.get("total_con_iva") or o.get("total"))
+            for o in ordenes_hoy
+            if o["forma_pago"] == "FIADO"
+        )
         excedidas = sum(
             1 for o in ordenes_hoy if o["forma_pago"] == "FIADO" and o["excede_cupo_credito"]
         )
@@ -627,6 +637,8 @@ class MemoryDashboardStore:
         desde = date.today() - timedelta(days=max(1, int(dias)))
         total = Decimal("0")
         for pago in self.pagos:
+            if pago.get("deleted_at"):
+                continue
             fecha = str(pago["fecha"])[:10]
             if fecha < desde.isoformat():
                 continue

@@ -2407,8 +2407,12 @@ tbody tr:last-child td { border-bottom: 0; }
     </div>
     <div class="field-row" style="margin-top:10px">
       <div><label class="field">Planta</label><select id="ord-planta"></select></div>
-      <div><label class="field">Forma de pago</label><select id="ord-pago"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>ABONO</option><option>FIADO</option></select></div>
+      <div><label class="field">Forma de pago</label><select id="ord-pago" onchange="calcularOrden()"><option>EFECTIVO</option><option>TRANSFERENCIA</option><option>ABONO</option><option>FIADO</option></select></div>
       <div><label class="field">Precio $/m³ (opcional)</label><input type="number" id="ord-precio" step="0.01" min="0" oninput="calcularOrden()"></div>
+    </div>
+    <div class="field-row" id="ord-abono-row" style="margin-top:10px;display:none">
+      <div><label class="field">Abono inicial $</label><input type="number" id="ord-abono-monto" step="0.01" min="0" oninput="calcularOrden()"></div>
+      <div><label class="field">Método del abono</label><select id="ord-abono-metodo"><option>EFECTIVO</option><option>TRANSFERENCIA</option></select></div>
     </div>
     <div class="field-row" style="margin-top:10px">
       <div><label class="field">Mixer</label><select id="ord-mixer"><option value="">Automático</option></select></div>
@@ -3196,27 +3200,44 @@ function calcularOrden() {
   const receta = ((state.opciones || {}).recetas || []).find(r => r.resistencia === resistencia) || {};
   const m3 = Number(($('#ord-volumen') || {}).value || 0);
   const precio = Number(($('#ord-precio') || {}).value || receta.precio_m3 || 0);
+  const formaPago = (($('#ord-pago') || {}).value || 'EFECTIVO').toUpperCase();
+  const abonoRow = $('#ord-abono-row');
+  if (abonoRow) abonoRow.style.display = formaPago === 'ABONO' ? '' : 'none';
+  const ivaPct = Number(receta.iva_pct || 0);
+  const neto = m3 * precio;
+  const iva = neto * ivaPct / 100;
+  const bruto = neto + iva;
+  const abono = Number(($('#ord-abono-monto') || {}).value || 0);
   const sacos = receta.cemento_sacos_m3 ? (m3 * receta.cemento_sacos_m3) : null;
   const retardante = receta.retardante_litros_m3 ? (m3 * receta.retardante_litros_m3) : null;
   const cap = Math.max(...((state.opciones || {}).mixers || []).map(m => Number(m.capacidad_m3 || 0)), 0) || 8;
   const viajes = m3 > 0 ? Math.ceil(m3 / cap) : 0;
+  const pagoTxt = formaPago === 'ABONO'
+    ? ` · abono ${money(abono)} · saldo ${money(Math.max(bruto - abono, 0))}`
+    : (formaPago === 'FIADO' ? ` · queda fiado ${money(bruto)}` : '');
   const host = $('#ord-calculo');
   if (host) host.innerHTML = `
     <strong>${m3 || 0} m³ de ${esc(resistencia || '—')}</strong> ·
     ${sacos ? num(sacos) + ' sacos de cemento' : 'consumo sin receta completa'} ·
     ${retardante ? num(retardante) + ' L retardante' : 'retardante pendiente'} ·
     ${viajes} viaje(s) estimados de hasta ${cap} m³ ·
-    total aprox. <strong>${money(m3 * precio)}</strong>`;
+    subtotal <strong>${money(neto)}</strong> + IVA ${ivaPct}% ${money(iva)} =
+    <strong>${money(bruto)}</strong>${pagoTxt}`;
 }
 
 async function crearOrden() {
+  const formaPago = ($('#ord-pago').value || '').toUpperCase();
+  const abonoMonto = Number(($('#ord-abono-monto') || {}).value || 0);
   const body = {
     cliente_id: $('#ord-cliente').value,
     resistencia: $('#ord-resistencia').value,
     volumen_m3: Number($('#ord-volumen').value),
     planta_codigo: $('#ord-planta').value,
-    forma_pago: $('#ord-pago').value,
+    forma_pago: formaPago,
     precio_m3: $('#ord-precio').value ? Number($('#ord-precio').value) : null,
+    aplica_iva: true,
+    abono_inicial_monto: formaPago === 'ABONO' && abonoMonto > 0 ? abonoMonto : null,
+    abono_inicial_metodo: formaPago === 'ABONO' ? ($('#ord-abono-metodo').value || null) : null,
     mixer_codigo: $('#ord-mixer').value || null,
     chofer_nombre: $('#ord-chofer').value || null,
     notas: $('#ord-notas').value || null,
@@ -3228,7 +3249,8 @@ async function crearOrden() {
     const r = await api('/api/v1/secretaria/ordenes', {method:'POST', body});
     const alerta = r.excede_cupo_credito
       ? `<div class="notice bad"><strong>ALERTA DE CRÉDITO:</strong> la orden supera el cupo de fiado. Quedó registrada y marcada para el Centinela. Saldo actual ${money(r.saldo_cliente_usd)} · cupo ${money(r.cupo_credito_usd)}.</div>` : '';
-    $('#ord-resultado').innerHTML = `<div class="notice ok">Orden #${r.numero} registrada · ${r.total_viajes} viaje(s).</div>${alerta}`;
+    const totalTxt = r.total_con_iva ? ` · ${money(r.total_con_iva)} con IVA` : '';
+    $('#ord-resultado').innerHTML = `<div class="notice ok">Orden #${r.numero} registrada · ${r.total_viajes} viaje(s)${totalTxt}.</div>${alerta}`;
     toast('Orden #' + r.numero + ' registrada', 'ok');
     state.carpeta = null;
     await cargarClientes(body.cliente_id);

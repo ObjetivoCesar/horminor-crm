@@ -1160,3 +1160,76 @@ Responder las 5 decisiones y generar **v4.3** con: `063` corregida, `064` correg
 - `scripts/hito3_lock_test.py` (fix de marca)
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - Refactor v4.3: IVA y COBRO inicial en crear_orden; caja y dashboard sobre bruto
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash Free)
+**Duración:** sesión única
+**Objetivo:** Hacer que el código consuma la base v4.3: escribir IVA y `total_con_iva` en el alta de orden, registrar el `COBRO` de contado/abono en la misma transacción, filtrar `payments.deleted_at` en caja/dashboard y verificar todo sin inventar datos.
+
+### Hecho
+
+1. `services/core-api/app/services/ordenes.py`: `crear_orden` lee `finanzas.iva_default_aplica` y el `iva_pct` de `concrete_recipes`, calcula IVA con `Decimal` y `ROUND_HALF_UP`, escribe `aplica_iva`, `iva_pct`, `iva_monto` y `total_con_iva`, y evalúa el cupo de fiado sobre el bruto.
+2. Nuevos helpers puros `calcular_iva()` y `validar_abono_inicial()`. `ABONO` exige `abono_inicial_monto > 0`, método `EFECTIVO`/`TRANSFERENCIA`, monto ≤ total bruto y precio de venta; las demás formas no admiten abono inicial.
+3. El `COBRO` se inserta dentro de la misma transacción de la orden: `EFECTIVO`/`TRANSFERENCIA` cobran el bruto; `ABONO` cobra solo el abono inicial; `FIADO` no genera `payments`. El mapeo de bolsa/cuenta es `CAJA_DIARIA`/`caja_diaria_secretaria` para efectivo y `BANCO_GERENCIA`/`bancos_gerencia` para transferencia.
+4. `routers/orders.py` y `m3_secretaria/router.py` aceptan y devuelven los campos nuevos (`aplica_iva`, `abono_inicial_*`, `total`, `iva_pct`, `iva_monto`, `total_con_iva`, `cobro_inicial_*`).
+5. `panel.html`: el modal de Nueva Orden muestra el subtotal, IVA y bruto; al elegir `ABONO` aparecen monto y método, con el saldo restante calculado en pantalla.
+6. `m3_secretaria/service.py`: `_movimientos()` filtra `deleted_at`; las ventas del cierre usan `total_con_iva` con fallback a `total`; `listar_ordenes` y `_ordenes_del_dia` traen IVA y bruto.
+7. `m4_dashboard/service.py`: caja y flujo filtran `payments.deleted_at`; `fiado_hoy` usa el bruto con fallback. Se replicó en `MemoryDashboardStore`.
+8. Pruebas nuevas: `tests/test_ordenes_custodio.py` (11 tests puros de IVA/abono) y un test de cierre sobre bruto en `test_m3_secretaria.py`.
+9. `scripts/refactor_v43_check.py`: verificación de integración contra el clon `orminorth_v43` con 4 ventas (EFECTIVO, TRANSFERENCIA, ABONO y FIADO), cartera, borrado lógico, caja, dashboard y validaciones. Limpia todo lo que crea.
+10. Se reconstruyó la imagen `core-api` (`docker compose up -d --build core-api`) y se re-ejecutaron la batería completa y los dos candados.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps -e DATABASE_URL=postgresql://orminorth:orminorth@postgres:5432/orminorth_v43 core-api python scripts/refactor_v43_check.py` | `REFACTOR V4.3: OK`; 4 ventas de 2 m³ con IVA 15 % = 35.40 y bruto 271.40; COBRO en EFECTIVO/TRANSFERENCIA/ABONO; FIADO sin COBRO; cartera 1,085.60 / 642.80 / 271.40 / 442.80; `deleted_at` baja el cobrado; caja/dashboard ignoran el borrado; 0 registros de prueba al terminar |
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | `192 passed in 27.22s`, EXIT=0 |
+| `docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py` | `[CANDADO CERRADO]`, 235 movimientos de kardex, EXIT=0 |
+| `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]`, EXIT=0 |
+| `psql -d orminorth` sobre `orders` y `v_cliente_saldo` | #43 $43,424.00 · #44 $9,448.40 · #45 $2,171.20 (bruto, IVA 15 %); #9 histórica NULL; cartera 55,043.60 / 2 clientes / fiado 55,043.60; `payments` 0 filas (las 3 reales son FIADO) |
+| Verificación de limpieza en el clon | 0 clientes, 0 órdenes y 0 pagos con el TAG del script |
+
+Evidencia guardada en `.agents/evidencias/refactor_v43_check_2026-11-09.txt`, `pytest_refactor_v43_2026-11-09.txt`, `hito1_lock_refactor_v43_2026-11-09.txt` y `hito3_lock_refactor_v43_2026-11-09.txt`.
+
+### Decisiones tomadas
+
+1. **IVA y COBRO en la misma transacción de la orden.** Si falla el pago, no queda una venta contada como cobrada. Alternativa descartada: insertar el `COBRO` desde el router en una segunda transacción, que dejaba ventas huérfanas.
+2. **El abono inicial solo existe para `ABONO`.** Se valida contra el total bruto y exige método de efectivo o transferencia; `EFECTIVO`/`TRANSFERENCIA` cobran el total y `FIADO` no genera cobro. Alternativa descartada: aceptar abonos sueltos sin orden, que no permiten validar el saldo.
+3. **Caja y dashboard muestran el bruto con fallback.** `total_con_iva` manda; si es `NULL` (históricos) se usa `total`. Alternativa descartada: sumar neto + IVA aparte en cada consulta, que duplicaba la regla.
+4. **`payments.deleted_at` se filtra en los dos stores.** Un cobro anulado no debe aparecer ni en el cierre ni en los KPIs. Alternativa descartada: borrar físicamente el pago, que rompe la trazabilidad.
+5. **Pruebas puras + verificación de integración en el clon.** Los cálculos se prueban sin PostgreSQL; la transacción real (orden + pago + vista) se prueba en `orminorth_v43` y se limpia. Alternativa descartada: probar el alta real contra la base de producción, que dejaría datos de prueba.
+6. **La #9 conserva el fallback.** No se le inventó IVA: sigue con `total`/`total_con_iva` `NULL` hasta que Julio confirme el tratamiento retroactivo.
+
+### Bloqueos / preguntas al cliente
+
+1. **IVA histórico:** confirmar si la orden #9 y cualquier anterior se backfillean al 15 % o quedan sin IVA. Dueño: Julio.
+2. **Fecha de conteo:** los 5 materiales siguen `SIN_FECHA_CONTEO`. Dueño: Julio.
+3. **Fórmula de valoración 10 años/DSCR:** el PDR no la trae completa. Dueño: Julio / Dirección.
+4. **Rol `CONTADORA`:** no existe en la base; decidir si se agrega o todo queda en `SUPERADMIN`. Dueño: Julio / Dirección.
+5. **Endpoint de pagos/abonos posteriores:** falta definir abono parcial, validación de saldo y permisos. Dueño: definición funcional + backend.
+6. **Custodio operativo de la BD en producción:** sigue sin designación formal. Dueño: Julio / Dirección.
+
+### Próximo paso exacto
+
+Refactorizar `services/core-api/app/m2_planta/kardex.py` para costo promedio ponderado, `ANULACION` como reversa y `costo_unitario_snapshot`; después ejecutar `docker compose up -d --build core-api`, `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` (esperado: más de 192 tests) y los dos candados.
+
+### Archivos tocados
+
+- `services/core-api/app/services/ordenes.py`
+- `services/core-api/app/routers/orders.py`
+- `services/core-api/app/m3_secretaria/router.py`
+- `services/core-api/app/m3_secretaria/service.py`
+- `services/core-api/app/m4_dashboard/service.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_ordenes_custodio.py` (nuevo)
+- `services/core-api/tests/test_m3_secretaria.py`
+- `scripts/refactor_v43_check.py` (nuevo)
+- `docs/BASE_DE_DATOS.md`
+- `docs/00_DECISIONES_PENDIENTES.md`
+- `docs/MODELO_DATOS.md`
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`
