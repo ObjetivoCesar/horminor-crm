@@ -1,0 +1,236 @@
+{
+  "meta": {
+    "name": "Horminor Design System",
+    "version": "1.0.0",
+    "updated": "2026-11-08",
+    "scope": "/panel (FastAPI + Jinja/HTML estático)",
+    "reference": "ShikshaQ Tablet Dashboard (estructura), adaptado a Horminor",
+    "constraints": [
+      "Cero build y cero CDN: SVG nativo y CSS puro",
+      "Poppins servida desde /static/fonts",
+      "Sin datos de negocio inventados: todo número sale del API o queda pendiente",
+      "Los 180 tests de pytest deben seguir verdes"
+    ]
+  },
+  "brand": {
+    "visible_name": "HORMINOR",
+    "subtitle": "Hormigones & Planta Móvil · El Coca",
+    "repo_name": "orminorth",
+    "logo": "/static/brand/horminor-mark.png",
+    "tone": "Ejecutivo industrial: basalto, ámbar CAT y azul bancario"
+  },
+  "color": {
+    "dark": {
+      "bg_void": "#0B0F17",
+      "bg_obsidian": "#111823",
+      "surface_card": "linear-gradient(180deg, rgba(26,35,50,0.88) 0%, rgba(15,22,34,0.96) 100%)",
+      "surface_row": "rgba(30,42,59,0.65)",
+      "surface_input": "rgba(11,15,23,0.90)",
+      "text_pure": "#FFFFFF",
+      "text_slate": "#CBD5E1",
+      "text_muted": "#64748B",
+      "border_subtle": "rgba(255,255,255,0.09)",
+      "header_bg": "rgba(11,15,23,0.82)"
+    },
+    "light": {
+      "bg_void": "#F1F5F9",
+      "bg_obsidian": "#FFFFFF",
+      "surface_card": "linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)",
+      "surface_row": "#F1F5F9",
+      "surface_input": "#FFFFFF",
+      "text_pure": "#0F172A",
+      "text_slate": "#334155",
+      "text_muted": "#64748B",
+      "border_subtle": "#E2E8F0",
+      "header_bg": "rgba(255,255,255,0.86)"
+    },
+    "accents": {
+      "cat_amber": "#F59E0B",
+      "cat_amber_bright": "#FBBF24",
+      "bank_blue": "#3572DD",
+      "bank_pill": "#4183FB",
+      "brand_orange": "#F26522",
+      "cyan": "#06B6D4",
+      "status_ok": "#10B981",
+      "status_warn": "#F59E0B",
+      "status_danger": "#EF4444"
+    },
+    "donut_gradient": ["#06B6D4", "#3B82F6", "#F59E0B"]
+  },
+  "typography": {
+    "family": "Poppins",
+    "fallback": "Segoe UI, system-ui, -apple-system, Roboto, Arial, sans-serif",
+    "weights": [400, 500, 600, 700, 800],
+    "scale": {
+      "dashboard_greeting": "26px / 600",
+      "donut_value": "2.1rem / 700",
+      "kpi_value": "29px / 700",
+      "card_title": "14px / 600",
+      "body": "13.5px / 400",
+      "small": "12px / 400",
+      "micro_label": "9.5px / 600 uppercase tracking 0.14em"
+    }
+  },
+  "geometry": {
+    "sidebar_width": "258px",
+    "top_header_height": "72px",
+    "main_padding": "96px 24px 64px",
+    "grid_gap": "20px",
+    "card_radius": "20px",
+    "inner_radius": "12px",
+    "button_radius": "8px",
+    "pill_radius": "9999px",
+    "shadow_card": "0 18px 42px -10px rgba(0,0,0,0.70)"
+  },
+  "shell": {
+    "sidebar": {
+      "tabs": [
+        {"id": "dashboard", "label": "Dashboard Julio", "icon": "grid", "default": true},
+        {"id": "secretaria", "label": "Secretaría y Caja", "icon": "briefcase"},
+        {"id": "clientes", "label": "Carpetas de Clientes", "icon": "folder"},
+        {"id": "planta", "label": "Planta, Flota y Kardex", "icon": "factory"},
+        {"id": "banca", "label": "Banca y Mercado", "icon": "bank"},
+        {"id": "superadmin", "label": "Superadmin y WhatsApp", "icon": "sliders"}
+      ],
+      "active_style": "linear-gradient(90deg, #2F63D8 0%, #4183FB 100%)",
+      "footer_profile": {
+        "avatar": "JV",
+        "name": "Julio Villavicencio",
+        "role": "Director Horminor · Planta El Coca",
+        "online_dot": "#10B981",
+        "status_pills": ["SANDBOX", "Juez", "DB"]
+      }
+    },
+    "top_header": {
+      "search_placeholder": "Buscar cliente, obra, mixer, resistencia o guía…",
+      "search_targets": ["clientes", "órdenes"],
+      "notifications": "alertas derivadas de stock, flota, cartera y cierre",
+      "theme_toggle": "día / noche persistido en localStorage",
+      "avatar": "JV · Gerente General"
+    }
+  },
+  "dashboard": {
+    "greeting": "Bienvenido de nuevo, Julio!",
+    "filters": [
+      {"id": "f-periodo", "label": "Período", "options": ["HOY", "7D", "MES", "12M", "ANIO"]},
+      {"id": "f-planta", "label": "Planta", "options": ["", "PLANTA-COCA", "PLANTA-MOVIL"]},
+      {"id": "f-resistencia", "label": "Resistencia", "options": ["", "FC-180", "FC-210", "FC-240", "FC-280", "FC-350"]},
+      {"id": "f-pago", "label": "Estado Pago", "options": ["", "EFECTIVO", "TRANSFERENCIA", "ABONO", "FIADO"]}
+    ],
+    "grid": {
+      "columns": "minmax(290px,0.92fr) minmax(320px,1.18fr) minmax(300px,1fr)",
+      "cards": ["donut", "actividad", "calendario"]
+    },
+    "donut": {
+      "size": "190px",
+      "stroke": "12px",
+      "radius": 80,
+      "circumference": 502.65,
+      "modes": [
+        {
+          "id": 0,
+          "label": "Despacho",
+          "metric": "viajes con despacho_validado / viajes contratados",
+          "source": "/api/v1/orders + /api/v1/orders/{id}"
+        },
+        {
+          "id": 1,
+          "label": "Mercado",
+          "metric": "capturado_usd / valor_mercado_usd",
+          "source": "/api/v1/dashboard/mercado"
+        },
+        {
+          "id": 2,
+          "label": "Cobrado",
+          "metric": "(facturado - saldo_pendiente) / facturado",
+          "source": "/api/v1/secretaria/clientes"
+        }
+      ],
+      "minimum_visible_arc": "1.5% (solo visual; la etiqueta muestra el valor real)"
+    },
+    "activity": {
+      "max_items": 7,
+      "sources": ["órdenes", "viajes validados", "incidencias", "mixers en ruta", "cartera", "stock crítico"]
+    },
+    "calendar": {
+      "week_start": "L",
+      "today_style": "#3B82F6",
+      "event_style": "rgba(59,130,246,0.16)",
+      "events_source": "created_at real de órdenes + cierre de caja",
+      "note": "No se inventan fechas ni horas de despacho: se muestra el registro real"
+    },
+    "works": {
+      "cards": ["orden 1", "orden 2", "simulación bancaria Pluma China"],
+      "progress": "viajes despachados / contratados; DSCR / 1.50x",
+      "thumb_height": "110px",
+      "thumb_gradients": {
+        "cyan_blue": "linear-gradient(135deg,#0E7490 0%,#1D4ED8 55%,#172554 100%)",
+        "amber": "linear-gradient(135deg,#B45309 0%,#F59E0B 48%,#78350F 100%)",
+        "slate": "linear-gradient(135deg,#1E293B 0%,#334155 55%,#0F172A 100%)"
+      }
+    }
+  },
+  "views": {
+    "secretaria": {
+      "blocks": ["alta rápida de orden", "cierre de caja", "cobros del día (solo lectura)", "cartera"],
+      "limitation": "No existe POST de pagos/abonos: no se inventan movimientos"
+    },
+    "clientes": {
+      "pattern": "maestro-detalle",
+      "autoselect": "primer cliente con total_m3 > 0 ordenado por total_m3 descendente",
+      "reason": "evita el panel derecho vacío y prioriza Ing. Reyes (372 m³)",
+      "detail": ["carpeta forense", "timeline", "órdenes", "evidencias Bunny"]
+    },
+    "planta": {
+      "blocks": ["stock", "kardex teórico vs real", "flota de mixers"],
+      "source": "/api/v1/inventory + /api/v1/dashboard/hero-kpis + /api/v1/secretaria/opciones"
+    },
+    "banca": {
+      "blocks": ["cuota de mercado", "dossier", "simulador francés"],
+      "source": "/api/v1/dashboard/mercado + /api/v1/dashboard/simulador"
+    },
+    "superadmin": {
+      "blocks": ["simulador WhatsApp", "outbox", "7 secciones de configuración"],
+      "ids": ["sim-remitente", "sim-texto", "sim-foto", "sim-resultado", "outbox-panel", "config-tabs", "config-panel"]
+    }
+  },
+  "preserved_contracts": {
+    "ids": [
+      "theme-toggle", "theme-icon", "theme-label", "modo-pill", "judge-pill", "db-pill",
+      "page-title", "page-date", "buscar-cliente", "lista-clientes", "carpeta-card",
+      "cierre-fecha", "cierre-estado", "cierre-resumen", "cierre-contado", "cierre-por", "cierre-resultado",
+      "hero-kpis", "mercado-modo", "mercado-anio", "mercado-periodo", "mercado-rango", "mercado-panel",
+      "simulador-panel", "sim-remitente", "sim-texto", "sim-foto", "sim-resultado",
+      "outbox-panel", "config-tabs", "config-panel", "dlg-cliente", "dlg-orden", "toasts"
+    ],
+    "endpoints": [
+      "/api/v1/orders",
+      "/api/v1/orders/{id}",
+      "/api/v1/inventory",
+      "/api/v1/secretaria/clientes",
+      "/api/v1/secretaria/clientes/{id}/carpeta",
+      "/api/v1/secretaria/cierre-caja",
+      "/api/v1/dashboard/hero-kpis",
+      "/api/v1/dashboard/mercado",
+      "/api/v1/dashboard/simulador",
+      "/api/v1/dashboard/dossier",
+      "/api/v1/superadmin/config"
+    ]
+  },
+  "responsive": {
+    "desktop": "3 columnas, sidebar fija 258px, top header fijo 72px",
+    "tablet_1280": "2 columnas; calendario a todo el ancho",
+    "mobile_980": "sidebar horizontal scrolleable, header sticky, 1 columna",
+    "mobile_520": "theme toggle compacto, gaps de 14px"
+  },
+  "motion": {
+    "view_in": "opacity 0→1 + translateY(6px→0), 280ms ease",
+    "donut": "stroke-dashoffset 800ms cubic-bezier(0.22,1,0.36,1)",
+    "reduced_motion": "respeta prefers-reduced-motion"
+  },
+  "pending_data": [
+    "Capacidad operativa de planta (m³) para el modo 1 del donut",
+    "Endpoint POST de pagos/abonos para Secretaría",
+    "Provincia y dirección de obra por cliente para el calendario"
+  ]
+}

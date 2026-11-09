@@ -219,7 +219,7 @@ class PostgresSecretariaStore:
         evidencias: list[dict[str, Any]] = []
         timeline: list[dict[str, Any]] = []
         for fila in viajes:
-            payload = dict(fila["tracking_payload"] or {})
+            payload = _json_objeto(fila["tracking_payload"])
             for url in payload.get("evidencias_bunny_cdn") or []:
                 evidencias.append(
                     {
@@ -452,6 +452,18 @@ def _json(valor: Any) -> str:
     import json
 
     return json.dumps(valor, ensure_ascii=False, default=str)
+
+
+def _json_objeto(valor: Any) -> dict[str, Any]:
+    """Normaliza un jsonb: asyncpg puede devolverlo como texto crudo."""
+    if isinstance(valor, str):
+        import json
+
+        try:
+            valor = json.loads(valor)
+        except ValueError:
+            return {}
+    return dict(valor) if isinstance(valor, Mapping) else {}
 
 
 def _orden_dict(fila: Mapping[str, Any]) -> dict[str, Any]:

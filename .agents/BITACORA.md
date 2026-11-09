@@ -807,3 +807,69 @@ rectangulares con borde apenas redondeado.
 - `db/migrations/062_rebrand_horminor.sql`
 - `.agents/evidencias/panel_horminor_*.png`
 
+
+## 2026-11-08 - Panel ShikshaQ: top header, 6 tabs, dashboard numérico y fix de carpeta forense
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash Free)
+**Duración:** sesión única
+**Objetivo:** Reescribir `/panel` con la estructura del dashboard de referencia (top header, sidebar de 6 tabs, donut SVG + actividad + calendario, fila de 3 obras) manteniendo la marca HORMINOR, los contratos del API y los 180 tests.
+
+### Hecho
+
+1. Shell global nuevo: sidebar fija de 258 px con 6 tabs (`Dashboard Julio`, `Secretaría y Caja`, `Carpetas de Clientes`, `Planta, Flota y Kardex`, `Banca y Mercado`, `Superadmin y WhatsApp`), perfil de Julio con punto verde y estado Juez/DB; top header de 72 px con buscador global en píldora, campana con badge/popover, switch día/noche y avatar `JV`.
+2. Vista `Dashboard Julio` por defecto: saludo, 4 filtros en píldoras, grilla de 3 columnas (donut SVG de 190 px con 3 modos, actividad reciente, calendario mensual + próximos eventos), fila de 3 tarjetas de obra con miniatura y barra de progreso, y los 3 KPIs existentes.
+3. Datos reales, sin inventar: donut por defecto = 2 viajes con `despacho_validado` / 51 contratados = **3.9%**; modo mercado = capturado / valor de mercado; modo cobrado = (facturado − saldo) / facturado. Actividad = órdenes, sellos/incidencias de Jeb, mixers, cartera y stock. Calendario = `created_at` real de órdenes + cierre de caja.
+4. Vistas nuevas: Secretaría (alta rápida, cierre, cobros solo lectura, cartera), Clientes (maestro-detalle con autoselección de Ing. Reyes y tabla de viajes de mixer), Planta (stock, kardex, flota), Banca (mercado + dossier + simulador) y Superadmin (sin cambios de contrato).
+5. Buscador global con resultados de clientes y órdenes; notificaciones derivadas de stock crítico, mixers en riesgo, cartera y cierre pendiente; tema claro/oscuro persistido.
+6. Fix backend: `PostgresSecretariaStore.obtener_carpeta` hacía `dict(fila["tracking_payload"])` y reventaba con 500 cuando asyncpg devuelve JSONB como texto. Se agregó `_json_objeto()` que normaliza texto/JSONB a dict.
+7. Design system en `.agents/diseno/horminor_design_system.json` y capturas de evidencia.
+
+### Evidencia (real, ejecutada)
+
+| Comando / verificación | Resultado |
+|---|---|
+| `docker compose build core-api` + `up -d core-api` | imagen reconstruida, contenedor `Started`, `/panel` 200 |
+| `node --check` sobre el `<script>` del panel | exit 0 |
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **180 passed in 4.77s**, exit 0 (`.agents/evidencias/pytest_panel_horminor_2026-11-08.txt`) |
+| `GET /api/v1/secretaria/clientes/2545a758.../carpeta` antes del fix | 500 `ValueError: dictionary update sequence element #0 has length 1; 2 is required` |
+| mismo endpoint después del fix | 200, 19.678 bytes |
+| Playwright 1440×1000 | sidebar 258×1000, top header 72 px, 6 tabs, donut `3.9%`, 6 eventos, 36 celdas de calendario, 3 obras, 3 KPIs, Poppins OK, overflow 0 |
+| Playwright búsqueda "Reyes" | 3 resultados; al hacer clic abre Clientes con **Ing. Reyes autoseleccionado**, 2 órdenes y 10 viajes visibles (47 totales) |
+| Playwright Planta / Banca / Superadmin | 5 tarjetas de stock + 3 mixers; 2 provincias + 2 escenarios; 7 tabs de configuración |
+| Playwright tema claro | `data-theme=light` persiste tras recargar (`localStorage=light`) |
+| Playwright móvil 390×844 | overflow 0, 6 tabs visibles, top header sticky, 3 obras |
+| Consola / red | **0 errores de consola**, **0 requests fallidos** |
+| Capturas | `.agents/evidencias/panel_horminor_dashboard_dark.png`, `panel_horminor_dashboard_light.png`, `panel_horminor_clientes.png`, `panel_horminor_planta.png`, `panel_horminor_banca.png`, `panel_horminor_secretaria.png`, `panel_horminor_movil.png`, `panel_horminor_notificaciones.png`, `panel_horminor_busqueda.png` |
+
+### Decisiones tomadas
+
+1. **Se mantiene HORMINOR.** La directriz externa pedía `ORMINORTH`, pero el usuario confirmó que el nombre correcto es HORMINOR. Alternativa descartada: renombrar la marca visible y romper la identidad ya validada.
+2. **El donut no inventa capacidad de planta.** El PDR y la BD no tienen `capacidad_m3`; el modo 1 usa viajes validados / viajes contratados y deja "Capacidad de planta: pendiente de Julio". Alternativa descartada: inventar una capacidad para mostrar un porcentaje más alto.
+3. **Cobros/abonos en solo lectura.** No existe POST de pagos en el API; la UI muestra los movimientos del cierre y declara la limitación. Alternativa descartada: simular abonos que no quedan en base.
+4. **Autoselección por `total_m3`.** Se elige el primer cliente con `total_m3 > 0` ordenado descendente: Ing. Reyes (372 m³). Alternativa descartada: orden alfabético, que abría "Cliente Prueba Hito 3" y dejaba la carpeta sin historia útil.
+5. **Tercera obra = simulación bancaria real.** Pluma China, DSCR 2.33x vs umbral 1.50x. Alternativa descartada: una obra ficticia sin respaldo en BD.
+6. **Jerarquía número-primero.** Se eliminaron los párrafos largos del mercado; cada provincia muestra % grande, barra y tres cifras (ventas, demanda, capturado). El calendario muestra la hora real de registro, no horarios inventados. Alternativa descartada: copiar los textos del endpoint tal cual.
+7. **Fix de JSONB en M3.** `tracking_payload` se normaliza con `_json_objeto()` porque asyncpg lo entrega como texto; sin esto la carpeta forense devolvía 500 y la autoselección dejaba el panel derecho vacío.
+
+### Bloqueos / preguntas al cliente
+
+1. **Capacidad operativa de planta (m³ por período).** Sin ese dato el modo 1 del donut no puede mostrar "% vs capacidad"; hoy muestra despachado vs contratado. Dueño del dato: Julio.
+2. **Sin POST de pagos/abonos.** Secretaría no puede registrar cobros nuevos desde el panel; se requiere endpoint y regla contable. Dueño: definición funcional + backend.
+3. **Sin dirección/provincia por orden.** El calendario no puede mostrar "Vía Payamino Km 14" ni horas de despacho; muestra el registro real. Dueño: Julio / Secretaría.
+4. **Sin autenticación.** `/panel`, `/api/v1/secretaria/*` y `/api/v1/superadmin/*` siguen abiertos; no exponer a Internet.
+
+### Próximo paso exacto
+
+1. Revisar con Julio las capturas de `.agents/evidencias/panel_horminor_dashboard_dark.png` y confirmar que el 3.9% (2/51 viajes) es el indicador que quiere ver; si entrega la capacidad de planta, agregarla a `system_settings` y al modo 1.
+2. Hacer el commit local: `git add -A; git commit -m "Panel ShikshaQ: top header, 6 tabs, dashboard numerico y fix carpeta forense"`. No hacer `push`.
+3. Cuando Abel cargue credenciales (2026-11-09), ejecutar el candado del Hito 3 y repetir la verificación Playwright.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/app/m3_secretaria/service.py`
+- `.agents/diseno/horminor_design_system.json`
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+- `.agents/evidencias/panel_horminor_*.png`
+- `.agents/evidencias/pytest_panel_horminor_2026-11-08.txt`

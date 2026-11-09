@@ -907,59 +907,932 @@ details summary { cursor: pointer; color: var(--text-muted); font-size: 12.5px; 
   .kpi-value { font-size: 25px; }
 }
 
+/* ==========================================================================
+   SHELL SHIKSHAQ · TOP HEADER + SIDEBAR 6 TABS + DASHBOARD 3 COLUMNAS
+   Todo SVG/CSS nativo. Sin build, sin CDN.
+   ========================================================================== */
+
+/* ---------------------------------------------------- Perfil del sidebar */
+.sidebar-profile {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: var(--border-subtle);
+}
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: var(--radius-row);
+  background: var(--surface-row-pill);
+  border: var(--border-subtle);
+}
+.profile-avatar,
+.avatar {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #06B6D4 0%, #3B82F6 60%, #2563EB 100%);
+  flex: 0 0 auto;
+}
+.profile-avatar { width: 38px; height: 38px; font-size: 12.5px; }
+.profile-meta { min-width: 0; flex: 1 1 auto; }
+.profile-meta strong {
+  display: block;
+  font-size: 12px;
+  color: var(--text-pure);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-meta span {
+  display: block;
+  font-size: 9.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+  flex: 0 0 8px;
+}
+.sidebar-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+.sidebar-status .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border-radius: 5px;
+  border: var(--border-subtle);
+  background: var(--surface-row-pill);
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  color: var(--text-slate);
+}
+.sidebar-status .pill::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
+}
+.sidebar-status .pill.sandbox { color: var(--accent-cat-amber-bright); border-color: rgba(245, 158, 11, 0.34); background: rgba(245, 158, 11, 0.13); }
+.sidebar-status .pill.prod { color: #34D399; border-color: rgba(16, 185, 129, 0.34); background: rgba(16, 185, 129, 0.13); }
+
+/* ------------------------------------------------------------- Top header */
+.top-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: var(--sidebar-w);
+  height: 72px;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 24px;
+  background: var(--header-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: var(--border-subtle);
+}
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 250px;
+}
+.top-eyebrow {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-pure);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.top-sub {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top-date {
+  padding: 5px 9px;
+  border: var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-row-pill);
+  color: var(--text-slate);
+  font-size: 10.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.top-search {
+  position: relative;
+  flex: 1 1 auto;
+  max-width: 620px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 16px;
+  height: 40px;
+  border-radius: 9999px;
+  border: 1px solid var(--input-border);
+  background: var(--surface-input);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.top-search:focus-within {
+  border-color: var(--accent-bank-pill);
+  box-shadow: 0 0 0 3px rgba(65, 131, 251, 0.16);
+}
+.top-search > svg { width: 17px; height: 17px; color: var(--text-muted); flex: 0 0 17px; }
+.top-search input[type=search] {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  height: 100%;
+  box-shadow: none;
+  font-size: 12.5px;
+}
+.top-search input[type=search]:focus { box-shadow: none; border: 0; }
+.search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  max-height: 380px;
+  overflow: auto;
+  padding: 6px;
+  border-radius: 14px;
+  border: var(--border-subtle);
+  background: var(--bg-obsidian);
+  box-shadow: var(--shadow-bento);
+}
+.search-results[hidden], .notif-popover[hidden] { display: none !important; }
+.search-hit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  text-align: left;
+  color: var(--text-pure);
+}
+.search-hit:hover { background: var(--surface-row-pill); }
+.search-hit .hit-ico { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-row-pill); font-size: 13px; flex: 0 0 26px; }
+.search-hit strong { display: block; font-size: 12px; font-weight: 600; }
+.search-hit span { display: block; font-size: 10.5px; color: var(--text-muted); }
+.search-empty { padding: 12px; font-size: 11.5px; color: var(--text-muted); }
+.search-group { padding: 7px 10px 4px; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+
+.top-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.icon-button {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid var(--input-border);
+  background: var(--surface-row-pill);
+  color: var(--text-slate);
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.icon-button:hover { background: var(--surface-row-pill-hover); color: var(--text-pure); }
+.icon-button svg { width: 18px; height: 18px; }
+.notif-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #EF4444;
+  color: #FFFFFF;
+  font-size: 9.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--bg-void);
+}
+.notif-wrap { position: relative; }
+.notif-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  z-index: 70;
+  border-radius: 14px;
+  border: var(--border-subtle);
+  background: var(--bg-obsidian);
+  box-shadow: var(--shadow-bento);
+  overflow: hidden;
+}
+.notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: var(--border-subtle);
+}
+.notif-head strong { font-size: 12.5px; }
+.link-btn {
+  border: 0;
+  background: transparent;
+  color: var(--accent-bank-pill);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 4px;
+}
+.notif-list { max-height: 340px; overflow: auto; padding: 6px; }
+.notif-item { display: flex; gap: 10px; padding: 9px 8px; border-radius: 9px; }
+.notif-item:hover { background: var(--surface-row-pill); }
+.notif-item .ni-ico { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; font-size: 13px; flex: 0 0 28px; background: var(--surface-row-pill); }
+.notif-item .ni-ico.bad { background: rgba(239, 68, 68, 0.14); }
+.notif-item .ni-ico.warn { background: rgba(245, 158, 11, 0.14); }
+.notif-item .ni-ico.ok { background: rgba(16, 185, 129, 0.14); }
+.notif-item strong { display: block; font-size: 11.5px; font-weight: 600; }
+.notif-item span { display: block; font-size: 10.5px; color: var(--text-muted); }
+
+.top-actions .theme-toggle {
+  width: auto;
+  padding: 9px 11px;
+  font-size: 11px;
+  border-radius: 10px;
+  background: var(--surface-row-pill);
+}
+.avatar-chip { display: flex; align-items: center; gap: 8px; padding-left: 4px; }
+.avatar-chip .avatar { width: 36px; height: 36px; font-size: 11.5px; }
+.avatar-meta strong { display: block; font-size: 11px; font-weight: 600; color: var(--text-pure); line-height: 1.2; }
+.avatar-meta span { display: block; font-size: 9.5px; color: var(--text-muted); }
+
+/* --------------------------------------------------------------- Contenido */
+main { padding: 96px 24px 64px; }
+.view { max-width: 1480px; }
+
+/* ----------------------------------------------------------- Dashboard top */
+.dash-welcome {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.dash-hi {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+  color: var(--text-pure);
+}
+.dash-sub { margin: 5px 0 0; font-size: 12.5px; color: var(--text-muted); }
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px 6px 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--input-border);
+  background: var(--surface-row-pill);
+  color: var(--text-slate);
+  font-size: 11px;
+}
+.filter-pill > span { font-size: 12px; }
+.filter-pill select {
+  width: auto;
+  border: 0;
+  background: transparent;
+  padding: 0 14px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-pure);
+  box-shadow: none;
+  cursor: pointer;
+}
+.filter-pill select:focus { border: 0; box-shadow: none; }
+.filter-pill select option { background: var(--bg-obsidian); color: var(--text-pure); }
+
+/* ------------------------------------------------------- Grilla 3 columnas */
+.dash-grid {
+  display: grid;
+  grid-template-columns: minmax(290px, 0.92fr) minmax(320px, 1.18fr) minmax(300px, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+.dash-card {
+  border: var(--border-subtle);
+  border-radius: 20px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-bento);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.dash-card h2 { font-size: 14px; margin: 0; letter-spacing: -0.01em; }
+.dash-card .card-kicker { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 4px; font-weight: 600; }
+
+/* Donut */
+.donut-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.donut-wrap { position: relative; width: 190px; height: 190px; margin: 12px auto 6px; }
+.donut-svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.donut-track { fill: none; stroke: rgba(148, 163, 184, 0.16); stroke-width: 12; }
+[data-theme="light"] .donut-track { stroke: #E2E8F0; }
+.donut-arc {
+  fill: none;
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.45));
+}
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.donut-value { font-size: 2.1rem; line-height: 1; font-weight: 700; color: var(--text-pure); letter-spacing: -0.03em; }
+.donut-cap { font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-top: 6px; font-weight: 600; }
+.donut-modes { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin: 10px 0 4px; }
+.donut-modes button {
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--input-border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.donut-modes button.active { background: rgba(59, 130, 246, 0.16); border-color: rgba(59, 130, 246, 0.55); color: #93C5FD; }
+[data-theme="light"] .donut-modes button.active { color: #1D4ED8; }
+.donut-title { margin: 10px 0 3px; font-size: 13px; font-weight: 600; color: var(--text-pure); text-align: center; }
+.donut-note { margin: 0 0 12px; font-size: 10.5px; line-height: 1.5; color: var(--text-muted); text-align: center; }
+.donut-kpis { display: grid; gap: 6px; margin-bottom: 12px; }
+.donut-kpis .spread { font-size: 11px; }
+.donut-cta { margin-top: auto; width: 100%; }
+
+/* Actividad */
+.act-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; }
+.act-item {
+  display: flex;
+  gap: 11px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  transition: background 0.16s ease;
+}
+.act-item:hover { background: var(--surface-row-pill); }
+.act-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  flex: 0 0 32px;
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.act-ico.ok { background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.32); }
+.act-ico.warn { background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.34); }
+.act-ico.bad { background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.34); }
+.act-body { min-width: 0; flex: 1 1 auto; }
+.act-body strong { display: block; font-size: 11.5px; font-weight: 600; color: var(--text-pure); line-height: 1.35; }
+.act-body span { display: block; font-size: 10.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.35; }
+.act-foot { margin-top: 10px; padding-top: 10px; border-top: var(--border-subtle); }
+.act-foot a { font-size: 11px; font-weight: 600; color: var(--accent-bank-pill); text-decoration: none; }
+
+/* Calendario */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cal-nav { display: flex; gap: 4px; }
+.cal-nav button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  border: 1px solid var(--input-border);
+  background: transparent;
+  color: var(--text-slate);
+  font-size: 12px;
+  line-height: 1;
+}
+.cal-nav button:hover { background: var(--surface-row-pill); color: var(--text-pure); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin: 12px 0 4px; }
+.cal-dow { text-align: center; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: var(--text-muted); padding: 3px 0; }
+.cal-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 10.5px;
+  color: var(--text-slate);
+}
+.cal-cell.blank { visibility: hidden; }
+.cal-cell.has-event { background: rgba(59, 130, 246, 0.16); color: #93C5FD; font-weight: 600; }
+.cal-cell.today { background: #3B82F6; color: #FFFFFF; font-weight: 700; box-shadow: 0 6px 14px -6px rgba(59, 130, 246, 0.9); }
+.cal-cell.today.has-event::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #F59E0B;
+}
+[data-theme="light"] .cal-cell.has-event { color: #1D4ED8; }
+.prox-title { margin: 12px 0 6px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+.prox-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.prox-item { display: flex; gap: 10px; }
+.prox-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: 0 0 8px; background: #F59E0B; }
+.prox-dot.blue { background: #3B82F6; }
+.prox-dot.green { background: #10B981; }
+.prox-item strong { display: block; font-size: 11px; font-weight: 600; color: var(--text-pure); line-height: 1.3; }
+.prox-item span { display: block; font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+.cal-cta { margin-top: auto; padding-top: 14px; }
+.cal-cta .btn { width: 100%; }
+
+/* ------------------------------------------------------- Obras / tarjetas */
+.works-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 26px 0 12px; flex-wrap: wrap; }
+.works-head h2 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.works-head a { font-size: 11px; font-weight: 600; color: var(--accent-bank-pill); text-decoration: none; }
+.works-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.work-card {
+  border: var(--border-subtle);
+  border-radius: 20px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-bento);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.work-thumb {
+  position: relative;
+  height: 110px;
+  background: linear-gradient(135deg, #0E7490 0%, #1D4ED8 55%, #172554 100%);
+  overflow: hidden;
+}
+.work-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.12) 50%, transparent 60%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.10) 0 1px, transparent 1px 26px);
+  opacity: 0.8;
+}
+.work-thumb.amber { background: linear-gradient(135deg, #B45309 0%, #F59E0B 48%, #78350F 100%); }
+.work-thumb.slate { background: linear-gradient(135deg, #1E293B 0%, #334155 55%, #0F172A 100%); }
+.work-thumb .thumb-tag {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  z-index: 2;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #FFFFFF;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.work-thumb .thumb-mix {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 2;
+  font-size: 26px;
+  opacity: 0.9;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+}
+.work-body { padding: 14px 16px 16px; display: flex; flex-direction: column; flex: 1 1 auto; }
+.work-badge {
+  align-self: flex-start;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+}
+.work-badge.blue { background: rgba(59, 130, 246, 0.16); color: #93C5FD; border-color: rgba(59, 130, 246, 0.4); }
+.work-badge.amber { background: rgba(245, 158, 11, 0.16); color: #FBBF24; border-color: rgba(245, 158, 11, 0.4); }
+.work-badge.green { background: rgba(16, 185, 129, 0.16); color: #34D399; border-color: rgba(16, 185, 129, 0.4); }
+[data-theme="light"] .work-badge.blue { color: #1D4ED8; }
+[data-theme="light"] .work-badge.amber { color: #92400E; }
+[data-theme="light"] .work-badge.green { color: #047857; }
+.work-body h3 { margin: 9px 0 4px; font-size: 12.5px; font-weight: 600; line-height: 1.4; color: var(--text-pure); }
+.work-body p { margin: 0 0 12px; font-size: 10.5px; color: var(--text-muted); line-height: 1.45; }
+.work-progress { margin-top: auto; }
+.work-progress .spread { font-size: 10px; color: var(--text-muted); margin-bottom: 5px; }
+.work-progress strong { color: var(--text-pure); font-size: 11px; }
+.bar-track.thin { height: 7px; }
+
+/* ------------------------------------------------------- KPIs compactos */
+#hero-kpis { margin-top: 24px; }
+
+/* -------------------------------------------------------------- Planta */
+.planta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+.stock-card {
+  border: var(--border-subtle);
+  border-radius: 16px;
+  padding: 16px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-bento);
+}
+.stock-card .kpi-label { margin-bottom: 2px; }
+.stock-card .big { font-size: 22px; }
+.stock-card .bar-track { margin-top: 10px; }
+.mixer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: var(--border-subtle);
+  background: var(--surface-row-pill);
+  margin-bottom: 8px;
+}
+.mixer-row .mix-ico { font-size: 20px; }
+.mixer-row strong { display: block; font-size: 12px; }
+.mixer-row span { display: block; font-size: 10.5px; color: var(--text-muted); }
+
+/* --------------------------------------------------------- Tablas y notas */
+.table-wrap { overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+thead th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--table-head);
+  border-bottom: var(--border-subtle);
+  white-space: nowrap;
+}
+tbody td { padding: 8px 10px; border-bottom: var(--border-subtle); color: var(--text-slate); }
+tbody tr:hover { background: var(--row-hover); }
+tbody tr:last-child td { border-bottom: 0; }
+
+/* ------------------------------------------------------------ Responsive */
+@media (max-width: 1280px) {
+  .dash-grid { grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr); }
+  .dash-grid > .dash-card:nth-child(3) { grid-column: 1 / -1; }
+  .works-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 980px) {
+  .app-header {
+    position: relative;
+    width: 100%;
+    height: auto;
+    border-right: 0;
+    border-bottom: var(--border-subtle);
+    z-index: 55;
+  }
+  .app-header .bar { height: auto; padding: 12px 14px 10px; overflow: visible; }
+  .brand { padding: 0 2px 10px; }
+  .brand small { display: none; }
+  .nav-label, .sidebar-profile { display: none; }
+  .role-switch { flex-direction: row; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .role-switch button { width: auto; flex: 0 0 auto; font-size: 11.5px; padding: 8px 11px; }
+  .role-switch .nav-ico { width: 15px; height: 15px; flex: 0 0 15px; }
+  .top-header {
+    position: sticky;
+    left: 0;
+    height: auto;
+    min-height: 62px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 9px 14px;
+  }
+  .top-left { display: none; }
+  .top-search { order: 3; flex: 1 0 100%; max-width: none; height: 38px; }
+  .avatar-meta { display: none; }
+  main { margin-left: 0; padding: 18px 14px 48px; }
+  .dash-grid { grid-template-columns: 1fr; }
+  .dash-grid > .dash-card:nth-child(3) { grid-column: auto; }
+  .works-grid { grid-template-columns: 1fr; }
+  .grid.two { grid-template-columns: 1fr; }
+  .page-head { margin-bottom: 16px; }
+  .dash-hi { font-size: 21px; }
+  .filter-pill { padding: 5px 8px; font-size: 10.5px; }
+  .filter-pill select { font-size: 10.5px; }
+  .notif-popover { right: -46px; }
+}
+@media (max-width: 520px) {
+  .top-actions .theme-toggle span:last-child { display: none; }
+  .top-actions .theme-toggle { padding: 9px; }
+  .dash-grid { gap: 14px; }
+  .dash-card, .work-card { border-radius: 16px; }
+  .works-grid { gap: 14px; }
+}
+
 </style>
 </head>
 <body>
-<header class="app-header">
+<aside class="app-header">
   <div class="bar">
     <div class="brand">
       <img class="brand-mark" src="/static/brand/horminor-mark.png" alt="Horminor">
       <div>
         <h1><span class="brand-word">HORMINOR</span></h1>
-        <small>Sistema de Gestión</small>
+        <small>Hormigones &amp; Planta Móvil · El Coca</small>
       </div>
     </div>
-    <div class="nav-label">Operación</div>
-    <nav class="role-switch" aria-label="Selector rápido de vista por rol">
-      <button data-role-btn="secretaria" class="active" onclick="setView('secretaria')">
+    <div class="nav-label">Panel de control</div>
+    <nav class="role-switch" aria-label="Navegación principal del panel">
+      <button data-role-btn="dashboard" class="active" onclick="setView('dashboard')">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Dashboard Julio
+      </button>
+      <button data-role-btn="secretaria" onclick="setView('secretaria')">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>
         Secretaría y Caja
       </button>
-      <button data-role-btn="gerencial" onclick="setView('gerencial')">
-        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
-        Gerencial Julio
+      <button data-role-btn="clientes" onclick="setView('clientes')">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 11h18"/></svg>
+        Carpetas de Clientes
+      </button>
+      <button data-role-btn="planta" onclick="setView('planta')">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l6 3V9l6 3V6l6 3v12Z"/><path d="M7 17h.01M12 17h.01M17 17h.01"/></svg>
+        Planta, Flota y Kardex
+      </button>
+      <button data-role-btn="banca" onclick="setView('banca')">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/></svg>
+        Banca y Mercado
       </button>
       <button data-role-btn="superadmin" onclick="setView('superadmin')">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
         Superadmin y WhatsApp
       </button>
     </nav>
-    <div class="status">
-      <button class="theme-toggle" id="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Cambiar entre modo día y noche" aria-pressed="false">
-        <span class="icon" id="theme-icon">🌙</span><span id="theme-label">Noche</span>
-      </button>
-      <span class="pill" id="modo-pill">SANDBOX</span>
-      <span class="pill" id="judge-pill">Juez: —</span>
-      <span class="pill" id="db-pill">DB: —</span>
+    <div class="sidebar-profile">
+      <div class="profile-row">
+        <div class="profile-avatar">JV</div>
+        <div class="profile-meta">
+          <strong>Julio Villavicencio</strong>
+          <span>Director Horminor · Planta El Coca</span>
+        </div>
+        <span class="online-dot" title="En línea"></span>
+      </div>
+      <div class="sidebar-status">
+        <span class="pill" id="modo-pill">SANDBOX</span>
+        <span class="pill" id="judge-pill">Juez: —</span>
+        <span class="pill" id="db-pill">DB: —</span>
+      </div>
     </div>
-    <div class="plant-card">
-      <span class="dot"></span>
-      <div><strong>Planta El Coca</strong><span>Operación local</span></div>
+  </div>
+</aside>
+
+<header class="top-header">
+  <div class="top-left">
+    <div>
+      <span class="top-eyebrow" id="page-title">Dashboard Julio</span>
+      <span class="top-sub" id="page-subtitle">Así se mueve tu operación hoy.</span>
+    </div>
+    <span class="top-date" id="page-date">—</span>
+  </div>
+  <div class="top-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+    <input type="search" id="busqueda-global" autocomplete="off"
+           placeholder="Buscar cliente, obra, mixer, resistencia o guía…"
+           oninput="buscarGlobal(this.value)" onfocus="buscarGlobal(this.value)">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="top-actions">
+    <div class="notif-wrap">
+      <button class="icon-button" id="btn-notif" type="button" onclick="toggleNotif()" aria-label="Alertas del Centinela" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="notif-badge" id="notif-badge" hidden>0</span>
+      </button>
+      <div class="notif-popover" id="notif-popover" hidden>
+        <div class="notif-head"><strong>Alertas del Centinela</strong><button class="link-btn" onclick="toggleNotif(false)">Cerrar</button></div>
+        <div class="notif-list" id="notif-list"></div>
+      </div>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Cambiar entre modo día y noche" aria-pressed="false">
+      <span class="icon" id="theme-icon">🌙</span><span id="theme-label">Noche</span>
+    </button>
+    <div class="avatar-chip" title="Julio Villavicencio — Gerente General">
+      <div class="avatar">JV</div>
+      <div class="avatar-meta"><strong>Julio V.</strong><span>Gerente General</span></div>
     </div>
   </div>
 </header>
 
 <main>
-  <div class="page-head">
-    <div>
-      <p class="eyebrow">Horminor · Centinela</p>
-      <h1 id="page-title">Secretaría y Caja</h1>
-      <p id="page-subtitle">Ventanilla, clientes y cierre diario.</p>
+  <!-- ===================== DASHBOARD JULIO ===================== -->
+  <section class="view active" data-view="dashboard">
+    <div class="dash-welcome">
+      <div>
+        <h1 class="dash-hi">Bienvenido de nuevo, Julio!</h1>
+        <p class="dash-sub">Así se mueve la producción, facturación y cuota de mercado de Horminor hoy.</p>
+      </div>
+      <span class="badge neutral" id="dash-actualizado">Actualizando…</span>
     </div>
-    <span class="date-chip" id="page-date">—</span>
-  </div>
-  <!-- ===================== SECRETARIA ===================== -->
-  <section class="view active" data-view="secretaria">
+
+    <div class="filter-bar" aria-label="Filtros del dashboard">
+      <label class="filter-pill"><span aria-hidden="true">📅</span>
+        <select id="f-periodo" onchange="cargarDashboard()" aria-label="Período">
+          <option value="HOY">Hoy</option>
+          <option value="7D">Últimos 7 días</option>
+          <option value="MES" selected>Este Mes</option>
+          <option value="12M">12 Meses Móviles</option>
+          <option value="ANIO">Año 2026</option>
+        </select>
+      </label>
+      <label class="filter-pill"><span aria-hidden="true">🏭</span>
+        <select id="f-planta" onchange="cargarDashboard()" aria-label="Planta">
+          <option value="">Todas las Plantas</option>
+          <option value="PLANTA-COCA">Planta Fija El Coca</option>
+          <option value="PLANTA-MOVIL">Planta Móvil Campamento</option>
+        </select>
+      </label>
+      <label class="filter-pill"><span aria-hidden="true">🧱</span>
+        <select id="f-resistencia" onchange="cargarDashboard()" aria-label="Resistencia">
+          <option value="">Todas</option>
+          <option>FC-180</option><option>FC-210</option><option>FC-240</option>
+          <option>FC-280</option><option>FC-350</option>
+        </select>
+      </label>
+      <label class="filter-pill"><span aria-hidden="true">💳</span>
+        <select id="f-pago" onchange="cargarDashboard()" aria-label="Estado de pago">
+          <option value="">Todos</option>
+          <option value="EFECTIVO">Pagado (efectivo)</option>
+          <option value="TRANSFERENCIA">Transferencia</option>
+          <option value="ABONO">Abono</option>
+          <option value="FIADO">Crédito / Fiado</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="dash-grid">
+      <!-- Donut -->
+      <div class="dash-card">
+        <div class="donut-head">
+          <div>
+            <p class="card-kicker">Rendimiento de hormigón</p>
+            <h2>Vendido vs. producido &amp; mercado</h2>
+          </div>
+        </div>
+        <div class="donut-wrap">
+          <svg class="donut-svg" viewBox="0 0 200 200" role="img" aria-labelledby="donut-a11y">
+            <title id="donut-a11y">Indicador circular de rendimiento</title>
+            <defs>
+              <linearGradient id="donut-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#06B6D4"/>
+                <stop offset="58%" stop-color="#3B82F6"/>
+                <stop offset="100%" stop-color="#F59E0B"/>
+              </linearGradient>
+            </defs>
+            <circle class="donut-track" cx="100" cy="100" r="80"></circle>
+            <circle class="donut-arc" id="donut-arc" cx="100" cy="100" r="80"
+                    stroke="url(#donut-grad)" stroke-dasharray="502.65" stroke-dashoffset="502.65"></circle>
+          </svg>
+          <div class="donut-center">
+            <span class="donut-value" id="donut-value">—</span>
+            <span class="donut-cap" id="donut-cap">Eficiencia comercial</span>
+          </div>
+        </div>
+        <div class="donut-modes" role="tablist" aria-label="Métrica del anillo">
+          <button type="button" id="donut-mode-0" class="active" onclick="setDonutMode(0)">Despacho</button>
+          <button type="button" id="donut-mode-1" onclick="setDonutMode(1)">Mercado</button>
+          <button type="button" id="donut-mode-2" onclick="setDonutMode(2)">Cobrado</button>
+        </div>
+        <h3 class="donut-title" id="donut-title">Despachado vs. contratado</h3>
+        <p class="donut-note" id="donut-note">Viajes de mixer validados por el Juez contra el total contratado.</p>
+        <div class="donut-kpis" id="donut-kpis"></div>
+        <button class="btn bank donut-cta" type="button" onclick="setView('planta')">Ver detalle de producción</button>
+      </div>
+
+      <!-- Actividad -->
+      <div class="dash-card">
+        <p class="card-kicker">Actividad reciente</p>
+        <div class="donut-head">
+          <h2>En tiempo real &amp; Juez Jeb</h2>
+          <span class="badge neutral" id="act-contador">—</span>
+        </div>
+        <ul class="act-list" id="actividad-lista">
+          <li class="act-item"><span class="act-ico">⏳</span><div class="act-body"><strong>Cargando actividad…</strong><span>Leyendo órdenes, viajes e inventario.</span></div></li>
+        </ul>
+        <div class="act-foot"><a href="#" onclick="setView('clientes');return false;">Ver toda la bitácora forense →</a></div>
+      </div>
+
+      <!-- Calendario -->
+      <div class="dash-card">
+        <div class="cal-head">
+          <div>
+            <p class="card-kicker">Calendario</p>
+            <h2 id="cal-titulo">—</h2>
+          </div>
+          <div class="cal-nav">
+            <button type="button" onclick="moverCalendario(-1)" aria-label="Mes anterior">‹</button>
+            <button type="button" onclick="moverCalendario(1)" aria-label="Mes siguiente">›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calendario-grid"></div>
+        <p class="prox-title">Próximos despachos / eventos</p>
+        <ul class="prox-list" id="proximos-despachos"></ul>
+        <div class="cal-cta">
+          <button class="btn bank" type="button" onclick="abrirOrden()">Programar nuevo despacho</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="works-head">
+      <h2>Obras activas, avance de mixers y evidencia Bunny.net</h2>
+      <a href="#" onclick="setView('clientes');return false;">Ver todas las carpetas de clientes →</a>
+    </div>
+    <div class="works-grid" id="obras-grid">
+      <div class="work-card"><div class="work-thumb"><span class="thumb-tag">Cargando</span></div><div class="work-body"><h3>Leyendo órdenes activas…</h3><p>Sin datos todavía.</p></div></div>
+    </div>
+
+    <div class="grid kpis" id="hero-kpis"></div>
+  </section>
+
+  <!-- ===================== SECRETARIA Y CAJA ===================== -->
+  <section class="view" data-view="secretaria">
+    <div class="grid two">
+      <div class="stack">
+        <div class="card">
+          <div class="spread">
+            <h2>Alta rápida de orden</h2>
+            <button class="btn small" onclick="abrirOrden()">+ Nueva orden</button>
+          </div>
+          <p class="small muted" style="margin-top:0">Calcula viajes, cemento y retardante con la receta confirmada antes de guardar.</p>
+          <div id="sec-ordenes" class="table-wrap"><p class="muted small">Cargando órdenes…</p></div>
+        </div>
+        <div class="card">
+          <div class="spread"><h2>Cierre de Caja</h2><span class="badge neutral" id="cierre-estado">—</span></div>
+          <label class="field">Fecha</label>
+          <input type="date" id="cierre-fecha" onchange="cargarCierre()">
+          <div id="cierre-resumen" class="small" style="margin-top:10px"></div>
+          <label class="field" style="margin-top:10px">Efectivo contado (USD)</label>
+          <input type="number" id="cierre-contado" step="0.01" min="0" placeholder="0.00">
+          <label class="field" style="margin-top:10px">Cerrado por</label>
+          <input type="text" id="cierre-por" value="Secretaría">
+          <button class="btn bank" style="margin-top:10px;width:100%" onclick="cerrarCaja()">Cerrar caja del día</button>
+          <div id="cierre-resultado"></div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <div class="spread"><h2>Cobros y abonos del día</h2><span class="badge neutral">Solo lectura</span></div>
+          <div id="sec-cobros" class="small"><p class="muted">Cargando movimientos…</p></div>
+          <div class="notice info" style="margin-top:12px">El alta de cobros y abonos se registra en el cierre de caja; el API aún no expone un POST de pagos. No se inventan movimientos desde la UI.</div>
+        </div>
+        <div class="card">
+          <h2>Cartera de clientes</h2>
+          <div id="sec-cartera" class="table-wrap"><p class="muted small">Cargando cartera…</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CARPETAS DE CLIENTES ===================== -->
+  <section class="view" data-view="clientes">
     <div class="grid two">
       <div class="stack">
         <div class="card">
@@ -970,20 +1843,7 @@ details summary { cursor: pointer; color: var(--text-muted); font-size: 12.5px; 
           <input type="search" id="buscar-cliente" placeholder="Buscar por nombre o constructora…" oninput="filtrarClientes()">
           <div id="lista-clientes" style="margin-top:10px"></div>
         </div>
-        <div class="card">
-          <div class="spread"><h2>Cierre de Caja</h2><span class="badge neutral" id="cierre-estado">—</span></div>
-          <label class="field">Fecha</label>
-          <input type="date" id="cierre-fecha" onchange="cargarCierre()">
-          <div id="cierre-resumen" class="small" style="margin-top:10px"></div>
-          <label class="field" style="margin-top:10px">Efectivo contado (USD)</label>
-          <input type="number" id="cierre-contado" step="0.01" min="0" placeholder="0.00">
-          <label class="field" style="margin-top:10px">Cerrado por</label>
-          <input type="text" id="cierre-por" value="Secretaría" >
-          <button class="btn bank" style="margin-top:10px;width:100%" onclick="cerrarCaja()">Cerrar caja del día</button>
-          <div id="cierre-resultado"></div>
-        </div>
       </div>
-
       <div class="stack">
         <div class="card" id="carpeta-card">
           <h2>Carpeta Forense del Cliente</h2>
@@ -993,51 +1853,57 @@ details summary { cursor: pointer; color: var(--text-muted); font-size: 12.5px; 
     </div>
   </section>
 
-  <!-- ===================== GERENCIAL ===================== -->
-  <section class="view" data-view="gerencial">
-    <div class="card" style="margin-bottom:16px">
-      <div class="row">
-        <div><label class="field">Fecha</label><input type="date" id="ger-fecha" onchange="cargarGerencial()"></div>
-        <div><label class="field">Planta</label>
-          <select id="ger-planta" onchange="cargarGerencial()">
-            <option value="">Todas</option>
-            <option value="PLANTA-COCA">Planta Fija El Coca</option>
-            <option value="PLANTA-MOVIL">Planta Móvil Campamento</option>
-          </select>
-        </div>
-        <div style="margin-left:auto;align-self:end">
-          <a class="btn cta-white" href="/api/v1/dashboard/dossier" target="_blank" rel="noopener">🖨️ Dossier Bancario</a>
-        </div>
-      </div>
+  <!-- ===================== PLANTA, FLOTA Y KARDEX ===================== -->
+  <section class="view" data-view="planta">
+    <div class="planta-grid" id="planta-stock">
+      <div class="stock-card"><div class="kpi-label">Inventario</div><div class="big">Cargando…</div></div>
     </div>
-
-    <div class="grid kpis" id="hero-kpis"></div>
-
-    <div class="grid two" style="margin-top:16px">
+    <div class="grid two" style="margin-top:20px">
       <div class="card">
-        <div class="spread">
-          <h2>Cuota de Mercado</h2>
-          <span class="badge neutral" id="mercado-periodo"></span>
-        </div>
-        <div class="row" style="margin-bottom:10px">
-          <select id="mercado-modo" onchange="cargarMercado()" style="max-width:220px">
-            <option value="12_MESES_MOVILES">12 meses móviles</option>
-            <option value="ANIO_CALENDARIO">Año calendario</option>
-          </select>
-          <input type="number" id="mercado-anio" value="2026" min="2020" max="2100" style="max-width:110px" onchange="cargarMercado()">
-        </div>
-        <div class="small muted" id="mercado-rango" style="margin:-2px 0 12px"></div>
-        <div id="mercado-panel"></div>
+        <div class="spread"><h2>Kardex teórico vs. real</h2><span class="badge neutral" id="kardex-badge">—</span></div>
+        <div id="planta-kardex"><p class="muted small">Leyendo umbrales de bodega…</p></div>
       </div>
       <div class="card">
-        <div class="spread"><h2>Simulador Bancario</h2><span class="badge neutral">Francesa · 11.2%</span></div>
-        <div id="simulador-panel"></div>
-        <p class="small muted" style="margin-bottom:0">DSCR proyectado = flujo incremental del equipo / cuota. DSCR histórico suma el flujo operativo de los últimos 90 días.</p>
+        <div class="spread"><h2>Flota de mixers</h2><span class="badge neutral" id="flota-badge">—</span></div>
+        <div id="planta-mixers"><p class="muted small">Leyendo flota…</p></div>
       </div>
     </div>
   </section>
 
-  <!-- ===================== SUPERADMIN ===================== -->
+  <!-- ===================== BANCA Y MERCADO ===================== -->
+  <section class="view" data-view="banca">
+    <div class="grid two">
+      <div class="stack">
+        <div class="card">
+          <div class="spread">
+            <h2>Cuota de Mercado Regional</h2>
+            <span class="badge neutral" id="mercado-periodo"></span>
+          </div>
+          <div class="row" style="margin-bottom:10px">
+            <select id="mercado-modo" onchange="cargarMercado()" style="max-width:220px">
+              <option value="12_MESES_MOVILES">12 meses móviles</option>
+              <option value="ANIO_CALENDARIO">Año calendario</option>
+            </select>
+            <input type="number" id="mercado-anio" value="2026" min="2020" max="2100" style="max-width:110px" onchange="cargarMercado()">
+          </div>
+          <div class="small muted" id="mercado-rango" style="margin:-2px 0 12px"></div>
+          <div id="mercado-panel"></div>
+        </div>
+        <div class="card">
+          <div class="spread"><h2>Dossier bancario</h2><span class="badge neutral">Imprimible</span></div>
+          <p class="small muted" style="margin-top:0">Resumen ejecutivo de KPIs, mercado y escenarios de financiamiento para presentar al banco.</p>
+          <a class="btn cta-white" href="/api/v1/dashboard/dossier" target="_blank" rel="noopener">🖨️ Abrir Dossier Bancario</a>
+        </div>
+      </div>
+      <div class="card">
+        <div class="spread"><h2>Simulador Bancario</h2><span class="badge neutral">Francesa · 11.2%</span></div>
+        <div id="simulador-panel"></div>
+        <p class="small muted" style="margin-bottom:0">DSCR proyectado = flujo incremental del equipo / cuota. DSCR histórico suma el flujo operativo de los últimos 90 días. Umbral verde: 1.50x.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SUPERADMIN Y WHATSAPP ===================== -->
   <section class="view" data-view="superadmin">
     <div class="grid two">
       <div class="stack">
@@ -1068,6 +1934,7 @@ details summary { cursor: pointer; color: var(--text-muted); font-size: 12.5px; 
     </div>
   </section>
 </main>
+
 
 <dialog id="dlg-cliente">
   <div class="dialog-head"><h2>Nuevo cliente</h2><button class="btn small ghost" onclick="document.getElementById('dlg-cliente').close()">Cerrar</button></div>
@@ -1117,9 +1984,11 @@ details summary { cursor: pointer; color: var(--text-muted); font-size: 12.5px; 
 
 <script>
 const state = {
-  view:'secretaria', clientes:[], carpeta:null, opciones:null,
+  view:'dashboard', clientes:[], carpeta:null, opciones:null,
   kpis:null, mercado:null, simulador:null, config:null, seccionConfig:null,
-  remitentes:[], outbox:[], cierre:null
+  remitentes:[], outbox:[], cierre:null,
+  ordenes:[], detalle:{}, inventario:[], donutMode:0,
+  calY:null, calM:null, notifs:[], cargando:false
 };
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
@@ -1127,19 +1996,32 @@ const money = v => (v===null||v===undefined||v==='') ? '—' : '$'+Number(v).toL
 const num = v => (v===null||v===undefined||v==='') ? '—' : Number(v).toLocaleString('en-US',{maximumFractionDigits:2});
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hoy = () => new Date().toISOString().slice(0,10);
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const VIEW_META = {
+  dashboard: {
+    title: 'Dashboard Julio',
+    subtitle: 'Producción, facturación y cuota de mercado en vivo.'
+  },
   secretaria: {
     title: 'Secretaría y Caja',
-    subtitle: 'Ventanilla, clientes, carpeta forense y cierre diario.'
+    subtitle: 'Alta de órdenes, cartera y cierre diario.'
   },
-  gerencial: {
-    title: 'Dashboard Gerencial',
-    subtitle: 'Caja, operación, bodega, cuota de mercado y simulador bancario.'
+  clientes: {
+    title: 'Carpetas de Clientes',
+    subtitle: 'Maestro-detalle forense con Juez Jeb y evidencia Bunny.'
+  },
+  planta: {
+    title: 'Planta, Flota y Kardex',
+    subtitle: 'Stock, autonomía, kardex teórico y estado de mixers.'
+  },
+  banca: {
+    title: 'Banca y Mercado',
+    subtitle: 'Cuota regional, simulador francés y dossier imprimible.'
   },
   superadmin: {
     title: 'Superadmin y WhatsApp',
-    subtitle: 'Configuración en caliente, flota, recetas y simulador de mensajes.'
+    subtitle: 'Configuración en caliente, flota, recetas y mensajes.'
   }
 };
 
@@ -1186,10 +2068,12 @@ function temaInicial() {
 }
 
 function toast(msg, kind='') {
+  const host = $('#toasts');
+  if (!host) return;
   const el = document.createElement('div');
   el.className = 'toast ' + kind;
   el.textContent = msg;
-  $('#toasts').appendChild(el);
+  host.appendChild(el);
   setTimeout(() => el.remove(), 5200);
 }
 
@@ -1207,64 +2091,550 @@ async function api(path, options={}) {
   return data;
 }
 
-function setView(v) {
-  state.view = v;
+/* ----------------------------- NAVEGACIÓN ----------------------------- */
+function _activarVista(v) {
   $$('.view').forEach(el => el.classList.toggle('active', el.dataset.view === v));
   $$('[data-role-btn]').forEach(el => el.classList.toggle('active', el.dataset.roleBtn === v));
-  const meta = VIEW_META[v] || VIEW_META.secretaria;
+  const meta = VIEW_META[v] || VIEW_META.dashboard;
   const titulo = $('#page-title');
   const subtitulo = $('#page-subtitle');
   if (titulo) titulo.textContent = meta.title;
   if (subtitulo) subtitulo.textContent = meta.subtitle;
   document.title = 'Horminor · ' + meta.title;
+}
+
+function setView(v) {
+  if (v === 'gerencial') v = 'dashboard';
+  state.view = v;
+  _activarVista(v);
+  cerrarBusqueda();
+  toggleNotif(false);
+  if (v === 'dashboard') cargarDashboard();
   if (v === 'secretaria') cargarSecretaria();
-  if (v === 'gerencial') cargarGerencial();
+  if (v === 'clientes') cargarClientes();
+  if (v === 'planta') cargarPlanta();
+  if (v === 'banca') cargarBanca();
   if (v === 'superadmin') cargarSuperadmin();
+  try { window.scrollTo({top:0, behavior:'smooth'}); } catch (e) { window.scrollTo(0,0); }
 }
 
 async function cargarSalud() {
   try {
     const h = await api('/api/v1/whatsapp/health');
     const modo = h.modo || 'SANDBOX';
-    $('#modo-pill').textContent = modo;
-    $('#modo-pill').className = 'pill ' + (modo === 'SANDBOX' ? 'sandbox' : 'prod');
-    $('#judge-pill').textContent = 'Juez: ' + (h.judge_mode || h.juez || '—');
-    $('#db-pill').textContent = 'DB: OK';
+    const mp = $('#modo-pill');
+    if (mp) { mp.textContent = modo; mp.className = 'pill ' + (modo === 'SANDBOX' ? 'sandbox' : 'prod'); }
+    const jp = $('#judge-pill');
+    if (jp) jp.textContent = 'Juez: ' + (h.judge_mode || h.juez || '—');
+    const dp = $('#db-pill');
+    if (dp) dp.textContent = 'DB: OK';
   } catch(e) {
-    $('#db-pill').textContent = 'DB: —';
+    const dp = $('#db-pill');
+    if (dp) dp.textContent = 'DB: —';
+  }
+  renderNotificaciones();
+}
+
+/* ----------------------------- BÚSQUEDA GLOBAL ----------------------------- */
+function buscarGlobal(q) {
+  const box = $('#search-results');
+  if (!box) return;
+  const t = String(q || '').trim().toLowerCase();
+  if (t.length < 2) { box.hidden = true; box.innerHTML = ''; return; }
+  const clientes = (state.clientes || []).filter(c =>
+    [c.nombre, c.constructora, c.ruc].some(x => String(x || '').toLowerCase().includes(t))
+  ).slice(0, 5);
+  const ordenes = (state.ordenes || []).filter(o =>
+    [o.numero, o.resistencia, o.cliente, o.planta].some(x => String(x || '').toLowerCase().includes(t))
+  ).slice(0, 6);
+  let html = '';
+  if (clientes.length) {
+    html += '<div class="search-group">Clientes</div>' + clientes.map(c => `
+      <button class="search-hit" type="button" onclick="irACliente('${esc(c.cliente_id)}')">
+        <span class="hit-ico">📁</span>
+        <span><strong>${esc(c.nombre)}</strong><span>${esc(c.constructora || 'Sin constructora')} · Saldo ${money(c.saldo_pendiente)}</span></span>
+      </button>`).join('');
+  }
+  if (ordenes.length) {
+    html += '<div class="search-group">Órdenes</div>' + ordenes.map(o => `
+      <button class="search-hit" type="button" onclick="irAOrden('${esc(o.cliente)}')">
+        <span class="hit-ico">🧾</span>
+        <span><strong>Orden #${o.numero} · ${esc(o.resistencia)}</strong><span>${esc(o.cliente)} · ${num(o.volumen_m3)} m³ · ${esc(o.estado)}</span></span>
+      </button>`).join('');
+  }
+  box.innerHTML = html || '<div class="search-empty">Sin coincidencias para “' + esc(q) + '”.</div>';
+  box.hidden = false;
+}
+
+function cerrarBusqueda() {
+  const s = $('#search-results');
+  if (s) { s.hidden = true; s.innerHTML = ''; }
+  const i = $('#busqueda-global');
+  if (i) i.value = '';
+}
+
+async function irACliente(id) {
+  cerrarBusqueda();
+  state.view = 'clientes';
+  _activarVista('clientes');
+  await cargarClientes(id);
+}
+
+async function irAOrden(nombreCliente) {
+  const c = (state.clientes || []).find(x => x.nombre === nombreCliente);
+  cerrarBusqueda();
+  state.view = 'clientes';
+  _activarVista('clientes');
+  await cargarClientes(c ? c.cliente_id : null);
+}
+
+/* ----------------------------- NOTIFICACIONES ----------------------------- */
+function construirNotifs() {
+  const n = [];
+  (state.inventario || []).filter(i => i.estado === 'CRITICO').forEach(i => n.push({
+    ico:'📦', kind:'bad', t:'Stock crítico: ' + i.nombre,
+    s: num(i.stock_actual) + ' ' + i.unidad + ' · mínimo ' + num(i.stock_minimo)
+  }));
+  const op = state.kpis && state.kpis.kpi_operacion;
+  (op && op.detalle_mixers || []).filter(m => m.semaforo && m.semaforo !== 'VERDE').forEach(m => n.push({
+    ico:'🚚', kind: m.semaforo === 'ROJO' ? 'bad' : 'warn', t: m.mixer_codigo + ' en riesgo térmico',
+    s: (m.minutos_en_ruta ?? '—') + ' min en ruta · ' + m.semaforo
+  }));
+  const caja = state.kpis && state.kpis.kpi_caja;
+  if (caja && Number(caja.por_cobrar_total) > 0) n.push({
+    ico:'💳', kind:'warn', t:'Cartera por cobrar: ' + money(caja.por_cobrar_total),
+    s: (caja.clientes_con_saldo || 0) + ' cliente(s) con saldo'
+  });
+  if (caja && caja.ordenes_fiado_excedidas) n.push({
+    ico:'⚠️', kind:'bad', t: caja.ordenes_fiado_excedidas + ' orden(es) sobre cupo',
+    s:'Revisar crédito en Secretaría'
+  });
+  if (state.cierre && !state.cierre.cerrado) n.push({
+    ico:'🧾', kind:'warn', t:'Cierre de caja pendiente',
+    s:'Fecha ' + state.cierre.fecha + ' · efectivo esperado ' + money(state.cierre.efectivo_sistema)
+  });
+  if (!n.length) n.push({ico:'✅', kind:'ok', t:'Sin alertas activas', s:'Bodega, flota y cartera dentro de umbral.'});
+  return n;
+}
+
+function renderNotificaciones() {
+  state.notifs = construirNotifs();
+  const b = $('#notif-badge');
+  if (b) { b.textContent = state.notifs.length; b.hidden = false; }
+  const l = $('#notif-list');
+  if (l) l.innerHTML = state.notifs.map(n => `
+    <div class="notif-item"><span class="ni-ico ${n.kind}">${n.ico}</span>
+      <div><strong>${esc(n.t)}</strong><span>${esc(n.s)}</span></div></div>`).join('');
+}
+
+function toggleNotif(force) {
+  const p = $('#notif-popover');
+  const btn = $('#btn-notif');
+  if (!p) return;
+  const abrir = typeof force === 'boolean' ? force : p.hidden;
+  p.hidden = !abrir;
+  if (btn) btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+  if (abrir) renderNotificaciones();
+}
+
+/* ----------------------------- DASHBOARD ----------------------------- */
+function clienteAutoseleccion() {
+  const conOrdenes = (state.clientes || []).filter(c => Number(c.total_m3 || 0) > 0 || Number(c.saldo_pendiente || 0) > 0);
+  const lista = (conOrdenes.length ? conOrdenes : (state.clientes || [])).slice()
+    .sort((a, b) => Number(b.total_m3 || 0) - Number(a.total_m3 || 0));
+  return lista.length ? lista[0].cliente_id : null;
+}
+
+function ordenesFiltradas() {
+  const r = ($('#f-resistencia') || {}).value || '';
+  const p = ($('#f-pago') || {}).value || '';
+  const pl = ($('#f-planta') || {}).value || '';
+  return (state.ordenes || []).filter(o => {
+    if (r && o.resistencia !== r) return false;
+    if (p && o.forma_pago !== p) return false;
+    if (pl) {
+      const nombre = pl === 'PLANTA-COCA' ? 'Planta Fija El Coca' : 'Planta Movil Campamento';
+      if (String(o.planta || '').toLowerCase().replace(/ó/g,'o') !== nombre.toLowerCase().replace(/ó/g,'o')) return false;
+    }
+    return true;
+  }).sort((a, b) => Number(b.volumen_m3 || 0) - Number(a.volumen_m3 || 0));
+}
+
+function metricasDashboard() {
+  const ordenes = ordenesFiltradas();
+  const totalViajes = ordenes.reduce((s, o) => s + Number(o.viajes || 0), 0);
+  let viajesDesp = 0;
+  ordenes.forEach(o => {
+    const d = state.detalle[o.id];
+    if (d && Array.isArray(d.viajes)) viajesDesp += d.viajes.filter(v => v.despacho_validado).length;
+  });
+  const m3Contratado = ordenes.reduce((s, o) => s + Number(o.volumen_m3 || 0), 0);
+  const clientes = state.clientes || [];
+  const facturado = clientes.reduce((s, c) => s + Number(c.total_facturado || 0), 0);
+  const cobrado = clientes.reduce((s, c) => s + (Number(c.total_facturado || 0) - Number(c.saldo_pendiente || 0)), 0);
+  const provincias = (state.mercado && state.mercado.provincias) || [];
+  const capturado = provincias.reduce((s, p) => s + Number(p.capturado_usd || 0), 0);
+  const valorMercado = provincias.reduce((s, p) => s + Number(p.valor_mercado_usd || 0), 0);
+  return {ordenes, totalViajes, viajesDesp, m3Contratado, facturado, cobrado, capturado, valorMercado};
+}
+
+function setDonutMode(i) {
+  state.donutMode = Number(i) || 0;
+  renderDonut();
+}
+
+function renderDonut() {
+  const m = metricasDashboard();
+  const modo = state.donutMode || 0;
+  let pct = 0, cap = '', title = '', note = '', kpis = '';
+  if (modo === 0) {
+    pct = m.totalViajes ? (m.viajesDesp / m.totalViajes) * 100 : 0;
+    cap = 'Eficiencia comercial';
+    title = 'Despachado vs. contratado';
+    note = 'Viajes validados por Jeb sobre el total contratado.';
+    kpis = `<div class="spread"><span>m³ contratados</span><strong>${num(m.m3Contratado)} m³</strong></div>
+      <div class="spread"><span>Viajes validados</span><strong>${m.viajesDesp} / ${m.totalViajes}</strong></div>
+      <div class="spread"><span>Capacidad de planta</span><span class="muted">Pendiente de Julio</span></div>`;
+  } else if (modo === 1) {
+    pct = m.valorMercado ? (m.capturado / m.valorMercado) * 100 : 0;
+    cap = 'Cuota de mercado';
+    title = 'Orellana + Sucumbíos';
+    note = money(m.valorMercado) + ' de mercado regional a FC-210.';
+    kpis = ((state.mercado && state.mercado.provincias) || []).map(p => `
+      <div class="spread"><span>${esc(p.provincia)} · ${num(p.demanda_m3)} m³ demanda</span>
+        <strong>${Number(p.cuota_pct || 0).toFixed(2)}%</strong></div>`).join('') +
+      `<div class="spread"><span>Mercado sin capturar</span><strong>${money(m.valorMercado - m.capturado)}</strong></div>`;
+  } else {
+    pct = m.facturado ? (m.cobrado / m.facturado) * 100 : 0;
+    cap = 'Efectivo cobrado';
+    title = 'Cobrado vs. fiado en calle';
+    note = 'Por cobrar: ' + money(m.facturado - m.cobrado) + '.';
+    kpis = `<div class="spread"><span>Facturado</span><strong>${money(m.facturado)}</strong></div>
+      <div class="spread"><span>Cobrado</span><strong>${money(m.cobrado)}</strong></div>
+      <div class="spread"><span>Por cobrar</span><strong>${money(m.facturado - m.cobrado)}</strong></div>`;
+  }
+  const safe = Math.max(0, Math.min(100, pct));
+  const visual = safe > 0 ? Math.max(1.5, safe) : 0;
+  const circ = 2 * Math.PI * 80;
+  const arc = $('#donut-arc');
+  if (arc) {
+    arc.setAttribute('stroke-dasharray', circ.toFixed(2));
+    arc.setAttribute('stroke-dashoffset', (circ * (1 - visual / 100)).toFixed(2));
+  }
+  const valor = $('#donut-value');
+  if (valor) valor.textContent = safe === 0 ? '0%' : (safe < 1 ? safe.toFixed(2) : safe.toFixed(1)) + '%';
+  const capEl = $('#donut-cap'); if (capEl) capEl.textContent = cap;
+  const titleEl = $('#donut-title'); if (titleEl) titleEl.textContent = title;
+  const noteEl = $('#donut-note'); if (noteEl) noteEl.textContent = note;
+  const kpisEl = $('#donut-kpis'); if (kpisEl) kpisEl.innerHTML = kpis;
+  [0, 1, 2].forEach(i => {
+    const b = $('#donut-mode-' + i);
+    if (b) b.classList.toggle('active', i === modo);
+  });
+}
+
+function renderActividad() {
+  const eventos = [];
+  const ordenes = ordenesFiltradas();
+  ordenes.slice(0, 3).forEach(o => {
+    eventos.push({
+      ico:'🟢', kind:'ok',
+      t:`Orden #${o.numero} — ${o.cliente}`,
+      s:`${num(o.volumen_m3)} m³ ${o.resistencia} (${money(o.total)}) · ${o.viajes} viajes · ${o.estado}`
+    });
+  });
+  Object.keys(state.detalle).forEach(id => {
+    const d = state.detalle[id];
+    const numeroOrden = (d.orden && d.orden.numero) || ((state.ordenes || []).find(o => o.id === id) || {}).numero || '—';
+    (d.viajes || []).forEach(v => {
+      if (v.estado_actual === 'INCIDENCIA_RECLAMO') {
+        eventos.push({ico:'⚠️', kind:'bad', t:`Incidencia en viaje ${v.viaje_numero} — Orden #${numeroOrden}`, s:`Reclamo del cliente · ${v.mixer_codigo || 'sin mixer'} · Juez Jeb`});
+      } else if (v.recepcion_validada) {
+        eventos.push({ico:'✅', kind:'ok', t:`Sello forense — Orden #${numeroOrden} viaje ${v.viaje_numero}`, s:`Recepción validada por el Juez Binario “Jeb” · ${v.mixer_codigo || 'sin mixer'}`});
+      }
+    });
+  });
+  const op = state.kpis && state.kpis.kpi_operacion;
+  (op && op.detalle_mixers || []).forEach(m => eventos.push({
+    ico:'🚚', kind: m.semaforo === 'ROJO' ? 'bad' : m.semaforo === 'AMBAR' ? 'warn' : 'ok',
+    t:`${m.mixer_codigo} — ${m.chofer || 'sin chofer'}`,
+    s:`En ruta · reloj térmico ${m.minutos_en_ruta ?? '—'} min · ${m.semaforo}`
+  }));
+  const caja = state.kpis && state.kpis.kpi_caja;
+  if (caja) eventos.push({
+    ico:'⚠️', kind: Number(caja.por_cobrar_total) > 0 ? 'warn' : 'ok',
+    t:`Cartera por cobrar — ${money(caja.por_cobrar_total)}`,
+    s:`${caja.clientes_con_saldo || 0} cliente(s) con saldo · ${caja.ordenes_fiado_excedidas || 0} orden(es) sobre cupo`
+  });
+  (state.inventario || []).filter(i => i.estado === 'CRITICO').forEach(i => eventos.push({
+    ico:'📦', kind:'bad', t:`Stock crítico — ${i.nombre}`,
+    s:`${num(i.stock_actual)} ${i.unidad} · mínimo ${num(i.stock_minimo)}`
+  }));
+  const lista = $('#actividad-lista');
+  if (lista) lista.innerHTML = eventos.slice(0, 7).map(e => `
+    <li class="act-item"><span class="act-ico ${e.kind}">${e.ico}</span>
+      <div class="act-body"><strong>${esc(e.t)}</strong><span>${esc(e.s)}</span></div></li>`).join('')
+    || '<li class="act-item"><span class="act-ico">•</span><div class="act-body"><strong>Sin actividad registrada</strong><span>No hay órdenes ni viajes en el período.</span></div></li>';
+  const c = $('#act-contador');
+  if (c) c.textContent = eventos.length + ' eventos';
+}
+
+function eventosCalendario() {
+  const lista = [];
+  ordenesFiltradas().slice(0, 4).forEach((o, idx) => {
+    const f = new Date(o.created_at);
+    if (isNaN(f.getTime())) return;
+    lista.push({
+      fecha: new Date(f.getFullYear(), f.getMonth(), f.getDate()),
+      y: f.getFullYear(), m: f.getMonth(), d: f.getDate(),
+      kind: idx === 0 ? 'blue' : idx === 1 ? 'amber' : 'green',
+      titulo: `Orden #${o.numero} — ${o.cliente}`,
+      sub: `${num(o.volumen_m3)} m³ ${o.resistencia} · ${o.viajes} viajes · registrada ${f.toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit'})}`
+    });
+  });
+  const ahora = new Date();
+  const base = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  lista.push({
+    fecha: base, y: base.getFullYear(), m: base.getMonth(), d: base.getDate(), kind:'amber',
+    titulo:'Corte y cierre de caja diario',
+    sub:'Ventanilla El Coca · estado: ' + (state.cierre && state.cierre.cerrado ? 'cerrado' : 'abierto')
+  });
+  return lista;
+}
+
+function renderCalendario() {
+  const ahora = new Date();
+  if (state.calY === null) { state.calY = ahora.getFullYear(); state.calM = ahora.getMonth(); }
+  const y = state.calY, m = state.calM;
+  const offset = (new Date(y, m, 1).getDay() + 6) % 7;
+  const dias = new Date(y, m + 1, 0).getDate();
+  const eventos = eventosCalendario();
+  const set = new Set(eventos.map(e => `${e.y}-${e.m}-${e.d}`));
+  const hoyKey = `${ahora.getFullYear()}-${ahora.getMonth()}-${ahora.getDate()}`;
+  let celdas = '';
+  ['L','M','M','J','V','S','D'].forEach(d => { celdas += `<div class="cal-dow">${d}</div>`; });
+  for (let i = 0; i < offset; i++) celdas += '<div class="cal-cell blank"></div>';
+  for (let d = 1; d <= dias; d++) {
+    const key = `${y}-${m}-${d}`;
+    const clases = ['cal-cell'];
+    if (key === hoyKey) clases.push('today');
+    if (set.has(key)) clases.push('has-event');
+    celdas += `<div class="${clases.join(' ')}" title="${set.has(key) ? 'Despacho / evento registrado' : ''}">${d}</div>`;
+  }
+  const grid = $('#calendario-grid');
+  if (grid) grid.innerHTML = celdas;
+  const titulo = $('#cal-titulo');
+  if (titulo) titulo.textContent = MESES[m] + ' ' + y;
+  const prox = $('#proximos-despachos');
+  if (prox) {
+    prox.innerHTML = eventos.slice(0, 3).map(e => `
+      <li class="prox-item"><span class="prox-dot ${e.kind || ''}"></span>
+        <div><strong>${esc(e.titulo)}</strong><span>${esc(e.sub)}</span></div></li>`).join('')
+      || '<li class="prox-item"><span class="prox-dot"></span><div><strong>Sin despachos programados</strong><span>El calendario se llena con las órdenes activas.</span></div></li>';
   }
 }
 
-/* ----------------------------- SECRETARIA ----------------------------- */
-async function cargarSecretaria() {
-  const fecha = $('#cierre-fecha').value || hoy();
-  $('#cierre-fecha').value = fecha;
+function moverCalendario(delta) {
+  if (state.calY === null) { const n = new Date(); state.calY = n.getFullYear(); state.calM = n.getMonth(); }
+  state.calM += delta;
+  if (state.calM < 0) { state.calM = 11; state.calY--; }
+  if (state.calM > 11) { state.calM = 0; state.calY++; }
+  renderCalendario();
+}
+
+function renderObras() {
+  const ordenes = ordenesFiltradas();
+  const cards = ordenes.slice(0, 2).map((o, idx) => {
+    const d = state.detalle[o.id];
+    const total = Number(o.viajes || 0);
+    const desp = d ? (d.viajes || []).filter(v => v.despacho_validado).length : 0;
+    const pct = total ? Math.round((desp / total) * 100) : 0;
+    const badge = o.forma_pago === 'FIADO' ? ['amber', 'Crédito / Fiado'] : ['green', esc(o.forma_pago)];
+    return `<article class="work-card">
+      <div class="work-thumb ${idx ? 'amber' : ''}"><span class="thumb-mix">🚛</span>
+        <span class="thumb-tag">${esc(o.planta || 'Planta')}</span></div>
+      <div class="work-body">
+        <span class="work-badge ${badge[0]}">${badge[1]}</span>
+        <h3>${esc(o.cliente)} — ${num(o.volumen_m3)} m³ ${esc(o.resistencia)}</h3>
+        <p>#${o.numero} · ${o.viajes} viajes · ${money(o.total)}</p>
+        <div class="work-progress">
+          <div class="spread"><span>Viajes despachados</span><strong>${desp}/${total} · ${pct}%</strong></div>
+          <div class="bar-track thin"><div class="bar-fill ${pct < 100 ? 'warn' : ''}" style="width:${pct}%"></div></div>
+        </div>
+      </div></article>`;
+  });
+  const sim = state.simulador;
+  if (sim && !sim.error && (sim.escenarios || []).length) {
+    const e = sim.escenarios[0];
+    const dscr = Number(e.dscr_proyectado || 0);
+    const pct = Math.min(100, Math.round((dscr / 1.5) * 100));
+    const badge = e.semaforo === 'VERDE' ? 'green' : e.semaforo === 'AMBAR' ? 'amber' : 'blue';
+    cards.push(`<article class="work-card">
+      <div class="work-thumb slate"><span class="thumb-mix">🏦</span><span class="thumb-tag">Banca</span></div>
+      <div class="work-body">
+        <span class="work-badge ${badge}">${esc(e.semaforo)} · DSCR ${dscr.toFixed(2)}x</span>
+        <h3>Simulación bancaria ${esc(e.nombre)} (${money(e.monto_usd)})</h3>
+        <p>${e.plazo_meses} meses · cuota ${money(e.cuota_mensual)}/mes · cobertura sobre umbral 1.50x.</p>
+        <div class="work-progress">
+          <div class="spread"><span>Cobertura DSCR</span><strong>${dscr.toFixed(2)}x / 1.50x</strong></div>
+          <div class="bar-track thin"><div class="bar-fill" style="width:${pct}%"></div></div>
+        </div>
+      </div></article>`);
+  }
+  const grid = $('#obras-grid');
+  if (grid) grid.innerHTML = cards.join('') || '<p class="muted small">Sin órdenes activas para los filtros seleccionados.</p>';
+}
+
+function renderDashboard() {
+  renderDonut();
+  renderActividad();
+  renderCalendario();
+  renderObras();
+  renderKpis();
+  renderNotificaciones();
+  const chip = $('#dash-actualizado');
+  if (chip) {
+    chip.className = 'badge ok';
+    chip.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit'});
+  }
+}
+
+async function cargarDashboard() {
+  if (state.cargando) return;
+  state.cargando = true;
+  const planta = ($('#f-planta') || {}).value || '';
+  try {
+    const [kpis, ordenes, inventario, mercado, simulador, clientes] = await Promise.all([
+      api('/api/v1/dashboard/hero-kpis?fecha=' + hoy() + (planta ? '&planta=' + encodeURIComponent(planta) : '')).catch(() => null),
+      api('/api/v1/orders?limit=50').catch(() => []),
+      api('/api/v1/inventory').catch(() => []),
+      api('/api/v1/dashboard/mercado?periodo=12_MESES_MOVILES&anio=' + new Date().getFullYear()).catch(() => null),
+      api('/api/v1/dashboard/simulador').catch(() => null),
+      api('/api/v1/secretaria/clientes').catch(() => ({clientes:[]}))
+    ]);
+    if (kpis) state.kpis = kpis;
+    state.ordenes = Array.isArray(ordenes) ? ordenes : [];
+    state.inventario = Array.isArray(inventario) ? inventario : [];
+    if (mercado) state.mercado = mercado;
+    if (simulador) state.simulador = simulador;
+    state.clientes = (clientes && clientes.clientes) || state.clientes || [];
+    const top = ordenesFiltradas().slice(0, 6);
+    const detalles = await Promise.all(top.map(o => api('/api/v1/orders/' + o.id).catch(() => null)));
+    state.detalle = {};
+    top.forEach((o, i) => { if (detalles[i]) state.detalle[o.id] = detalles[i]; });
+    renderDashboard();
+    renderCartera();
+    renderSecretariaOrdenes();
+  } catch(e) {
+    toast('Dashboard no disponible: ' + e.message, 'bad');
+  } finally {
+    state.cargando = false;
+  }
+}
+
+function renderKpis() {
+  const k = state.kpis;
+  const host = $('#hero-kpis');
+  if (!k || !host) return;
+  const caja = k.kpi_caja || {}, op = k.kpi_operacion || {}, bodega = k.kpi_bodega || {};
+  const sem = op.semaforo_termico || 'SIN_DATOS';
+  host.innerHTML = `
+    <div class="card kpi kpi-bank">
+      <div class="kpi-label">Caja y cartera · hoy</div>
+      <div class="kpi-value">${money(caja.cobrado_hoy)}</div>
+      <div class="kpi-sub">Efectivo ${money(caja.efectivo_hoy)} · Transferencias ${money(caja.transferencias_hoy)}</div>
+      <div class="divider"></div>
+      <div class="spread"><span class="small">Fiado en calle</span><strong>${money(caja.por_cobrar_total)}</strong></div>
+      <div class="spread small muted"><span>Clientes con saldo</span><span>${caja.clientes_con_saldo ?? '—'}</span></div>
+      ${caja.ordenes_fiado_excedidas ? `<div class="notice warn">${caja.ordenes_fiado_excedidas} orden(es) de hoy exceden cupo de crédito.</div>` : ''}
+    </div>
+    <div class="card kpi kpi-amber">
+      <div class="kpi-label">Operación · hoy</div>
+      <div class="kpi-value">${num(op.m3_hoy)} m³ <span class="muted" style="font-size:13px;font-weight:600">hoy</span></div>
+      <div class="kpi-sub">${num(op.m3_mes)} m³ en el mes · ${op.mixers_en_ruta ?? 0} mixer(s) en ruta</div>
+      <div class="divider"></div>
+      <div class="spread"><span class="small">Reloj térmico de fraguado</span><span><span class="semaforo ${sem}"></span> <strong>${sem}</strong></span></div>
+      <div class="small muted" style="margin-top:6px">VERDE &lt; 90 min · ÁMBAR 90–120 min · ROJO &gt; 120 min</div>
+      <div style="margin-top:8px">
+        ${(op.detalle_mixers || []).map(m => `<div class="spread small"><span>${esc(m.mixer_codigo)} · ${esc(m.chofer || 'sin chofer')}</span><span><span class="semaforo ${m.semaforo}"></span> ${m.minutos_en_ruta ?? '—'} min</span></div>`).join('') || '<span class="muted small">Sin mixers en ruta.</span>'}
+      </div>
+    </div>
+    <div class="card kpi kpi-bodega">
+      <div class="kpi-label">Bodega · FC-210</div>
+      <div class="kpi-value">${num(bodega.m3_fc210_disponibles)} m³</div>
+      <div class="kpi-sub">Disponibles antes de parar planta</div>
+      <div class="divider"></div>
+      <div class="spread small"><span>Cemento</span><strong>${num(bodega.cemento_sacos)} sacos</strong></div>
+      <div class="spread small"><span>Retardante</span><strong>${num(bodega.retardante_litros)} L</strong></div>
+      <div class="spread small"><span>Merma cemento (30 d)</span><strong>${num(bodega.merma_cemento_sacos_30d)} sacos</strong></div>
+      ${bodega.alerta_merma ? '<div class="notice warn">Alerta de merma: el consumo real supera el teórico.</div>' : ''}
+    </div>`;
+}
+
+/* ----------------------------- CLIENTES / SECRETARÍA ----------------------------- */
+async function cargarClientes(preferId) {
   try {
     const [clientes, opciones] = await Promise.all([
       api('/api/v1/secretaria/clientes'),
-      api('/api/v1/secretaria/opciones').catch(() => ({recetas:[],plantas:[],mixers:[]}))
+      api('/api/v1/secretaria/opciones').catch(() => ({recetas:[], plantas:[], mixers:[]}))
     ]);
     state.clientes = clientes.clientes || [];
     state.opciones = opciones;
     renderClientes();
     llenarOpcionesOrden();
+    renderCartera();
+    const id = preferId || (state.carpeta && state.carpeta.cliente.cliente_id) || clienteAutoseleccion();
+    if (id) await seleccionarCliente(id);
+    renderNotificaciones();
   } catch(e) { toast('No se pudo cargar clientes: ' + e.message, 'bad'); }
+}
+
+async function cargarSecretaria() {
+  const f = $('#cierre-fecha');
+  if (f && !f.value) f.value = hoy();
+  await cargarClientes();
+  renderSecretariaOrdenes();
   cargarCierre();
 }
 
 function renderClientes() {
-  const q = ($('#buscar-cliente').value || '').toLowerCase();
+  const host = $('#lista-clientes');
+  if (!host) return;
+  const q = (($('#buscar-cliente') || {}).value || '').toLowerCase();
   const lista = state.clientes.filter(c =>
-    !q || String(c.nombre).toLowerCase().includes(q) || String(c.constructora||'').toLowerCase().includes(q));
-  $('#lista-clientes').innerHTML = lista.length ? lista.map(c => `
-    <button class="cliente-item ${state.carpeta && state.carpeta.cliente.cliente_id === c.cliente_id ? 'active':''}"
+    !q || String(c.nombre).toLowerCase().includes(q) || String(c.constructora || '').toLowerCase().includes(q));
+  host.innerHTML = lista.length ? lista.map(c => `
+    <button class="cliente-item ${state.carpeta && state.carpeta.cliente.cliente_id === c.cliente_id ? 'active' : ''}"
             onclick="seleccionarCliente('${esc(c.cliente_id)}')">
       <strong>${esc(c.nombre)}</strong>
       <span>${esc(c.constructora || 'Sin constructora')} · Saldo ${money(c.saldo_pendiente)}</span>
     </button>`).join('') : '<p class="muted small">Sin resultados.</p>';
 }
 
-function filtrarClientes(){ renderClientes(); }
+function filtrarClientes() { renderClientes(); }
+
+function renderCartera() {
+  const el = $('#sec-cartera');
+  if (!el) return;
+  el.innerHTML = `<table>
+    <thead><tr><th>Cliente</th><th>m³</th><th>Facturado</th><th>Saldo</th></tr></thead>
+    <tbody>${(state.clientes || []).map(c => `<tr>
+      <td>${esc(c.nombre)}</td><td>${num(c.total_m3)}</td>
+      <td>${money(c.total_facturado)}</td><td>${money(c.saldo_pendiente)}</td>
+    </tr>`).join('') || '<tr><td colspan="4" class="muted">Sin clientes.</td></tr>'}</tbody></table>`;
+}
+
+function renderSecretariaOrdenes() {
+  const el = $('#sec-ordenes');
+  if (!el) return;
+  const ordenes = (state.ordenes && state.ordenes.length ? state.ordenes : ((state.carpeta && state.carpeta.ordenes) || [])).slice(0, 8);
+  el.innerHTML = `<table>
+    <thead><tr><th>#</th><th>Cliente</th><th>m³</th><th>Total</th></tr></thead>
+    <tbody>${ordenes.map(o => `<tr>
+      <td>${o.numero}</td><td>${esc(o.cliente || '—')}</td>
+      <td>${num(o.volumen_m3)}</td><td>${money(o.total)}</td>
+    </tr>`).join('') || '<tr><td colspan="4" class="muted">Sin órdenes.</td></tr>'}</tbody></table>`;
+}
 
 async function seleccionarCliente(id) {
   try {
@@ -1281,14 +2651,16 @@ function renderCarpeta() {
   const semaforoJuez = (c.viajes || []).some(v => v.juez && v.juez.incidencia_detectada) ? 'bad'
     : (c.viajes || []).some(v => v.juez && v.juez.despacho_validado) ? 'ok' : 'neutral';
   const textoJuez = semaforoJuez === 'bad' ? 'Incidencia detectada' : semaforoJuez === 'ok' ? 'Despachos validados' : 'Sin veredicto';
-  $('#carpeta-card').innerHTML = `
+  const host = $('#carpeta-card');
+  if (!host) return;
+  host.innerHTML = `
     <div class="spread">
       <div>
         <h2 style="margin:0">${esc(cliente.nombre)}</h2>
         <p class="muted small" style="margin:4px 0 0">${esc(cliente.constructora || 'Sin constructora')} · RUC ${esc(cliente.ruc || '—')} · ${esc(cliente.telefono || 'sin WhatsApp')}</p>
       </div>
       <div class="right">
-        <span class="badge ${cliente.estado === 'ACTIVO' ? 'ok':'neutral'}">${esc(cliente.estado)}</span>
+        <span class="badge ${cliente.estado === 'ACTIVO' ? 'ok' : 'neutral'}">${esc(cliente.estado)}</span>
         <span class="badge ${semaforoJuez}">Jeb: ${textoJuez}</span>
       </div>
     </div>
@@ -1302,15 +2674,33 @@ function renderCarpeta() {
       <h3 style="margin:0">Órdenes</h3>
       <button class="btn small" onclick="abrirOrden()">+ Nueva orden</button>
     </div>
-    <div style="overflow:auto;margin-top:8px">
+    <div class="table-wrap" style="margin-top:8px">
       <table>
         <thead><tr><th>#</th><th>Resistencia</th><th>m³</th><th>Pago</th><th>Total</th><th>Estado</th></tr></thead>
         <tbody>
-        ${(c.ordenes||[]).map(o => `<tr>
+        ${(c.ordenes || []).map(o => `<tr>
           <td>${o.numero}</td><td>${esc(o.resistencia)}</td><td>${num(o.volumen_m3)}</td>
-          <td>${esc(o.forma_pago)}${o.excede_cupo_credito ? ' <span class="badge bad">cupo</span>':''}</td>
+          <td>${esc(o.forma_pago)}${o.excede_cupo_credito ? ' <span class="badge bad">cupo</span>' : ''}</td>
           <td>${money(o.total)}</td><td><span class="badge neutral">${esc(o.estado)}</span></td>
         </tr>`).join('') || '<tr><td colspan="6" class="muted">Sin órdenes.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+    <div class="divider"></div>
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">Viajes de mixer</h3>
+      <span class="badge neutral">${(c.viajes || []).length} viajes</span>
+    </div>
+    <div class="table-wrap" style="margin-top:8px">
+      <table>
+        <thead><tr><th>Orden</th><th>Viaje</th><th>Mixer</th><th>Chofer</th><th>m³</th><th>Estado</th><th>Jeb</th></tr></thead>
+        <tbody>
+        ${(c.viajes || []).slice(0, 10).map(v => `<tr>
+          <td>#${v.orden_numero}</td><td>${v.viaje_numero}/${v.total_viajes ?? '—'}</td>
+          <td>${esc(v.mixer_codigo || '—')}</td><td>${esc(v.chofer_nombre || '—')}</td>
+          <td>${num(v.volumen_m3)}</td><td><span class="badge neutral">${esc(v.estado_actual)}</span></td>
+          <td>${v.juez && v.juez.incidencia_detectada ? '<span class="badge bad">Incidencia</span>' : v.juez && v.juez.recepcion_validada ? '<span class="badge ok">Validado</span>' : v.juez && v.juez.despacho_validado ? '<span class="badge warn">Despachado</span>' : '<span class="badge neutral">Pendiente</span>'}</td>
+        </tr>`).join('') || '<tr><td colspan="7" class="muted">Sin viajes de mixer.</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -1319,15 +2709,15 @@ function renderCarpeta() {
       <div>
         <h3>Línea de tiempo forense</h3>
         <ul class="timeline">
-          ${(c.timeline||[]).map(t => `<li><time>${new Date(t.fecha).toLocaleString('es-EC')}</time>${esc(t.tipo)} <span class="muted">· ${esc(t.detalle)}</span></li>`).join('') || '<li class="muted">Sin eventos registrados.</li>'}
+          ${(c.timeline || []).map(t => `<li><time>${new Date(t.fecha).toLocaleString('es-EC')}</time>${esc(t.tipo)} <span class="muted">· ${esc(t.detalle)}</span></li>`).join('') || '<li class="muted">Sin eventos registrados.</li>'}
         </ul>
       </div>
       <div>
         <h3>Galería Bunny.net</h3>
         <div class="gallery">
-          ${(c.evidencias||[]).map(ev => `<a class="shot" href="${esc(ev.url)}" target="_blank" rel="noopener">
+          ${(c.evidencias || []).map(ev => `<a class="shot" href="${esc(ev.url)}" target="_blank" rel="noopener">
             <div class="ph">evidencia sandbox</div>
-            <div class="meta">Orden #${ev.orden_numero} · viaje ${ev.viaje_numero} · ${esc(ev.vehiculo||'')}</div>
+            <div class="meta">Orden #${ev.orden_numero} · viaje ${ev.viaje_numero} · ${esc(ev.vehiculo || '')}</div>
           </a>`).join('') || '<p class="muted small">Sin evidencias todavía.</p>'}
         </div>
       </div>
@@ -1336,34 +2726,46 @@ function renderCarpeta() {
 
 function llenarOpcionesOrden() {
   const op = state.opciones || {};
-  $('#ord-resistencia').innerHTML = (op.recetas||[]).map(r => `<option value="${esc(r.resistencia)}">${esc(r.resistencia)} · ${money(r.precio_m3)}/m³</option>`).join('') || '<option value="FC-210">FC-210</option>';
-  $('#ord-planta').innerHTML = (op.plantas||[]).map(p => `<option value="${esc(p.codigo)}">${esc(p.nombre)}</option>`).join('') || '<option value="PLANTA-COCA">Planta Fija El Coca</option>';
-  $('#ord-mixer').innerHTML = '<option value="">Automático</option>' + (op.mixers||[]).map(m => `<option value="${esc(m.codigo)}">${esc(m.codigo)} · ${num(m.capacidad_m3)} m³${m.placa ? ' · '+esc(m.placa):''}</option>`).join('');
-  $('#ord-cliente').innerHTML = state.clientes.map(c => `<option value="${esc(c.cliente_id)}">${esc(c.nombre)}</option>`).join('');
+  const res = $('#ord-resistencia');
+  if (res) res.innerHTML = (op.recetas || []).map(r => `<option value="${esc(r.resistencia)}">${esc(r.resistencia)} · ${money(r.precio_m3)}/m³</option>`).join('') || '<option value="FC-210">FC-210</option>';
+  const pl = $('#ord-planta');
+  if (pl) pl.innerHTML = (op.plantas || []).map(p => `<option value="${esc(p.codigo)}">${esc(p.nombre)}</option>`).join('') || '<option value="PLANTA-COCA">Planta Fija El Coca</option>';
+  const mx = $('#ord-mixer');
+  if (mx) mx.innerHTML = '<option value="">Automático</option>' + (op.mixers || []).map(m => `<option value="${esc(m.codigo)}">${esc(m.codigo)} · ${num(m.capacidad_m3)} m³${m.placa ? ' · ' + esc(m.placa) : ''}</option>`).join('');
+  const cl = $('#ord-cliente');
+  if (cl) cl.innerHTML = state.clientes.map(c => `<option value="${esc(c.cliente_id)}">${esc(c.nombre)}</option>`).join('');
 }
 
-function abrirOrden() {
+async function abrirOrden() {
+  if (!state.clientes.length || !state.opciones) await cargarClientes();
   if (!state.clientes.length) { toast('Primero registra un cliente.', 'bad'); return; }
-  if (!state.carpeta) { toast('Selecciona un cliente en la lista.', 'bad'); return; }
-  $('#ord-cliente').value = state.carpeta.cliente.cliente_id;
-  $('#ord-resultado').innerHTML = '';
-  $('#dlg-orden').showModal();
+  const id = (state.carpeta && state.carpeta.cliente.cliente_id) || clienteAutoseleccion() || state.clientes[0].cliente_id;
+  if (!state.carpeta || state.carpeta.cliente.cliente_id !== id) {
+    try { await seleccionarCliente(id); } catch (e) { /* seguimos con el modal */ }
+  }
+  const cl = $('#ord-cliente');
+  if (cl) cl.value = id;
+  const res = $('#ord-resultado');
+  if (res) res.innerHTML = '';
+  const dlg = $('#dlg-orden');
+  if (dlg && dlg.showModal) dlg.showModal();
   calcularOrden();
 }
 
 function calcularOrden() {
-  const resistencia = $('#ord-resistencia').value;
-  const receta = ((state.opciones||{}).recetas||[]).find(r => r.resistencia === resistencia) || {};
-  const m3 = Number($('#ord-volumen').value || 0);
-  const precio = Number($('#ord-precio').value || receta.precio_m3 || 0);
+  const resistencia = ($('#ord-resistencia') || {}).value;
+  const receta = ((state.opciones || {}).recetas || []).find(r => r.resistencia === resistencia) || {};
+  const m3 = Number(($('#ord-volumen') || {}).value || 0);
+  const precio = Number(($('#ord-precio') || {}).value || receta.precio_m3 || 0);
   const sacos = receta.cemento_sacos_m3 ? (m3 * receta.cemento_sacos_m3) : null;
   const retardante = receta.retardante_litros_m3 ? (m3 * receta.retardante_litros_m3) : null;
-  const cap = Math.max(...((state.opciones||{}).mixers||[]).map(m => Number(m.capacidad_m3||0)), 0) || 8;
+  const cap = Math.max(...((state.opciones || {}).mixers || []).map(m => Number(m.capacidad_m3 || 0)), 0) || 8;
   const viajes = m3 > 0 ? Math.ceil(m3 / cap) : 0;
-  $('#ord-calculo').innerHTML = `
+  const host = $('#ord-calculo');
+  if (host) host.innerHTML = `
     <strong>${m3 || 0} m³ de ${esc(resistencia || '—')}</strong> ·
-    ${sacos ? num(sacos)+' sacos de cemento' : 'consumo sin receta completa'} ·
-    ${retardante ? num(retardante)+' L retardante' : 'retardante pendiente'} ·
+    ${sacos ? num(sacos) + ' sacos de cemento' : 'consumo sin receta completa'} ·
+    ${retardante ? num(retardante) + ' L retardante' : 'retardante pendiente'} ·
     ${viajes} viaje(s) estimados de hasta ${cap} m³ ·
     total aprox. <strong>${money(m3 * precio)}</strong>`;
 }
@@ -1381,7 +2783,8 @@ async function crearOrden() {
     notas: $('#ord-notas').value || null,
     creada_por: 'Secretaría (panel)'
   };
-  $('#ord-submit').disabled = true;
+  const submit = $('#ord-submit');
+  if (submit) submit.disabled = true;
   try {
     const r = await api('/api/v1/secretaria/ordenes', {method:'POST', body});
     const alerta = r.excede_cupo_credito
@@ -1389,18 +2792,21 @@ async function crearOrden() {
     $('#ord-resultado').innerHTML = `<div class="notice ok">Orden #${r.numero} registrada · ${r.total_viajes} viaje(s).</div>${alerta}`;
     toast('Orden #' + r.numero + ' registrada', 'ok');
     state.carpeta = null;
-    await cargarSecretaria();
-    if ($('#ord-cliente').value) seleccionarCliente($('#ord-cliente').value);
+    await cargarClientes(body.cliente_id);
+    await cargarDashboard();
   } catch(e) {
     $('#ord-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
     toast('No se pudo registrar la orden', 'bad');
-  } finally { $('#ord-submit').disabled = false; }
+  } finally { if (submit) submit.disabled = false; }
 }
 
-function abrirCliente(){
-  ['cli-nombre','cli-constructora','cli-ruc','cli-telefono'].forEach(id => $('#'+id).value = '');
-  $('#cli-error').innerHTML = '';
-  $('#dlg-cliente').showModal();
+function abrirCliente() {
+  ['cli-nombre','cli-constructora','cli-ruc','cli-telefono'].forEach(id => {
+    const el = $('#' + id);
+    if (el) el.value = '';
+  });
+  const err = $('#cli-error'); if (err) err.innerHTML = '';
+  const dlg = $('#dlg-cliente'); if (dlg && dlg.showModal) dlg.showModal();
 }
 
 async function crearCliente() {
@@ -1416,29 +2822,49 @@ async function crearCliente() {
     await api('/api/v1/clients', {method:'POST', body});
     $('#dlg-cliente').close();
     toast('Cliente creado', 'ok');
-    await cargarSecretaria();
+    await cargarClientes();
+    await cargarDashboard();
   } catch(e) { $('#cli-error').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`; }
 }
 
 async function cargarCierre() {
-  const fecha = $('#cierre-fecha').value || hoy();
+  const el = $('#cierre-fecha');
+  if (!el) return;
+  const fecha = el.value || hoy();
   try {
     const r = await api('/api/v1/secretaria/cierre-caja?fecha=' + fecha);
     state.cierre = r;
-    $('#cierre-estado').textContent = r.cerrado ? 'CERRADO' : 'ABIERTO';
-    $('#cierre-estado').className = 'badge ' + (r.cerrado ? 'ok' : 'warn');
-    $('#cierre-resumen').innerHTML = `
+    const estado = $('#cierre-estado');
+    if (estado) {
+      estado.textContent = r.cerrado ? 'CERRADO' : 'ABIERTO';
+      estado.className = 'badge ' + (r.cerrado ? 'ok' : 'warn');
+    }
+    const resumen = $('#cierre-resumen');
+    if (resumen) resumen.innerHTML = `
       <div class="spread"><span>Efectivo cobrado</span><strong>${money(r.cobros.efectivo)}</strong></div>
       <div class="spread"><span>Transferencias</span><strong>${money(r.cobros.transferencia)}</strong></div>
       <div class="spread"><span>Fiado otorgado</span><strong>${money(r.ventas.fiado)}</strong></div>
       <div class="spread"><span>Caja chica</span><strong>− ${money(r.caja_chica)}</strong></div>
       <div class="divider" style="margin:8px 0"></div>
       <div class="spread"><span><strong>Efectivo esperado</strong></span><strong>${money(r.efectivo_sistema)}</strong></div>`;
+    renderCobros(r);
     if (r.cierre && r.cierre.efectivo_contado !== null && r.cierre.efectivo_contado !== undefined) {
       $('#cierre-contado').value = r.cierre.efectivo_contado;
-      $('#cierre-resultado').innerHTML = `<div class="notice ${Math.abs(r.cierre.diferencia||0) < 0.01 ? 'ok':'warn'}">Cierre guardado. Diferencia: ${money(r.cierre.diferencia)}</div>`;
+      $('#cierre-resultado').innerHTML = `<div class="notice ${Math.abs(r.cierre.diferencia || 0) < 0.01 ? 'ok' : 'warn'}">Cierre guardado. Diferencia: ${money(r.cierre.diferencia)}</div>`;
     }
   } catch(e) { toast('Cierre no disponible: ' + e.message, 'bad'); }
+}
+
+function renderCobros(r) {
+  const el = $('#sec-cobros');
+  if (!el || !r) return;
+  el.innerHTML = `
+    <div class="spread"><span>Efectivo cobrado</span><strong>${money(r.cobros.efectivo)}</strong></div>
+    <div class="spread"><span>Transferencias</span><strong>${money(r.cobros.transferencia)}</strong></div>
+    <div class="spread"><span>Fiado del día</span><strong>${money(r.cobros.fiado)}</strong></div>
+    <div class="divider" style="margin:8px 0"></div>
+    <div class="spread"><span>Cobros totales</span><strong>${money(r.cobros.total)}</strong></div>
+    <div class="spread"><span>Ventas del día</span><strong>${money(r.ventas.total)}</strong></div>`;
 }
 
 async function cerrarCaja() {
@@ -1455,63 +2881,69 @@ async function cerrarCaja() {
   } catch(e) { toast('No se pudo cerrar caja: ' + e.message, 'bad'); }
 }
 
-/* ----------------------------- GERENCIAL ----------------------------- */
-async function cargarGerencial() {
-  if (!$('#ger-fecha').value) $('#ger-fecha').value = hoy();
-  const fecha = $('#ger-fecha').value;
-  const planta = $('#ger-planta').value;
+/* ----------------------------- PLANTA ----------------------------- */
+async function cargarPlanta() {
   try {
-    const [kpis, simulador] = await Promise.all([
-      api('/api/v1/dashboard/hero-kpis?fecha=' + fecha + (planta ? '&planta=' + encodeURIComponent(planta) : '')),
-      api('/api/v1/dashboard/simulador').catch(e => ({error:e.message}))
+    const [inv, opciones, kpis] = await Promise.all([
+      api('/api/v1/inventory').catch(() => state.inventario || []),
+      api('/api/v1/secretaria/opciones').catch(() => state.opciones || {mixers:[]}),
+      api('/api/v1/dashboard/hero-kpis?fecha=' + hoy()).catch(() => state.kpis)
     ]);
-    state.kpis = kpis; state.simulador = simulador;
-    renderKpis();
-    renderSimulador();
-  } catch(e) { toast('Dashboard no disponible: ' + e.message, 'bad'); }
-  cargarMercado();
+    state.inventario = Array.isArray(inv) ? inv : state.inventario;
+    if (opciones) state.opciones = opciones;
+    if (kpis) state.kpis = kpis;
+    renderPlanta();
+  } catch(e) { toast('Planta no disponible: ' + e.message, 'bad'); }
 }
 
-function renderKpis() {
-  const k = state.kpis; if (!k) return;
-  const caja = k.kpi_caja, op = k.kpi_operacion, bodega = k.kpi_bodega;
-  const sem = op.semaforo_termico || 'SIN_DATOS';
-  $('#hero-kpis').innerHTML = `
-    <div class="card kpi kpi-bank">
-      <div class="kpi-label">KPI 1 · Pulso de caja y cartera hoy</div>
-      <div class="kpi-value">${money(caja.cobrado_hoy)}</div>
-      <div class="kpi-sub">Efectivo ${money(caja.efectivo_hoy)} · Transferencias ${money(caja.transferencias_hoy)}</div>
-      <div class="divider"></div>
-      <div class="spread"><span class="small">Total en la calle (fiados)</span><strong>${money(caja.por_cobrar_total)}</strong></div>
-      <div class="spread small muted"><span>Clientes con saldo</span><span>${caja.clientes_con_saldo}</span></div>
-      ${caja.ordenes_fiado_excedidas ? `<div class="notice warn">${caja.ordenes_fiado_excedidas} orden(es) de hoy exceden cupo de crédito.</div>` : ''}
-    </div>
-    <div class="card kpi kpi-amber">
-      <div class="kpi-label">KPI 2 · Operación y riesgo térmico</div>
-      <div class="kpi-value">${num(op.m3_hoy)} m³ <span class="muted" style="font-size:13px;font-weight:600">hoy</span></div>
-      <div class="kpi-sub">${num(op.m3_mes)} m³ en el mes · ${op.mixers_en_ruta} mixer(s) en ruta</div>
-      <div class="divider"></div>
-      <div class="spread"><span class="small">Reloj térmico de fraguado</span><span><span class="semaforo ${sem}"></span> <strong>${sem}</strong></span></div>
-      <div class="small muted" style="margin-top:6px">VERDE &lt; 90 min · ÁMBAR 90–120 min · ROJO &gt; 120 min</div>
-      <div style="margin-top:8px">
-        ${(op.detalle_mixers||[]).map(m => `<div class="spread small"><span>${esc(m.mixer_codigo)} · ${esc(m.chofer||'sin chofer')}</span><span><span class="semaforo ${m.semaforo}"></span> ${m.minutos_en_ruta ?? '—'} min</span></div>`).join('') || '<span class="muted small">Sin mixers en ruta.</span>'}
-      </div>
-    </div>
-    <div class="card kpi kpi-bodega">
-      <div class="kpi-label">KPI 3 · Bodega y autonomía</div>
-      <div class="kpi-value">${num(bodega.m3_fc210_disponibles)} m³</div>
-      <div class="kpi-sub">Autonomía de FC-210 antes de parar planta</div>
-      <div class="divider"></div>
-      <div class="spread small"><span>Cemento</span><strong>${num(bodega.cemento_sacos)} sacos</strong></div>
-      <div class="spread small"><span>Retardante</span><strong>${num(bodega.retardante_litros)} L</strong></div>
-      <div class="spread small"><span>Merma cemento (30 d)</span><strong>${num(bodega.merma_cemento_sacos_30d)} sacos</strong></div>
-      ${bodega.alerta_merma ? '<div class="notice warn">Alerta de merma: el consumo real supera el teórico.</div>' : ''}
+function renderPlanta() {
+  const stock = $('#planta-stock');
+  if (stock) stock.innerHTML = (state.inventario || []).map(i => {
+    const actual = Number(i.stock_actual || 0), min = Number(i.stock_minimo || 0);
+    const pct = min > 0 ? Math.min(100, Math.round(actual / (min * 5) * 100)) : (actual > 0 ? 100 : 0);
+    const cls = i.estado === 'CRITICO' ? 'bad' : i.estado === 'OK' ? 'ok' : 'warn';
+    return `<div class="stock-card">
+      <div class="spread"><span class="kpi-label">${esc(i.nombre)}</span><span class="badge ${cls}">${esc(i.estado)}</span></div>
+      <div class="big">${i.stock_actual === null ? '—' : num(i.stock_actual)} <span class="muted" style="font-size:11px">${esc(i.unidad)}</span></div>
+      <div class="small muted">Mínimo ${i.stock_minimo === null ? 'sin umbral' : num(i.stock_minimo) + ' ' + esc(i.unidad)}</div>
+      <div class="bar-track thin"><div class="bar-fill ${cls === 'bad' ? 'warn' : ''}" style="width:${pct}%"></div></div>
     </div>`;
+  }).join('') || '<p class="muted small">Sin inventario.</p>';
+
+  const b = state.kpis && state.kpis.kpi_bodega;
+  const kb = $('#kardex-badge');
+  if (kb) {
+    kb.textContent = b ? (b.alerta_merma ? 'Merma en alerta' : 'Sin alerta') : 'Sin datos';
+    kb.className = 'badge ' + (b && b.alerta_merma ? 'bad' : 'ok');
+  }
+  const kardex = $('#planta-kardex');
+  if (kardex) kardex.innerHTML = b ? `
+    <div class="spread"><span>Cemento disponible</span><strong>${num(b.cemento_sacos)} sacos</strong></div>
+    <div class="spread"><span>Autonomía FC-210</span><strong>${num(b.m3_fc210_disponibles)} m³</strong></div>
+    <div class="spread"><span>Retardante</span><strong>${num(b.retardante_litros)} L</strong></div>
+    <div class="spread"><span>Merma cemento (30 días)</span><strong>${num(b.merma_cemento_sacos_30d)} sacos</strong></div>
+    <div class="notice ${b.alerta_merma ? 'warn' : 'info'}">Kardex teórico vs. real: ${b.alerta_merma ? 'el consumo real supera el teórico.' : 'sin desviación registrada en 30 días.'}</div>`
+    : '<p class="muted small">Sin KPIs de bodega.</p>';
+
+  const mixers = (state.opciones && state.opciones.mixers) || [];
+  const fb = $('#flota-badge');
+  if (fb) fb.textContent = mixers.length + ' unidades';
+  const flota = $('#planta-mixers');
+  if (flota) flota.innerHTML = mixers.map(m => `
+    <div class="mixer-row"><span class="mix-ico">🚛</span>
+      <div style="flex:1"><strong>${esc(m.codigo)} · ${esc(m.chofer_asignado || 'sin chofer')}</strong>
+        <span>${num(m.capacidad_m3)} m³ · placa ${esc(m.placa || '—')}</span></div>
+      <span class="badge ${m.activo ? 'ok' : 'neutral'}">${m.activo ? 'ACTIVO' : 'INACTIVO'}</span>
+    </div>`).join('') || '<p class="muted small">Sin flota configurada.</p>';
 }
 
+/* ----------------------------- MERCADO / BANCA ----------------------------- */
 async function cargarMercado() {
-  const modo = $('#mercado-modo').value;
-  const anio = Number($('#mercado-anio').value || 2026);
+  const modoEl = $('#mercado-modo');
+  const anioEl = $('#mercado-anio');
+  if (!modoEl || !anioEl) return;
+  const modo = modoEl.value;
+  const anio = Number(anioEl.value || new Date().getFullYear());
   try {
     const r = await api('/api/v1/dashboard/mercado?periodo=' + modo + '&anio=' + anio);
     state.mercado = r;
@@ -1519,30 +2951,55 @@ async function cargarMercado() {
   } catch(e) { toast('Cuota de mercado no disponible: ' + e.message, 'bad'); }
 }
 
+async function cargarBanca() {
+  try {
+    const [mercado, simulador] = await Promise.all([
+      api('/api/v1/dashboard/mercado?periodo=' + (($('#mercado-modo') || {}).value || '12_MESES_MOVILES') + '&anio=' + (($('#mercado-anio') || {}).value || new Date().getFullYear())),
+      api('/api/v1/dashboard/simulador')
+    ]);
+    state.mercado = mercado;
+    state.simulador = simulador;
+    renderMercado();
+    renderSimulador();
+  } catch(e) { toast('Banca no disponible: ' + e.message, 'bad'); }
+}
+
 function renderMercado() {
-  const r = state.mercado; if (!r) return;
+  const r = state.mercado;
+  if (!r) return;
   const etiqueta = r.periodo === '12_MESES_MOVILES' ? '12M móviles' : 'Año ' + (r.anio || '');
-  $('#mercado-periodo').textContent = etiqueta;
-  $('#mercado-rango').textContent = (r.desde || '—') + '  →  ' + (r.hasta || '—');
-  $('#mercado-panel').innerHTML = (r.provincias||[]).map(p => {
+  const per = $('#mercado-periodo'); if (per) per.textContent = etiqueta;
+  const rango = $('#mercado-rango'); if (rango) rango.textContent = (r.desde || '—') + '  →  ' + (r.hasta || '—');
+  const panel = $('#mercado-panel');
+  if (!panel) return;
+  panel.innerHTML = (r.provincias || []).map(p => {
     const cuota = Math.max(0, Math.min(100, Number(p.cuota_pct || 0)));
     const clase = cuota >= 15 ? '' : 'warn';
+    const ancho = cuota > 0 ? Math.max(1.5, cuota) : 0;
     return `
-      <div style="margin-bottom:14px">
-        <div class="spread"><strong>${esc(p.provincia)}</strong><span>${p.cuota_pct === null ? '—' : Number(p.cuota_pct).toFixed(2)+'%'}</span></div>
-        <div class="bar-track" style="margin:6px 0"><div class="bar-fill ${clase}" style="width:${cuota}%"></div></div>
-        <div class="spread small muted"><span>Ventas ${num(p.ventas_m3)} m³ / demanda ${num(p.demanda_m3)} m³</span><span>Competencia: ${money(p.competencia_usd)}</span></div>
-        <p class="small" style="margin:6px 0 0">${esc(p.mensaje)}</p>
+      <div style="margin-bottom:18px">
+        <div class="spread" style="align-items:flex-end">
+          <strong style="font-size:13px">${esc(p.provincia)}</strong>
+          <span style="font-size:26px;font-weight:700;letter-spacing:-0.03em">${p.cuota_pct === null ? '—' : Number(p.cuota_pct).toFixed(2) + '%'}</span>
+        </div>
+        <div class="bar-track" style="margin:4px 0 8px"><div class="bar-fill ${clase}" style="width:${ancho}%"></div></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div><div class="kpi-label">Ventas</div><strong>${num(p.ventas_m3)} m³</strong></div>
+          <div><div class="kpi-label">Demanda</div><strong>${num(p.demanda_m3)} m³</strong></div>
+          <div><div class="kpi-label">Capturado</div><strong>${money(p.capturado_usd)}</strong></div>
+        </div>
       </div>`;
-  }).join('') + `<div class="notice info">Valorización a ${money(r.precio_valorizacion_m3)}/m³ (${esc(r.resistencia_valorizacion)}). ${r.sin_provincia_m3 ? 'Ventas sin provincia: '+num(r.sin_provincia_m3)+' m³.' : ''}</div>`;
+  }).join('') + `<div class="notice info">FC-210 a ${money(r.precio_valorizacion_m3)}/m³${r.sin_provincia_m3 ? ' · sin provincia: ' + num(r.sin_provincia_m3) + ' m³' : ''}.</div>`;
 }
 
 function renderSimulador() {
   const s = state.simulador;
-  if (!s || s.error) { $('#simulador-panel').innerHTML = `<div class="notice bad">${esc(s ? s.error : 'Sin datos')}</div>`; return; }
-  $('#simulador-panel').innerHTML = (s.escenarios||[]).map(e => `
+  const host = $('#simulador-panel');
+  if (!host) return;
+  if (!s || s.error) { host.innerHTML = `<div class="notice bad">${esc(s ? s.error : 'Sin datos')}</div>`; return; }
+  host.innerHTML = (s.escenarios || []).map(e => `
     <div class="card kpi kpi-bank" style="margin-bottom:12px;padding:14px">
-      <div class="spread"><strong>${esc(e.nombre)}</strong><span class="badge ${e.semaforo === 'VERDE' ? 'ok' : e.semaforo === 'AMBAR' ? 'warn':'bad'}">${e.semaforo}</span></div>
+      <div class="spread"><strong>${esc(e.nombre)}</strong><span class="badge ${e.semaforo === 'VERDE' ? 'ok' : e.semaforo === 'AMBAR' ? 'warn' : 'bad'}">${e.semaforo}</span></div>
       <div class="kpi-value" style="font-size:22px">${money(e.cuota_mensual)}<span class="muted" style="font-size:12px;font-weight:600"> /mes</span></div>
       <div class="small muted">${money(e.monto_usd)} · ${e.plazo_meses} meses · intereses ${money(e.total_intereses)}</div>
       <div class="divider" style="margin:9px 0"></div>
@@ -1611,12 +3068,11 @@ const CAMPOS = {
 };
 
 async function cargarSuperadmin() {
-  if (!$('#cierre-fecha')) return;
   try {
     const [config, remitentes, outbox] = await Promise.all([
       api('/api/v1/superadmin/config'),
-      api('/api/v1/superadmin/simulador/remitentes').catch(e => ({remitentes:[]})),
-      api('/api/v1/superadmin/sandbox/outbox').catch(e => ({outbox:[]}))
+      api('/api/v1/superadmin/simulador/remitentes').catch(() => ({remitentes:[]})),
+      api('/api/v1/superadmin/sandbox/outbox').catch(() => ({outbox:[]}))
     ]);
     state.config = config;
     state.remitentes = remitentes.remitentes || [];
@@ -1630,37 +3086,43 @@ async function cargarSuperadmin() {
 }
 
 function renderRemitentes() {
-  $('#sim-remitente').innerHTML = state.remitentes.map(r =>
-    `<option value="${esc(r.telefono)}">${esc(r.nombre)} · ${esc(r.rol)}${r.mixer ? ' · '+esc(r.mixer):''}</option>`
+  const el = $('#sim-remitente');
+  if (!el) return;
+  el.innerHTML = state.remitentes.map(r =>
+    `<option value="${esc(r.telefono)}">${esc(r.nombre)} · ${esc(r.rol)}${r.mixer ? ' · ' + esc(r.mixer) : ''}</option>`
   ).join('') || '<option value="+593990000999">Lead Nuevo</option>';
 }
 
 function renderConfigTabs() {
-  $('#config-tabs').innerHTML = SECCIONES.map(([id,label]) =>
-    `<button class="${state.seccionConfig===id?'active':''}" onclick="cambiarSeccion('${id}')">${label}</button>`
+  const el = $('#config-tabs');
+  if (!el) return;
+  el.innerHTML = SECCIONES.map(([id,label]) =>
+    `<button class="${state.seccionConfig === id ? 'active' : ''}" onclick="cambiarSeccion('${id}')">${label}</button>`
   ).join('');
 }
 
-function cambiarSeccion(id){ state.seccionConfig = id; renderConfigTabs(); renderConfig(); }
+function cambiarSeccion(id) { state.seccionConfig = id; renderConfigTabs(); renderConfig(); }
 
 function renderConfig() {
   const id = state.seccionConfig;
-  const datos = (state.config||{})[id] || {};
+  const datos = (state.config || {})[id] || {};
   const campos = CAMPOS[id] || [];
-  $('#config-panel').innerHTML = `
+  const panel = $('#config-panel');
+  if (!panel) return;
+  panel.innerHTML = `
     <p class="small muted">Los datos marcados como provisionales son semilla editable. Guardar aquí aplica el cambio en la siguiente petición, sin reiniciar.</p>
     ${campos.map(c => {
-      if (c.t === 'bool') return `<label class="row small" style="margin:8px 0"><input type="checkbox" data-campo="${c.k}" ${datos[c.k]?'checked':''} style="width:auto"> ${c.l}</label>`;
+      if (c.t === 'bool') return `<label class="row small" style="margin:8px 0"><input type="checkbox" data-campo="${c.k}" ${datos[c.k] ? 'checked' : ''} style="width:auto"> ${c.l}</label>`;
       if (c.t === 'json' || c.t === 'readonly') return `
         <label class="field" style="margin-top:8px">${c.l}</label>
-        <textarea class="mono" data-campo="${c.k}" data-json="1" ${c.t === 'readonly' ? 'readonly':''}>${esc(JSON.stringify(datos[c.k] ?? (c.t==='json'?{}:[]), null, 2))}</textarea>`;
+        <textarea class="mono" data-campo="${c.k}" data-json="1" ${c.t === 'readonly' ? 'readonly' : ''}>${esc(JSON.stringify(datos[c.k] ?? (c.t === 'json' ? {} : []), null, 2))}</textarea>`;
       if (c.t === 'opciones') return `<label class="field" style="margin-top:8px">${c.l}</label>
-        <select data-campo="${c.k}">${c.o.map(o => `<option ${datos[c.k]===o?'selected':''}>${o}</option>`).join('')}</select>`;
-      const valor = c.t === 'lista' ? (datos[c.k]||[]).join(', ') : c.t === 'lineas' ? (datos[c.k]||[]).join('\n') : (datos[c.k] ?? '');
+        <select data-campo="${c.k}">${c.o.map(o => `<option ${datos[c.k] === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+      const valor = c.t === 'lista' ? (datos[c.k] || []).join(', ') : c.t === 'lineas' ? (datos[c.k] || []).join('\n') : (datos[c.k] ?? '');
       if (c.t === 'lineas') return `<label class="field" style="margin-top:8px">${c.l} (una por línea)</label><textarea data-campo="${c.k}" data-lineas="1">${esc(valor)}</textarea>`;
       return `<label class="field" style="margin-top:8px">${c.l}</label><input type="text" data-campo="${c.k}" value="${esc(valor)}">`;
     }).join('')}
-    <button class="btn" style="margin-top:12px" onclick="guardarSeccion()">Guardar ${SECCIONES.find(s=>s[0]===id)[1]}</button>
+    <button class="btn" style="margin-top:12px" onclick="guardarSeccion()">Guardar ${SECCIONES.find(s => s[0] === id)[1]}</button>
     <div id="config-resultado"></div>`;
 }
 
@@ -1708,12 +3170,12 @@ async function enviarSimulacion() {
     $('#sim-resultado').innerHTML = `
       <div class="notice ${clase}">
         <strong>${esc(r.rol)}</strong> · compuerta ${esc(r.compuerta || '—')} · estado ${esc(r.estado_actual || '—')}
-        ${r.respuesta ? '<div class="bubble in" style="margin-top:8px"><span class="who">respuesta al cliente</span>'+esc(r.respuesta)+'</div>' : ''}
+        ${r.respuesta ? '<div class="bubble in" style="margin-top:8px"><span class="who">respuesta al cliente</span>' + esc(r.respuesta) + '</div>' : ''}
       </div>
       <details><summary>Ver JSON del pipeline</summary><pre>${esc(JSON.stringify(r, null, 2))}</pre></details>`;
     toast('Mensaje procesado por el pipeline', 'ok');
     await cargarOutbox();
-    if (state.carpeta) seleccionarCliente(state.carpeta.cliente.cliente_id);
+    if (state.carpeta && state.carpeta.cliente) seleccionarCliente(state.carpeta.cliente.cliente_id);
   } catch(e) {
     $('#sim-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
     toast('El simulador no pudo procesar el mensaje', 'bad');
@@ -1729,21 +3191,41 @@ async function cargarOutbox() {
 }
 
 function renderOutbox() {
-  $('#outbox-panel').innerHTML = state.outbox.length ? state.outbox.map(o => `
-    <div style="border-bottom:1px solid var(--line);padding:8px 0">
+  const el = $('#outbox-panel');
+  if (!el) return;
+  el.innerHTML = state.outbox.length ? state.outbox.map(o => `
+    <div style="border-bottom:1px solid var(--input-border);padding:8px 0">
       <div class="spread"><strong>${esc(o.canal)} → ${esc(o.destino)}</strong><span class="badge neutral">${esc(o.estado)}</span></div>
       <div class="small">${esc(o.contenido)}</div>
       <div class="small muted">${new Date(o.created_at).toLocaleString('es-EC')} · ${esc(o.tipo)}</div>
     </div>`).join('') : '<p class="muted">Sin mensajes encolados.</p>';
 }
 
-/* ----------------------------- INIT ----------------------------- */
+/* ----------------------------- EVENTOS GLOBALES / INIT ----------------------------- */
+document.addEventListener('click', e => {
+  const s = $('#search-results'), input = $('#busqueda-global');
+  if (s && !s.hidden && input && !input.contains(e.target) && !s.contains(e.target)) s.hidden = true;
+  const p = $('#notif-popover');
+  const enWrap = e.target && e.target.closest ? e.target.closest('.notif-wrap') : null;
+  if (p && !p.hidden && !enWrap) toggleNotif(false);
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    cerrarBusqueda();
+    toggleNotif(false);
+    const dlg = document.querySelector('dialog[open]');
+    if (dlg) dlg.close();
+  }
+});
+
 temaInicial();
 const chipFecha = $('#page-date');
 if (chipFecha) chipFecha.textContent = fechaLarga();
-setView('secretaria');
+setView('dashboard');
 cargarSalud();
 setInterval(cargarSalud, 60000);
 </script>
+
 </body>
 </html>

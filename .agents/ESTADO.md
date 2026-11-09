@@ -1,7 +1,7 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-08** (rebranding Horminor + panel CRM)
+> Última actualización: **2026-11-08** (panel ShikshaQ: top header, 6 tabs, dashboard numérico y fix de carpeta forense)
 
 ## Hitos
 
@@ -12,8 +12,8 @@
 | 2 | M2 — Motor determinístico | 🟡 Construido, verificado local | `evidencias/hito3_4_pytest_2026-11-08.txt`: **180 tests** + candado Hito 1 | Probar desde el CRM de la agencia en el VPS |
 | 2 | M5 — Nodo Centinela | 🟡 Construido, verificado local | `evidencias/hito3_4_live_2026-11-08.txt`: 12 checks, `modo=SANDBOX`, `judge_mode=DETERMINISTIC_FALLBACK`; Evolution/Bunny en OK | Webhook real del CRM; umbral de merma que defina Julio |
 | 3 | M1 — WhatsApp (Evolution + Jeb + Bunny) | 🟢 **Cerrado en SANDBOX** | `evidencias/hito3_lock_2026-11-08.txt`: `[CANDADO CERRADO EN SANDBOX]`; 4 compuertas, JSONB y outbox | Producción real: cargar credenciales, apagar SANDBOX y repetir el candado |
-| 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 Construido y verificado local | `/panel` y endpoints `/api/v1/secretaria/*`; tests `test_m3_secretaria.py` | Autenticación; validación con la secretaria real |
-| 5 | M4 — Dashboard de Julio + Ases | 🟢 Construido y verificado local | KPIs, cuota de mercado, simulador y dossier; tests `test_m4_dashboard.py` | Validar números con Julio; auth para exponer |
+| 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 Construido y verificado local | `/panel` (tab Secretaría), carpeta forense con 47 viajes de mixer, `GET .../carpeta` 200 tras fix JSONB; tests `test_m3_secretaria.py` | Autenticación; validación con la secretaria real; POST de pagos/abonos |
+| 5 | M4 — Dashboard de Julio + Ases | 🟢 Construido y verificado local | *Dashboard Julio* con donut real **3.9%** (2/51 viajes), 6 eventos, calendario, 3 obras y 3 KPIs; 2 provincias y 2 escenarios; tests `test_m4_dashboard.py` | Validar el 3.9% y la capacidad de planta con Julio; auth para exponer |
 | — | Despliegue en VPS | ⚪ No iniciado | — | VPS, dominio, TLS, proxy, backups |
 
 Leyenda: ⚪ no iniciado · 🟡 en curso / candado abierto · 🟢 cerrado y congelado
@@ -25,12 +25,20 @@ Leyenda: ⚪ no iniciado · 🟡 en curso / candado abierto · 🟢 cerrado y co
 | PostgreSQL 15 | `localhost:5433` (contenedor `orminorth-postgres`) | — |
 | Redis 7 | `localhost:6380` (contenedor `orminorth-redis`) | — |
 | Core API | `http://localhost:8000` (contenedor `orminorth-core-api`) | — |
-| Panel (M3 + M4 + Superadmin) | `http://localhost:8000/panel` · Horminor, sidebar CRM, Poppins local, tema día/noche | — |
+| Panel (M3 + M4 + Superadmin) | `http://localhost:8000/panel` · Horminor, top header 72 px, sidebar de 6 tabs, dashboard numérico, Poppins local, tema día/noche | — |
 
 Datos de demo en local: órdenes del Ing. Reyes (320 m³ FC-210 y 52 m³ FC-350),
 orden del candado del Hito 3 (16 m³) y clientes de fixture con provincia
 Orellana/Sucumbíos para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
+
+## Evidencia de la última sesión
+
+- `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` → **180 passed**, exit 0 (`.agents/evidencias/pytest_panel_horminor_2026-11-08.txt`).
+- Playwright 1440×1000 → sidebar 258 px, top header 72 px, 6 tabs, donut **3.9%**, 6 eventos, 36 celdas, 3 obras, 3 KPIs, Poppins OK, overflow 0, **0 errores de consola**, **0 requests fallidos** (`.agents/evidencias/playwright_panel_horminor_2026-11-08.txt`).
+- Playwright 390×844 → overflow 0, 6 tabs visibles, top header sticky.
+- Capturas: `.agents/evidencias/panel_horminor_dashboard_dark.png`, `panel_horminor_dashboard_light.png`, `panel_horminor_clientes.png`, `panel_horminor_planta.png`, `panel_horminor_banca.png`, `panel_horminor_secretaria.png`, `panel_horminor_movil.png`, `panel_horminor_notificaciones.png`, `panel_horminor_busqueda.png`.
+- Design system: `.agents/diseno/horminor_design_system.json`.
 
 ## Bloqueos actuales (ordenados por impacto)
 
@@ -46,10 +54,15 @@ scripts de candado.
 3. **Datos que Julio todavía no entregó:** RUC, horario, cuentas bancarias,
    placas, choferes, precio de mercado por provincia y umbral de merma. Quedan
    `NULL`/vacíos o como semilla marcada; no se inventaron.
-4. **Sin autenticación.** `/panel`, `/api/v1/secretaria/*` y
+4. **Capacidad operativa de planta (m³ por período) sin definir.** Sin ese dato
+   el modo 1 del donut no puede mostrar “% vs capacidad”; hoy muestra viajes
+   despachados vs contratados (**3.9%**, 2/51). Dueño del dato: Julio.
+5. **Sin POST de pagos/abonos.** Secretaría muestra los cobros del cierre en
+   solo lectura; no se pueden registrar abonos nuevos desde el panel.
+6. **Sin autenticación.** `/panel`, `/api/v1/secretaria/*` y
    `/api/v1/superadmin/*` están abiertos: no exponerlos a Internet hasta
    implementar login.
-5. **Respaldo externo.** Todo el proyecto y la base viven en un solo disco.
+7. **Respaldo externo.** Todo el proyecto y la base viven en un solo disco.
 
 > **Repositorio: solo local (ratificado 2026-11-08).** El código vivirá en el
 > VPS; GitHub no es requisito para avanzar. Los commits locales en `orminorth/`
@@ -58,14 +71,16 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **Producción del Hito 3:** cargar credenciales reales en
+1. **Validar el dashboard con Julio:** mostrar
+   `.agents/evidencias/panel_horminor_dashboard_dark.png` y confirmar que el
+   **3.9% (2/51 viajes)** es el indicador que quiere ver; pedir la **capacidad
+   operativa de planta** para completar el modo 1 del donut.
+2. **Producción del Hito 3:** cargar credenciales reales en
    `PUT /api/v1/superadmin/config/whatsapp_evolution_y_cdn`, poner
    `evolution_sandbox=false` y `bunny_sandbox=false`, y repetir
    `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py`.
-2. **Autenticación:** login para Superadmin/Secretaría antes de publicar el
+3. **Autenticación:** login para Superadmin/Secretaría antes de publicar el
    panel en el VPS.
-3. **Validación con Julio:** revisar los KPIs, la cuota de mercado y los dos
-   escenarios del simulador; cargar benchmarks/precios reales por provincia.
 4. **Despliegue:** cuando exista el VPS, copiar el repo, levantar el stack y
    configurar TLS, proxy inverso y backups.
 
@@ -99,6 +114,8 @@ scripts de candado.
 | 24 | **Marca visible Horminor; carpeta/repo siguen como `orminorth`** | Es lo que ve el cliente; renombrar rutas, contenedores e historial rompería comandos sin aportar valor |
 | 25 | **Poppins local y sidebar CRM de 258 px** | La tipografía de la referencia queda servida desde `/static` (sin Google Fonts); la sidebar reproduce la captura y colapsa a barra superior en <900 px |
 | 26 | **Corrección de marca en migración 062** | Las migraciones 050/060 ya estaban aplicadas; se corrige el ADN público y Bunny sin editar el pasado |
+| 27 | **Panel con shell ShikshaQ y jerarquía número-primero** | Top header fijo, sidebar de 6 tabs, donut/actividad/calendario y 3 obras; los párrafos se reemplazan por cifras grandes y barras. Se conservan IDs, `data-*`, rutas y contratos; cero build y cero CDN. Alternativa descartada: copiar los textos largos del API, que cansan la lectura |
+| 28 | **`_json_objeto()` normaliza JSONB en M3** | `obtener_carpeta` hacía `dict(tracking_payload)` y devolvía 500 cuando asyncpg entrega JSONB como texto. El helper acepta texto o mapping y devuelve `{}` si no se puede parsear; la carpeta forense volvió a 200 sin tocar el contrato |
 
 ## Riesgos abiertos
 
