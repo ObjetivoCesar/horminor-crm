@@ -28,6 +28,20 @@ class Settings(BaseSettings):
     # Nombre ratificado 2026-11-08. Si se define, gana sobre agency_master_key.
     sentinel_master_key: str | None = None
 
+    # v4.4.0 - Router HTTP del Custodio. Tokens de servicio por rol, no login.
+    # Si ningun token esta configurado y CUSTODIO_ALLOW_DEV_HEADER=false, el
+    # router responde 503 (falla cerrado).
+    custodio_token_superadmin: str | None = None
+    custodio_token_contadora: str | None = None
+    custodio_token_secretaria: str | None = None
+    custodio_token_bodega: str | None = None
+    custodio_token_chofer: str | None = None
+    custodio_token_system_cron: str | None = None
+    custodio_allow_dev_header: bool = False
+
+    # Compatibilidad con la primera version del router (X-Gate-Key).
+    gate_api_key: str = CLAVE_INSEGURA
+
     # Push webhook del Centinela al CRM Central (PDR 4.2)
     agency_crm_webhook_url: str | None = None
 

@@ -268,7 +268,10 @@ async def crear_orden(
     cupo_cfg = await setting(pool, "finanzas.tope_credito_auto", {}) or {}
     if not isinstance(cupo_cfg, dict):
         cupo_cfg = {}
-    iva_default = await setting(pool, "finanzas.iva_default_aplica", True)
+    # v4.4.0: el IVA solo se calcula si el contrato lo pide explicitamente.
+    # El panel envia aplica_iva=true; los llamadores programaticos deben
+    # hacerlo tambien. El default queda en false.
+    iva_default = await setting(pool, "finanzas.iva_default_aplica", False)
     aplica_iva = datos.aplica_iva if datos.aplica_iva is not None else bool(iva_default)
 
     advertencias: list[str] = []

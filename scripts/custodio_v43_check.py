@@ -1,4 +1,4 @@
-"""Verificacion de integracion del Custodio v4.3 contra el clon.
+"""Verificacion de integracion del Custodio v4.4 contra el clon.
 
 Recorre el contrato completo: 14 intents de mutacion, 9 consultas, idempotencia
 y correcciones con testigo. Todo ocurre en una unica conexion con una
@@ -395,7 +395,8 @@ async def main() -> int:
                 "resistencia": "FC-210",
                 "volumen_m3": str(volumen),
                 "forma_pago": "FIADO",
-                "notas": "Orden de prueba Custodio v4.3",
+                "aplica_iva": True,
+                "notas": "Orden de prueba Custodio v4.4",
             },
             "CREATE_CONCRETE_ORDER",
         )
@@ -784,90 +785,10 @@ async def main() -> int:
         print("12. PAY_BANK_LOAN_INSTALLMENT: OK")
 
         # ------------------------------------------------------------------
-        # 13. CANCEL_CONCRETE_ORDER + RESOLVE_APPROVAL_REQUEST
+        # 13. Anulaciones: se prueban despues de las consultas (paso 17)
+        #     para no alterar la foto financiera que verifican los KPIs.
         # ------------------------------------------------------------------
-        _, r = await mutar(
-            gate,
-            actor,
-            "CANCEL_CONCRETE_ORDER",
-            {
-                "order_id": orden1_id,
-                "motivo": "Anulacion de prueba con cobro activo",
-            },
-            "cancelacion con cobro",
-            esperado="PENDING_JULIO_APPROVAL",
-        )
-        aprobacion1 = r["approval_request_id"]
-        exigir(aprobacion1 is not None, "aprobacion sin id")
-        _, r = await mutar(
-            gate,
-            actor,
-            "RESOLVE_APPROVAL_REQUEST",
-            {
-                "approval_request_id": aprobacion1,
-                "decision": "APPROVED",
-                "comentario": "Aprobado para probar la regla de reembolso",
-            },
-            "resolver anulacion con cobro",
-        )
-        exigir(
-            r["data"]["ejecutada"] is False
-            and r["data"]["motivo"] == "REFUND_RULE_NOT_CONFIRMED",
-            f"se anulo una orden con cobros: {r['data']}",
-        )
-        estado_orden1 = await conn.fetchval(
-            "SELECT estado FROM orders WHERE id = $1", orden1_id
-        )
-        exigir(estado_orden1 != "ANULADA", "la orden con cobro quedo anulada")
-
-        # Orden nueva sin cobros: la anulacion si se ejecuta.
-        _, r = await mutar(
-            gate,
-            actor,
-            "CREATE_CONCRETE_ORDER",
-            {
-                "cliente_id": cliente_id,
-                "planta_codigo": "PLANTA-COCA",
-                "resistencia": "FC-180",
-                "volumen_m3": "5",
-                "forma_pago": "FIADO",
-            },
-            "orden para anular",
-        )
-        orden2_id = r["data"]["orden_id"]
-        _, r = await mutar(
-            gate,
-            actor,
-            "CANCEL_CONCRETE_ORDER",
-            {
-                "order_id": orden2_id,
-                "motivo": "Anulacion de prueba sin cobros",
-            },
-            "cancelacion sin cobro",
-            esperado="PENDING_JULIO_APPROVAL",
-        )
-        aprobacion2 = r["approval_request_id"]
-        _, r = await mutar(
-            gate,
-            actor,
-            "RESOLVE_APPROVAL_REQUEST",
-            {
-                "approval_request_id": aprobacion2,
-                "decision": "APPROVED",
-                "comentario": "Aprobado: no hay cobros que devolver",
-            },
-            "resolver anulacion sin cobro",
-        )
-        exigir(r["data"]["ejecutada"] is True, f"no se anulo: {r['data']}")
-        exigir(
-            r["data"]["movimientos_anulados"] >= 1,
-            f"no se anularon consumos teoricos: {r['data']}",
-        )
-        estado_orden2 = await conn.fetchval(
-            "SELECT estado FROM orders WHERE id = $1", orden2_id
-        )
-        exigir(estado_orden2 == "ANULADA", "la orden sin cobros no quedo anulada")
-        print("13. CANCEL_CONCRETE_ORDER + aprobacion: OK")
+        print("13. Anulaciones: diferidas al paso 17 para no alterar los KPIs")
 
         # ------------------------------------------------------------------
         # 14. Categorias contables: crear, duplicado, renombrar, fusionar
@@ -1148,7 +1069,8 @@ async def main() -> int:
         )
         exigir(
             r["data"]["estado"] == "PENDIENTE"
-            and "VALUATION_FORMULA_NOT_CONFIRMED" in r["residual_risks"],
+            and "UNCONFIRMED_FINANCIAL_RATES" in r["residual_risks"]
+            and r["data"]["proyeccion_10y"] is None,
             f"valoracion inventada: {r}",
         )
 
@@ -1161,10 +1083,268 @@ async def main() -> int:
         )
         exigir(
             r["data"]["estado"] == "PENDIENTE"
-            and "DSCR_DEFINITION_NOT_CONFIRMED" in r["residual_risks"],
+            and "UNCONFIRMED_FINANCIAL_RATES" in r["residual_risks"]
+            and r["data"]["dscr_actual"] is None,
             f"DSCR inventado: {r}",
         )
         print("16. Las nueve consultas: OK")
+
+        # ------------------------------------------------------------------
+        # 17. Anulaciones y modos de reembolso
+        # ------------------------------------------------------------------
+        _, r = await mutar(
+            gate,
+            actor,
+            "CANCEL_CONCRETE_ORDER",
+            {
+                "order_id": orden1_id,
+                "motivo": "Anulacion de prueba con cobro activo",
+            },
+            "cancelacion con cobro",
+            esperado="PENDING_JULIO_APPROVAL",
+        )
+        aprobacion1 = r["approval_request_id"]
+        exigir(aprobacion1 is not None, "aprobacion sin id")
+
+        # Sin modo_resolucion_cobro la aprobacion no se consume.
+        _, r = await mutar(
+            gate,
+            actor,
+            "RESOLVE_APPROVAL_REQUEST",
+            {
+                "approval_request_id": aprobacion1,
+                "decision": "APPROVED",
+                "comentario": "Aprobado sin indicar el modo de reembolso",
+            },
+            "resolver sin modo de reembolso",
+            esperado="REJECT",
+        )
+        exigir(
+            "SCHEMA_VALIDATION_FAILED" in r["rejection_codes"],
+            f"se aprobo sin modo: {r}",
+        )
+        estado = await conn.fetchval(
+            "SELECT estado FROM orders WHERE id = $1", orden1_id
+        )
+        exigir(estado != "ANULADA", "la orden con cobro quedo anulada sin modo")
+        pendiente = await conn.fetchval(
+            "SELECT status FROM approval_requests WHERE id = $1",
+            aprobacion1,
+        )
+        exigir(pendiente == "PENDING", f"la aprobacion se consumio: {pendiente}")
+
+        # CONVERTIR_A_ANTICIPO_CLIENTE: el cobro queda como saldo a favor.
+        _, r = await mutar(
+            gate,
+            actor,
+            "RESOLVE_APPROVAL_REQUEST",
+            {
+                "approval_request_id": aprobacion1,
+                "decision": "APPROVED",
+                "comentario": "Convertir el cobro en anticipo del cliente",
+                "modo_resolucion_cobro": "CONVERTIR_A_ANTICIPO_CLIENTE",
+            },
+            "resolver con anticipo",
+        )
+        exigir(r["data"]["ejecutada"] is True, f"no se anulo: {r['data']}")
+        exigir(
+            r["data"]["modo_resolucion_cobro"] == "CONVERTIR_A_ANTICIPO_CLIENTE",
+            f"modo inesperado: {r['data']}",
+        )
+        estado = await conn.fetchval(
+            "SELECT estado FROM orders WHERE id = $1", orden1_id
+        )
+        exigir(estado == "ANULADA", "la orden no quedo anulada")
+        saldo_favor = await conn.fetchval(
+            "SELECT COALESCE(saldo_a_favor, 0) FROM v_cliente_saldo WHERE id = $1",
+            cliente_id,
+        )
+        exigir(
+            d(saldo_favor) == Decimal("100.00"),
+            f"saldo a favor inesperado: {saldo_favor}",
+        )
+
+        # Orden sin cobros: se anula directo al aprobar.
+        _, r = await mutar(
+            gate,
+            actor,
+            "CREATE_CONCRETE_ORDER",
+            {
+                "cliente_id": cliente_id,
+                "planta_codigo": "PLANTA-COCA",
+                "resistencia": "FC-180",
+                "volumen_m3": "5",
+                "forma_pago": "FIADO",
+                "aplica_iva": True,
+            },
+            "orden para anular sin cobros",
+        )
+        orden2_id = r["data"]["orden_id"]
+        _, r = await mutar(
+            gate,
+            actor,
+            "CANCEL_CONCRETE_ORDER",
+            {
+                "order_id": orden2_id,
+                "motivo": "Anulacion de prueba sin cobros",
+            },
+            "cancelacion sin cobro",
+            esperado="PENDING_JULIO_APPROVAL",
+        )
+        aprobacion2 = r["approval_request_id"]
+        _, r = await mutar(
+            gate,
+            actor,
+            "RESOLVE_APPROVAL_REQUEST",
+            {
+                "approval_request_id": aprobacion2,
+                "decision": "APPROVED",
+                "comentario": "Aprobado: no hay cobros que devolver",
+            },
+            "resolver anulacion sin cobro",
+        )
+        exigir(r["data"]["ejecutada"] is True, f"no se anulo: {r['data']}")
+        exigir(
+            r["data"]["movimientos_anulados"] >= 1,
+            f"no se anularon consumos teoricos: {r['data']}",
+        )
+
+        # DEVOLVER_DINERO_CAJA_O_BANCO: reembolso y borrado logico del cobro.
+        _, r = await mutar(
+            gate,
+            actor,
+            "CREATE_CONCRETE_ORDER",
+            {
+                "cliente_id": cliente_id,
+                "planta_codigo": "PLANTA-COCA",
+                "resistencia": "FC-210",
+                "volumen_m3": "2",
+                "forma_pago": "FIADO",
+                "aplica_iva": True,
+            },
+            "orden para devolucion",
+        )
+        orden3_id = r["data"]["orden_id"]
+        _, r = await mutar(
+            gate,
+            actor,
+            "REGISTER_CLIENT_PAYMENT",
+            {
+                "cliente_id": cliente_id,
+                "order_id": orden3_id,
+                "fecha": hoy.isoformat(),
+                "metodo": "EFECTIVO",
+                "bolsa": "CAJA_DIARIA",
+                "monto": "50.00",
+                "referencia": "REC-DEVOLUCION",
+            },
+            "cobro para devolucion",
+        )
+        pago3_id = r["data"]["payment_id"]
+        _, r = await mutar(
+            gate,
+            actor,
+            "CANCEL_CONCRETE_ORDER",
+            {
+                "order_id": orden3_id,
+                "motivo": "Anulacion con devolucion de dinero",
+            },
+            "cancelacion con devolucion",
+            esperado="PENDING_JULIO_APPROVAL",
+        )
+        aprobacion3 = r["approval_request_id"]
+        _, r = await mutar(
+            gate,
+            actor,
+            "RESOLVE_APPROVAL_REQUEST",
+            {
+                "approval_request_id": aprobacion3,
+                "decision": "APPROVED",
+                "comentario": "Devolver el dinero al cliente",
+                "modo_resolucion_cobro": "DEVOLVER_DINERO_CAJA_O_BANCO",
+            },
+            "resolver con devolucion",
+        )
+        exigir(r["data"]["ejecutada"] is True, f"no se anulo: {r['data']}")
+        exigir(
+            r["data"]["modo_resolucion_cobro"] == "DEVOLVER_DINERO_CAJA_O_BANCO",
+            f"modo inesperado: {r['data']}",
+        )
+        estado = await conn.fetchval(
+            "SELECT estado FROM orders WHERE id = $1", orden3_id
+        )
+        exigir(estado == "ANULADA", "la orden con devolucion no quedo anulada")
+        borrado = await conn.fetchval(
+            "SELECT deleted_at FROM payments WHERE id = $1", pago3_id
+        )
+        exigir(borrado is not None, "el cobro original no quedo borrado")
+        reembolso = await conn.fetchrow(
+            """
+            SELECT tipo_movimiento, monto
+              FROM payments
+             WHERE referencia = $1
+            """,
+            f"REEMBOLSO:{pago3_id}",
+        )
+        exigir(
+            reembolso is not None
+            and reembolso["tipo_movimiento"] == "REEMBOLSO_CAJA"
+            and d(reembolso["monto"]) == Decimal("50.00"),
+            f"reembolso inesperado: {reembolso}",
+        )
+        print("17. Anulaciones y modos de reembolso: OK")
+
+        # ------------------------------------------------------------------
+        # 18. Anticipo y rechazo de sobrepago
+        # ------------------------------------------------------------------
+        cliente_anticipo = await conn.fetchval(
+            """
+            INSERT INTO clients (nombre, estado)
+            VALUES ($1, 'ACTIVO')
+            RETURNING id::text
+            """,
+            f"{PREFIJO} Cliente anticipo",
+        )
+        _, r = await mutar(
+            gate,
+            actor,
+            "REGISTER_CLIENT_PAYMENT",
+            {
+                "cliente_id": cliente_anticipo,
+                "fecha": hoy.isoformat(),
+                "metodo": "EFECTIVO",
+                "bolsa": "CAJA_DIARIA",
+                "monto": "50.00",
+                "es_anticipo": False,
+            },
+            "cobro sin deuda sin anticipo",
+            esperado="REJECT",
+        )
+        exigir(
+            "PAYMENT_EXCEEDS_PENDING_BALANCE" in r["rejection_codes"],
+            f"sobrepago no rechazado: {r}",
+        )
+        _, r = await mutar(
+            gate,
+            actor,
+            "REGISTER_CLIENT_PAYMENT",
+            {
+                "cliente_id": cliente_anticipo,
+                "fecha": hoy.isoformat(),
+                "metodo": "EFECTIVO",
+                "bolsa": "CAJA_DIARIA",
+                "monto": "200.00",
+                "es_anticipo": True,
+            },
+            "anticipo del cliente",
+        )
+        exigir(
+            d(r["data"]["parte_cxc"]) == Decimal("0.00")
+            and d(r["data"]["parte_anticipo"]) == Decimal("200.00")
+            and d(r["data"]["saldo_a_favor"]) == Decimal("200.00"),
+            f"anticipo mal separado: {r['data']}",
+        )
+        print("18. Anticipo y rechazo de sobrepago: OK")
 
         # ------------------------------------------------------------------
         # Cierre del escenario
@@ -1172,7 +1352,7 @@ async def main() -> int:
         mut = ESTADISTICAS["mutaciones"]
         test = ESTADISTICAS["testigos"]
         print(
-            "CUSTODIO V4.3: OK | "
+            "CUSTODIO V4.4: OK | "
             f"{len(ESTADISTICAS['intents'])}/14 intents de mutacion, "
             f"{sum(mut.values())} solicitudes "
             f"({mut.get('ACCEPT', 0)} ACCEPT, {mut.get('REJECT', 0)} REJECT, "
@@ -1203,5 +1383,5 @@ if __name__ == "__main__":
     try:
         sys.exit(asyncio.run(main()))
     except AssertionError as exc:
-        print(f"CUSTODIO V4.3: FALLO -> {exc}")
+        print(f"CUSTODIO V4.4: FALLO -> {exc}")
         sys.exit(1)

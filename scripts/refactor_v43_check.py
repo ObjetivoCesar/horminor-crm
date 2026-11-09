@@ -117,6 +117,7 @@ async def main() -> int:
                 planta_codigo=PLANTA,
                 forma_pago=forma_pago,
                 creada_por=TAG,
+                aplica_iva=True,
                 abono_inicial_monto=abono if forma_pago == "ABONO" else None,
                 abono_inicial_metodo=(
                     "TRANSFERENCIA" if forma_pago == "ABONO" else None
@@ -309,6 +310,7 @@ async def main() -> int:
                     planta_codigo=PLANTA,
                     forma_pago="EFECTIVO",
                     creada_por=TAG,
+                aplica_iva=True,
                     abono_inicial_monto=Decimal("10.00"),
                     abono_inicial_metodo="EFECTIVO",
                 ),

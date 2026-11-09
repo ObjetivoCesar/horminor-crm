@@ -768,7 +768,23 @@ def _validar_payload_mutacion(
         _campos(
             payload,
             requeridos=("approval_request_id", "decision", "comentario"),
-            permitidos=("approval_request_id", "decision", "comentario"),
+            permitidos=(
+                "approval_request_id",
+                "decision",
+                "comentario",
+                "modo_resolucion_cobro",
+            ),
+            errores=errores,
+        )
+        _texto(
+            payload,
+            "modo_resolucion_cobro",
+            requerido=False,
+            nulo=True,
+            enum=(
+                "CONVERTIR_A_ANTICIPO_CLIENTE",
+                "DEVOLVER_DINERO_CAJA_O_BANCO",
+            ),
             errores=errores,
         )
         if not _uuid(payload.get("approval_request_id")):
@@ -1242,6 +1258,9 @@ REJECTION_CODES = (
     "MISSING_VOUCHER_REFERENCE",
     "MISSING_INVENTORY_ITEM_DATA",
     "INSUFFICIENT_SILO_STOCK",
+    "PAYMENT_EXCEEDS_PENDING_BALANCE",
+    "BOLSA_METHOD_MISMATCH",
+    "PURCHASE_REQUIRES_CREDIT_NOTE",
     "DUPLICATE_CATEGORY_SIMILARITY",
     "IMMUTABLE_ROOT_ACCOUNT",
     "WITNESS_REASON_TOO_SHORT",

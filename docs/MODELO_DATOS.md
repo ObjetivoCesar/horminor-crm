@@ -4,16 +4,19 @@ Motor: PostgreSQL 15. Esquema base en `db/migrations/001_init.sql`.
 Migraciones aplicadas automáticamente al arrancar la API (idempotentes, con
 `pg_advisory_lock` y registro en `schema_migrations`).
 
-> **Actualización 2026-11-09 — Custodio v4.3.** Al esquema base se suman 14
+> **Actualización 2026-11-09 — Custodio v4.4.0.** Al esquema base se suman 14
 > tablas contables/operativas y 3 vistas nuevas. El detalle de creación,
 > responsables y flujo de ingresos está en `docs/BASE_DE_DATOS.md`; las
-> migraciones son `063_custodio_core.sql` y `064_custodio_views.sql`.
-> `crear_orden` ya escribe IVA/bruto y registra el `COBRO` de contado o abono;
-> caja y dashboard filtran `payments.deleted_at` y usan el bruto; el kardex
-> calcula costo promedio ponderado, guarda `costo_unitario_snapshot` y anula
-> consumos `TEORICO` con `ANULACION`. El Custodio (`app/custodio/`) implementa
-> el Gate con 14 intents, 9 consultas, idempotencia por `request_id` + hash,
-> partida doble, reversa del asiento vigente y testigo inmutable.
+> migraciones son `063_custodio_core.sql`, `064_custodio_views.sql`,
+> `065_http_gate_v44.sql` y `066_iva_default_v44.sql`.
+> `crear_orden` escribe IVA/bruto cuando el contrato envía `aplica_iva=true` y
+> registra el `COBRO` de contado o abono; caja y dashboard filtran
+> `payments.deleted_at` y usan el bruto; el kardex calcula costo promedio
+> ponderado, guarda `costo_unitario_snapshot` y anula consumos `TEORICO` con
+> `ANULACION`. El Custodio (`app/custodio/`) implementa el Gate con 14 intents,
+> 9 consultas, idempotencia por `request_id` + hash, partida doble, reversa del
+> asiento vigente y testigo inmutable. `app/http_gate/` lo expone con tokens de
+> servicio y una ventanilla única de pagos/gastos.
 
 ## Tablas
 
@@ -90,9 +93,11 @@ fechas y suma los períodos.
 - **`audit_witness_log`** guarda el valor anterior, el nuevo y el motivo de cada
   corrección. Pagos y pagos a proveedor revierten y rehacen su asiento; una
   compra solo se corrige si es de servicio y tiene una única línea.
-- **Pendiente por diseño:** anular una orden con cobros activos devuelve
-  `PENDING_JULIO_APPROVAL` y, sin regla de reembolso, `REFUND_RULE_NOT_CONFIRMED`;
-  valoración 10 años y DSCR devuelven `PENDIENTE` con su código de riesgo.
+- **Anulación y valoración:** una orden con cobros activos queda
+  `PENDING_JULIO_APPROVAL`; al aprobar, Julio indica `modo_resolucion_cobro`
+  (`CONVERTIR_A_ANTICIPO_CLIENTE` o `DEVOLVER_DINERO_CAJA_O_BANCO`).
+  Valoración 10 años y DSCR leen `finanzas.parametros_contables`; si faltan
+  tasas, devuelven la foto real con `UNCONFIRMED_FINANCIAL_RATES`.
 
 ## Contrato `tracking_payload`
 

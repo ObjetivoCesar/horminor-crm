@@ -8,13 +8,15 @@ debounce + Juez Binario + Bunny.net)**, **Módulo 2 (motor determinístico de
 planta)**, **Módulo 3 (Secretaría + Caja)**, **Módulo 4 (Dashboard gerencial)**
 y **Módulo 5 (Nodo Centinela)** del PDR v4.0.
 
-Estado actual: **Hitos 1, 2 y 3 construidos y verificados en local** (**180
+Estado actual: **Hitos 1, 2 y 3 construidos y verificados en local** (**242
 tests**, candado del Hito 1 **CERRADO** y candado del Hito 3 **CERRADO EN
 SANDBOX**). El Hito 1 quedó cerrado con la semilla oficial de Dirección (5
 recetas confirmadas) y el **Centro de Configuración Superadmin** de 7 secciones,
-editable en caliente. La producción real solo espera credenciales de
-Evolution/Bunny/Gemini y los teléfonos del personal. Ver
-`docs/00_DECISIONES_PENDIENTES.md`.
+editable en caliente. El Custodio v4.4.0 ya expone el Gate y la ventanilla de
+pagos por HTTP con tokens de servicio. La producción real solo espera
+credenciales de Evolution/Bunny/Gemini, los teléfonos del personal y el login de
+usuario final. Ver `docs/00_DECISIONES_PENDIENTES.md` y
+`docs/v4.4.0_HTTP_GATE.md`.
 
 ## Estructura
 
@@ -40,12 +42,16 @@ orminorth/
 │  ├─ app/m5_sentinel/         salud de infraestructura, canales y operación
 │  ├─ app/web/                 panel HTML en `/panel` + estáticos (Poppins, logo)
 │  ├─ app/services/            alta de órdenes (M0 + M2)
+│  ├─ app/custodio/            Gate contable, ledger, testigo y catálogo
+│  ├─ app/http_gate/           router HTTP, tokens y ventanilla de pagos
 │  ├─ app/routers/             health, catálogo, órdenes
-│  └─ tests/                   pytest (197 tests)
+│  └─ tests/                   pytest (242 tests)
 ├─ scripts/
 │  ├─ db_migrate.py            aplica migraciones a mano
 │  ├─ hito1_lock_test.py       Test de Candado del Hito 1 (pedido Ing. Reyes)
-│  └─ hito3_lock_test.py       Test de Candado del Hito 3 (3 celulares simulados)
+│  ├─ hito3_lock_test.py       Test de Candado del Hito 3 (3 celulares simulados)
+│  ├─ custodio_v43_check.py    integración del Custodio en el clon (ROLLBACK)
+│  └─ http_gate_v44_check.py   integración HTTP v4.4.0 en el clon (ROLLBACK)
 └─ docs/                       decisiones pendientes y modelo de datos
 ```
 

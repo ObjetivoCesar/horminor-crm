@@ -1,10 +1,11 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-09** (Custodio v4.3 implementado: 14 intents,
-> 9 consultas, 8 solicitudes de testigo y 2 aprobaciones; 11 migraciones,
-> 28 tablas, 6 vistas, 26 cuentas; 223 tests y los 2 candados en verde.
-> Queda el POST de pagos/abonos posteriores)
+> Última actualización: **2026-11-09** (Custodio v4.4.0 con circuito HTTP
+> cerrado: 14 intents, 9 consultas, pagos/anticipos/reembolsos y rol
+> CONTADORA; 13 migraciones, 28 tablas, 6 vistas, 26 cuentas; 242 tests y los
+> 2 candados en verde. Quedan operativos: tasas financieras, conteo físico,
+> formulario del panel, login de usuario y backups)
 
 ## Hitos
 
@@ -12,10 +13,10 @@
 |---|---|---|---|---|
 | 1 | M0 — Datos y configuración | 🟢 **Cerrado** con semilla oficial | `evidencias/hito1_lock_2026-11-08.txt`: `[CANDADO CERRADO]`, 235 movimientos de kardex, órdenes valoradas ($37.760 y $8.216) | Nada bloqueante. Re-verificar si se editan recetas |
 | — | Superadmin — Configuración en caliente | 🟢 Construido y editable desde el panel | 7 secciones, CRUD de recetas/flota, simulador de WhatsApp y outbox | Autenticación antes de exponerlo a Internet |
-| 2 | M2 — Motor determinístico | 🟡 Construido, verificado local | `evidencias/pytest_custodio_v43_2026-11-09.txt`: **223 tests** + candado Hito 1 | Probar desde el CRM de la agencia en el VPS |
+| 2 | M2 — Motor determinístico | 🟡 Construido, verificado local | `evidencias/pytest_http_v44_2026-11-09.txt`: **242 tests** + candado Hito 1 | Probar desde el CRM de la agencia en el VPS |
 | 2 | M5 — Nodo Centinela | 🟡 Construido, verificado local | `evidencias/hito3_4_live_2026-11-08.txt`: 12 checks, `modo=SANDBOX`, `judge_mode=DETERMINISTIC_FALLBACK`; Evolution/Bunny en OK | Webhook real del CRM; umbral de merma que defina Julio |
 | 3 | M1 — WhatsApp (Evolution + Jeb + Bunny) | 🟢 **Cerrado en SANDBOX** | `evidencias/hito3_lock_2026-11-08.txt`: `[CANDADO CERRADO EN SANDBOX]`; 4 compuertas, JSONB y outbox | Producción real: cargar credenciales, apagar SANDBOX y repetir el candado |
-| 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 Construido y verificado local | `/panel` (tab Secretaría), carpeta forense con 47 viajes de mixer, `GET .../carpeta` 200 tras fix JSONB; tests `test_m3_secretaria.py` | Autenticación; validación con la secretaria real; POST de pagos/abonos |
+| 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 Construido y verificado local | `/panel` (tab Secretaría), carpeta forense con 47 viajes de mixer, `GET .../carpeta` 200 tras fix JSONB; `POST /api/v1/secretaria/pagos` probado; tests `test_m3_secretaria.py` | Autenticación de usuario; formulario de pagos en el panel; validación con la secretaria real |
 | 5 | M4 — Dashboard de Julio + Ases | 🟢 Construido y verificado local | *Dashboard Julio* con 3 tarjetas iguales: mercado El Coca **0.31% (372/120,000 m³)**, ventas **404 m³ / $55,043.60 / 51 viajes** (la captura aprobada 2026-11-08 mostraba $47,864 sin IVA), y provincias **Orellana 372 + Sucumbíos 16 + sin provincia 16**; Banca **215,000 / 404 / 0.19% / 214,596 m³**; 2 escenarios; tests `test_m4_dashboard.py` | Validar con Julio el ángulo de mercado; auth para exponer |
 | — | Despliegue en VPS | ⚪ No iniciado | — | VPS, dominio, TLS, proxy, backups |
 
@@ -37,6 +38,27 @@ scripts de candado.
 
 ## Evidencia de la última sesión
 
+- **Custodio v4.4.0 con HTTP cerrado el 2026-11-09.** `app/http_gate/` expone
+  `POST /api/v1/custodio/mutations`, `/queries`, `/witness` y
+  `GET /catalog` con tokens de servicio; `POST /api/v1/secretaria/pagos`
+  registra `COBRO`, `GASTO_CAJA_CHICA` y `GASTO_BANCARIO`, valida saldo,
+  separa abono/anticipo y es idempotente. `scripts/http_gate_v44_check.py`
+  contra `orminorth_v43` → **HTTP GATE V4.4: OK** con 10 verificaciones y
+  `ROLLBACK` en 17 tablas. Evidencia:
+  `.agents/evidencias/http_gate_v44_check_2026-11-09.txt`.
+- `scripts/custodio_v43_check.py` → **CUSTODIO V4.4: OK** con 30 solicitudes
+  (21 ACCEPT, 6 REJECT, 3 PENDING), 8 testigos, 4 aprobaciones y 9 consultas;
+  incluye anulación con `CONVERTIR_A_ANTICIPO_CLIENTE`,
+  `DEVOLVER_DINERO_CAJA_O_BANCO` y anticipo 1103/2102. Evidencia:
+  `.agents/evidencias/custodio_v44_check_2026-11-09.txt`.
+- `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` → **242 passed**, exit 0 (`.agents/evidencias/pytest_http_v44_2026-11-09.txt`).
+- Hito 1 → `[CANDADO CERRADO]` y Hito 3 → `[CANDADO CERRADO EN SANDBOX]`
+  (`.agents/evidencias/hito1_lock_http_v44_2026-11-09.txt`,
+  `hito3_lock_http_v44_2026-11-09.txt`).
+- Base real: 13 migraciones, órdenes #9/#55/#56/#57, cartera
+  **55,043.60 / 2 clientes / fiado 55,043.60**, `payments=0`, 249 movimientos
+  y materiales intactos. Evidencia:
+  `.agents/evidencias/base_real_v44_final_2026-11-09.txt`.
 - **Custodio v4.3 implementado y verificado el 2026-11-09.** `app/custodio/`
   (`contracts.py`, `ledger.py`, `catalog_hygiene.py`, `witness.py`, `gate.py`)
   cubre **14/14 intents de mutación, 9 consultas, 8 solicitudes de testigo y
@@ -72,7 +94,7 @@ scripts de candado.
   **REFACTOR V4.3: OK** (4 ventas, cartera, `deleted_at`, caja y dashboard;
   0 registros de prueba al terminar). Evidencia:
   `.agents/evidencias/refactor_v43_check_2026-11-09.txt`.
-- Órdenes reales #49/#50/#51 con IVA 15 % y bruto **$43,424.00 / $9,448.40 /
+- Órdenes reales #55/#56/#57 con IVA 15 % y bruto **$43,424.00 / $9,448.40 /
   $2,171.20** (los candados las recrean con el código nuevo); cartera real
   **55,043.60 / 2 clientes / fiado 55,043.60**; `payments` sigue en 0 porque las
   tres son FIADO. La #9 histórica conserva `total`/`total_con_iva` `NULL`.
@@ -108,26 +130,24 @@ scripts de candado.
 4. **Capacidad operativa de planta (m³ por período) sin definir.** El dashboard
    ya no la usa para el anillo principal (muestra el mercado real de El Coca);
    sigue faltando para un KPI de capacidad operativa. Dueño del dato: Julio.
-5. **Sin POST de pagos/abonos.** Secretaría muestra los cobros del cierre en
-   solo lectura; no se pueden registrar abonos nuevos desde el panel.
-6. **Sin autenticación.** `/panel`, `/api/v1/secretaria/*` y
-   `/api/v1/superadmin/*` están abiertos: no exponerlos a Internet hasta
-   implementar login.
-7. **Responsable/custodio de la base de datos sin designar.** No hay un DBA ni
-   un custodio formal de PostgreSQL en producción documentado. El desarrollo
-   técnico lo sostiene César Reyes y los datos de negocio son de Julio; el
-   custodio operativo del VPS queda **pendiente de confirmar** (ver
-   `docs/BASE_DE_DATOS.md`, sección 5).
+5. **Sin formulario de pagos en el panel.** El endpoint
+   `POST /api/v1/secretaria/pagos` ya existe y está probado; la vista de
+   Secretaría todavía no tiene el formulario para capturarlo.
+6. **Sin login de usuario final.** El router del Custodio usa tokens de
+   servicio `CUSTODIO_TOKEN_*`; `/panel`, `/api/v1/secretaria/*` y
+   `/api/v1/superadmin/*` siguen abiertos. No exponerlos a Internet.
+7. **Custodio operativo asignado, backups pendientes.** La v4.4.0 asigna el
+   VPS y los backups a la agencia (César Reyes / Nohan); falta ejecutar el
+   `pg_dump` diario y definir retención.
 8. **Respaldo externo.** Todo el proyecto y la base viven en un solo disco. Hay
    un respaldo manual previo a v4.3, pero no política automática.
-9. **Código pendiente solo en el POST de pagos/abonos posteriores.** El
-   Custodio ya está implementado (`gate.py`, `witness.py`, `ledger.py`,
-   `catalog_hygiene.py`) con 14 intents y 9 consultas; falta exponer el abono
-   parcial posterior con validación de saldo y permisos.
-10. **IVA histórico, fecha de conteo, fórmula 10 años/DSCR y rol `CONTADORA`
-    siguen pendientes de Julio/Dirección.** No se inventaron: los históricos
-    quedaron `total_con_iva = total` (o `NULL` si los recreó un candado), los
-    materiales `SIN_FECHA_CONTEO` y no existe vista de valoración especulativa.
+9. **Circuito HTTP cerrado.** El Custodio, el router y la ventanilla de pagos
+   están implementados; solo falta el formulario del panel y el login de
+   usuario.
+10. **Decisiones de negocio cerradas; quedan datos operativos.** IVA histórico,
+    fecha de conteo, valoración/DSCR, rol `CONTADORA`, reembolso y nota de
+    crédito ya tienen decisión. Falta que Julio/Contadora carguen las tasas,
+    que Bodega ejecute el conteo físico y que se validen con la operación real.
 
 > **Repositorio: solo local (ratificado 2026-11-08).** El código vivirá en el
 > VPS; GitHub no es requisito para avanzar. Los commits locales en `orminorth/`
@@ -136,13 +156,13 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **Definir con Julio/Dirección la regla de reembolso** para anular una orden
-   con cobros activos. Hoy el Gate devuelve `PENDING_JULIO_APPROVAL` y, al
-   aprobar sin regla, responde `REFUND_RULE_NOT_CONFIRMED` sin anular.
-2. **Implementar el POST de pagos/abonos posteriores** cuando se definan
-   abono parcial, validación de saldo y permisos.
-3. **Confirmar con Julio/Dirección:** IVA histórico de la orden #9, fecha de
-   conteo, fórmula de valoración 10 años/DSCR y rol `CONTADORA`.
+1. **Cargar las tasas financieras** en `finanzas.parametros_contables`
+   (`wacc_anual_pct`, `crecimiento_anual_pct`, `participacion_trabajadores_pct`,
+   `impuesto_renta_pct`, `dscr_minimo_banco`) para activar valoración/DSCR.
+2. **Ejecutar el conteo físico** de los 5 materiales y registrar la fecha; hoy
+   siguen `SIN_FECHA_CONTEO`.
+3. **Agregar el formulario de pagos** en la vista de Secretaría y el login de
+   usuario antes de exponer el panel a Internet.
 4. **Dashboard V2 aprobado por Julio (2026-11-08).** La captura de referencia es
    `.agents/evidencias/panel_horminor_dashboard_v2_dark_2026-11-08.png`; el
    ángulo comercial es **372 m³ vendidos de 120,000 m³ (0.31%)** en El Coca.
@@ -199,7 +219,11 @@ scripts de candado.
 | 35 | **IVA y COBRO inicial en la transacción de la orden** | `crear_orden` valida el abono contra el bruto y escribe orden + `payments` juntos: si falla el pago, no queda una venta contada como cobrada. El router no inserta pagos por su cuenta. Alternativa descartada: un segundo `INSERT` desde el endpoint, que dejaba ventas huérfanas si fallaba |
 | 36 | **El pago inicial de una compra va en un asiento `SUPPLIER_PAYMENT` separado** | Si el pago se asentara dentro de `PURCHASE`, corregir el pago con testigo revertiría también la compra. Separado, cada documento tiene su propia reversa y su propio testigo |
 | 37 | **Corrección con testigo limitada al asiento vigente y a compras de servicio de una línea** | Solo se revierte el asiento sin reversa previa (evita duplicar el ajuste) y una compra con inventario o varias líneas exige nota de crédito: redistribuir stock o costos desde una cabecera sería inventar datos |
-| 38 | **Valoración 10 años/DSCR y anulación con cobros quedan `PENDIENTE`** | El PDR no fija la fórmula de valoración ni la regla de reembolso. El Gate devuelve `VALUATION_FORMULA_NOT_CONFIRMED`, `DSCR_DEFINITION_NOT_CONFIRMED` y `REFUND_RULE_NOT_CONFIRMED` en lugar de calcular una cifra inventada |
+| 38 | **Valoración/DSCR parametrizados y anulación con modos** | Si faltan tasas en `finanzas.parametros_contables`, el Gate devuelve la foto real y `UNCONFIRMED_FINANCIAL_RATES`; si existen, calcula DCF/DSCR. La anulación con cobros exige `modo_resolucion_cobro` y no consume la aprobación si falta |
+| 39 | **Router HTTP con tokens de servicio y roles oficiales** | `CUSTODIO_TOKEN_SUPERADMIN/CONTADORA/SECRETARIA/BODEGA/CHOFER` + `X-Actor-Id` + `X-Channel`; el rol nunca viaja en el JSON. `SECRETARIA` y `CONTADORA` cobran; `BODEGA` y `CHOFER` no |
+| 40 | **Pagos con split 1103/2102** | Abono parcial permitido. Si `monto > saldo` y `es_anticipo=false` → `PAYMENT_EXCEEDS_PENDING_BALANCE`; si `es_anticipo=true`, la deuda va a `1103` y el excedente a `2102`, con `saldo_a_favor` |
+| 41 | **Reembolso con `modo_resolucion_cobro`** | `CONVERTIR_A_ANTICIPO_CLIENTE` reclasifica a `2102`; `DEVOLVER_DINERO_CAJA_O_BANCO` inserta `REEMBOLSO_CAJA` y borra lógicamente el cobro original |
+| 42 | **IVA por defecto apagado** | `066` deja `finanzas.iva_default_aplica=false`. Las ventas nuevas solo llevan IVA si el contrato envía `aplica_iva=true`; el panel y los candados lo envían, así que la cartera verificada de $55,043.60 no cambia |
 
 ## Riesgos abiertos
 

@@ -492,14 +492,14 @@ async def corregir_compra(
     )
     if len(items) > 1:
         raise ErrorTestigo(
-            "SCHEMA_VALIDATION_FAILED",
-            "la compra tiene varias lineas de detalle; use una nota de credito",
+            "PURCHASE_REQUIRES_CREDIT_NOTE",
+            "la compra tiene varias lineas de detalle; registre una nota de credito",
         )
     item_unico = items[0] if items else None
     if item_unico is not None and item_unico["material_id"] is not None:
         raise ErrorTestigo(
-            "SCHEMA_VALIDATION_FAILED",
-            "la compra tiene material inventariable; use una nota de credito",
+            "PURCHASE_REQUIRES_CREDIT_NOTE",
+            "la compra tiene material inventariable; registre una nota de credito",
         )
 
     item_costo = None
@@ -535,8 +535,8 @@ async def corregir_compra(
     cuentas_debito = {fila["account_slug"] for fila in debitos}
     if len(cuentas_debito) > 1:
         raise ErrorTestigo(
-            "SCHEMA_VALIDATION_FAILED",
-            "la compra tiene varios renglones de debito; use una nota de credito",
+            "PURCHASE_REQUIRES_CREDIT_NOTE",
+            "la compra tiene varios renglones de debito; registre una nota de credito",
         )
     cuenta_debito = (
         changes.get("nuevo_account_slug")

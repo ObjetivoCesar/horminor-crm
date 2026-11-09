@@ -112,6 +112,7 @@ async def main(provisional: bool) -> int:
                 forma_pago="FIADO",
                 notas=TAG,
                 creada_por="hito1_lock_test",
+                aplica_iva=True,
                 permitir_receta_provisional=provisional,
             ),
         )
@@ -125,6 +126,7 @@ async def main(provisional: bool) -> int:
                 forma_pago="FIADO",
                 notas=TAG,
                 creada_por="hito1_lock_test",
+                aplica_iva=True,
                 permitir_receta_provisional=provisional,
             ),
         )

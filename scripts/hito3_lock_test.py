@@ -216,6 +216,7 @@ async def main() -> int:
                 forma_pago="FIADO",
                 notas=TAG,
                 creada_por="hito3_lock_test",
+                aplica_iva=True,
             ),
         )
         print(

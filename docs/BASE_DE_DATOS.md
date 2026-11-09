@@ -77,10 +77,13 @@ Variables relevantes (`services/core-api/app/settings.py` y `.env.example`):
 | `062_rebrand_horminor.sql` | 2026-11-08 21:35 |
 | `063_custodio_core.sql` | 2026-11-09 12:50 |
 | `064_custodio_views.sql` | 2026-11-09 12:50 |
+| `065_http_gate_v44.sql` | 2026-11-09 15:35 |
+| `066_iva_default_v44.sql` | 2026-11-09 16:05 |
 
-No hay migraciones pendientes: son **11 de 11**. La v4.3 del Custodio se
-aplicó después de probarla en el clon `orminorth_v43` y de guardar el respaldo
-`.agents/evidencias/pre_v43_orminorth.dump`.
+No hay migraciones pendientes: son **13 de 13**. La v4.4.0 del router HTTP se
+aplicó después de probarla en el clon `orminorth_v43`; agrega parámetros
+`system_settings` y apaga el IVA por defecto (`finanzas.iva_default_aplica =
+false`). No toca datos de negocio ni órdenes existentes.
 
 ---
 
@@ -215,44 +218,48 @@ calcula:
 
 ### 4.4 Estado real del código hoy
 
-El código de ventas, caja, dashboard, kardex y el Custodio **ya consume v4.3**
-desde el 2026-11-09. Lo que sigue pendiente es el endpoint HTTP de pagos
-posteriores y exponer el Gate por un router:
+El código de ventas, caja, dashboard, kardex y el Custodio **ya consume v4.4**
+desde el 2026-11-09. El circuito HTTP está cerrado con autenticación de
+servicio y reglas oficiales:
 
-| Pieza | Base v4.3 | Código actual | Qué falta |
+| Pieza | Base v4.4 | Código actual | Qué falta |
 |---|---|---|---|
-| IVA en la orden | Columnas y CHECK listos | `crear_orden` lee `finanzas.iva_default_aplica` y el `iva_pct` de `concrete_recipes`, y escribe `aplica_iva`, `iva_pct`, `iva_monto` y `total_con_iva` | Nada para ventas nuevas |
+| IVA en la orden | Columnas y CHECK listos | `crear_orden` lee `finanzas.iva_default_aplica` y el `iva_pct` de `concrete_recipes`, y escribe `aplica_iva`, `iva_pct`, `iva_monto` y `total_con_iva`; los históricos no se backfillean | Nada para ventas nuevas |
 | COBRO automático de contado | `payments` acepta `COBRO`, bolsa y cuenta | `crear_orden` inserta el `COBRO` de `EFECTIVO`/`TRANSFERENCIA` y el abono inicial de `ABONO` en la misma transacción; `FIADO` no genera cobro | Nada para ventas nuevas |
-| Endpoint de pagos/abonos | Tabla lista | No existe `POST /api/v1/secretaria/pagos` | Implementar router + reglas de abono parcial y permisos |
-| Cierre de caja | `payments.deleted_at` disponible | `_movimientos()` filtra `deleted_at`; `ventas_*` usa `total_con_iva` con fallback a `total` | Nada; sigue sin POST de pagos |
+| Endpoint de pagos/abonos | Tabla lista | `POST /api/v1/secretaria/pagos` acepta `COBRO`, `GASTO_CAJA_CHICA` y `GASTO_BANCARIO`; valida saldo, abono parcial y anticipo; es idempotente por `request_id`/`Idempotency-Key` | Formulario del panel (opcional) |
+| Cierre de caja | `payments.deleted_at` disponible | `_movimientos()` filtra `deleted_at`; `ventas_*` usa `total_con_iva` con fallback a `total` | Nada |
 | Dashboard | `v_cliente_saldo` ya usa bruto y filtra borrados | `hero_kpis()` y `flujo_operativo_mensual()` filtran `deleted_at`; `fiado_hoy` usa el bruto | Nada |
-| Kardex | `ANULACION`, `costo_unitario_snapshot` y promedio disponibles | `kardex.py` calcula promedio ponderado en `COMPRA`, guarda `costo_unitario_snapshot` en todos los movimientos y anula `TEORICO` con una fila `ANULACION` idempotente; las correcciones físicas usan `AJUSTE` | Nada para el flujo actual; la recepción de compras del Gate ya usa el kardex |
-| Gate y testigo | Tablas, triggers y contratos v1.3.0 listos | `app/custodio/` implementa 14 intents, 9 consultas, idempotencia por `request_id` + SHA-256, partida doble, reversa del asiento vigente y testigo inmutable | Exponerlo por HTTP cuando exista autenticación |
+| Kardex | `ANULACION`, `costo_unitario_snapshot` y promedio disponibles | `kardex.py` calcula promedio ponderado en `COMPRA`, guarda `costo_unitario_snapshot` en todos los movimientos y anula `TEORICO` con una fila `ANULACION` idempotente; las correcciones físicas usan `AJUSTE` | Nada |
+| Gate y testigo | Tablas, triggers y contratos v1.3.0 listos | `app/custodio/` implementa 14 intents, 9 consultas, idempotencia por `request_id` + SHA-256, partida doble, reversa del asiento vigente y testigo inmutable | Nada; expuesto por `/api/v1/custodio/*` |
 
 **Consecuencia verificada hoy:** las 4 órdenes reales son la #9 histórica
-(`total` y `total_con_iva` `NULL`, FIADO) y las #49/#50/#51 recreadas por los
-candados con el código nuevo. Las tres ya tienen IVA 15 % y bruto:
+(`total` y `total_con_iva` `NULL`, FIADO) y las #55/#56/#57 recreadas por los
+candados con el código nuevo. Las tres tienen IVA 15 % explícito y bruto:
 **$43,424.00**, **$9,448.40** y **$2,171.20**. La cartera sigue en
-**55,043.60 / 2 clientes / fiado 55,043.60** porque el candado del Hito 1
-también valoriza las órdenes de prueba con IVA. El fallback de la vista queda
+**55,043.60 / 2 clientes / fiado 55,043.60**. El fallback de la vista queda
 solo para la #9 y para cualquier orden histórica sin bruto. Los costos de
 materiales siguen en **8.2000 / 14.0000 / 16.5000 / 3.8000** y el stock en
 **3,500 / 450 / 550 / 600**; ni el kardex ni el Custodio alteraron datos reales.
 
-### 4.5 Qué falta para registrar ingresos desde la aplicación
+### 4.5 Cómo se registra un ingreso hoy
 
-1. **Endpoint** `POST /api/v1/secretaria/pagos` (o `/cobros`) con:
+1. **Endpoint:** `POST /api/v1/secretaria/pagos` con
+   `tipo_movimiento` (`COBRO`, `GASTO_CAJA_CHICA`, `GASTO_BANCARIO`),
    `cliente_id`, `order_id` (opcional), `fecha`, `metodo`, `bolsa`, `monto`,
-   `referencia` y `es_anticipo`.
-2. **Regla de abono parcial:** confirmar si se permite y si se valida contra
-   `v_cliente_saldo` antes de insertar.
-3. **Formulario** en la vista de Secretaría para capturarlo.
-4. **Permisos:** hoy `/api/v1/secretaria/*` no tiene login.
+   `referencia`, `descripcion` y `es_anticipo`.
+2. **Idempotencia:** `request_id` es opcional y se genera si falta; para
+   reintentos seguros se reenvía el mismo `request_id` o `Idempotency-Key`.
+3. **Saldo:** si `monto > saldo_pendiente` y `es_anticipo=false`, el Gate
+   rechaza con `PAYMENT_EXCEEDS_PENDING_BALANCE`. Si `es_anticipo=true`, la
+   parte que cubre la deuda va a `1103` y el excedente a `2102`.
+4. **Roles:** `SUPERADMIN`, `CONTADORA` y `SECRETARIA` pueden cobrar;
+   `BODEGA` y `CHOFER` no.
+5. **Autenticación:** tokens de servicio `CUSTODIO_TOKEN_*` + `X-Actor-Id` +
+   `X-Channel`. No es login de usuario final.
 
-Sin esas definiciones no se implementa el endpoint, para no inventar reglas de
-cobro. La regla de contado/abono inicial/fiado ya está aplicada en
-`crear_orden` (refactor 2026-11-09): la venta de contado y el abono inicial
-generan su `COBRO` en la misma transacción; el fiado no genera cobro.
+La regla de contado/abono inicial/fiado sigue aplicada en `crear_orden`:
+la venta de contado y el abono inicial generan su `COBRO` en la misma
+transacción; el fiado no genera cobro.
 
 ---
 
@@ -294,34 +301,38 @@ sí se puede probar:
    persiste y existe un respaldo manual previo a v4.3
    (`.agents/evidencias/pre_v43_orminorth.dump`), pero no hay política
    automática de backup/restauración ni retención.
-3. **Código pendiente solo en el POST de pagos/abonos y el router del Gate.**
-   `crear_orden`, caja, dashboard, kardex y el Custodio ya consumen v4.3;
-   `gate.py`, `witness.py`, `ledger.py` y `catalog_hygiene.py` existen y pasan
-   su check de integración. La tabla completa está en la sección 4.4.
-4. **Sin endpoint de pagos/abonos** (sección 4.5). Mientras no exista, un cobro
-   posterior solo se puede insertar por SQL.
+3. **Sin login de usuario final.** El router del Custodio usa tokens de
+   servicio `CUSTODIO_TOKEN_*`; no hay login de Secretaría/Superadmin. No
+   exponer el panel a Internet sin autenticación de usuario.
+4. **Sin formulario de pagos en el panel.** El endpoint
+   `POST /api/v1/secretaria/pagos` existe y está probado, pero la vista de
+   Secretaría todavía no tiene el formulario para capturarlo.
 5. **Credenciales por defecto** (`orminorth`/`orminorth`). Antes de producción
    hay que cambiarlas en `.env`.
 6. **`payments` vacía** (0 filas) y `cash_closures` vacía (0 filas). No es un
    error: las 3 órdenes reales de los candados son FIADO y el fiado no genera
    `COBRO`. El camino de contado/abono se verificó en el clon
    `orminorth_v43` con `scripts/refactor_v43_check.py`.
-7. **IVA histórico sin confirmar.** La orden #9 (histórica) sigue con
-   `total`/`total_con_iva` `NULL`; las órdenes #49/#50/#51 ya se crearon con IVA
-   15 % y bruto. Julio debe decidir si la #9 y cualquier orden anterior se
-   backfillean al 15 % o quedan sin IVA.
+7. **IVA histórico resuelto.** La orden #9 (histórica) sigue con
+   `total`/`total_con_iva` `NULL`; las órdenes #55/#56/#57 se crearon con IVA
+   15 % explícito. No se backfillea ninguna orden anterior:
+   `finanzas.iva_historico_pct = null` y `finanzas.iva_default_aplica = false`.
+   Las ventas nuevas solo llevan IVA si el contrato envía `aplica_iva=true`.
 8. **Fecha de conteo sin confirmar.** `materials.ultimo_levantamiento_at` sigue
    `NULL` en los 5 materiales; por eso `v_stock_proyectado` no aplica consumos
    teóricos y marca `SIN_FECHA_CONTEO`.
-9. **Fórmula de valoración/DSCR sin confirmar.** El PDR describe escenarios y
-   parámetros, pero no la fórmula completa; no se creó una vista especulativa
+9. **Valoración/DSCR parametrizados.** Leen `finanzas.parametros_contables`.
+   Si las tasas están `null`, devuelven la foto real y
+   `UNCONFIRMED_FINANCIAL_RATES`; no se inventa una vista especulativa
    `v_valoracion_proyeccion_10y`.
-10. **Rol `CONTADORA` inexistente.** La base no tiene ese rol; falta decidir si
-    se agrega o si el Custodio queda solo en `SUPERADMIN`.
-11. **Regla de reembolso y nota de crédito sin confirmar.** Una anulación con
-    cobros activos queda en `PENDING_JULIO_APPROVAL` y, sin regla, responde
-    `REFUND_RULE_NOT_CONFIRMED`. Una compra con inventario o varias líneas no
-    se corrige por testigo: exige una nota de crédito que aún no está definida.
+10. **Rol `CONTADORA` habilitado.** `contabilidad.rol_contadora` queda activo;
+    consulta reportes, ejecuta apertura/depreciación y cuentas, pero no aprueba
+    solicitudes. `SECRETARIA` puede crear rubros solo si
+    `secretaria_can_create_categories=true`.
+11. **Reembolso y nota de crédito implementados.** Una anulación con cobros
+    activos exige `modo_resolucion_cobro`; sin él la aprobación sigue
+    `PENDING`. Una compra con inventario o varias líneas se rechaza con
+    `PURCHASE_REQUIRES_CREDIT_NOTE` (Fase 1).
 
 ---
 
@@ -368,7 +379,7 @@ SELECT version();
 → PostgreSQL 15.19 on x86_64-pc-linux-musl
 
 SELECT version FROM schema_migrations ORDER BY version;
-→ 11 filas: 001_init … 064_custodio_views
+→ 13 filas: 001_init … 066_iva_default_v44
 → 063 y 064 aplicadas el 2026-11-09 12:50
 
 SELECT count(*) FROM information_schema.tables
@@ -408,7 +419,7 @@ SELECT ordinal_position, column_name FROM information_schema.columns
 → 11 columnas: las 8 originales + ruc, credit_limit_usd, saldo_a_favor
 
 docker compose run --rm --no-deps core-api python -m pytest /app/tests -q
-→ 223 passed, EXIT=0
+→ 242 passed, EXIT=0
 
 docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py
 → [CANDADO CERRADO], 235 movimientos de kardex, EXIT=0
@@ -435,14 +446,21 @@ Kardex v4.3 en el clon orminorth_v43
 → todos los movimientos de prueba tienen `costo_unitario_snapshot`
 → ROLLBACK total: 0 materiales y 0 movimientos de prueba al terminar
 
-Custodio v4.3 en el clon orminorth_v43
-→ scripts/custodio_v43_check.py: CUSTODIO V4.3: OK
-→ 14/14 intents de mutación · 23 solicitudes (17 ACCEPT, 4 REJECT,
-   2 PENDING) · 8 testigos (6 ACCEPT/2 REJECT) · 2 aprobaciones · 9 consultas
+Custodio v4.4 en el clon orminorth_v43
+→ scripts/custodio_v43_check.py: CUSTODIO V4.4: OK
+→ 14/14 intents de mutación · 30 solicitudes (21 ACCEPT, 6 REJECT,
+   3 PENDING) · 8 testigos (6 ACCEPT/2 REJECT) · 4 aprobaciones · 9 consultas
 → asiento de venta balanceado (CAJA/CxC + IVA + ingreso), cobro, gasto,
    compra a crédito con recepción parcial/completa, pago a proveedor,
    corrección con testigo, depreciación, cuota de préstamo, anulación con
-   y sin cobros, apertura de saldos y catálogo contable
+   y sin cobros, anticipo con split 1103/2102, apertura de saldos y catálogo
+→ ROLLBACK verificado: 17 tablas con el mismo conteo que antes
+
+HTTP v4.4 en el clon orminorth_v43
+→ scripts/http_gate_v44_check.py: HTTP GATE V4.4: OK
+→ catalog 26 cuentas, mutations, queries, COBRO parcial, anticipo 200,
+   gasto de caja chica, replay 200, hash distinto 409, sobrepago 422 y
+   BODEGA sin permiso 403
 → ROLLBACK verificado: 17 tablas con el mismo conteo que antes
 
 Pruebas SQL en el clon orminorth_v43
@@ -470,6 +488,9 @@ Contratos JSON v1.3.0
 - `db/migrations/060_modulos_3_4_sandbox.sql` — columnas M3/M4 y `sandbox_outbox`.
 - `db/migrations/063_custodio_core.sql` — núcleo v4.3: IVA, pagos, plan de cuentas, compras, activos, pasivos, ledger y testigo.
 - `db/migrations/064_custodio_views.sql` — `v_cliente_saldo` v4.3, stock proyectado, balance y estado de resultados.
+- `db/migrations/065_http_gate_v44.sql` — parámetros v4.4.0 del router HTTP, pagos, reembolso y rol CONTADORA.
+- `db/migrations/066_iva_default_v44.sql` — apaga el IVA por defecto; las ventas nuevas lo piden explícitamente.
+- `docs/v4.4.0_HTTP_GATE.md` — contrato HTTP, tokens, pagos y decisiones oficiales.
 - `.agents/skills/custodio-bd-horminor/contracts/` — contratos JSON v1.3.0 del Gate.
 - `services/core-api/app/db.py` — runner de migraciones.
 - `services/core-api/app/settings.py` — variables de conexión.

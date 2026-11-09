@@ -3,10 +3,11 @@
 Última actualización: 2026-11-09
 Estado: **Hitos 1 y 3 cerrados; el Hito 3 en modo SANDBOX. Módulos 3
 (Secretaría + Caja) y 4 (Dashboard de Julio y Ases) construidos y verificados
-localmente. La especificación del Custodio v4.3 (`063`/`064`) está aplicada en
-la base real y el código de ventas, caja, dashboard, kardex y el Custodio ya la
-consume; queda pendiente el endpoint HTTP de pagos/abonos posteriores.** El
-Centro de Configuración Superadmin opera sin
+localmente. La especificación del Custodio v4.4.0 (`063`/`064`/`065`/`066`)
+está aplicada en la base real y el circuito HTTP está cerrado: Gate, pagos,
+anticipos, reembolsos y rol CONTADORA. Quedan pendientes operativos (tasas
+financieras, conteo físico, formulario del panel, login de usuario y backups),
+no decisiones de negocio.** El Centro de Configuración Superadmin opera sin
 login en esta etapa. Las credenciales reales y los teléfonos ya no bloquean: se
 cargan en caliente y se apaga el switch SANDBOX.
 
@@ -200,22 +201,21 @@ producción sin tocar el pipeline.
 | # | Tema | Decisión vigente | Implementación |
 |---|---|---|---|
 | E1 | Cobro de contado | Cada venta `EFECTIVO`, `TRANSFERENCIA` o `ABONO` inicial genera un `payments` tipo `COBRO` por el total con IVA. `FIADO` no genera `COBRO`: queda como deuda | **Aplicado** en `crear_orden` (refactor 2026-11-09); verificado en el clon con `refactor_v43_check.py` |
-| E2 | IVA | 15 % por defecto para ventas nuevas, tomado de `concrete_recipes.iva_pct`. Saldo, cupo y cartera usan `total_con_iva` (bruto) | `063` agrega columnas y CHECK; `crear_orden` escribe `aplica_iva`, `iva_pct`, `iva_monto` y `total_con_iva`; `064` usa `COALESCE(total_con_iva, total)` para históricos |
+| E2 | IVA | Históricos sin backfill. Las ventas nuevas solo llevan IVA si el contrato envía `aplica_iva=true`; el panel lo envía. Saldo, cupo y cartera usan `total_con_iva` cuando existe | `066` apaga `finanzas.iva_default_aplica`; `crear_orden` escribe `aplica_iva`, `iva_pct`, `iva_monto` y `total_con_iva`; `064` usa `COALESCE(total_con_iva, total)` para históricos |
 | E3 | Costo de inventario | Promedio ponderado para COGS y valor de inventario | `finanzas.costo_inventario_metodo = "PROMEDIO_PONDERADO"`; **aplicado** en `kardex.py` (promedio en `COMPRA`, snapshot en todos los movimientos); la recepción de compras del Gate usa el mismo kardex |
 | E4 | Datos maestros | El Gate puede crear proveedores, activos fijos y pasivos bancarios | **Implementado**: `CREATE_SUPPLIER`, `CREATE_FIXED_ASSET` y `CREATE_FINANCIAL_LIABILITY` en `gate.py`, verificados en `custodio_v43_check.py` |
 | E5 | Fecha de conteo | No se inventa: `materials.ultimo_levantamiento_at` queda `NULL` hasta que Julio entregue la fecha real | `063` la deja nullable; `v_stock_proyectado` marca `SIN_FECHA_CONTEO` |
 
-### D2. Pendientes que siguen abiertos
+### D2. Pendientes operativos (las decisiones de negocio ya están cerradas)
 
 | # | Tema | Qué falta | Dueño |
 |---|---|---|---|
-| P1 | IVA histórico | Confirmar si la orden #9 (y cualquier orden anterior al 2026-11-09) se backfillea al 15 % o queda sin IVA. Las órdenes nuevas ya nacen con bruto | Julio |
-| P2 | Fecha de conteo | Entregar la fecha del último levantamiento físico de los 5 materiales | Julio |
-| P3 | Valoración 10 años / DSCR | El PDR trae escenarios y parámetros, pero no la fórmula completa; no se creó vista especulativa | Julio / Dirección |
-| P4 | Rol `CONTADORA` | Decidir si se agrega a la base o si el Custodio queda solo en `SUPERADMIN` | Julio / Dirección |
-| P5 | Endpoint de pagos/abonos | El Custodio ya está implementado; falta decidir abono parcial, validación de saldo y permisos, y exponer el POST | Julio / Dirección |
-| P6 | Regla de reembolso | Definir qué pasa si se anula una orden con cobros activos. Hoy queda `PENDING_JULIO_APPROVAL` y, sin regla, responde `REFUND_RULE_NOT_CONFIRMED` | Julio / Dirección |
-| P7 | Nota de crédito de compras | Una compra con inventario o varias líneas no se corrige por testigo; falta el flujo formal de nota de crédito | Julio / Dirección |
+| P1 | Tasas financieras | Cargar `wacc_anual_pct`, `crecimiento_anual_pct`, `participacion_trabajadores_pct`, `impuesto_renta_pct` y `dscr_minimo_banco` en `finanzas.parametros_contables`. Mientras sigan `null`, valoración/DSCR devuelven la foto real y `UNCONFIRMED_FINANCIAL_RATES` | Julio / Contadora |
+| P2 | Conteo físico | Ejecutar el levantamiento de los 5 materiales. Mientras no exista fecha, `v_stock_proyectado` marca `SIN_FECHA_CONTEO` y el Gate advierte; no bloquea la venta | Julio / Bodega |
+| P3 | Formulario de pagos en el panel | El endpoint `POST /api/v1/secretaria/pagos` existe y está probado; falta el formulario de la vista de Secretaría | Desarrollo |
+| P4 | Login de usuario | El router usa tokens de servicio `CUSTODIO_TOKEN_*`; falta login de Secretaría/Superadmin antes de exponer el panel a Internet | Desarrollo |
+| P5 | Backups y VPS | `pg_dump` diario del contenedor `orminorth-postgres` y política de retención; custodio operativo asignado a la agencia | César / Nohan |
+| P6 | Nota de crédito Fase 2 | El intent dedicado `REGISTER_PURCHASE_CREDIT_NOTE` queda agendado si Dirección lo requiere; Fase 1 ya rechaza con `PURCHASE_REQUIRES_CREDIT_NOTE` | Julio / Dirección |
 
 ### D3. Decisiones de implementación del Custodio (2026-11-09)
 
@@ -223,8 +223,8 @@ producción sin tocar el pipeline.
 |---|---|---|
 | I1 | El pago inicial de una compra va en un asiento `SUPPLIER_PAYMENT` separado del asiento `PURCHASE` | Corregir el pago con testigo revierte solo el pago; la compra conserva su asiento y su trazabilidad |
 | I2 | La corrección con testigo revierte solo el asiento vigente (sin reversa previa) | Revertir todo el histórico del documento duplicaba el ajuste en una segunda corrección |
-| I3 | Una compra con inventario o varias líneas no se corrige por testigo | La cabecera no redistribuye stock ni costos; hacerlo sería inventar la distribución. Exige nota de crédito |
-| I4 | Valoración 10 años, DSCR y anulación con cobros devuelven `PENDIENTE` | El PDR no fija esas fórmulas/reglas; el Gate reporta el código de pendiente en lugar de calcular una cifra inventada |
+| I3 | Una compra con inventario o varias líneas no se corrige por testigo | La cabecera no redistribuye stock ni costos; hacerlo sería inventar la distribución. Exige nota de crédito (`PURCHASE_REQUIRES_CREDIT_NOTE`) |
+| I4 | Valoración/DSCR leen `finanzas.parametros_contables`; anulación con cobros exige `modo_resolucion_cobro` | Si faltan tasas, devuelven la foto real y `UNCONFIRMED_FINANCIAL_RATES`; si faltan cobros, no se consume la aprobación. No se inventan fórmulas ni reembolsos |
 
 ---
 

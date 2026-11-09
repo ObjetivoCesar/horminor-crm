@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .db import create_pool, run_migrations
+from .http_gate import custodio_router, payments_router
 from .m1_whatsapp.router import router as whatsapp_router
 from .m1_whatsapp.runtime import WhatsAppRuntime, construir_runtime
 from .m2_planta import ErrorPlanta
@@ -102,6 +103,8 @@ app.include_router(orders.router)
 app.include_router(whatsapp_router)
 app.include_router(superadmin_router)
 app.include_router(secretaria_router)
+app.include_router(custodio_router)
+app.include_router(payments_router)
 app.include_router(dashboard_router)
 app.include_router(sentinel_router)
 app.include_router(panel_router)

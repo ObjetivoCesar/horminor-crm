@@ -52,51 +52,105 @@ from .contracts import (
 CONTRACT_VERSION = "1.3.0"
 UUID_NULO = "00000000-0000-4000-8000-000000000000"
 
-ROLES = ("SUPERADMIN", "CAJA_SECRETARIA", "BODEGA_PLANTA", "SYSTEM_CRON")
+ROLES = (
+    "SUPERADMIN",
+    "CONTADORA",
+    "SECRETARIA",
+    "BODEGA",
+    "CHOFER",
+    "CAJA_SECRETARIA",
+    "BODEGA_PLANTA",
+    "SYSTEM_CRON",
+)
 
 PERMISOS_MUTACION: dict[str, set[str]] = {
-    "CREATE_CONCRETE_ORDER": {"SUPERADMIN", "CAJA_SECRETARIA"},
-    "CANCEL_CONCRETE_ORDER": {"SUPERADMIN", "CAJA_SECRETARIA"},
-    "REGISTER_CLIENT_PAYMENT": {"SUPERADMIN", "CAJA_SECRETARIA"},
-    "REGISTER_PURCHASE": {"SUPERADMIN", "BODEGA_PLANTA"},
-    "RECEIVE_PURCHASED_MATERIAL": {"SUPERADMIN", "BODEGA_PLANTA"},
-    "REGISTER_EXPENSE": {"SUPERADMIN", "CAJA_SECRETARIA"},
-    "PAY_SUPPLIER_DEBT": {"SUPERADMIN"},
-    "PAY_BANK_LOAN_INSTALLMENT": {"SUPERADMIN"},
-    "RUN_MONTHLY_DEPRECIATION": {"SUPERADMIN", "SYSTEM_CRON"},
-    "SET_OPENING_BALANCES": {"SUPERADMIN"},
+    "CREATE_CONCRETE_ORDER": {
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "CAJA_SECRETARIA",
+    },
+    "CANCEL_CONCRETE_ORDER": {
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "CAJA_SECRETARIA",
+    },
+    "REGISTER_CLIENT_PAYMENT": {
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "CAJA_SECRETARIA",
+    },
+    "REGISTER_PURCHASE": {"SUPERADMIN", "CONTADORA", "BODEGA", "BODEGA_PLANTA"},
+    "RECEIVE_PURCHASED_MATERIAL": {"SUPERADMIN", "BODEGA", "BODEGA_PLANTA"},
+    "REGISTER_EXPENSE": {
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "CAJA_SECRETARIA",
+    },
+    "PAY_SUPPLIER_DEBT": {"SUPERADMIN", "CONTADORA"},
+    "PAY_BANK_LOAN_INSTALLMENT": {"SUPERADMIN", "CONTADORA"},
+    "RUN_MONTHLY_DEPRECIATION": {"SUPERADMIN", "CONTADORA", "SYSTEM_CRON"},
+    "SET_OPENING_BALANCES": {"SUPERADMIN", "CONTADORA"},
     "RESOLVE_APPROVAL_REQUEST": {"SUPERADMIN"},
-    "CREATE_SUPPLIER": {"SUPERADMIN", "BODEGA_PLANTA"},
-    "CREATE_FIXED_ASSET": {"SUPERADMIN"},
-    "CREATE_FINANCIAL_LIABILITY": {"SUPERADMIN"},
+    "CREATE_SUPPLIER": {"SUPERADMIN", "CONTADORA", "BODEGA", "BODEGA_PLANTA"},
+    "CREATE_FIXED_ASSET": {"SUPERADMIN", "CONTADORA"},
+    "CREATE_FINANCIAL_LIABILITY": {"SUPERADMIN", "CONTADORA"},
 }
 
 PERMISOS_CONSULTA: dict[str, set[str]] = {
-    "GET_CLIENT_BALANCE": {"SUPERADMIN", "CAJA_SECRETARIA"},
-    "GET_DAILY_CASH_CLOSURE": {"SUPERADMIN", "CAJA_SECRETARIA"},
-    "GET_ACCOUNTS_PAYABLE": {"SUPERADMIN", "SYSTEM_CRON"},
+    "GET_CLIENT_BALANCE": {
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "CAJA_SECRETARIA",
+    },
+    "GET_DAILY_CASH_CLOSURE": {
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "CAJA_SECRETARIA",
+    },
+    "GET_ACCOUNTS_PAYABLE": {"SUPERADMIN", "CONTADORA", "SYSTEM_CRON"},
     "GET_INVENTORY_AND_ALERTS": {
         "SUPERADMIN",
-        "CAJA_SECRETARIA",
+        "CONTADORA",
+        "SECRETARIA",
+        "BODEGA",
         "BODEGA_PLANTA",
+        "CAJA_SECRETARIA",
         "SYSTEM_CRON",
     },
     "GET_DISPATCH_TIMELINE": {
         "SUPERADMIN",
-        "CAJA_SECRETARIA",
+        "CONTADORA",
+        "SECRETARIA",
+        "BODEGA",
         "BODEGA_PLANTA",
+        "CAJA_SECRETARIA",
     },
-    "GET_INCOME_STATEMENT_PL": {"SUPERADMIN", "SYSTEM_CRON"},
-    "GET_BALANCE_SHEET_REALTIME": {"SUPERADMIN", "SYSTEM_CRON"},
-    "GET_VALUATION_AND_10Y_PROJECTION": {"SUPERADMIN", "SYSTEM_CRON"},
-    "GET_DEBT_CAPACITY_DSCR": {"SUPERADMIN", "SYSTEM_CRON"},
+    "GET_INCOME_STATEMENT_PL": {"SUPERADMIN", "CONTADORA", "SYSTEM_CRON"},
+    "GET_BALANCE_SHEET_REALTIME": {"SUPERADMIN", "CONTADORA", "SYSTEM_CRON"},
+    "GET_VALUATION_AND_10Y_PROJECTION": {
+        "SUPERADMIN",
+        "CONTADORA",
+        "SYSTEM_CRON",
+    },
+    "GET_DEBT_CAPACITY_DSCR": {"SUPERADMIN", "CONTADORA", "SYSTEM_CRON"},
 }
 
 PERMISOS_TESTIGO: dict[str, set[str]] = {
-    "CORRECT_MOVEMENT_WITH_WITNESS": {"SUPERADMIN", "CAJA_SECRETARIA"},
-    "CREATE_ACCOUNTING_CATEGORY": {"SUPERADMIN"},
-    "RENAME_ACCOUNTING_CATEGORY": {"SUPERADMIN"},
-    "MERGE_ACCOUNTING_CATEGORIES": {"SUPERADMIN"},
+    "CORRECT_MOVEMENT_WITH_WITNESS": {
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "CAJA_SECRETARIA",
+    },
+    "CREATE_ACCOUNTING_CATEGORY": {"SUPERADMIN", "CONTADORA", "SECRETARIA"},
+    "RENAME_ACCOUNTING_CATEGORY": {"SUPERADMIN", "CONTADORA"},
+    "MERGE_ACCOUNTING_CATEGORIES": {"SUPERADMIN", "CONTADORA"},
 }
 
 
@@ -257,7 +311,7 @@ def _bolsa_coherente(metodo: str, bolsa: str | None, campo: str) -> str:
         return esperada
     if bolsa != esperada:
         raise RechazoGate(
-            "SCHEMA_VALIDATION_FAILED",
+            "BOLSA_METHOD_MISMATCH",
             {
                 "errores": [
                     f"{campo}: el metodo {metodo} exige {esperada}, no {bolsa}"
@@ -698,11 +752,58 @@ class Gate:
             )
         order_id = payload.get("order_id")
         es_anticipo = bool(payload.get("es_anticipo", False))
-        if es_anticipo and order_id is not None:
+
+        # v4.4.0: reglas de pagos parametrizadas. El default oficial permite
+        # abono parcial y anticipo; el excedente se separa a 2102.
+        cfg = await setting(self.pool, "secretaria.pagos", {}) or {}
+        if not isinstance(cfg, dict):
+            cfg = {}
+        try:
+            monto_minimo = Decimal(str(cfg.get("monto_minimo", "0.01")))
+        except (InvalidOperation, ValueError):
+            monto_minimo = Decimal("0.01")
+        if monto < monto_minimo:
             raise RechazoGate(
                 "SCHEMA_VALIDATION_FAILED",
-                {"errores": ["un anticipo no se asocia a una orden"]},
+                {
+                    "errores": [f"el monto es menor al minimo {monto_minimo}"],
+                    "monto_minimo": float(monto_minimo),
+                },
             )
+        if es_anticipo and not bool(cfg.get("permitir_anticipo", True)):
+            raise RechazoGate(
+                "SCHEMA_VALIDATION_FAILED",
+                {"errores": ["los anticipos no estan habilitados"]},
+            )
+        abono_parcial = bool(cfg.get("abono_parcial", True))
+
+        # Bloquea la fila del cliente para que dos cobros concurrentes no
+        # sobrepasen el saldo. La vista no se puede bloquear; el cliente si.
+        cliente = await conn.fetchrow(
+            "SELECT id::text, nombre FROM clients WHERE id = $1 FOR UPDATE",
+            payload["cliente_id"],
+        )
+        if cliente is None:
+            raise RechazoGate(
+                "MISSING_MASTER_DATA",
+                {"errores": ["el cliente no existe"]},
+            )
+        saldo_cliente = Decimal(
+            str(
+                await conn.fetchval(
+                    """
+                    SELECT COALESCE(saldo_pendiente, 0)
+                      FROM v_cliente_saldo
+                     WHERE id = $1
+                    """,
+                    payload["cliente_id"],
+                )
+                or "0"
+            )
+        )
+
+        parte_cxc = Decimal("0")
+        parte_anticipo = Decimal("0")
         if order_id is not None:
             orden = await conn.fetchrow(
                 """
@@ -735,31 +836,60 @@ class Gate:
                 order_id,
             )
             total = Decimal(str(orden["total_bruto"] or "0"))
-            if Decimal(str(pagado)) + monto > total + Decimal("0.01"):
+            saldo_orden = total - Decimal(str(pagado))
+            if monto > saldo_orden + Decimal("0.01") and not es_anticipo:
+                raise RechazoGate(
+                    "PAYMENT_EXCEEDS_PENDING_BALANCE",
+                    {
+                        "errores": [
+                            "el cobro supera el saldo de la orden; "
+                            "marque es_anticipo=true para el excedente"
+                        ],
+                        "saldo_pendiente": float(max(saldo_orden, Decimal("0"))),
+                        "monto": float(monto),
+                    },
+                )
+            if not abono_parcial and not es_anticipo and monto < saldo_orden - Decimal("0.01"):
                 raise RechazoGate(
                     "SCHEMA_VALIDATION_FAILED",
                     {
                         "errores": [
-                            "el cobro supera el saldo de la orden",
+                            "el abono parcial esta deshabilitado; "
+                            "el cobro debe cubrir el saldo de la orden"
                         ],
-                        "saldo_orden": float(total - Decimal(str(pagado))),
+                        "saldo_orden": float(max(saldo_orden, Decimal("0"))),
                         "monto": float(monto),
                     },
                 )
-        elif not es_anticipo:
-            saldo = await conn.fetchval(
-                "SELECT COALESCE(saldo_pendiente, 0) FROM v_cliente_saldo WHERE id = $1",
-                payload["cliente_id"],
-            )
-            if monto > Decimal(str(saldo or "0")) + Decimal("0.01"):
+            parte_cxc = min(monto, max(saldo_orden, Decimal("0")))
+            parte_anticipo = monto - parte_cxc
+        else:
+            if monto > saldo_cliente + Decimal("0.01") and not es_anticipo:
+                raise RechazoGate(
+                    "PAYMENT_EXCEEDS_PENDING_BALANCE",
+                    {
+                        "errores": [
+                            "el cobro supera el saldo pendiente del cliente; "
+                            "marque es_anticipo=true para el excedente"
+                        ],
+                        "saldo_pendiente": float(saldo_cliente),
+                        "monto": float(monto),
+                    },
+                )
+            if not abono_parcial and not es_anticipo and monto < saldo_cliente - Decimal("0.01"):
                 raise RechazoGate(
                     "SCHEMA_VALIDATION_FAILED",
                     {
-                        "errores": ["el cobro supera el saldo pendiente del cliente"],
-                        "saldo_pendiente": float(Decimal(str(saldo or "0"))),
+                        "errores": [
+                            "el abono parcial esta deshabilitado; "
+                            "el cobro debe cubrir el saldo del cliente"
+                        ],
+                        "saldo_pendiente": float(saldo_cliente),
                         "monto": float(monto),
                     },
                 )
+            parte_cxc = min(monto, max(saldo_cliente, Decimal("0")))
+            parte_anticipo = monto - parte_cxc
 
         metodo = payload["metodo"]
         bolsa = _bolsa_coherente(metodo, payload.get("bolsa"), "bolsa")
@@ -785,9 +915,15 @@ class Gate:
             bolsa,
             es_anticipo,
         )
-        contrapartida = (
-            ledger.ANTICIPOS_CLIENTES if es_anticipo else ledger.CUENTAS_POR_COBRAR
-        )
+        lineas = [ledger.linea_debe(cuenta_slug, monto)]
+        if parte_cxc > 0:
+            lineas.append(
+                ledger.linea_haber(ledger.CUENTAS_POR_COBRAR, parte_cxc)
+            )
+        if parte_anticipo > 0:
+            lineas.append(
+                ledger.linea_haber(ledger.ANTICIPOS_CLIENTES, parte_anticipo)
+            )
         grupo = await ledger.registrar_asiento(
             conn,
             fecha=fecha,
@@ -795,13 +931,20 @@ class Gate:
             source_id=pago["id"],
             descripcion=(
                 f"Cobro cliente {cliente['nombre']}"
-                + (" (anticipo)" if es_anticipo else "")
+                + (" (anticipo)" if parte_anticipo > 0 else "")
             ),
             created_by_role=actor.role,
-            lineas=[
-                ledger.linea_debe(cuenta_slug, monto),
-                ledger.linea_haber(contrapartida, monto),
-            ],
+            lineas=lineas,
+        )
+        saldo_actual = await conn.fetchrow(
+            """
+            SELECT COALESCE(saldo_pendiente, 0) AS saldo_pendiente,
+                   COALESCE(total_cobrado, 0) AS total_cobrado,
+                   COALESCE(saldo_a_favor, 0) AS saldo_a_favor
+              FROM v_cliente_saldo
+             WHERE id = $1
+            """,
+            payload["cliente_id"],
         )
         return respuesta_gate(
             solicitud["request_id"],
@@ -815,6 +958,23 @@ class Gate:
                 "metodo": payload["metodo"],
                 "bolsa": bolsa,
                 "es_anticipo": es_anticipo,
+                "parte_cxc": parte_cxc,
+                "parte_anticipo": parte_anticipo,
+                "saldo_pendiente": (
+                    Decimal(str(saldo_actual["saldo_pendiente"]))
+                    if saldo_actual is not None
+                    else None
+                ),
+                "total_cobrado": (
+                    Decimal(str(saldo_actual["total_cobrado"]))
+                    if saldo_actual is not None
+                    else None
+                ),
+                "saldo_a_favor": (
+                    Decimal(str(saldo_actual["saldo_a_favor"]))
+                    if saldo_actual is not None
+                    else None
+                ),
             },
         )
 
@@ -1919,6 +2079,41 @@ class Gate:
                 {"estado": aprobacion["status"]},
             )
         decision = payload["decision"]
+        modo = payload.get("modo_resolucion_cobro")
+        contrato = _json_cargado(aprobacion["contract_payload"])
+        order_id = None
+        if isinstance(contrato, Mapping) and contrato.get("order_id") is not None:
+            order_id = str(contrato["order_id"])
+
+        # v4.4.0: si hay cobros activos, Julio debe indicar como resolverlos
+        # antes de aprobar. Si falta, la solicitud sigue PENDING.
+        if (
+            decision == "APPROVED"
+            and aprobacion["intent"] == "CANCEL_CONCRETE_ORDER"
+            and order_id is not None
+        ):
+            cobros = await conn.fetchval(
+                """
+                SELECT COALESCE(sum(monto), 0)
+                  FROM payments
+                 WHERE order_id = $1
+                   AND tipo_movimiento = 'COBRO'
+                   AND deleted_at IS NULL
+                """,
+                order_id,
+            )
+            if Decimal(str(cobros)) > 0 and not modo:
+                raise RechazoGate(
+                    "SCHEMA_VALIDATION_FAILED",
+                    {
+                        "errores": [
+                            "la orden tiene cobros activos; indique "
+                            "modo_resolucion_cobro=CONVERTIR_A_ANTICIPO_CLIENTE "
+                            "o DEVOLVER_DINERO_CAJA_O_BANCO"
+                        ]
+                    },
+                )
+
         await conn.execute(
             """
             UPDATE approval_requests
@@ -1956,18 +2151,18 @@ class Gate:
                 },
             )
 
-        contrato = _json_cargado(aprobacion["contract_payload"])
-        if not isinstance(contrato, Mapping) or contrato.get("order_id") is None:
+        if order_id is None:
             raise RechazoGate(
                 "SCHEMA_VALIDATION_FAILED",
                 {"errores": ["la aprobacion no tiene order_id"]},
             )
         resultado = await self._ejecutar_cancelacion(
             conn,
-            order_id=str(contrato["order_id"]),
+            order_id=order_id,
             motivo=aprobacion["motivo"],
             actor=actor,
             approval_request_id=aprobacion["id"],
+            modo_resolucion_cobro=modo,
         )
         return respuesta_gate(
             solicitud["request_id"],
@@ -1985,6 +2180,7 @@ class Gate:
         motivo: str,
         actor: Actor,
         approval_request_id: str,
+        modo_resolucion_cobro: str | None = None,
     ) -> dict[str, Any]:
         orden = await conn.fetchrow(
             """
@@ -2008,28 +2204,96 @@ class Gate:
                 "motivo": "la orden ya estaba anulada",
             }
 
-        cobros = await conn.fetchval(
+        pagos = await conn.fetch(
             """
-            SELECT COALESCE(sum(monto), 0)
+            SELECT id::text, monto, metodo, bolsa, account_id::text, fecha
               FROM payments
              WHERE order_id = $1
                AND tipo_movimiento = 'COBRO'
                AND deleted_at IS NULL
+             ORDER BY fecha, id
             """,
             order_id,
         )
-        if Decimal(str(cobros)) > 0:
-            return {
-                "approval_request_id": approval_request_id,
-                "orden_id": order_id,
-                "ejecutada": False,
-                "motivo": "REFUND_RULE_NOT_CONFIRMED",
-                "cobros_activos": float(Decimal(str(cobros))),
-                "aviso": (
-                    "Julio aprobo la anulacion, pero no existe regla de "
-                    "reembolso. La orden y sus cobros siguen intactos."
-                ),
-            }
+        total_cobros = sum(
+            (Decimal(str(p["monto"])) for p in pagos), Decimal("0")
+        )
+        reembolsos: list[str] = []
+        if total_cobros > 0:
+            if modo_resolucion_cobro == "CONVERTIR_A_ANTICIPO_CLIENTE":
+                await ledger.registrar_asiento(
+                    conn,
+                    fecha=date.today(),
+                    source_type="ORDER_CANCELLATION_RECLASSIFICATION",
+                    source_id=order_id,
+                    descripcion=(
+                        "Reclasificacion de cobros de la orden anulada a "
+                        "anticipo del cliente"
+                    ),
+                    created_by_role=actor.role,
+                    lineas=[
+                        ledger.linea_debe(
+                            ledger.CUENTAS_POR_COBRAR, total_cobros
+                        ),
+                        ledger.linea_haber(
+                            ledger.ANTICIPOS_CLIENTES, total_cobros
+                        ),
+                    ],
+                )
+            elif modo_resolucion_cobro == "DEVOLVER_DINERO_CAJA_O_BANCO":
+                for pago in pagos:
+                    monto_pago = Decimal(str(pago["monto"]))
+                    cuenta_slug = ledger.slug_caja(pago["bolsa"])
+                    reembolso = await conn.fetchrow(
+                        """
+                        INSERT INTO payments
+                            (order_id, cliente_id, fecha, tipo_movimiento,
+                             metodo, monto, referencia, account_id, bolsa,
+                             es_anticipo)
+                        SELECT order_id, cliente_id, $2, 'REEMBOLSO_CAJA',
+                               metodo, monto, $3, account_id, bolsa, false
+                          FROM payments
+                         WHERE id = $1
+                        RETURNING id::text
+                        """,
+                        pago["id"],
+                        date.today(),
+                        f"REEMBOLSO:{pago['id']}",
+                    )
+                    await ledger.registrar_asiento(
+                        conn,
+                        fecha=date.today(),
+                        source_type="CLIENT_REFUND",
+                        source_id=reembolso["id"],
+                        descripcion=(
+                            "Reembolso al cliente por anulacion de la orden"
+                        ),
+                        created_by_role=actor.role,
+                        lineas=[
+                            ledger.linea_debe(
+                                ledger.CUENTAS_POR_COBRAR, monto_pago
+                            ),
+                            ledger.linea_haber(cuenta_slug, monto_pago),
+                        ],
+                    )
+                    await conn.execute(
+                        "UPDATE payments SET deleted_at = now() WHERE id = $1",
+                        pago["id"],
+                    )
+                    reembolsos.append(reembolso["id"])
+            else:
+                return {
+                    "approval_request_id": approval_request_id,
+                    "orden_id": order_id,
+                    "ejecutada": False,
+                    "motivo": "REFUND_RULE_NOT_CONFIRMED",
+                    "cobros_activos": float(total_cobros),
+                    "aviso": (
+                        "Julio aprobo la anulacion, pero no indico "
+                        "modo_resolucion_cobro. La orden y sus cobros siguen "
+                        "intactos."
+                    ),
+                }
 
         await conn.execute(
             "UPDATE orders SET estado = 'ANULADA' WHERE id = $1", order_id
@@ -2062,7 +2326,12 @@ class Gate:
             target_record_id=order_id,
             action_type=witness.ACCION_ANULACION,
             valor_anterior={"estado": orden["estado"]},
-            valor_nuevo={"estado": "ANULADA", "movimientos_anulados": anulados},
+            valor_nuevo={
+                "estado": "ANULADA",
+                "movimientos_anulados": anulados,
+                "modo_resolucion_cobro": modo_resolucion_cobro,
+                "reembolsos": reembolsos,
+            },
             motivo=motivo,
             autor_role=actor.role,
             autor_id=str(actor.id),
@@ -2075,6 +2344,9 @@ class Gate:
             "orden_numero": orden["numero"],
             "ejecutada": True,
             "movimientos_anulados": anulados,
+            "modo_resolucion_cobro": modo_resolucion_cobro,
+            "cobros_activos": float(total_cobros),
+            "reembolsos": reembolsos,
             "grupos_revertidos": grupos,
             "witness_id": witness_id,
             "transaction_group_id": grupos[-1] if grupos else None,
@@ -2356,29 +2628,176 @@ class Gate:
             "descuadre": activo - pasivo - patrimonio - resultado,
         }, []
 
+    async def _foto_financiera(self, conn: asyncpg.Connection) -> dict[str, Any]:
+        """Foto real actual. No proyecta: solo lee el libro mayor."""
+        filas = await conn.fetch("SELECT * FROM v_balance_general ORDER BY code")
+        totales = ledger.sumar_por_naturaleza(filas)
+        resultado = totales["REVENUE"] - totales["EXPENSE"]
+        caja = await conn.fetchval(
+            """
+            SELECT COALESCE(SUM(le.debe - le.haber), 0)
+              FROM ledger_entries le
+              JOIN accounting_accounts aa ON aa.id = le.account_id
+             WHERE aa.slug IN ('caja_diaria_secretaria', 'bancos_gerencia')
+            """
+        )
+        servicio = await conn.fetchval(
+            """
+            SELECT COALESCE(SUM(cuota_mensual_referencial * 12), 0)
+              FROM financial_liabilities
+             WHERE deleted_at IS NULL
+               AND saldo_capital_actual > 0
+            """
+        )
+        return {
+            "activo": totales["ASSET"],
+            "pasivo": totales["LIABILITY"],
+            "patrimonio": totales["EQUITY"],
+            "resultado_ejercicio": resultado,
+            "patrimonio_neto_hoy": totales["EQUITY"] + resultado,
+            "ebitda_acumulado_real": resultado,
+            "deuda_total_actual": totales["LIABILITY"],
+            "flujo_caja_operativo_real": resultado,
+            "caja_y_bancos": Decimal(str(caja or "0")),
+            "servicio_deuda_anual": Decimal(str(servicio or "0")),
+            "definiciones": (
+                "SALDO_REAL_ACTUAL: EBITDA=ingresos-gastos; "
+                "flujo=resultado del ejercicio; deuda=pasivo total"
+            ),
+        }
+
+    @staticmethod
+    def _tasas(parametros: Mapping[str, Any]) -> dict[str, Decimal] | None:
+        nombres = (
+            "wacc_anual_pct",
+            "crecimiento_anual_pct",
+            "participacion_trabajadores_pct",
+            "impuesto_renta_pct",
+        )
+        if any(parametros.get(n) is None for n in nombres):
+            return None
+        return {n: Decimal(str(parametros[n])) / Decimal("100") for n in nombres}
+
+    @staticmethod
+    def _dcf(
+        tasas: Mapping[str, Decimal],
+        foto: Mapping[str, Any],
+        horizon: int,
+    ) -> dict[str, Any]:
+        wacc = tasas["wacc_anual_pct"]
+        g = tasas["crecimiento_anual_pct"]
+        trab = tasas["participacion_trabajadores_pct"]
+        imp = tasas["impuesto_renta_pct"]
+        ebitda0 = Decimal(str(foto["ebitda_acumulado_real"]))
+        filas: list[dict[str, Any]] = []
+        pv = Decimal("0")
+        for anio in range(1, horizon + 1):
+            ebitda = ebitda0 * (Decimal("1") + g) ** anio
+            fcf = ebitda * (Decimal("1") - trab - imp)
+            factor = (Decimal("1") + wacc) ** anio
+            vp = fcf / factor if factor else Decimal("0")
+            pv += vp
+            filas.append(
+                {
+                    "anio": anio,
+                    "ebitda": ebitda,
+                    "fcf": fcf,
+                    "vp": vp,
+                }
+            )
+        terminal = Decimal("0")
+        pv_terminal = Decimal("0")
+        if wacc > g:
+            terminal = filas[-1]["fcf"] * (Decimal("1") + g) / (wacc - g)
+            pv_terminal = terminal / (Decimal("1") + wacc) ** horizon
+        enterprise = pv + pv_terminal
+        return {
+            "filas": filas,
+            "enterprise_value": enterprise,
+            "equity_value": enterprise - Decimal(str(foto["deuda_total_actual"])),
+            "terminal_value": terminal,
+            "pv_terminal": pv_terminal,
+            "wacc": wacc,
+            "crecimiento": g,
+        }
+
     async def _q_valoracion(
         self, conn: asyncpg.Connection, filtros: Mapping[str, Any]
     ) -> tuple[dict[str, Any], list[str]]:
+        parametros = await setting(
+            self.pool, "finanzas.parametros_contables", {}
+        ) or {}
+        if not isinstance(parametros, Mapping):
+            parametros = {}
+        foto = await self._foto_financiera(conn)
+        horizon = int(filtros["horizon_years"])
+        tasas = self._tasas(parametros)
+        if tasas is None:
+            return {
+                **foto,
+                "estado": "PENDIENTE",
+                "horizon_years": horizon,
+                "proyeccion_10y": None,
+                "capacidad_endeudamiento_max": None,
+                "motivo": (
+                    "faltan tasas en finanzas.parametros_contables; se "
+                    "devuelve la foto real y no se inventa la proyeccion"
+                ),
+            }, ["UNCONFIRMED_FINANCIAL_RATES"]
+        dcf = self._dcf(tasas, foto, horizon)
         return {
-            "estado": "PENDIENTE",
-            "horizon_years": filtros["horizon_years"],
-            "motivo": (
-                "La formula de valoracion a 10 anos no esta confirmada por "
-                "Julio/Direccion. No se calcula un valor inventado."
-            ),
-        }, ["VALUATION_FORMULA_NOT_CONFIRMED"]
+            **foto,
+            "estado": "CALCULADA",
+            "horizon_years": horizon,
+            "proyeccion_10y": dcf["filas"],
+            "enterprise_value": dcf["enterprise_value"],
+            "equity_value": dcf["equity_value"],
+            "terminal_value": dcf["terminal_value"],
+            "capacidad_endeudamiento_max": dcf["equity_value"],
+        }, []
 
     async def _q_dscr(
         self, conn: asyncpg.Connection, filtros: Mapping[str, Any]
     ) -> tuple[dict[str, Any], list[str]]:
+        parametros = await setting(
+            self.pool, "finanzas.parametros_contables", {}
+        ) or {}
+        if not isinstance(parametros, Mapping):
+            parametros = {}
+        foto = await self._foto_financiera(conn)
+        horizon = int(filtros["horizon_years"])
+        requeridos = (
+            "wacc_anual_pct",
+            "crecimiento_anual_pct",
+            "participacion_trabajadores_pct",
+            "impuesto_renta_pct",
+            "dscr_minimo_banco",
+        )
+        if any(parametros.get(n) is None for n in requeridos):
+            return {
+                **foto,
+                "estado": "PENDIENTE",
+                "horizon_years": horizon,
+                "dscr_actual": None,
+                "capacidad_endeudamiento_max": None,
+                "motivo": (
+                    "faltan tasas o dscr_minimo_banco en "
+                    "finanzas.parametros_contables; no se inventa el ratio"
+                ),
+            }, ["UNCONFIRMED_FINANCIAL_RATES"]
+        servicio = Decimal(str(foto["servicio_deuda_anual"]))
+        flujo = Decimal(str(foto["flujo_caja_operativo_real"]))
+        dscr = flujo / servicio if servicio > 0 else None
+        minimo = Decimal(str(parametros["dscr_minimo_banco"]))
+        capacidad = flujo / minimo if minimo > 0 else None
         return {
-            "estado": "PENDIENTE",
-            "horizon_years": filtros["horizon_years"],
-            "motivo": (
-                "La definicion de DSCR (periodo, EBITDA y deuda incluida) no "
-                "esta confirmada. No se calcula un ratio inventado."
-            ),
-        }, ["DSCR_DEFINITION_NOT_CONFIRMED"]
+            **foto,
+            "estado": "CALCULADA",
+            "horizon_years": horizon,
+            "dscr_actual": dscr,
+            "dscr_minimo_banco": minimo,
+            "capacidad_endeudamiento_max": capacidad,
+        }, []
 
     # ------------------------------------------------------------------
     # Testigo: correcciones y categorias
@@ -2527,6 +2946,23 @@ class Gate:
             )
 
         if intent == "CREATE_ACCOUNTING_CATEGORY":
+            if actor.role == "SECRETARIA":
+                parametros = await setting(
+                    self.pool, "finanzas.parametros_contables", {}
+                ) or {}
+                if not (
+                    isinstance(parametros, Mapping)
+                    and parametros.get("secretaria_can_create_categories", False)
+                ):
+                    raise RechazoGate(
+                        "UNAUTHORIZED_DOMAIN_ACCESS",
+                        {
+                            "errores": [
+                                "SECRETARIA no puede crear rubros: "
+                                "secretaria_can_create_categories=false"
+                            ]
+                        },
+                    )
             cuenta = await catalog_hygiene.crear_categoria(
                 conn,
                 nombre=changes["nuevo_nombre_categoria"],

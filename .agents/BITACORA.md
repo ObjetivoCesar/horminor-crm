@@ -1386,3 +1386,87 @@ Confirmar con Julio/Dirección el IVA histórico, la fecha de conteo, la fórmul
 - `.agents/ESTADO.md`
 - `AGENTS.md`
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - v4.4.0: circuito HTTP, pagos, anticipos y reembolsos
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Duración:** sesión única
+**Objetivo:** Cerrar el circuito HTTP del Custodio y la ventanilla de pagos con las 8 decisiones oficiales post-check v4.3, sin inventar datos y sin tocar la cartera histórica.
+
+### Hecho
+
+1. `db/migrations/065_http_gate_v44.sql`: parámetros `finanzas.iva_historico_pct`, `finanzas.valoracion_10y`, `finanzas.dscr`, `finanzas.regla_reembolso`, `finanzas.nota_credito_compras`, `contabilidad.rol_contadora`, `inventario.conteo` y `secretaria.pagos`.
+2. `db/migrations/066_iva_default_v44.sql`: apaga `finanzas.iva_default_aplica`; las ventas nuevas solo llevan IVA si el contrato envía `aplica_iva=true`. Los candados y el panel lo envían, así que la cartera verificada no cambia.
+3. `app/http_gate/auth.py`: tokens de servicio `CUSTODIO_TOKEN_SUPERADMIN/CONTADORA/SECRETARIA/BODEGA/CHOFER/SYSTEM_CRON`, `X-Actor-Id` y `X-Channel`; fallback de desarrollo con `CUSTODIO_ALLOW_DEV_HEADER=true`.
+4. `app/http_gate/router.py`: `POST /api/v1/custodio/mutations`, `/queries`, `/witness` y `GET /catalog`; alias en español para no romper v4.3. Traduce `ACCEPT`/`REJECT`/`PENDING` a HTTP.
+5. `app/http_gate/payments.py`: `POST /api/v1/secretaria/pagos` para `COBRO`, `GASTO_CAJA_CHICA` y `GASTO_BANCARIO`; idempotencia por `request_id`/`Idempotency-Key`; 201/200/202/400/401/403/409/422/503.
+6. `Gate._pago_cliente`: abono parcial, split `1103`/`2102` para anticipos, `PAYMENT_EXCEEDS_PENDING_BALANCE`, `BOLSA_METHOD_MISMATCH` y saldo a favor en la respuesta.
+7. `Gate._resolver_aprobacion` y `_ejecutar_cancelacion`: `modo_resolucion_cobro` obligatorio con cobros activos; `CONVERTIR_A_ANTICIPO_CLIENTE` (reclasifica a `2102`) y `DEVOLVER_DINERO_CAJA_O_BANCO` (`REEMBOLSO_CAJA` + borrado lógico del cobro).
+8. `Gate._q_valoracion` y `_q_dscr`: leen `finanzas.parametros_contables`; si faltan tasas devuelven la foto real y `UNCONFIRMED_FINANCIAL_RATES`; si existen, calculan DCF/DSCR.
+9. Roles `CONTADORA`, `SECRETARIA`, `BODEGA` y `CHOFER` en el Gate; `CONTADORA` consulta reportes, ejecuta apertura/depreciación y cuentas, pero no aprueba solicitudes.
+10. `witness.py` rechaza compras con inventario o varias líneas con `PURCHASE_REQUIRES_CREDIT_NOTE`.
+11. `scripts/http_gate_v44_check.py` y `scripts/custodio_v43_check.py` actualizados; tests HTTP nuevos en `tests/test_http_gate_v44.py`.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **242 passed in 6.52s** |
+| `scripts/custodio_v43_check.py` contra `orminorth_v43` | `CUSTODIO V4.4: OK \| 14/14 intents, 30 solicitudes (21 ACCEPT, 6 REJECT, 3 PENDING), 8 testigos (6 ACCEPT/2 REJECT), 4 aprobaciones, 9 consultas`; `ROLLBACK verificado: 17 tablas` |
+| `scripts/http_gate_v44_check.py` contra `orminorth_v43` | `HTTP GATE V4.4: OK`; catalog 26 cuentas, mutations, queries, COBRO parcial, anticipo 200, gasto, replay 200, hash 409, sobrepago 422, BODEGA 403; `ROLLBACK verificado: 17 tablas` |
+| `scripts/hito1_lock_test.py` | `[CANDADO CERRADO]`, órdenes #55/#56 con IVA 15 %, `EXIT=0` |
+| `scripts/hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]`, orden #57 con IVA 15 %, `EXIT=0` |
+| `psql -d orminorth` | **13 migraciones**, órdenes #9/#55/#56/#57, cartera **55,043.60 / 2 clientes / fiado 55,043.60**, `payments=0`, 249 movimientos, materiales **8.2000 / 14.0000 / 16.5000 / 3.8000** y stocks **3,500 / 450 / 550 / 600** |
+
+Evidencia guardada en `.agents/evidencias/pytest_http_v44_2026-11-09.txt`, `custodio_v44_check_2026-11-09.txt`, `http_gate_v44_check_2026-11-09.txt`, `hito1_lock_http_v44_2026-11-09.txt`, `hito3_lock_http_v44_2026-11-09.txt` y `base_real_v44_final_2026-11-09.txt`.
+
+### Decisiones tomadas
+
+1. **Las 8 decisiones oficiales v4.4.0 se implementan tal cual.** IVA histórico sin backfill; conteo `SIN_FECHA_CONTEO`; valoración/DSCR parametrizados; `CONTADORA` separado; reembolso con modo; nota de crédito Fase 1; abono parcial; orden/cliente y saldo validados.
+2. **El rol se resuelve en el servidor.** `X-Actor-Token` mapea a rol; el JSON nunca decide el rol. Alternativa descartada: confiar en `X-Actor-Role` en producción.
+3. **El anticipo se separa en dos créditos.** La deuda va a `1103` y el excedente a `2102`; así `saldo_a_favor` es real y el cliente puede usarlo en su próximo pedido. Alternativa descartada: mandar todo a `1103`, que dejaba un saldo negativo sin explicación.
+4. **La anulación con cobros exige `modo_resolucion_cobro`.** Si falta, la aprobación sigue `PENDING`; no se consume. Alternativa descartada: aprobar y devolver `REFUND_RULE_NOT_CONFIRMED`, que dejaba la solicitud bloqueada.
+5. **El IVA por defecto se apaga, pero los candados lo piden explícito.** Se conserva la cartera de $55,043.60 y las ventas nuevas sin IVA no lo inventan. Alternativa descartada: backfill al 15 %, que alteraba la cartera histórica.
+
+### Bloqueos / preguntas al cliente
+
+1. **Tasas financieras:** cargar `wacc_anual_pct`, `crecimiento_anual_pct`, `participacion_trabajadores_pct`, `impuesto_renta_pct` y `dscr_minimo_banco`. Mientras sigan `null`, valoración/DSCR devuelven la foto real.
+2. **Conteo físico:** ejecutar el levantamiento de los 5 materiales; hoy siguen `SIN_FECHA_CONTEO`.
+3. **Formulario de pagos en el panel:** el endpoint existe; falta la captura en la vista de Secretaría.
+4. **Login de usuario final:** el router usa tokens de servicio; el panel sigue abierto.
+5. **Backups:** ejecutar `pg_dump` diario del contenedor `orminorth-postgres` y definir retención.
+
+### Próximo paso exacto
+
+Cargar las tasas en `finanzas.parametros_contables` desde el Superadmin y ejecutar el conteo físico; después agregar el formulario de pagos en la vista de Secretaría y el login de usuario antes de exponer el panel. Para re-verificar: `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto`, `scripts/http_gate_v44_check.py` y `scripts/custodio_v43_check.py` contra `orminorth_v43`.
+
+### Archivos tocados
+
+- `db/migrations/065_http_gate_v44.sql` (nuevo)
+- `db/migrations/066_iva_default_v44.sql` (nuevo)
+- `services/core-api/app/http_gate/__init__.py` (nuevo)
+- `services/core-api/app/http_gate/auth.py` (nuevo)
+- `services/core-api/app/http_gate/router.py` (nuevo)
+- `services/core-api/app/http_gate/payments.py` (nuevo)
+- `services/core-api/app/custodio/gate.py`
+- `services/core-api/app/custodio/contracts.py`
+- `services/core-api/app/custodio/witness.py`
+- `services/core-api/app/services/ordenes.py`
+- `services/core-api/app/settings.py`
+- `services/core-api/app/main.py`
+- `services/core-api/tests/test_http_gate_v44.py` (nuevo)
+- `scripts/http_gate_v44_check.py` (nuevo)
+- `scripts/custodio_v43_check.py`
+- `scripts/hito1_lock_test.py`
+- `scripts/hito3_lock_test.py`
+- `scripts/refactor_v43_check.py`
+- `.agents/skills/custodio-bd-horminor/contracts/custodio_mutation_request.json`
+- `docs/v4.4.0_HTTP_GATE.md` (nuevo)
+- `docs/BASE_DE_DATOS.md`
+- `docs/00_DECISIONES_PENDIENTES.md`
+- `docs/MODELO_DATOS.md`
+- `.agents/ESTADO.md`
+- `AGENTS.md`
+- `.agents/BITACORA.md`

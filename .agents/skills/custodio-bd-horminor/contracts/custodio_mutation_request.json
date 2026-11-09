@@ -458,7 +458,15 @@
               "type": "string",
               "enum": ["APPROVED", "REJECTED"]
             },
-            "comentario": { "type": "string", "minLength": 3, "maxLength": 250 }
+            "comentario": { "type": "string", "minLength": 3, "maxLength": 250 },
+            "modo_resolucion_cobro": {
+              "type": ["string", "null"],
+              "enum": [
+                "CONVERTIR_A_ANTICIPO_CLIENTE",
+                "DEVOLVER_DINERO_CAJA_O_BANCO",
+                null
+              ]
+            }
           }
         }
       }
