@@ -36,6 +36,9 @@ from fastapi import FastAPI
 
 from app.custodio import Gate
 from app.http_gate import custodio_router, payments_router
+from app.http_gate.panel import router as panel_router
+from app.superadmin.router import router as superadmin_router
+from app.superadmin.store import PostgresConfigStore
 from app.settings import get_settings
 
 TAG = "HTTP-V44-CHECK"
@@ -141,8 +144,11 @@ async def main() -> int:
         app.state.pool = pool
         app.state.settings = TOKENS
         app.state.gate_factory = lambda p: Gate(p)
+        app.state.config_store = PostgresConfigStore(pool)
         app.include_router(custodio_router)
         app.include_router(payments_router)
+        app.include_router(panel_router)
+        app.include_router(superadmin_router)
 
         transporte = httpx.ASGITransport(app=app)
         cliente_http = httpx.AsyncClient(
@@ -185,6 +191,13 @@ async def main() -> int:
         cuentas = r.json()["cuentas"]
         exigir(len(cuentas) >= 26, f"catalogo incompleto: {len(cuentas)}")
         print(f"2. GET /custodio/catalog: {len(cuentas)} cuentas: OK")
+
+        # 2b. Catalogo y pago desde el puente interno del panel (sin token
+        # en el navegador; el servidor resuelve el actor).
+        r = await cliente_http.get("/api/v1/panel/catalog")
+        exigir(r.status_code == 200, f"panel catalog fallo: {r.status_code}")
+        exigir(len(r.json()["cuentas"]) >= 26, "panel catalog incompleto")
+        print("2b. GET /panel/catalog: OK")
 
         # 3. Mutacion: crear orden
         request_orden = str(uuid4())
@@ -248,6 +261,25 @@ async def main() -> int:
         exigir(d(data["parte_cxc"]) == Decimal("100.00"), f"parte_cxc: {data}")
         exigir(d(data["parte_anticipo"]) == Decimal("0.00"), f"anticipo: {data}")
         print("5. POST /secretaria/pagos (COBRO parcial): OK")
+
+        # 5b. El panel usa el puente interno: no lleva token en el navegador.
+        r = await cliente_http.post(
+            "/api/v1/panel/pagos",
+            headers={"X-Panel-Role": "SECRETARIA", "X-Panel-Actor": "secretaria-panel"},
+            json={
+                "request_id": str(uuid4()),
+                "tipo_movimiento": "COBRO",
+                "cliente_id": cliente_id,
+                "order_id": orden_id,
+                "fecha": hoy.isoformat(),
+                "metodo": "EFECTIVO",
+                "bolsa": "CAJA_DIARIA",
+                "monto": "10.00",
+                "referencia": "PANEL-COBRO-1",
+            },
+        )
+        exigir(r.status_code == 201, f"panel cobro fallo: {r.status_code} {r.text}")
+        print("5b. POST /panel/pagos (puente del panel): OK")
 
         # 6. Reintento idempotente y choque de hash
         r = await cliente_http.post(
@@ -350,10 +382,59 @@ async def main() -> int:
         exigir(r.status_code == 403, f"bodega pudo cobrar: {r.status_code}")
         print("10. BODEGA no registra pagos -> 403: OK")
 
+        # 11. Superadmin: parámetros contables
+        r = await cliente_http.put(
+            "/api/v1/superadmin/config/finanzas_y_ases_gerenciales",
+            json={
+                "parametros_contables": {
+                    "wacc_anual_pct": 12.5,
+                    "crecimiento_anual_pct": 3.0,
+                    "participacion_trabajadores_pct": 15.0,
+                    "impuesto_renta_pct": 25.0,
+                    "inflacion_costos_pct": 4.0,
+                    "dscr_minimo_banco": 1.3,
+                }
+            },
+        )
+        exigir(r.status_code == 200, f"finanzas PUT fallo: {r.status_code} {r.text}")
+        r = await cliente_http.get(
+            "/api/v1/superadmin/config/finanzas_y_ases_gerenciales"
+        )
+        params = r.json()["parametros_contables"]
+        exigir(params["wacc_anual_pct"] == 12.5, f"wacc no guardado: {params}")
+        exigir(params["dscr_minimo_banco"] == 1.3, f"dscr no guardado: {params}")
+        print("11. Superadmin: parámetros contables: OK")
+
+        # 12. Superadmin: conteo físico
+        r = await cliente_http.put(
+            "/api/v1/superadmin/config/bodega_y_umbrales",
+            json={
+                "materiales": [{"codigo": "CEMENTO", "stock_actual": 3500}],
+                "conteo": {"registrar": True},
+            },
+        )
+        exigir(r.status_code == 200, f"bodega PUT fallo: {r.status_code} {r.text}")
+        r = await cliente_http.get(
+            "/api/v1/superadmin/config/bodega_y_umbrales"
+        )
+        bodega = r.json()
+        exigir(
+            bodega["conteo"]["estado"] == "REGISTRADO",
+            f"conteo no registrado: {bodega['conteo']}",
+        )
+        cemento = next(
+            m for m in bodega["materiales"] if m["codigo"] == "CEMENTO"
+        )
+        exigir(
+            cemento["ultimo_levantamiento_at"] is not None,
+            "CEMENTO no recibió ultimo_levantamiento_at",
+        )
+        print("12. Superadmin: conteo físico con fecha: OK")
+
         await cliente_http.aclose()
         print(
             "HTTP GATE V4.4: OK | catalog, mutations, queries, pagos, "
-            "anticipo, gasto, idempotencia y roles"
+            "anticipo, gasto, idempotencia, roles, parámetros y conteo"
         )
         print("Transaccion de prueba: se revierte con ROLLBACK.")
         return 0

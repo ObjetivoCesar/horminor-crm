@@ -1,11 +1,11 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-09** (Custodio v4.4.0 con circuito HTTP
-> cerrado: 14 intents, 9 consultas, pagos/anticipos/reembolsos y rol
-> CONTADORA; 13 migraciones, 28 tablas, 6 vistas, 26 cuentas; 242 tests y los
-> 2 candados en verde. Quedan operativos: tasas financieras, conteo físico,
-> formulario del panel, login de usuario y backups)
+> Última actualización: **2026-11-09** (v5.1: Custodio v4.4.0 con HTTP,
+> panel de cobros/abonos/gastos, Superadmin de tasas y conteo, y backup diario
+> listo. 13 migraciones, 28 tablas, 6 vistas, 26 cuentas; **247 tests** y los
+> 2 candados en verde. Quedan operativos: login de usuario, cargar tasas,
+> ejecutar el conteo real e instalar el cron de backups)
 
 ## Hitos
 
@@ -13,10 +13,10 @@
 |---|---|---|---|---|
 | 1 | M0 — Datos y configuración | 🟢 **Cerrado** con semilla oficial | `evidencias/hito1_lock_2026-11-08.txt`: `[CANDADO CERRADO]`, 235 movimientos de kardex, órdenes valoradas ($37.760 y $8.216) | Nada bloqueante. Re-verificar si se editan recetas |
 | — | Superadmin — Configuración en caliente | 🟢 Construido y editable desde el panel | 7 secciones, CRUD de recetas/flota, simulador de WhatsApp y outbox | Autenticación antes de exponerlo a Internet |
-| 2 | M2 — Motor determinístico | 🟡 Construido, verificado local | `evidencias/pytest_http_v44_2026-11-09.txt`: **242 tests** + candado Hito 1 | Probar desde el CRM de la agencia en el VPS |
+| 2 | M2 — Motor determinístico | 🟡 Construido, verificado local | `evidencias/pytest_panel_v44_2026-11-09.txt`: **247 tests** + candado Hito 1 | Probar desde el CRM de la agencia en el VPS |
 | 2 | M5 — Nodo Centinela | 🟡 Construido, verificado local | `evidencias/hito3_4_live_2026-11-08.txt`: 12 checks, `modo=SANDBOX`, `judge_mode=DETERMINISTIC_FALLBACK`; Evolution/Bunny en OK | Webhook real del CRM; umbral de merma que defina Julio |
 | 3 | M1 — WhatsApp (Evolution + Jeb + Bunny) | 🟢 **Cerrado en SANDBOX** | `evidencias/hito3_lock_2026-11-08.txt`: `[CANDADO CERRADO EN SANDBOX]`; 4 compuertas, JSONB y outbox | Producción real: cargar credenciales, apagar SANDBOX y repetir el candado |
-| 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 Construido y verificado local | `/panel` (tab Secretaría), carpeta forense con 47 viajes de mixer, `GET .../carpeta` 200 tras fix JSONB; `POST /api/v1/secretaria/pagos` probado; tests `test_m3_secretaria.py` | Autenticación de usuario; formulario de pagos en el panel; validación con la secretaria real |
+| 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 Construido y verificado local | `/panel` (tab Secretaría) con formularios de cobro/abono y gasto; carpeta forense; `POST /api/v1/panel/pagos` probado; tests `test_m3_secretaria.py` | Login de usuario; validación con la secretaria real |
 | 5 | M4 — Dashboard de Julio + Ases | 🟢 Construido y verificado local | *Dashboard Julio* con 3 tarjetas iguales: mercado El Coca **0.31% (372/120,000 m³)**, ventas **404 m³ / $55,043.60 / 51 viajes** (la captura aprobada 2026-11-08 mostraba $47,864 sin IVA), y provincias **Orellana 372 + Sucumbíos 16 + sin provincia 16**; Banca **215,000 / 404 / 0.19% / 214,596 m³**; 2 escenarios; tests `test_m4_dashboard.py` | Validar con Julio el ángulo de mercado; auth para exponer |
 | — | Despliegue en VPS | ⚪ No iniciado | — | VPS, dominio, TLS, proxy, backups |
 
@@ -38,6 +38,12 @@ scripts de candado.
 
 ## Evidencia de la última sesión
 
+- **v5.1: panel, Superadmin y backup el 2026-11-09.** El panel de Secretaría
+  registra cobros/abonos y gastos contra `/api/v1/panel/pagos`; Superadmin
+  edita `finanzas.parametros_contables` y registra el conteo físico; el backup
+  diario `scripts/backup_db.sh` verifica el dump con `pg_restore --list`.
+  `pytest /app/tests` → **247 passed**; `http_gate_v44_check.py` → **OK** con
+  12 verificaciones y `ROLLBACK` en 17 tablas.
 - **Custodio v4.4.0 con HTTP cerrado el 2026-11-09.** `app/http_gate/` expone
   `POST /api/v1/custodio/mutations`, `/queries`, `/witness` y
   `GET /catalog` con tokens de servicio; `POST /api/v1/secretaria/pagos`
@@ -130,20 +136,18 @@ scripts de candado.
 4. **Capacidad operativa de planta (m³ por período) sin definir.** El dashboard
    ya no la usa para el anillo principal (muestra el mercado real de El Coca);
    sigue faltando para un KPI de capacidad operativa. Dueño del dato: Julio.
-5. **Sin formulario de pagos en el panel.** El endpoint
-   `POST /api/v1/secretaria/pagos` ya existe y está probado; la vista de
-   Secretaría todavía no tiene el formulario para capturarlo.
+5. **Formulario de pagos implementado.** `/panel` ya registra cobros, abonos y
+   gastos contra `/api/v1/panel/pagos`; falta validarlo con la secretaria real.
 6. **Sin login de usuario final.** El router del Custodio usa tokens de
    servicio `CUSTODIO_TOKEN_*`; `/panel`, `/api/v1/secretaria/*` y
    `/api/v1/superadmin/*` siguen abiertos. No exponerlos a Internet.
-7. **Custodio operativo asignado, backups pendientes.** La v4.4.0 asigna el
-   VPS y los backups a la agencia (César Reyes / Nohan); falta ejecutar el
-   `pg_dump` diario y definir retención.
+7. **Backup diario listo, cron pendiente.** `scripts/backup_db.sh` genera,
+   verifica y retiene 14 días/6 meses; falta instalarlo en el VPS y copiar los
+   dumps fuera de la máquina.
 8. **Respaldo externo.** Todo el proyecto y la base viven en un solo disco. Hay
    un respaldo manual previo a v4.3, pero no política automática.
-9. **Circuito HTTP cerrado.** El Custodio, el router y la ventanilla de pagos
-   están implementados; solo falta el formulario del panel y el login de
-   usuario.
+9. **Circuito HTTP cerrado.** El Custodio, el router, la ventanilla de pagos y
+   el panel están implementados; solo falta el login de usuario.
 10. **Decisiones de negocio cerradas; quedan datos operativos.** IVA histórico,
     fecha de conteo, valoración/DSCR, rol `CONTADORA`, reembolso y nota de
     crédito ya tienen decisión. Falta que Julio/Contadora carguen las tasas,
@@ -156,27 +160,26 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **Cargar las tasas financieras** en `finanzas.parametros_contables`
-   (`wacc_anual_pct`, `crecimiento_anual_pct`, `participacion_trabajadores_pct`,
+1. **Cargar las tasas financieras** en Superadmin >
+   `finanzas.parametros_contables` (`wacc_anual_pct`,
+   `crecimiento_anual_pct`, `participacion_trabajadores_pct`,
    `impuesto_renta_pct`, `dscr_minimo_banco`) para activar valoración/DSCR.
-2. **Ejecutar el conteo físico** de los 5 materiales y registrar la fecha; hoy
+2. **Ejecutar el conteo físico** de los 5 materiales desde Superadmin; hoy
    siguen `SIN_FECHA_CONTEO`.
-3. **Agregar el formulario de pagos** en la vista de Secretaría y el login de
-   usuario antes de exponer el panel a Internet.
-4. **Dashboard V2 aprobado por Julio (2026-11-08).** La captura de referencia es
+3. **Implementar el login de usuario** y proteger todas las rutas del panel
+   antes de exponerlo a Internet.
+4. **Instalar el cron de backup** (`backup_db.sh`) y copiar los dumps fuera del
+   VPS; probar una restauración mensual.
+5. **Dashboard V2 aprobado por Julio (2026-11-08).** La captura de referencia es
    `.agents/evidencias/panel_horminor_dashboard_v2_dark_2026-11-08.png`; el
    ángulo comercial es **372 m³ vendidos de 120,000 m³ (0.31%)** en El Coca.
    Sigue pendiente que Julio entregue la **capacidad operativa de planta**.
-5. **Producción del Hito 3:** cargar credenciales reales en
+6. **Producción del Hito 3:** cargar credenciales reales en
    `PUT /api/v1/superadmin/config/whatsapp_evolution_y_cdn`, poner
    `evolution_sandbox=false` y `bunny_sandbox=false`, y repetir
    `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py`.
-6. **Autenticación:** login para Superadmin/Secretaría antes de publicar el
-   panel en el VPS.
-7. **Despliegue:** cuando exista el VPS, copiar el repo, levantar el stack y
-   configurar TLS, proxy inverso y backups.
-8. **Backups de PostgreSQL:** definir política y custodio del volumen
-   `orminorth-pgdata` (hoy solo existe el respaldo manual previo a v4.3).
+7. **Despliegue:** cuando exista el VPS, copiar el repo, levantar el stack,
+   configurar TLS, proxy inverso, login de usuario y el cron de backups.
 
 ## Decisiones de arquitectura vigentes
 
@@ -224,6 +227,9 @@ scripts de candado.
 | 40 | **Pagos con split 1103/2102** | Abono parcial permitido. Si `monto > saldo` y `es_anticipo=false` → `PAYMENT_EXCEEDS_PENDING_BALANCE`; si `es_anticipo=true`, la deuda va a `1103` y el excedente a `2102`, con `saldo_a_favor` |
 | 41 | **Reembolso con `modo_resolucion_cobro`** | `CONVERTIR_A_ANTICIPO_CLIENTE` reclasifica a `2102`; `DEVOLVER_DINERO_CAJA_O_BANCO` inserta `REEMBOLSO_CAJA` y borra lógicamente el cobro original |
 | 42 | **IVA por defecto apagado** | `066` deja `finanzas.iva_default_aplica=false`. Las ventas nuevas solo llevan IVA si el contrato envía `aplica_iva=true`; el panel y los candados lo envían, así que la cartera verificada de $55,043.60 no cambia |
+| 43 | **El navegador no recibe tokens del Custodio** | El panel llama a `/api/v1/panel/pagos` y `/api/v1/panel/catalog`; el servidor resuelve el actor (`X-Panel-Role` mientras no haya login). Los `CUSTODIO_TOKEN_*` quedan solo en el backend |
+| 44 | **Superadmin edita tasas y conteo, no valores inventados** | `finanzas.parametros_contables` se edita con inputs; el conteo físico se registra con stock real y sella `ultimo_levantamiento_at`. Los valores siguen siendo de Julio/Bodega |
+| 45 | **Backup diario verificable, no solo un dump** | `backup_db.sh` valida con `pg_restore --list`, retiene 14 días y 6 meses, y se complementa con copia externa y restauración mensual |
 
 ## Riesgos abiertos
 

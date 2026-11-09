@@ -304,9 +304,9 @@ sí se puede probar:
 3. **Sin login de usuario final.** El router del Custodio usa tokens de
    servicio `CUSTODIO_TOKEN_*`; no hay login de Secretaría/Superadmin. No
    exponer el panel a Internet sin autenticación de usuario.
-4. **Sin formulario de pagos en el panel.** El endpoint
-   `POST /api/v1/secretaria/pagos` existe y está probado, pero la vista de
-   Secretaría todavía no tiene el formulario para capturarlo.
+4. **Sin login de usuario final.** El panel ya tiene formularios de cobro,
+   abono y gasto, y el endpoint `POST /api/v1/panel/pagos` funciona; falta el
+   login y la protección de todas las rutas antes de exponerlo a Internet.
 5. **Credenciales por defecto** (`orminorth`/`orminorth`). Antes de producción
    hay que cambiarlas en `.env`.
 6. **`payments` vacía** (0 filas) y `cash_closures` vacía (0 filas). No es un
@@ -491,6 +491,7 @@ Contratos JSON v1.3.0
 - `db/migrations/065_http_gate_v44.sql` — parámetros v4.4.0 del router HTTP, pagos, reembolso y rol CONTADORA.
 - `db/migrations/066_iva_default_v44.sql` — apaga el IVA por defecto; las ventas nuevas lo piden explícitamente.
 - `docs/v4.4.0_HTTP_GATE.md` — contrato HTTP, tokens, pagos y decisiones oficiales.
+- `docs/OPERACION_BACKUPS.md` — backup diario, retención y restauración de prueba.
 - `.agents/skills/custodio-bd-horminor/contracts/` — contratos JSON v1.3.0 del Gate.
 - `services/core-api/app/db.py` — runner de migraciones.
 - `services/core-api/app/settings.py` — variables de conexión.

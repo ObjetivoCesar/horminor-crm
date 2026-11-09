@@ -2229,11 +2229,14 @@ tbody tr:last-child td { border-bottom: 0; }
         <details class="card fold-card">
           <summary>
             <h2>Cobros y abonos del día</h2>
-            <span class="badge neutral">Solo lectura</span>
+            <span class="badge neutral">Ventanilla</span>
           </summary>
           <div class="fold-body">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+              <button class="btn small" onclick="abrirPago()">+ Registrar cobro / abono</button>
+              <button class="btn small ghost" onclick="abrirGasto()">+ Registrar gasto</button>
+            </div>
             <div id="sec-cobros" class="small"><p class="muted">Cargando movimientos…</p></div>
-            <div class="notice info" style="margin-top:12px">El alta de cobros y abonos se registra en el cierre de caja; el API aún no expone un POST de pagos. No se inventan movimientos desde la UI.</div>
           </div>
         </details>
         <div class="card">
@@ -2376,6 +2379,34 @@ tbody tr:last-child td { border-bottom: 0; }
         <div id="config-panel"></div>
       </div>
     </div>
+
+    <div class="grid two" style="margin-top:16px">
+      <div class="card">
+        <h2>Parámetros contables y valoración 10 años</h2>
+        <p class="small muted" style="margin-top:0">Con estas tasas se activa la proyección DCF y el DSCR. Si quedan vacías, el Custodio devuelve la foto real y <code>UNCONFIRMED_FINANCIAL_RATES</code>.</p>
+        <div class="field-row">
+          <div><label class="field">WACC anual (%)</label><input type="number" id="fin-wacc" step="0.01" min="0" placeholder="null"></div>
+          <div><label class="field">Crecimiento anual (%)</label><input type="number" id="fin-crecimiento" step="0.01" placeholder="null"></div>
+          <div><label class="field">Participación trabajadores (%)</label><input type="number" id="fin-participacion" step="0.01" min="0" placeholder="null"></div>
+        </div>
+        <div class="field-row" style="margin-top:10px">
+          <div><label class="field">Impuesto a la renta (%)</label><input type="number" id="fin-impuesto" step="0.01" min="0" placeholder="null"></div>
+          <div><label class="field">Inflación de costos (%)</label><input type="number" id="fin-inflacion" step="0.01" placeholder="null"></div>
+          <div><label class="field">DSCR mínimo del banco</label><input type="number" id="fin-dscr" step="0.01" min="0" placeholder="null"></div>
+        </div>
+        <button class="btn" style="margin-top:12px" onclick="guardarParametrosFinancieros()">Guardar parámetros</button>
+        <div id="fin-param-resultado"></div>
+      </div>
+
+      <div class="card">
+        <h2>Levantamiento físico de silos / bodega</h2>
+        <p class="small muted" style="margin-top:0">Registra el stock real contado. Al confirmar se sella <code>ultimo_levantamiento_at</code> y desaparece <code>SIN_FECHA_CONTEO</code>.</p>
+        <div id="conteo-materiales" class="table-wrap"></div>
+        <label class="row small" style="margin-top:10px"><input type="checkbox" id="conteo-confirmar" style="width:auto"> Confirmo que estos valores son el conteo físico real</label>
+        <button class="btn bank" style="margin-top:10px" onclick="registrarConteo()">Registrar conteo</button>
+        <div id="conteo-resultado"></div>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -2428,6 +2459,51 @@ tbody tr:last-child td { border-bottom: 0; }
   </div>
 </dialog>
 
+<dialog id="dlg-pago">
+  <div class="dialog-head"><h2>Registrar cobro o abono</h2><button class="btn small ghost" onclick="document.getElementById('dlg-pago').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <div class="field-row">
+      <div><label class="field">Cliente</label><select id="pago-cliente" onchange="onPagoClienteChange()"></select></div>
+      <div><label class="field">Orden (opcional)</label><select id="pago-orden"><option value="">Abono general a la cuenta</option></select></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Monto (USD)</label><input type="number" id="pago-monto" step="0.01" min="0.01" oninput="actualizarPagoInfo()"></div>
+      <div><label class="field">Método</label><select id="pago-metodo"><option>EFECTIVO</option><option>TRANSFERENCIA</option></select></div>
+      <div><label class="field">Referencia</label><input type="text" id="pago-referencia" placeholder="Recibo o comprobante"></div>
+    </div>
+    <label class="field" style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <input type="checkbox" id="pago-anticipo"> Registrar el excedente como anticipo a favor del cliente
+    </label>
+    <div id="pago-info" class="notice info" style="margin-top:10px">Selecciona un cliente.</div>
+    <div id="pago-resultado"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-pago').close()">Cancelar</button>
+    <button class="btn" id="pago-submit" onclick="registrarPago()">Registrar cobro</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-gasto">
+  <div class="dialog-head"><h2>Registrar gasto</h2><button class="btn small ghost" onclick="document.getElementById('dlg-gasto').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <div class="field-row">
+      <div><label class="field">Rubro</label><select id="gasto-rubro"></select></div>
+      <div><label class="field">Método</label><select id="gasto-metodo"><option>EFECTIVO</option><option>TRANSFERENCIA</option></select></div>
+      <div><label class="field">Monto (USD)</label><input type="number" id="gasto-monto" step="0.01" min="0.01"></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Referencia / comprobante</label><input type="text" id="gasto-referencia"></div>
+      <div style="grid-column:span 2"><label class="field">Descripción</label><input type="text" id="gasto-descripcion" placeholder="Detalle del gasto"></div>
+    </div>
+    <div class="notice info" style="margin-top:10px">EFECTIVO sale de CAJA_DIARIA; TRANSFERENCIA sale de BANCO_GERENCIA.</div>
+    <div id="gasto-resultado"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-gasto').close()">Cancelar</button>
+    <button class="btn" id="gasto-submit" onclick="registrarGasto()">Registrar gasto</button>
+  </div>
+</dialog>
+
 <div class="toast-wrap" id="toasts"></div>
 
 <script>
@@ -2435,7 +2511,7 @@ const state = {
   view:'dashboard', clientes:[], carpeta:null, opciones:null,
   kpis:null, mercado:null, simulador:null, config:null, seccionConfig:null,
   remitentes:[], outbox:[], cierre:null,
-  ordenes:[], detalle:{}, inventario:[], donutMode:0,
+  ordenes:[], detalle:{}, inventario:[], donutMode:0, catalogo:null,
   calY:null, calM:null, notifs:[], cargando:false
 };
 const $ = (sel, root=document) => root.querySelector(sel);
@@ -3079,6 +3155,165 @@ function renderSecretariaOrdenes() {
     </tr>`).join('') || '<tr><td colspan="4" class="muted">Sin órdenes.</td></tr>'}</tbody></table>`;
 }
 
+/* ----------------------------- VENTANILLA DE PAGOS ----------------------------- */
+function nuevoRequestId() {
+  if (window.crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+function _pagoClienteActual() {
+  const id = ($('#pago-cliente') || {}).value;
+  return (state.clientes || []).find(c => String(c.cliente_id) === String(id));
+}
+
+function actualizarPagoInfo() {
+  const host = $('#pago-info');
+  if (!host) return;
+  const c = _pagoClienteActual();
+  if (!c) { host.textContent = 'Selecciona un cliente.'; return; }
+  const monto = Number(($('#pago-monto') || {}).value || 0);
+  const saldo = Number(c.saldo_pendiente || 0);
+  const aFavor = Number(c.saldo_a_favor || 0);
+  const excede = monto > saldo + 0.01;
+  host.innerHTML = `Saldo pendiente <strong>${money(saldo)}</strong> · a favor <strong>${money(aFavor)}</strong>`
+    + (excede ? ` · excedente <strong>${money(monto - saldo)}</strong> (marque anticipo para aceptarlo)` : '');
+}
+
+async function onPagoClienteChange() {
+  actualizarPagoInfo();
+  const sel = $('#pago-orden');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Abono general a la cuenta</option>';
+  const id = ($('#pago-cliente') || {}).value;
+  if (!id) return;
+  try {
+    const ordenes = await api('/api/v1/orders?cliente_id=' + encodeURIComponent(id) + '&limit=50');
+    (ordenes || []).forEach(o => {
+      if (o.estado === 'ANULADA') return;
+      const opt = document.createElement('option');
+      opt.value = o.id;
+      opt.textContent = `#${o.numero} · ${num(o.volumen_m3)} m³ · ${money(o.total)}`;
+      sel.appendChild(opt);
+    });
+  } catch(e) { /* la orden es opcional */ }
+}
+
+function abrirPago() {
+  const sel = $('#pago-cliente');
+  sel.innerHTML = (state.clientes || []).map(c =>
+    `<option value="${esc(c.cliente_id)}">${esc(c.nombre)} · saldo ${money(c.saldo_pendiente)}</option>`
+  ).join('');
+  if (!sel.options.length) { toast('No hay clientes disponibles', 'bad'); return; }
+  $('#pago-orden').innerHTML = '<option value="">Abono general a la cuenta</option>';
+  $('#pago-monto').value = '';
+  $('#pago-referencia').value = '';
+  $('#pago-anticipo').checked = false;
+  $('#pago-metodo').value = 'EFECTIVO';
+  $('#pago-resultado').innerHTML = '';
+  onPagoClienteChange();
+  document.getElementById('dlg-pago').showModal();
+}
+
+async function registrarPago() {
+  const cliente = _pagoClienteActual();
+  const monto = Number(($('#pago-monto') || {}).value || 0);
+  if (!cliente || !(monto > 0)) {
+    toast('Completa el cliente y un monto mayor a cero', 'bad');
+    return;
+  }
+  const body = {
+    request_id: nuevoRequestId(),
+    tipo_movimiento: 'COBRO',
+    cliente_id: cliente.cliente_id,
+    order_id: ($('#pago-orden') || {}).value || null,
+    fecha: hoy(),
+    metodo: ($('#pago-metodo') || {}).value || 'EFECTIVO',
+    monto: monto.toFixed(2),
+    referencia: ($('#pago-referencia') || {}).value || null,
+    es_anticipo: !!($('#pago-anticipo') || {}).checked
+  };
+  const submit = $('#pago-submit');
+  if (submit) submit.disabled = true;
+  try {
+    const r = await api('/api/v1/panel/pagos', {method:'POST', body});
+    const d = r.data || {};
+    $('#pago-resultado').innerHTML = `<div class="notice ok">Cobro registrado: ${money(d.monto)} · saldo ${money(d.saldo_pendiente)} · a favor ${money(d.saldo_a_favor)}.</div>`;
+    toast('Cobro registrado', 'ok');
+    setTimeout(() => { try { document.getElementById('dlg-pago').close(); } catch(e) {} }, 900);
+    await cargarClientes(cliente.cliente_id);
+    await cargarDashboard();
+    cargarCierre();
+  } catch(e) {
+    $('#pago-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+}
+
+async function abrirGasto() {
+  if (!state.catalogo) {
+    try {
+      const r = await api('/api/v1/panel/catalog');
+      state.catalogo = r.cuentas || [];
+    } catch(e) {
+      toast('No se pudo cargar el catálogo: ' + e.message, 'bad');
+      return;
+    }
+  }
+  const grupos = new Set(['CAJA_CHICA', 'GASTO_ADMIN_FIJO', 'CIF_PLANTA']);
+  const cuentas = (state.catalogo || []).filter(c => grupos.has(c.parent_group));
+  const sel = $('#gasto-rubro');
+  sel.innerHTML = cuentas.map(c =>
+    `<option value="${esc(c.slug)}">${esc(c.code)} · ${esc(c.name)}</option>`
+  ).join('');
+  if (!sel.options.length) { toast('No hay rubros de gasto configurados', 'bad'); return; }
+  $('#gasto-monto').value = '';
+  $('#gasto-referencia').value = '';
+  $('#gasto-descripcion').value = '';
+  $('#gasto-metodo').value = 'EFECTIVO';
+  $('#gasto-resultado').innerHTML = '';
+  document.getElementById('dlg-gasto').showModal();
+}
+
+async function registrarGasto() {
+  const metodo = ($('#gasto-metodo') || {}).value || 'EFECTIVO';
+  const monto = Number(($('#gasto-monto') || {}).value || 0);
+  const descripcion = (($('#gasto-descripcion') || {}).value || '').trim();
+  if (!(monto > 0) || descripcion.length < 3) {
+    toast('Completa el monto y una descripción de al menos 3 caracteres', 'bad');
+    return;
+  }
+  const body = {
+    request_id: nuevoRequestId(),
+    tipo_movimiento: metodo === 'EFECTIVO' ? 'GASTO_CAJA_CHICA' : 'GASTO_BANCARIO',
+    fecha: hoy(),
+    metodo,
+    bolsa: metodo === 'EFECTIVO' ? 'CAJA_DIARIA' : 'BANCO_GERENCIA',
+    monto: monto.toFixed(2),
+    account_slug: ($('#gasto-rubro') || {}).value,
+    referencia: ($('#gasto-referencia') || {}).value || null,
+    descripcion
+  };
+  const submit = $('#gasto-submit');
+  if (submit) submit.disabled = true;
+  try {
+    await api('/api/v1/panel/pagos', {method:'POST', body});
+    $('#gasto-resultado').innerHTML = '<div class="notice ok">Gasto registrado.</div>';
+    toast('Gasto registrado', 'ok');
+    setTimeout(() => { try { document.getElementById('dlg-gasto').close(); } catch(e) {} }, 900);
+    await cargarSecretaria();
+    await cargarDashboard();
+  } catch(e) {
+    $('#gasto-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+}
+
 async function seleccionarCliente(id) {
   try {
     state.carpeta = await api('/api/v1/secretaria/clientes/' + id + '/carpeta');
@@ -3527,11 +3762,13 @@ const CAMPOS = {
   ],
   bodega_y_umbrales: [
     {k:'materiales', l:'Materiales (solo lectura)', t:'readonly'},
-    {k:'por_planta', l:'Umbrales por planta', t:'json'}
+    {k:'por_planta', l:'Umbrales por planta', t:'json'},
+    {k:'conteo', l:'Estado del conteo físico', t:'readonly'}
   ],
   finanzas_y_ases_gerenciales: [
     {k:'tope_credito_auto', l:'Cupo de crédito automático', t:'json'},
     {k:'simulador', l:'Simulador bancario', t:'json'},
+    {k:'parametros_contables', l:'Parámetros contables y valoración 10 años', t:'json'},
     {k:'mercado_valorizacion', l:'Valorización de mercado', t:'json'},
     {k:'benchmarks', l:'Benchmarks por provincia', t:'json'}
   ],
@@ -3554,6 +3791,8 @@ async function cargarSuperadmin() {
     renderRemitentes();
     renderConfigTabs();
     renderConfig();
+    renderFinanzasForm();
+    renderConteo();
     renderOutbox();
   } catch(e) { toast('Superadmin no disponible: ' + e.message, 'bad'); }
 }
@@ -3630,6 +3869,96 @@ async function guardarSeccion() {
     cargarSalud();
   } catch(e) {
     $('#config-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+function renderFinanzasForm() {
+  const p = (((state.config || {}).finanzas_y_ases_gerenciales || {}).parametros_contables) || {};
+  const mapa = [
+    ['fin-wacc', 'wacc_anual_pct'],
+    ['fin-crecimiento', 'crecimiento_anual_pct'],
+    ['fin-participacion', 'participacion_trabajadores_pct'],
+    ['fin-impuesto', 'impuesto_renta_pct'],
+    ['fin-inflacion', 'inflacion_costos_pct'],
+    ['fin-dscr', 'dscr_minimo_banco']
+  ];
+  mapa.forEach(([id, key]) => {
+    const el = $('#' + id);
+    if (el) el.value = (p[key] === null || p[key] === undefined) ? '' : p[key];
+  });
+}
+
+async function guardarParametrosFinancieros() {
+  const num = id => {
+    const v = ($('#' + id) || {}).value;
+    return v === '' || v === undefined || v === null ? null : Number(v);
+  };
+  const parametros = {
+    wacc_anual_pct: num('fin-wacc'),
+    crecimiento_anual_pct: num('fin-crecimiento'),
+    participacion_trabajadores_pct: num('fin-participacion'),
+    impuesto_renta_pct: num('fin-impuesto'),
+    inflacion_costos_pct: num('fin-inflacion'),
+    dscr_minimo_banco: num('fin-dscr')
+  };
+  try {
+    const r = await api('/api/v1/superadmin/config/finanzas_y_ases_gerenciales', {
+      method: 'PUT',
+      body: {parametros_contables: parametros}
+    });
+    state.config.finanzas_y_ases_gerenciales = r;
+    renderConfig();
+    renderFinanzasForm();
+    $('#fin-param-resultado').innerHTML = '<div class="notice ok">Parámetros guardados. La valoración y el DSCR se activan si todas las tasas están completas.</div>';
+    toast('Parámetros financieros guardados', 'ok');
+  } catch(e) {
+    $('#fin-param-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+function renderConteo() {
+  const host = $('#conteo-materiales');
+  if (!host) return;
+  const sec = (state.config || {}).bodega_y_umbrales || {};
+  const mats = sec.materiales || [];
+  if (!mats.length) {
+    host.innerHTML = '<p class="muted small">Sin materiales para contar.</p>';
+    return;
+  }
+  host.innerHTML = `<table>
+    <thead><tr><th>Material</th><th>Stock real contado</th><th>Mínimo</th><th>Costo</th><th>Último conteo</th></tr></thead>
+    <tbody>${mats.map(m => `<tr>
+      <td><strong>${esc(m.codigo)}</strong><br><span class="small muted">${esc(m.nombre)} (${esc(m.unidad)})</span></td>
+      <td><input type="number" data-conteo="${esc(m.codigo)}" step="0.001" min="0" value="${m.stock_actual ?? ''}"></td>
+      <td>${num(m.stock_minimo)}</td>
+      <td>${money(m.costo_unitario)}</td>
+      <td class="small">${esc(m.ultimo_levantamiento_at || 'SIN_FECHA_CONTEO')}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+async function registrarConteo() {
+  if (!($('#conteo-confirmar') || {}).checked) {
+    toast('Confirma que los valores son el conteo físico real', 'bad');
+    return;
+  }
+  const materiales = $$('#conteo-materiales [data-conteo]').map(el => ({
+    codigo: el.dataset.conteo,
+    stock_actual: el.value === '' ? null : Number(el.value)
+  }));
+  if (!materiales.length) { toast('No hay materiales para registrar', 'bad'); return; }
+  try {
+    const r = await api('/api/v1/superadmin/config/bodega_y_umbrales', {
+      method: 'PUT',
+      body: {materiales, conteo: {registrar: true}}
+    });
+    state.config.bodega_y_umbrales = r;
+    renderConteo();
+    renderConfig();
+    $('#conteo-resultado').innerHTML = '<div class="notice ok">Conteo registrado. Los materiales quedaron con fecha de levantamiento y la proyección usa el stock real.</div>';
+    toast('Conteo físico registrado', 'ok');
+    cargarDashboard();
+  } catch(e) {
+    $('#conteo-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
   }
 }
 

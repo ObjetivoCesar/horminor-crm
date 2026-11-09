@@ -119,11 +119,13 @@ docker compose stop
 | `services/core-api/app/custodio/` | Gate contable: 14 intents, 9 consultas, ledger, testigo y catálogo |
 | `services/core-api/app/http_gate/` | Router HTTP, tokens de servicio y ventanilla de pagos |
 | `services/core-api/app/routers/` | HTTP: health, catálogo, órdenes |
-| `services/core-api/tests/` | pytest (242 tests) |
+| `services/core-api/tests/` | pytest (247 tests) |
 | `scripts/hito1_lock_test.py` | Test de Candado del Hito 1 |
 | `scripts/hito3_lock_test.py` | Test de Candado del Hito 3 |
 | `scripts/custodio_v43_check.py` | Check de integración del Custodio en el clon, con `ROLLBACK` |
 | `scripts/http_gate_v44_check.py` | Check HTTP v4.4.0 contra el clon, con `ROLLBACK` |
+| `scripts/backup_db.sh` | Backup diario verificado con retención 14/6 |
+| `docs/OPERACION_BACKUPS.md` | Cron, retención y restauración de prueba |
 | `docs/` | Decisiones pendientes y modelo de datos |
 | `.agents/` | Memoria, procesos, skills y evidencias |
 

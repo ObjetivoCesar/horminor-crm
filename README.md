@@ -8,7 +8,7 @@ debounce + Juez Binario + Bunny.net)**, **Módulo 2 (motor determinístico de
 planta)**, **Módulo 3 (Secretaría + Caja)**, **Módulo 4 (Dashboard gerencial)**
 y **Módulo 5 (Nodo Centinela)** del PDR v4.0.
 
-Estado actual: **Hitos 1, 2 y 3 construidos y verificados en local** (**242
+Estado actual: **Hitos 1, 2 y 3 construidos y verificados en local** (**247
 tests**, candado del Hito 1 **CERRADO** y candado del Hito 3 **CERRADO EN
 SANDBOX**). El Hito 1 quedó cerrado con la semilla oficial de Dirección (5
 recetas confirmadas) y el **Centro de Configuración Superadmin** de 7 secciones,
@@ -45,13 +45,14 @@ orminorth/
 │  ├─ app/custodio/            Gate contable, ledger, testigo y catálogo
 │  ├─ app/http_gate/           router HTTP, tokens y ventanilla de pagos
 │  ├─ app/routers/             health, catálogo, órdenes
-│  └─ tests/                   pytest (242 tests)
+│  └─ tests/                   pytest (247 tests)
 ├─ scripts/
 │  ├─ db_migrate.py            aplica migraciones a mano
 │  ├─ hito1_lock_test.py       Test de Candado del Hito 1 (pedido Ing. Reyes)
 │  ├─ hito3_lock_test.py       Test de Candado del Hito 3 (3 celulares simulados)
 │  ├─ custodio_v43_check.py    integración del Custodio en el clon (ROLLBACK)
-│  └─ http_gate_v44_check.py   integración HTTP v4.4.0 en el clon (ROLLBACK)
+│  ├─ http_gate_v44_check.py   integración HTTP v4.4.0 en el clon (ROLLBACK)
+│  └─ backup_db.sh             backup diario verificado y con retención
 └─ docs/                       decisiones pendientes y modelo de datos
 ```
 

@@ -210,11 +210,11 @@ producción sin tocar el pipeline.
 
 | # | Tema | Qué falta | Dueño |
 |---|---|---|---|
-| P1 | Tasas financieras | Cargar `wacc_anual_pct`, `crecimiento_anual_pct`, `participacion_trabajadores_pct`, `impuesto_renta_pct` y `dscr_minimo_banco` en `finanzas.parametros_contables`. Mientras sigan `null`, valoración/DSCR devuelven la foto real y `UNCONFIRMED_FINANCIAL_RATES` | Julio / Contadora |
-| P2 | Conteo físico | Ejecutar el levantamiento de los 5 materiales. Mientras no exista fecha, `v_stock_proyectado` marca `SIN_FECHA_CONTEO` y el Gate advierte; no bloquea la venta | Julio / Bodega |
-| P3 | Formulario de pagos en el panel | El endpoint `POST /api/v1/secretaria/pagos` existe y está probado; falta el formulario de la vista de Secretaría | Desarrollo |
-| P4 | Login de usuario | El router usa tokens de servicio `CUSTODIO_TOKEN_*`; falta login de Secretaría/Superadmin antes de exponer el panel a Internet | Desarrollo |
-| P5 | Backups y VPS | `pg_dump` diario del contenedor `orminorth-postgres` y política de retención; custodio operativo asignado a la agencia | César / Nohan |
+| P1 | Tasas financieras | El formulario ya está en Superadmin; falta que Julio/Contadora carguen `wacc_anual_pct`, `crecimiento_anual_pct`, `participacion_trabajadores_pct`, `impuesto_renta_pct` y `dscr_minimo_banco`. Mientras sigan `null`, valoración/DSCR devuelven la foto real y `UNCONFIRMED_FINANCIAL_RATES` | Julio / Contadora |
+| P2 | Conteo físico | El formulario de conteo ya está en Superadmin; falta que Bodega ejecute el levantamiento real de los 5 materiales. Mientras no se registre, `v_stock_proyectado` marca `SIN_FECHA_CONTEO` y el Gate advierte; no bloquea la venta | Julio / Bodega |
+| P3 | Formulario de pagos en el panel | **Implementado**: `/panel` tiene cobro/abono y gasto conectados a `/api/v1/panel/pagos` y al catálogo. Falta validarlo con la secretaria real | Desarrollo / Secretaría |
+| P4 | Login de usuario | Pendiente: login de Secretaría/Superadmin y protección de todas las rutas del panel antes de exponerlo a Internet | Desarrollo |
+| P5 | Backups y VPS | `scripts/backup_db.sh` listo con retención 14/6 y verificación `pg_restore --list`; falta instalar el cron y copiar los backups fuera del VPS | César / Nohan |
 | P6 | Nota de crédito Fase 2 | El intent dedicado `REGISTER_PURCHASE_CREDIT_NOTE` queda agendado si Dirección lo requiere; Fase 1 ya rechaza con `PURCHASE_REQUIRES_CREDIT_NOTE` | Julio / Dirección |
 
 ### D3. Decisiones de implementación del Custodio (2026-11-09)

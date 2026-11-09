@@ -187,6 +187,47 @@ async def test_cambiar_precio_de_una_formula_se_ve_de_inmediato() -> None:
 
 
 @pytest.mark.asyncio
+async def test_parametros_contables_se_guardan_sin_perder_flags() -> None:
+    store = MemoryConfigStore()
+
+    finanzas = await store.guardar_seccion(
+        "finanzas_y_ases_gerenciales",
+        {
+            "parametros_contables": {
+                "wacc_anual_pct": 12.5,
+                "impuesto_renta_pct": 25.0,
+                "dscr_minimo_banco": 1.3,
+            }
+        },
+    )
+
+    parametros = finanzas["parametros_contables"]
+    assert parametros["wacc_anual_pct"] == 12.5
+    assert parametros["impuesto_renta_pct"] == 25.0
+    assert parametros["dscr_minimo_banco"] == 1.3
+    assert parametros["secretaria_can_create_categories"] is False
+
+
+@pytest.mark.asyncio
+async def test_conteo_fisico_marca_registrado() -> None:
+    store = MemoryConfigStore()
+
+    bodega = await store.guardar_seccion(
+        "bodega_y_umbrales",
+        {
+            "materiales": [
+                {"codigo": "CEMENTO", "stock_actual": 3400.0},
+                {"codigo": "ARENA", "stock_actual": 430.0},
+            ],
+            "conteo": {"registrar": True},
+        },
+    )
+
+    assert bodega["conteo"]["estado"] == "REGISTRADO"
+    assert bodega["conteo"]["fecha"] is not None
+
+
+@pytest.mark.asyncio
 async def test_politica_y_reloj_termico_respetan_el_formato_editado() -> None:
     store = MemoryConfigStore()
 

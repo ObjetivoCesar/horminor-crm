@@ -21,6 +21,7 @@ RAIZ_SERVICIO = Path(__file__).resolve().parents[1]
 if str(RAIZ_SERVICIO) not in sys.path:
     sys.path.insert(0, str(RAIZ_SERVICIO))
 
+from app.http_gate.panel import router as panel_router  # noqa: E402
 from app.http_gate.payments import router as payments_router  # noqa: E402
 from app.http_gate.router import router as custodio_router  # noqa: E402
 
@@ -92,6 +93,7 @@ def _app(respuesta: dict | None = None, *, clave: str = CLAVE, pool=None) -> Fas
     app.state.fake_gate = fake
     app.include_router(custodio_router)
     app.include_router(payments_router)
+    app.include_router(panel_router)
     return app
 
 
@@ -380,6 +382,43 @@ async def test_pending_202() -> None:
         headers=_headers(rol="SUPERADMIN"),
     )
     assert r.status_code == 202
+
+
+# ---------------------------------------------------------------------------
+# Puente interno del panel
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_panel_pago_sin_token_usa_rol_secretaria() -> None:
+    app = _app()
+    r = await _post(
+        app,
+        "/api/v1/panel/pagos",
+        _pago(),
+        headers={"X-Panel-Role": "SECRETARIA"},
+    )
+    assert r.status_code == 201
+    assert app.state.fake_gate.actores[0].role == "SECRETARIA"
+
+
+@pytest.mark.asyncio
+async def test_panel_rol_no_permitido_403() -> None:
+    r = await _post(
+        _app(),
+        "/api/v1/panel/pagos",
+        _pago(),
+        headers={"X-Panel-Role": "BODEGA"},
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_panel_catalogo_sin_pool_503() -> None:
+    app = _app()
+    app.state.pool = None
+    transporte = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transporte, base_url="http://test") as client:
+        r = await client.get("/api/v1/panel/catalog")
+    assert r.status_code == 503
 
 
 @pytest.mark.asyncio

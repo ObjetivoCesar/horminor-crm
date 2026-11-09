@@ -15,6 +15,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+from datetime import datetime, timezone
 from typing import Any, Mapping, Protocol
 
 import asyncpg
@@ -438,7 +439,7 @@ class PostgresConfigStore:
             filas = await self._pool.fetch(
                 """
                 SELECT codigo, nombre, unidad, stock_actual, stock_minimo,
-                       costo_unitario
+                       costo_unitario, ultimo_levantamiento_at
                   FROM materials
                  ORDER BY codigo
                 """
@@ -452,11 +453,19 @@ class PostgresConfigStore:
                         "stock_actual": _num(fila["stock_actual"]),
                         "stock_minimo": _num(fila["stock_minimo"]),
                         "costo_unitario": _num(fila["costo_unitario"]),
+                        "ultimo_levantamiento_at": (
+                            fila["ultimo_levantamiento_at"].isoformat()
+                            if fila["ultimo_levantamiento_at"] is not None
+                            else None
+                        ),
                     }
                     for fila in filas
                 ],
                 "por_planta": dict(
                     await self._setting("bodega.umbrales_por_planta", {}) or {}
+                ),
+                "conteo": dict(
+                    await self._setting("inventario.conteo", {}) or {}
                 ),
             }
 
@@ -474,6 +483,9 @@ class PostgresConfigStore:
                 ),
                 "simulador": dict(
                     await self._setting("finanzas.simulador", {}) or {}
+                ),
+                "parametros_contables": dict(
+                    await self._setting("finanzas.parametros_contables", {}) or {}
                 ),
                 "mercado_valorizacion": dict(
                     await self._setting("mercado.valorizacion", {}) or {}
@@ -598,11 +610,13 @@ class PostgresConfigStore:
 
         elif seccion == SECCION_BODEGA:
             materiales = cuerpo.get("materiales")
+            codigos: list[str] = []
             if isinstance(materiales, list):
                 for material in materiales:
                     codigo = _texto(material.get("codigo"))
                     if not codigo:
                         continue
+                    codigos.append(codigo)
                     await self._pool.execute(
                         """
                         UPDATE materials
@@ -621,6 +635,29 @@ class PostgresConfigStore:
                 await self._guardar_setting(
                     "bodega.umbrales_por_planta", dict(cuerpo["por_planta"])
                 )
+            conteo = cuerpo.get("conteo")
+            if isinstance(conteo, Mapping) and _booleano(conteo.get("registrar")):
+                if codigos:
+                    await self._pool.execute(
+                        """
+                        UPDATE materials
+                           SET ultimo_levantamiento_at = now(),
+                               updated_at = now()
+                         WHERE codigo = ANY($1::text[])
+                        """,
+                        codigos,
+                    )
+                else:
+                    await self._pool.execute(
+                        "UPDATE materials SET ultimo_levantamiento_at = now(), updated_at = now()"
+                    )
+                await self._guardar_setting(
+                    "inventario.conteo",
+                    {
+                        "fecha": datetime.now(timezone.utc).isoformat(),
+                        "estado": "REGISTRADO",
+                    },
+                )
 
         elif seccion == SECCION_FINANZAS:
             if "tope_credito_auto" in cuerpo:
@@ -631,6 +668,14 @@ class PostgresConfigStore:
                 actual = dict(await self._setting("finanzas.simulador", {}) or {})
                 actual.update(cuerpo["simulador"])
                 await self._guardar_setting("finanzas.simulador", actual)
+            if isinstance(cuerpo.get("parametros_contables"), Mapping):
+                actual = dict(
+                    await self._setting("finanzas.parametros_contables", {}) or {}
+                )
+                actual.update(cuerpo["parametros_contables"])
+                await self._guardar_setting(
+                    "finanzas.parametros_contables", actual
+                )
             if isinstance(cuerpo.get("mercado_valorizacion"), Mapping):
                 actual = dict(
                     await self._setting("mercado.valorizacion", {}) or {}
@@ -785,6 +830,16 @@ class MemoryConfigStore:
             },
             "whatsapp.pin_operador": {"require_pin": False, "pines": {}},
             "bodega.umbrales_por_planta": {"PLANTA-COCA": {}},
+            "inventario.conteo": {"fecha": None, "estado": "PENDIENTE"},
+            "finanzas.parametros_contables": {
+                "wacc_anual_pct": None,
+                "crecimiento_anual_pct": None,
+                "participacion_trabajadores_pct": None,
+                "impuesto_renta_pct": None,
+                "inflacion_costos_pct": None,
+                "dscr_minimo_banco": None,
+                "secretaria_can_create_categories": False,
+            },
             "finanzas.tope_credito_auto": {
                 "enabled": True,
                 "default_credit_limit_usd": 1500.00,
@@ -958,6 +1013,7 @@ class MemoryConfigStore:
                         "stock_actual": 3500.0,
                         "stock_minimo": 500.0,
                         "costo_unitario": 8.2,
+                        "ultimo_levantamiento_at": None,
                     },
                     {
                         "codigo": "ARENA",
@@ -966,16 +1022,21 @@ class MemoryConfigStore:
                         "stock_actual": 450.0,
                         "stock_minimo": 80.0,
                         "costo_unitario": 14.0,
+                        "ultimo_levantamiento_at": None,
                     },
                 ],
                 "por_planta": copy.deepcopy(
                     self.settings["bodega.umbrales_por_planta"]
                 ),
+                "conteo": copy.deepcopy(self.settings["inventario.conteo"]),
             }
         if seccion == SECCION_FINANZAS:
             return {
                 "tope_credito_auto": self.settings["finanzas.tope_credito_auto"],
                 "simulador": copy.deepcopy(self.settings["finanzas.simulador"]),
+                "parametros_contables": copy.deepcopy(
+                    self.settings["finanzas.parametros_contables"]
+                ),
                 "mercado_valorizacion": copy.deepcopy(
                     self.settings["mercado.valorizacion"]
                 ),
@@ -1066,6 +1127,12 @@ class MemoryConfigStore:
                 self.settings["bodega.umbrales_por_planta"] = dict(
                     cuerpo["por_planta"]
                 )
+            conteo = cuerpo.get("conteo")
+            if isinstance(conteo, Mapping) and _booleano(conteo.get("registrar")):
+                self.settings["inventario.conteo"] = {
+                    "fecha": datetime.now(timezone.utc).isoformat(),
+                    "estado": "REGISTRADO",
+                }
         elif seccion == SECCION_FINANZAS:
             if "tope_credito_auto" in cuerpo:
                 self.settings["finanzas.tope_credito_auto"] = cuerpo.get(
@@ -1075,6 +1142,10 @@ class MemoryConfigStore:
                 actual = dict(self.settings["finanzas.simulador"])
                 actual.update(cuerpo["simulador"])
                 self.settings["finanzas.simulador"] = actual
+            if isinstance(cuerpo.get("parametros_contables"), Mapping):
+                actual = dict(self.settings["finanzas.parametros_contables"])
+                actual.update(cuerpo["parametros_contables"])
+                self.settings["finanzas.parametros_contables"] = actual
             if isinstance(cuerpo.get("mercado_valorizacion"), Mapping):
                 actual = dict(self.settings["mercado.valorizacion"])
                 actual.update(cuerpo["mercado_valorizacion"])

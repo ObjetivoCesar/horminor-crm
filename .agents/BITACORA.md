@@ -1470,3 +1470,69 @@ Cargar las tasas en `finanzas.parametros_contables` desde el Superadmin y ejecut
 - `.agents/ESTADO.md`
 - `AGENTS.md`
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - v5.1: panel de pagos, Superadmin de tasas/conteo y backup
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Duración:** sesión única
+**Objetivo:** Ejecutar los Pasos 1, 2 y 4 de la hoja de ruta v5.1: conectar el panel a la ventanilla de pagos, habilitar la configuración financiera y el conteo físico en Superadmin, y dejar el backup diario verificado.
+
+### Hecho
+
+1. `app/http_gate/panel.py`: puente interno `GET /api/v1/panel/catalog` y `POST /api/v1/panel/pagos`. El navegador no recibe `CUSTODIO_TOKEN_*`; el servidor resuelve el actor (`X-Panel-Role`, default SECRETARIA) mientras no exista login.
+2. Panel `/panel` > Secretaría: botones y modales para **cobro/abono** y **gasto**. El cobro muestra saldo pendiente y saldo a favor, permite orden opcional y checkbox de anticipo; el gasto filtra rubros de `CAJA_CHICA`, `GASTO_ADMIN_FIJO` y `CIF_PLANTA`. Al guardar refresca cartera, dashboard y cierre.
+3. Superadmin > Finanzas: formulario de `wacc_anual_pct`, `crecimiento_anual_pct`, `participacion_trabajadores_pct`, `impuesto_renta_pct`, `inflacion_costos_pct` y `dscr_minimo_banco`; guarda en `finanzas.parametros_contables` sin perder flags.
+4. Superadmin > Bodega: tabla de conteo físico con stock editable por material y confirmación explícita; al guardar actualiza `materials.stock_actual`, sella `ultimo_levantamiento_at` y deja `inventario.conteo.estado = REGISTRADO`.
+5. `scripts/backup_db.sh`: `pg_dump -Fc` dentro del contenedor, verificación con `pg_restore --list`, retención 14 días/6 meses y copia mensual. Documentado en `docs/OPERACION_BACKUPS.md`.
+6. Tests nuevos de parámetros contables, conteo y puente del panel; check HTTP ampliado a 12 verificaciones.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **247 passed in 5.76s** |
+| `scripts/http_gate_v44_check.py` contra `orminorth_v43` | `HTTP GATE V4.4: OK` con 12 pasos: catalog, mutations, queries, pagos, anticipo, gasto, idempotencia, roles, parámetros contables y conteo; `ROLLBACK` en 17 tablas |
+| `Invoke-WebRequest /panel` | 200; contiene `dlg-pago`, `dlg-gasto`, `registrarPago`, `registrarGasto`, `conteo-materiales` y `fin-wacc` |
+| `GET /api/v1/panel/catalog` | 26 cuentas activas |
+| `docker run ... sh -n scripts/backup_db.sh` | `BACKUP_SH_SYNTAX_OK` |
+
+Evidencia en `.agents/evidencias/pytest_panel_v44_2026-11-09.txt` y `http_gate_v44_check_2026-11-09.txt`.
+
+### Decisiones tomadas
+
+1. **El navegador no lleva tokens del Custodio.** El panel usa `/api/v1/panel/*`; el servidor resuelve el actor. Alternativa descartada: inyectar `CUSTODIO_TOKEN_*` en el HTML/JS, que los expone a cualquiera con DevTools.
+2. **El conteo físico no inventa stock.** La tabla parte del `stock_actual` real y exige confirmación; solo entonces sella `ultimo_levantamiento_at`. Alternativa descartada: poner una fecha por defecto, que falsearía la proyección.
+3. **Las tasas financieras se editan, no se estiman.** Si quedan vacías, el Gate sigue devolviendo `UNCONFIRMED_FINANCIAL_RATES`; la UI no rellena valores "razonables".
+4. **El backup se verifica, no solo se genera.** `pg_restore --list` valida el dump antes de rotar; la copia externa y la restauración mensual quedan como operación del VPS.
+
+### Bloqueos / preguntas al cliente
+
+1. **Login de usuario final:** falta implementar `/login`, `panel_users` y proteger todas las rutas; el panel sigue abierto.
+2. **Tasas financieras:** Julio/Contadora deben cargar los 5 valores para activar DCF/DSCR.
+3. **Conteo físico:** Bodega debe ejecutar el levantamiento real de los 5 materiales.
+4. **Cron de backup:** instalar `backup_db.sh` en el VPS a las 23:55 America/Guayaquil y copiar los dumps fuera del servidor.
+
+### Próximo paso exacto
+
+Implementar el login de usuario final: tabla `panel_users` con hash `scrypt`, CLI `scripts/panel_user.py` para crear usuarios (sin credenciales por defecto), cookie `HttpOnly` firmada y protección de `/panel`, `/api/v1/panel/*` y las rutas de Secretaría/Superadmin. Después, cargar las tasas y ejecutar el conteo real.
+
+### Archivos tocados
+
+- `services/core-api/app/http_gate/panel.py` (nuevo)
+- `services/core-api/app/main.py`
+- `services/core-api/app/superadmin/store.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_http_gate_v44.py`
+- `services/core-api/tests/test_superadmin_config.py`
+- `scripts/http_gate_v44_check.py`
+- `scripts/backup_db.sh` (nuevo)
+- `docs/OPERACION_BACKUPS.md` (nuevo)
+- `.env.example`
+- `docs/BASE_DE_DATOS.md`
+- `docs/00_DECISIONES_PENDIENTES.md`
+- `.agents/ESTADO.md`
+- `README.md`
+- `AGENTS.md`
+- `.agents/BITACORA.md`
