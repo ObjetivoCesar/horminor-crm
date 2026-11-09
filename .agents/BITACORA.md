@@ -873,3 +873,71 @@ rectangulares con borde apenas redondeado.
 - `.agents/ESTADO.md`
 - `.agents/evidencias/panel_horminor_*.png`
 - `.agents/evidencias/pytest_panel_horminor_2026-11-08.txt`
+
+
+## 2026-11-08 - Dashboard V2: mercado El Coca como ancla, ventas y provincias; Banca sin párrafos
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash Free)
+**Duración:** sesión única (continuación de la anterior)
+**Objetivo:** Reescribir el dashboard de `/panel` para que Julio vea primero el mercado, sus ventas y dónde vende; mover el calendario y el detalle operativo fuera de la primera pantalla; aligerar Secretaría y Configuración sin tocar sidebar, cabecera, colores ni contratos del API.
+
+### Hecho
+
+1. **Tres tarjetas métricas iguales** bajo el header: `Mercado El Coca` (anillo **0.31%**, **372 m³ vendidos** de **120,000 m³** anuales), `Ventas 2026` (**404 m³**, **$47,864 facturados**, **4 órdenes**, **51 viajes**, ticket **$11,966**) y `Dónde vendes` (Orellana **372 m³ / 0.31%**, Sucumbíos **16 m³ / 0.02%**, sin provincia **16 m³**). Medidas reales: las tres quedaron en **253 px** de alto a 1440×1000.
+2. **Obras activas con ilustraciones locales** `panel-obra-planta.svg` y `panel-obra-mixer.svg` (800×300, SVG puro, sin CDN); dos tarjetas con planta, cliente, volumen, resistencia, viajes, total y barra de despacho.
+3. **Agenda y actividad** bajan a una fila inferior; el calendario conserva sus IDs y el detalle de caja/mixers/bodega queda dentro de `<details class="dash2-more">`. Los filtros de obras se pliegan en un `<details>` y `f-periodo` queda oculto.
+4. **Banca sin párrafos:** resumen de cuatro cifras grandes `215,000 / 404 / 0.19% / 214,596 m³`, filas por provincia con barra y selects de período/año en línea. Se eliminó el bloque de texto largo y el "capturado USD" de cada fila; el detalle monetario sigue en el dossier.
+5. **Secretaría más liviana:** `Cierre de Caja` y `Cobros y abonos del día` pasan a tarjetas plegables; la cartera y el alta de orden siguen visibles.
+6. **Configuración más liviana:** las 7 pestañas se reemplazan por un `<select id="config-seccion">`; el Outbox Sandbox se pliega y muestra solo 4 mensajes resumidos a 120 caracteres, con contador.
+7. Se conservaron IDs legacy (`donut-*`, `hero-kpis`, `actividad-lista`, `calendario-grid`, `obras-grid`, `f-*`, `mercado-*`) y todos los contratos JSON; cero build y cero CDN.
+
+### Evidencia (real, ejecutada)
+
+| Comando / verificación | Resultado |
+|---|---|
+| `node --check` sobre el `<script>` extraído de `panel.html` | exit 0 |
+| `docker compose build core-api` + `up -d core-api` | imagen reconstruida y contenedor `Started` |
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **180 passed**, exit 0 (`.agents/evidencias/pytest_dashboard_v2_2026-11-08.txt`) |
+| Playwright 1440×1000 | alturas `[253, 253, 253]`; anillo `0.31%`; mercado `372 / 120,000`; ventas `404 / $47,864 / 4 órdenes / 51 viajes / $11,966`; 3 filas de provincia; 2 imágenes SVG locales; 3 KPIs plegados; `detalleAbierto=false`; overflow 0 |
+| Playwright Banca | `215,000 / 404 / 0.19% / 214,596`; 2 provincias; 2 escenarios |
+| Playwright Superadmin | 7 secciones en el selector; outbox cerrado con 4 mensajes; alto de página 1000 px |
+| Playwright 390×844 | tarjetas apiladas, overflow 0, 6 tabs visibles, top header sticky, 2 obras |
+| Consola / red | **0 errores de consola**, **0 requests fallidos** |
+| Capturas | `.agents/evidencias/panel_horminor_dashboard_v2_dark_2026-11-08.png`, `panel_horminor_dashboard_v2_light_2026-11-08.png`, `panel_horminor_banca_v2_2026-11-08.png`, `panel_horminor_secretaria_v2_2026-11-08.png`, `panel_horminor_superadmin_v2_2026-11-08.png`, `panel_horminor_movil_v2_2026-11-08.png` |
+| Log Playwright | `.agents/evidencias/playwright_dashboard_v2_2026-11-08.txt` |
+| Commit local | **`7a3f0f4`** `Dashboard V2: mercado El Coca, ventas y provincias; Banca sin parrafos` (sin `push`) |
+
+### Decisiones tomadas
+
+1. **El mercado es el protagonista, no la eficiencia de despacho.** El anillo muestra `372 / 120,000 m³ = 0.31%` porque ese es el número que vende posicionamiento y motiva la llamada. Alternativa descartada: mantener el anillo de 2/51 viajes (3.9%), que mide otra cosa y no responde "cuánto mercado hay".
+2. **Ventas y brecha se calculan, no se escriben.** Las ventas salen de `state.ordenes` (404 m³) y el mercado de `demanda_m3` del API (215,000); la brecha es `mercado - ventas` (214,596). Alternativa descartada: sumar solo las provincias (388 m³) y perder los 16 m³ sin provincia.
+3. **La tercera tarjeta usa provincias, no plantas.** Las 4 órdenes actuales son de Planta Fija El Coca; un desglose por planta repetiría el 100%. Alternativa descartada: mostrar plantas vacías o inventar una planta móvil sin ventas.
+4. **Banca número-primero.** Se eliminaron párrafos y el "capturado USD" por fila; quedan 4 cifras grandes y barras. El dossier conserva el detalle monetario. Alternativa descartada: mantener el texto largo del endpoint, que era la queja explícita del usuario.
+5. **Plegar sin esconder lo esencial.** Secretaría pliega cierre/cobros; Configuración usa selector; el Outbox se pliega y resume. El dashboard mantiene ventas, provincias y mercado siempre visibles. Alternativa descartada: esconder el mercado en Banca o dentro de un dropdown.
+6. **Ilustraciones SVG locales.** Se generaron dos escenas (planta y mixer) en `/static/brand/`. Alternativa descartada: fotos o imágenes por CDN, que rompen la regla de cero CDN y añaden peso.
+
+### Bloqueos / preguntas al cliente
+
+1. **Capacidad operativa de planta (m³ por período).** Ya no bloquea el anillo principal, pero falta para un KPI de capacidad. Dueño: Julio.
+2. **Sin POST de pagos/abonos.** Secretaría sigue en solo lectura para cobros nuevos. Dueño: definición funcional + backend.
+3. **Sin dirección/provincia/hora por orden.** La agenda usa `created_at` real y no inventa despachos. Dueño: Julio / Secretaría.
+4. **Sin autenticación.** `/panel`, `/api/v1/secretaria/*` y `/api/v1/superadmin/*` siguen abiertos; no exponer a Internet.
+
+### Próximo paso exacto
+
+1. Mostrar a Julio `.agents/evidencias/panel_horminor_dashboard_v2_dark_2026-11-08.png` y confirmar que el ángulo **372 de 120,000 m³ (0.31%)** es el que quiere; pedir la capacidad operativa de planta.
+2. Cuando Abel cargue credenciales el 2026-11-09, ejecutar `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py` y repetir la verificación Playwright.
+3. Implementar autenticación antes de publicar el panel en el VPS.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/app/web/static/brand/panel-obra-planta.svg`
+- `services/core-api/app/web/static/brand/panel-obra-mixer.svg`
+- `services/core-api/app/web/static/brand/panel-banca.svg`
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`
+- `.agents/diseno/horminor_design_system.json`
+- `.agents/evidencias/panel_horminor_*_v2_2026-11-08.png`
+- `.agents/evidencias/pytest_dashboard_v2_2026-11-08.txt`
+- `.agents/evidencias/playwright_dashboard_v2_2026-11-08.txt`
