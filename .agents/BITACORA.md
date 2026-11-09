@@ -614,3 +614,83 @@ Evidencia live completa: `.agents/evidencias/hito3_4_live_2026-11-08.txt`.
   `hito3_4_live_2026-11-08.txt`, `hito1_lock_2026-11-08.txt`,
   `hito3_lock_2026-11-08.txt`
 
+---
+
+## 2026-11-08 — Panel con tema "Industrial Titanium" día/noche
+
+**Agente:** DeepSeek V4.1 Flash Free (OpenCode)
+**Objetivo:** Aplicar la directriz visual V2 (Industrial Titanium, CAT Amber &
+Banking Blue Bento) al panel existente, con Modo Ejecutivo Oscuro por defecto y
+Modo Oficina Claro conmutable, sin romper contratos ni tests.
+
+### Hecho
+
+1. **Tokens CSS completos** en `/panel`: base basalto/acero oscuro, neblina
+   radial ámbar-azul, superficies Bento con vidrio, coronas de luz ámbar (CAT,
+   operación) y azul cobalto (banca, caja/cartera y simulador), cápsulas
+   horizontales para clientes y semáforos operativos.
+2. **Modo Oficina Claro** (`[data-theme="light"]`): Blanco Hormigón
+   Arquitectónico, texto carbón, bordes claros y acentos ámbar/azul. Pensado
+   para la secretaria bajo luz solar intensa.
+3. **Conmutador día/noche** en la barra superior, con persistencia en
+   `localStorage` (`orminorth-theme`), icono sol/luna, `aria-pressed` y
+   actualización de `meta[name="theme-color"]`. El tema se aplica en un script
+   inline antes del primer pintado para evitar destellos.
+4. **Geometría Bento en KPIs**: la tarjeta de caja/cartera ocupa 5/12, la de
+   operación 4/12 y la de bodega 3/12 en escritorio; en tablet y móvil colapsan
+   a 2 y 1 columna. El simulador usa la corona bancaria azul.
+5. **Detalles de interacción**: filas de clientes como cápsulas con hover
+   ámbar, botones primarios ámbar CAT, cierre de caja y dossier en azul
+   bancario/CTA blanco, foco visible en inputs, transiciones suaves y respeto a
+   `prefers-reduced-motion`.
+6. **Móvil**: el selector de rol ahora envuelve en varias líneas en lugar de
+   recortarse; los tres botones quedan visibles en 484 px.
+
+### Evidencia (real, ejecutada)
+
+| Comando / verificación | Resultado |
+|---|---|
+| `docker compose run ... pytest /app/tests -q` | **180 passed**, exit 0 |
+| `node --check` sobre los dos `<script>` del panel | exit 0, sintaxis válida |
+| Navegador → `/panel` (oscuro) | `data-theme=dark`, fondo `rgb(11,15,23)`, texto blanco, **0 errores de consola** |
+| Conmutar a claro | `data-theme=light`, fondo `rgb(241,245,249)`, texto `rgb(15,23,42)`, **0 errores** |
+| Recargar la página | `localStorage=dark` y `data-theme=dark` (persistencia correcta) |
+| KPIs en claro | caja/cartera borde `rgb(37,99,235)`; operación borde `rgb(245,158,11)`; bodega borde `rgb(226,232,240)` |
+| KPIs en oscuro | caja/cartera borde `rgba(65,131,251,.55)`; operación borde `rgba(245,158,11,.55)` |
+| Selector de rol a 484 px | los 3 botones visibles (`derecha` máx. 455 ≤ 484) |
+| Capturas | `.agents/evidencias/panel_tema_oscuro_secretaria.jpeg`, `panel_tema_claro_gerencial.jpeg`, `panel_tema_oscuro_gerencial.jpeg` |
+
+### Decisiones tomadas
+
+1. **Tokens en CSS, no en JS.** El cambio de tema solo alterna
+   `data-theme` en `<html>`; todos los colores viven en variables. Se descartó
+   re-renderizar componentes o duplicar hojas de estilo.
+2. **Oscuro por defecto.** Impacto ejecutivo para Julio; claro disponible para
+   turnos largos de Secretaría. Se descartó seguir el `prefers-color-scheme`
+   del sistema para que la primera impresión sea la definida por Dirección.
+3. **Corona ámbar = operación; corona azul = banca.** La semántica de color
+   guía la lectura: CAT para mixers/producción, cobalto para cartera, cuota de
+   mercado y simulador. Se descartó usar un solo acento para todo.
+4. **Sin build ni CDN.** Todo el sistema visual vive en el `<style>` de
+   `panel.html`. Se descartó introducir Tailwind/Vite en esta etapa.
+
+### Bloqueos / preguntas al cliente
+
+- Ninguno para el panel. Las credenciales reales las sube Abel el 2026-11-09;
+  mientras tanto el sistema sigue en SANDBOX.
+- Validar con Julio si el oscuro debe ser el predeterminado para su equipo o si
+  prefiere claro por defecto en oficina.
+
+### Próximo paso exacto
+
+1. Cuando Abel cargue las credenciales, actualizar
+   `whatsapp_evolution_y_cdn`, apagar `evolution_sandbox`/`bunny_sandbox` y
+   repetir `hito3_lock_test.py`.
+2. Revisar el panel en una pantalla ancha real (escritorio) para confirmar la
+   composición Bento 5/4/3 y ajustar si Julio pide otra jerarquía.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html` (CSS, toggle y clases Bento)
+- `.agents/evidencias/panel_tema_*.jpeg`
+

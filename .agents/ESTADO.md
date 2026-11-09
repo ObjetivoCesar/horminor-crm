@@ -25,7 +25,7 @@ Leyenda: ⚪ no iniciado · 🟡 en curso / candado abierto · 🟢 cerrado y co
 | PostgreSQL 15 | `localhost:5433` (contenedor `orminorth-postgres`) | — |
 | Redis 7 | `localhost:6380` (contenedor `orminorth-redis`) | — |
 | Core API | `http://localhost:8000` (contenedor `orminorth-core-api`) | — |
-| Panel (M3 + M4 + Superadmin) | `http://localhost:8000/panel` | — |
+| Panel (M3 + M4 + Superadmin) | `http://localhost:8000/panel` · tema V2 día/noche | — |
 
 Datos de demo en local: órdenes del Ing. Reyes (320 m³ FC-210 y 52 m³ FC-350),
 orden del candado del Hito 3 (16 m³) y clientes de fixture con provincia
@@ -37,8 +37,8 @@ scripts de candado.
 1. **Credenciales reales de Evolution API, Bunny.net y Gemini.** Ya **no
    bloquean** demos ni el cierre lógico: en SANDBOX el WhatsApp se encola en
    `sandbox_outbox`, Bunny devuelve URLs simuladas y el Juez es determinístico.
-   Se cargan desde el Superadmin (`whatsapp_evolution_y_cdn`) y se apaga el
-   switch para pasar a producción.
+   Abel las sube el **2026-11-09**; se cargan desde el Superadmin
+   (`whatsapp_evolution_y_cdn`) y se apaga el switch para pasar a producción.
 2. **Teléfonos reales del personal.** La identidad ya está implementada
    (número registrado + códigos `#BODEGA`, `#CAJA`, `#ADMIN`, `#M<n>`);
    `whatsapp.staff` tiene semillas de demostración editables en
@@ -95,6 +95,7 @@ scripts de candado.
 | 20 | **Panel único HTML sin build ni CDN** | Funciona en local y VPS sin toolchain de frontend; se puede migrar después |
 | 21 | **Centinela sin llamadas externas en SANDBOX** | Un WARN por el CDN real confundía la salud del sistema |
 | 22 | **Migración 061 separada** | La 060 ya estaba aplicada; no se edita una migración aplicada |
+| 23 | **Tema visual V2 en tokens CSS** (`data-theme` + `localStorage`) | Oscuro ejecutivo por defecto para Julio; claro de oficina conmutable para Secretaría; sin build ni CDN y sin tocar contratos ni tests |
 
 ## Riesgos abiertos
 
