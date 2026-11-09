@@ -1233,3 +1233,69 @@ Refactorizar `services/core-api/app/m2_planta/kardex.py` para costo promedio pon
 - `docs/MODELO_DATOS.md`
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - Kardex v4.3: costo promedio ponderado, snapshot y ANULACION
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash Free)
+**Duración:** sesión única
+**Objetivo:** Hacer que el kardex consuma la base v4.3: costo promedio ponderado en compras, `costo_unitario_snapshot` en todos los movimientos y reversa de consumos `TEORICO` con `ANULACION`, sin inventar stock ni costos.
+
+### Hecho
+
+1. `services/core-api/app/m2_planta/kardex.py`: nuevo helper puro `costo_promedio_ponderado()`. Si no hay stock o costo previo confirmado, la compra usa su propio costo como base; no se inventa stock inicial.
+2. `registrar_movimiento_real()` acepta `tipo` `REAL`, `COMPRA` o `AJUSTE`. La `COMPRA` exige cantidad y costo unitario, actualiza `materials.stock_actual` y recalcula `materials.costo_unitario`; `REAL`/`AJUSTE` mueven stock al costo vigente sin alterar el promedio.
+3. Todos los movimientos (`TEORICO`, `REAL`, `COMPRA`, `AJUSTE`, `ANULACION`) guardan `costo_unitario_snapshot` para valorar COGS sin recalcular el pasado.
+4. `registrar_consumo_teorico()` ya no modifica `materials.stock_actual` y ahora acepta `order_id`/`dispatch_id` opcionales, para poder probarlo sin filas de orden/viaje.
+5. `anular_consumo_teorico()` inserta una fila `ANULACION` con la cantidad contraria, conserva el snapshot y es idempotente por `referencia` (por defecto `ANULA:<id>`). Solo acepta movimientos `TEORICO`; una corrección de `REAL`/`COMPRA`/`AJUSTE` se hace con `AJUSTE`.
+6. Pruebas puras nuevas en `services/core-api/tests/test_kardex_v43.py` (5 tests: promedio de dos compras, sin stock previo, redondeo, cantidad no positiva y costo negativo).
+7. `scripts/kardex_v43_check.py`: verificación de integración contra el clon `orminorth_v43` dentro de una transacción que siempre hace `ROLLBACK`. Cubre compra/promedio, salida real, teórico, anulación idempotente, rechazo de anulación física y snapshots.
+8. Se reconstruyó `core-api` y se re-ejecutaron la batería completa y los dos candados.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps -e DATABASE_URL=postgresql://orminorth:orminorth@postgres:5432/orminorth_v43 core-api python scripts/kardex_v43_check.py` | `KARDEX V4.3: OK`; promedio (100×8.20 + 100×10.00)/200 = **9.1000**; REAL -50 deja stock 150 y conserva 9.1000; TEORICO guarda snapshot 8.2000 sin tocar stock; ANULACION +10 devuelve el proyectado de 140 a 150; repetir no duplica; COMPRA no se anula con ANULACION; 5 movimientos con snapshot; `ROLLBACK` total |
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | `197 passed in 27.37s` |
+| `docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py` | `[CANDADO CERRADO]`, 235 movimientos de kardex, EXIT=0 |
+| `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]`, EXIT=0 |
+| Verificación de limpieza en `orminorth_v43` | 0 materiales `TEST-KARDEX-V43` y 0 movimientos de prueba |
+| `psql -d orminorth` | 249 movimientos; costos **8.2000 / 14.0000 / 16.5000 / 3.8000** y stocks **3,500 / 450 / 550 / 600** sin cambios |
+
+Evidencia guardada en `.agents/evidencias/kardex_v43_check_2026-11-09.txt`, `pytest_kardex_v43_2026-11-09.txt`, `hito1_lock_kardex_v43_2026-11-09.txt` y `hito3_lock_kardex_v43_2026-11-09.txt`.
+
+### Decisiones tomadas
+
+1. **Promedio ponderado con la compra como base cuando no hay stock/costo.** El cliente eligió promedio ponderado; si no existe base confirmada, el costo de la compra es el único dato real. Alternativa descartada: asumir stock o costo inicial, que inventaría datos.
+2. **Snapshot en cada movimiento.** El COGS de un consumo se valora con el costo vigente en ese momento. Alternativa descartada: recalcular todo con el costo actual, que reescribiría el pasado.
+3. **`ANULACION` solo para `TEORICO`, idempotente por `ANULA:<id>`.** `v_stock_proyectado` suma `ANULACION` en valor absoluto, así que usarla para movimientos físicos duplicaría el stock. Las correcciones físicas van con `AJUSTE` de signo contrario. Alternativa descartada: borrar el movimiento original, que rompe la trazabilidad.
+4. **`order_id`/`dispatch_id` opcionales en el consumo teórico.** Permite probar el kardex sin crear orden/viaje; en producción `crear_orden` sigue pasándolos. Alternativa descartada: crear filas falsas para satisfacer las FK.
+5. **La verificación de integración corre en el clon y siempre revierte.** No se toca la base real ni se dejan materiales de prueba. Alternativa descartada: probar contra `orminorth`, que dejaría residuos.
+
+### Bloqueos / preguntas al cliente
+
+1. **IVA histórico:** confirmar si la orden #9 y cualquier anterior se backfillean al 15 % o quedan sin IVA. Dueño: Julio.
+2. **Fecha de conteo:** los 5 materiales siguen `SIN_FECHA_CONTEO`. Dueño: Julio.
+3. **Fórmula de valoración 10 años/DSCR:** el PDR no la trae completa. Dueño: Julio / Dirección.
+4. **Rol `CONTADORA`:** no existe en la base; decidir si se agrega o todo queda en `SUPERADMIN`. Dueño: Julio / Dirección.
+5. **Endpoint de pagos/abonos posteriores:** falta definir abono parcial, validación de saldo y permisos. Dueño: definición funcional + backend.
+6. **Custodio operativo de la BD en producción:** sigue sin designación formal. Dueño: Julio / Dirección.
+
+### Próximo paso exacto
+
+Implementar `gate.py`, `witness.py` y `catalog_hygiene.py` contra los contratos v1.3.0, con sus pruebas; después ejecutar `docker compose up -d --build core-api`, `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` (esperado: 197+ tests) y los dos candados.
+
+### Archivos tocados
+
+- `services/core-api/app/m2_planta/kardex.py`
+- `services/core-api/tests/test_kardex_v43.py` (nuevo)
+- `scripts/kardex_v43_check.py` (nuevo)
+- `docs/BASE_DE_DATOS.md`
+- `docs/00_DECISIONES_PENDIENTES.md`
+- `docs/MODELO_DATOS.md`
+- `.agents/ESTADO.md`
+- `README.md`
+- `AGENTS.md`
+- `.agents/BITACORA.md`

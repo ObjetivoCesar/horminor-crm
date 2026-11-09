@@ -215,8 +215,9 @@ calcula:
 
 ### 4.4 Estado real del código hoy
 
-El código de ventas, caja y dashboard **ya consume v4.3** desde el refactor del
-2026-11-09. Lo que sigue pendiente es el kardex y el Custodio ejecutable:
+El código de ventas, caja, dashboard y kardex **ya consume v4.3** desde el
+refactor del 2026-11-09. Lo que sigue pendiente es el Custodio ejecutable y el
+endpoint de pagos posteriores:
 
 | Pieza | Base v4.3 | Código actual | Qué falta |
 |---|---|---|---|
@@ -225,16 +226,18 @@ El código de ventas, caja y dashboard **ya consume v4.3** desde el refactor del
 | Endpoint de pagos/abonos | Tabla lista | No existe `POST /api/v1/secretaria/pagos` | Implementar router + reglas de abono parcial y permisos |
 | Cierre de caja | `payments.deleted_at` disponible | `_movimientos()` filtra `deleted_at`; `ventas_*` usa `total_con_iva` con fallback a `total` | Nada; sigue sin POST de pagos |
 | Dashboard | `v_cliente_saldo` ya usa bruto y filtra borrados | `hero_kpis()` y `flujo_operativo_mensual()` filtran `deleted_at`; `fiado_hoy` usa el bruto | Nada |
-| Kardex | `ANULACION`, `costo_unitario_snapshot` y promedio disponibles | `kardex.py` solo inserta `TEORICO`, `REAL`, `COMPRA` y `AJUSTE`; no calcula promedio ni anulación | Refactorizar kardex y recepción de compras |
+| Kardex | `ANULACION`, `costo_unitario_snapshot` y promedio disponibles | `kardex.py` calcula promedio ponderado en `COMPRA`, guarda `costo_unitario_snapshot` en todos los movimientos y anula `TEORICO` con una fila `ANULACION` idempotente; las correcciones físicas usan `AJUSTE` | Nada para el flujo actual; la recepción de compras del Gate aún no existe |
 | Gate y testigo | Tablas, triggers y contratos v1.3.0 listos | No existe `gate.py`, `witness.py` ni `catalog_hygiene.py` | Implementar los servicios y sus pruebas |
 
 **Consecuencia verificada hoy:** las 4 órdenes reales son la #9 histórica
-(`total` y `total_con_iva` `NULL`, FIADO) y las #43/#44/#45 recreadas por los
+(`total` y `total_con_iva` `NULL`, FIADO) y las #46/#47/#48 recreadas por los
 candados con el código nuevo. Las tres ya tienen IVA 15 % y bruto:
 **$43,424.00**, **$9,448.40** y **$2,171.20**. La cartera subió a
 **55,043.60 / 2 clientes / fiado 55,043.60** porque ahora el candado del Hito 1
 también valoriza las órdenes de prueba con IVA. El fallback de la vista queda
-solo para la #9 y para cualquier orden histórica sin bruto.
+solo para la #9 y para cualquier orden histórica sin bruto. Los costos de
+materiales siguen en **8.2000 / 14.0000 / 16.5000 / 3.8000** y el stock en
+**3,500 / 450 / 550 / 600**; el kardex no alteró datos reales.
 
 ### 4.5 Qué falta para registrar ingresos desde la aplicación
 
@@ -291,10 +294,9 @@ sí se puede probar:
    persiste y existe un respaldo manual previo a v4.3
    (`.agents/evidencias/pre_v43_orminorth.dump`), pero no hay política
    automática de backup/restauración ni retención.
-3. **Código desactualizado solo en kardex y Custodio ejecutable.**
-   `crear_orden`, caja y dashboard ya consumen v4.3; el kardex todavía no maneja
-   `ANULACION` ni costo promedio y faltan `gate.py`, `witness.py` y
-   `catalog_hygiene.py`. La tabla completa está en la sección 4.4.
+3. **Código desactualizado solo en el Custodio ejecutable.**
+   `crear_orden`, caja, dashboard y kardex ya consumen v4.3; faltan `gate.py`,
+   `witness.py` y `catalog_hygiene.py`. La tabla completa está en la sección 4.4.
 4. **Sin endpoint de pagos/abonos** (sección 4.5). Mientras no exista, un cobro
    posterior solo se puede insertar por SQL.
 5. **Credenciales por defecto** (`orminorth`/`orminorth`). Antes de producción
@@ -304,7 +306,7 @@ sí se puede probar:
    `COBRO`. El camino de contado/abono se verificó en el clon
    `orminorth_v43` con `scripts/refactor_v43_check.py`.
 7. **IVA histórico sin confirmar.** La orden #9 (histórica) sigue con
-   `total`/`total_con_iva` `NULL`; las órdenes #43/#44/#45 ya se crearon con IVA
+   `total`/`total_con_iva` `NULL`; las órdenes #46/#47/#48 ya se crearon con IVA
    15 % y bruto. Julio debe decidir si la #9 y cualquier orden anterior se
    backfillean al 15 % o quedan sin IVA.
 8. **Fecha de conteo sin confirmar.** `materials.ultimo_levantamiento_at` sigue
@@ -346,7 +348,10 @@ La evidencia completa está en
 pytest, candados, pruebas SQL y contratos. El refactor del código dejó además
 `refactor_v43_check_2026-11-09.txt`, `pytest_refactor_v43_2026-11-09.txt`,
 `hito1_lock_refactor_v43_2026-11-09.txt` y
-`hito3_lock_refactor_v43_2026-11-09.txt`. Resumen de comandos y salida real:
+`hito3_lock_refactor_v43_2026-11-09.txt`. El refactor del kardex agregó
+`kardex_v43_check_2026-11-09.txt`, `pytest_kardex_v43_2026-11-09.txt`,
+`hito1_lock_kardex_v43_2026-11-09.txt` y
+`hito3_lock_kardex_v43_2026-11-09.txt`. Resumen de comandos y salida real:
 
 ```text
 docker ps --filter name=orminorth
@@ -374,9 +379,9 @@ SELECT count(*) FROM accounting_accounts;
 SELECT numero, total, iva_pct, iva_monto, total_con_iva, forma_pago, creada_por
   FROM orders ORDER BY numero;
 → #9  (histórica, total/total_con_iva NULL, FIADO)
-→ #43 $37,760.00 + IVA 5,664.00 = $43,424.00 (FIADO, hito1_lock_test)
-→ #44  $8,216.00 + IVA 1,232.40 =  $9,448.40 (FIADO, hito1_lock_test)
-→ #45  $1,888.00 + IVA   283.20 =  $2,171.20 (FIADO, hito3_lock_test)
+→ #46 $37,760.00 + IVA 5,664.00 = $43,424.00 (FIADO, hito1_lock_test)
+→ #47  $8,216.00 + IVA 1,232.40 =  $9,448.40 (FIADO, hito1_lock_test)
+→ #48  $1,888.00 + IVA   283.20 =  $2,171.20 (FIADO, hito3_lock_test)
 
 SELECT sum(saldo_pendiente), count(*) FILTER (WHERE saldo_pendiente > 0),
        sum(total_fiado), sum(total_facturado), sum(total_cobrado)
@@ -398,7 +403,7 @@ SELECT ordinal_position, column_name FROM information_schema.columns
 → 11 columnas: las 8 originales + ruc, credit_limit_usd, saldo_a_favor
 
 docker compose run --rm --no-deps core-api python -m pytest /app/tests -q
-→ 192 passed, EXIT=0
+→ 197 passed, EXIT=0
 
 docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py
 → [CANDADO CERRADO], 235 movimientos de kardex, EXIT=0
@@ -414,6 +419,16 @@ Refactor v4.3 en el clon orminorth_v43
    saldo 442.80; pago con deleted_at baja el cobrado y sube el saldo
 → cierre y dashboard: el COBRO borrado no aparece; fiado_hoy usa el bruto
 → 0 registros de prueba al terminar (limpieza verificada)
+
+Kardex v4.3 en el clon orminorth_v43
+→ scripts/kardex_v43_check.py: KARDEX V4.3: OK
+→ COMPRA 100 @ 8.20 + 100 @ 10.00 = costo promedio 9.1000
+→ REAL -50 deja stock 150 y conserva el costo 9.1000
+→ TEORICO guarda snapshot 8.2000 sin mover el stock físico del CEMENTO
+→ ANULACION +10 devuelve el proyectado de 140 a 150 y es idempotente
+→ una COMPRA no se puede anular con ANULACION (se remite a AJUSTE)
+→ todos los movimientos de prueba tienen `costo_unitario_snapshot`
+→ ROLLBACK total: 0 materiales y 0 movimientos de prueba al terminar
 
 Pruebas SQL en el clon orminorth_v43
 → 7 guardas OK, 0 FALLO

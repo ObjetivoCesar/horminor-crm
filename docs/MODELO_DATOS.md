@@ -9,8 +9,10 @@ Migraciones aplicadas automáticamente al arrancar la API (idempotentes, con
 > responsables y flujo de ingresos está en `docs/BASE_DE_DATOS.md`; las
 > migraciones son `063_custodio_core.sql` y `064_custodio_views.sql`.
 > `crear_orden` ya escribe IVA/bruto y registra el `COBRO` de contado o abono;
-> caja y dashboard filtran `payments.deleted_at` y usan el bruto. El kardex y los
-> servicios `gate.py`/`witness.py` siguen pendientes.
+> caja y dashboard filtran `payments.deleted_at` y usan el bruto; el kardex
+> calcula costo promedio ponderado, guarda `costo_unitario_snapshot` y anula
+> consumos `TEORICO` con `ANULACION`. Los servicios `gate.py`/`witness.py`
+> siguen pendientes.
 
 ## Tablas
 
