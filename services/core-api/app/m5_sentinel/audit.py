@@ -30,7 +30,7 @@ from .checks import (
 
 ZONA_POR_DEFECTO = "America/Guayaquil"
 CLAVE_ZONA_HORARIA = "core.zona_horaria"
-CLIENTE = "ORMINORTH"
+CLIENTE = "HORMINOR"
 
 
 def agregar_estado_global(estados: Sequence[Estado]) -> Estado:

@@ -166,7 +166,7 @@ class SentinelAlerter:
             )
 
         cuerpo = {
-            "cliente": "ORMINORTH",
+            "cliente": "HORMINOR",
             "evento": codigo,
             "mensaje": mensaje,
             "generado_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),

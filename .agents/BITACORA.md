@@ -694,3 +694,116 @@ Modo Oficina Claro conmutable, sin romper contratos ni tests.
 - `services/core-api/app/web/templates/panel.html` (CSS, toggle y clases Bento)
 - `.agents/evidencias/panel_tema_*.jpeg`
 
+---
+
+## 2026-11-08 — Rebranding a Horminor y rediseño del panel (CRM con sidebar)
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash Free)
+**Duración:** sesión continua sobre el cierre del Hito 3
+**Objetivo:** Corregir la marca a **Horminor**, usar el logo entregado en la raíz
+del workspace y rediseñar el panel para que no parezca una UI genérica de IA:
+sidebar oscura, tipografía de la referencia servida localmente y botones
+rectangulares con borde apenas redondeado.
+
+### Hecho
+
+1. **Logo procesado desde `logo_crop.png`.** Se extrajo la marca H a PNG
+   transparente (`/static/brand/horminor-mark.png`, 64 px para favicon) y se
+   preservó el logo completo como `horminor-logo.png`. El wordmark del sidebar
+   se compone en HTML con el naranja corporativo `#F26522` (claro `#D9541A`).
+2. **Tipografía local, sin CDN.** Poppins 400/500/600/700/800 descargada como
+   `.woff2` a `app/web/static/fonts/` y declarada con `@font-face` apuntando a
+   `/static/fonts/`. `main.py` monta `StaticFiles` en `/static` y registra el
+   MIME `font/woff2`; el panel no hace ninguna petición a Google Fonts.
+3. **Layout tipo CRM de la segunda captura.** Sidebar fija de 258 px con marca,
+   etiqueta "Operación", navegación vertical (activa en azul `#2F63D8→#4183FB`)
+   y bloque inferior de estado (tema, SANDBOX, Juez, DB, planta). El contenido
+   usa `margin-left: 258px`; por debajo de 900 px colapsa a barra superior con
+   los botones envueltos en varias líneas.
+4. **Menos "hecho por IA".** Botones e inputs a 8 px de radio, cards a 16 px
+   (14 px en móvil), badges a 5 px, pills de estado a 6 px; se eliminaron las
+   coronas de glow y se reemplazaron por una línea superior fina de 2 px en los
+   KPIs. Pesos tipográficos normalizados (600/700 en lugar de 750/850/900) y
+   etiquetas en mayúsculas con tracking.
+5. **Tema día/noche conservado y persistido** (`orminorth-theme` en
+   `localStorage`), con el nuevo sidebar también en claro.
+6. **Rebranding de datos y textos.** Migración nueva
+   `db/migrations/062_rebrand_horminor.sql` (no se editaron 050/060 ya
+   aplicadas): corrige `company_name`, `trade_name`, titulares de cuentas y el
+   host Bunny a `horminor-media` / `https://horminor.b-cdn.net`. Se actualizaron
+   dossier, cálculos, defaults del Superadmin en memoria, respuesta pública del
+   bot, identificador `HORMINOR` en notificaciones y Centinela, CDN sandbox y
+   expectations de tests.
+7. **Encabezado de página dinámico.** Título, subtítulo, `document.title` y chip
+   de fecha larga por vista; el rango de la cuota de mercado se movió a una
+   línea aparte y el badge quedó corto (`12M móviles` / `Año 2026`).
+
+### Evidencia (real, ejecutada)
+
+| Comando / verificación | Resultado |
+|---|---|
+| `docker compose build core-api` + `up -d core-api` | imagen reconstruida y contenedor `Started` |
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **180 passed in 3.42s**, exit 0 (`.agents/evidencias/hito3_4_pytest_2026-11-08.txt`) |
+| `node --check` sobre los dos `<script>` del panel | exit 0 |
+| `curl /static/fonts/poppins-400.woff2` | 200, 7.884 bytes |
+| `curl /static/brand/horminor-mark.png` | 200, `image/png` |
+| `curl /panel` | 200, 72.847 bytes |
+| Playwright 1440×1000 → Secretaría/Gerencial oscuro y claro | sidebar 258 px, `main margin-left:258px`, Poppins cargada, nav 8 px, KPIs 457/362/267 px, **0 errores de consola**, **0 requests fallidos** |
+| Persistencia de tema | tras conmutar y recargar: `localStorage=light`, `data-theme=light` |
+| Playwright 390×844 | los 3 botones de rol visibles (`derecha` máx. 374 ≤ 390), sin recorte |
+| PostgreSQL `system_settings` | `company_name=HORMINOR HORMIGONES Y PREFABRICADOS S.A.S.`, `trade_name=Horminor Hormigones`, cuentas con titular `HORMINOR` |
+| PostgreSQL `integraciones.bunny` | `storage_zone=horminor-media`, `cdn_host=https://horminor.b-cdn.net` |
+| Capturas | `.agents/evidencias/panel_horminor_secretaria_dark_2026-11-08.png`, `panel_horminor_gerencial_dark_2026-11-08.png`, `panel_horminor_gerencial_light_2026-11-08.png`, `panel_horminor_movil_390_2026-11-08.png` |
+
+### Decisiones tomadas
+
+1. **Marca visible Horminor; carpeta y repo siguen como `orminorth`.** Cambiar
+   rutas, nombres de contenedores y el historial no aporta valor y rompería
+   comandos documentados. Se conserva el identificador técnico y se corrige
+   todo lo que ve el cliente.
+2. **No se editan las migraciones 050/060.** Ya estaban aplicadas; la
+   corrección va en la 062, coherente con la regla 4 del contrato.
+3. **Poppins local en lugar de Google Fonts.** Elimina dependencia de red en el
+   VPS y garantiza que la tipografía de la referencia esté siempre disponible.
+4. **Sidebar fija y no barra superior.** Es la estructura de la captura de
+   referencia y separa navegación de contenido; en móvil se degrada a barra
+   superior porque una sidebar de 258 px no cabe.
+5. **Se descartaron las coronas de glow.** El brillo radial era el detalle que
+   más "delataba" el diseño generado; una línea superior fina conserva la
+   jerarquía sin el efecto.
+
+### Bloqueos / preguntas al cliente
+
+- Confirmar con Julio que el nombre legal completo es
+  `HORMINOR HORMIGONES Y PREFABRICADOS S.A.S.` y el comercial
+  `Horminor Hormigones`; se usó el que ya estaba en la semilla, solo cambiando
+  la marca.
+- El logo entregado es de 880×480; si existe un SVG o PNG de mayor resolución,
+  conviene reemplazarlo para pantallas 4K.
+
+### Próximo paso exacto
+
+1. Ejecutar `git add -A && git commit -m "Rebrand Horminor + panel CRM con sidebar"`.
+2. Cuando Abel cargue las credenciales (2026-11-09), actualizar
+   `whatsapp_evolution_y_cdn`, apagar `evolution_sandbox`/`bunny_sandbox` y
+   repetir `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py`.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/app/main.py`
+- `services/core-api/app/__init__.py`
+- `services/core-api/app/sandbox.py`
+- `services/core-api/app/m1_whatsapp/notifications.py`
+- `services/core-api/app/m3_secretaria/service.py`
+- `services/core-api/app/m4_dashboard/calculos.py`
+- `services/core-api/app/m4_dashboard/dossier.py`
+- `services/core-api/app/m5_sentinel/audit.py`
+- `services/core-api/app/superadmin/secciones.py`
+- `services/core-api/app/superadmin/store.py`
+- `services/core-api/app/web/static/brand/` (marca y logo)
+- `services/core-api/app/web/static/fonts/` (Poppins local)
+- `services/core-api/tests/test_superadmin_config.py`, `test_sandbox.py`, `test_m3_secretaria.py`, `test_sentinel_unit.py`
+- `db/migrations/062_rebrand_horminor.sql`
+- `.agents/evidencias/panel_horminor_*.png`
+

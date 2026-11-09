@@ -28,7 +28,7 @@ from .m1_whatsapp.bunny import BunnyStorageClient
 from .m1_whatsapp.notifications import Notifier
 from .m1_whatsapp.repositorio import RepositorioWhatsApp
 
-CDN_SANDBOX_POR_DEFECTO = "https://orminorth.b-cdn.net"
+CDN_SANDBOX_POR_DEFECTO = "https://horminor.b-cdn.net"
 
 
 @dataclass

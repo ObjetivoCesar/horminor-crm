@@ -107,7 +107,7 @@ async def test_config_expone_las_siete_secciones() -> None:
 
     assert set(config) == set(SECCIONES)
     assert len(SECCIONES) == 7
-    assert config["empresa_bot_publico"]["company_name"] == "Orminorth Hormigones"
+    assert config["empresa_bot_publico"]["company_name"] == "Horminor Hormigones"
     assert config["flota_y_operacion"]["politica_ultimo_viaje"] == "PARCIAL"
     assert config["flota_y_operacion"]["reloj_termico"] == {
         "max_fraguado_minutes": 150,
@@ -149,7 +149,7 @@ async def test_cambiar_texto_del_bot_cambia_la_respuesta_en_vivo() -> None:
     antes = componer_respuesta_lead(
         await store.leer_seccion("empresa_bot_publico"), recetas
     )
-    assert "Orminorth Hormigones" in antes
+    assert "Horminor Hormigones" in antes
 
     await store.guardar_seccion(
         "empresa_bot_publico",
@@ -164,7 +164,7 @@ async def test_cambiar_texto_del_bot_cambia_la_respuesta_en_vivo() -> None:
     )
 
     assert "Hormigones del Oriente" in despues
-    assert "Orminorth Hormigones" not in despues
+    assert "Horminor Hormigones" not in despues
     assert "Sucumbios" in despues
 
 
@@ -296,7 +296,7 @@ async def test_http_lee_y_escribe_sin_autenticacion() -> None:
 
     assert completa.status_code == 200
     assert set(completa.json()) == set(SECCIONES)
-    assert empresa.json()["company_name"] == "Orminorth Hormigones"
+    assert empresa.json()["company_name"] == "Horminor Hormigones"
     assert guardado.status_code == 200
     assert guardado.json()["business_hours"] == "Lunes a sabado, 07:00 a 18:00"
     # El cambio ya esta en memoria: la siguiente lectura lo devuelve.
@@ -372,7 +372,7 @@ async def test_gate_4_responde_y_registra_el_lead() -> None:
     repo = MemoriaRepositorio(
         parametros={
             "empresa.bot_publico": {
-                "company_name": "Orminorth Hormigones",
+                "company_name": "Horminor Hormigones",
                 "main_plant_address": "El Coca, Orellana",
                 "coverage_zones": ["Orellana", "Sucumbios", "Via Auca"],
                 "mobile_plant_pitch": "Planta movil desde 1,000 m3",
@@ -401,7 +401,7 @@ async def test_gate_4_responde_y_registra_el_lead() -> None:
     assert "PROSPECTO_CREADO" in resultado.acciones
     assert "RESPUESTA_BOT_ENVIADA" in resultado.acciones
     assert resultado.respuesta is not None
-    assert "Orminorth Hormigones" in resultado.respuesta
+    assert "Horminor Hormigones" in resultado.respuesta
     assert "FC-210: $118.00/m3" in resultado.respuesta
     assert "El Coca, Orellana" in resultado.respuesta
     assert len(repo.leads) == 1
@@ -412,7 +412,7 @@ async def test_gate_4_responde_y_registra_el_lead() -> None:
 async def test_gate_4_cambia_la_respuesta_si_cambia_la_config() -> None:
     repo = MemoriaRepositorio()
     repo.parametros["empresa.bot_publico"] = {
-        "company_name": "Orminorth Hormigones",
+        "company_name": "Horminor Hormigones",
         "coverage_zones": ["Orellana"],
     }
     repo.recetas = [
@@ -449,7 +449,7 @@ async def test_gate_4_omite_datos_que_el_cliente_no_entrego() -> None:
     repo = MemoriaRepositorio(
         parametros={
             "empresa.bot_publico": {
-                "company_name": "Orminorth Hormigones",
+                "company_name": "Horminor Hormigones",
                 "ruc": None,
                 "business_hours": None,
                 "bank_accounts": [],

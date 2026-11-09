@@ -1,15 +1,20 @@
-# ORMINORTH — Núcleo Centinela (Hitos 1, 2 y 3)
+# HORMINOR — Núcleo Centinela (Hitos 1, 2 y 3)
+
+> La marca visible es **HORMINOR**. La carpeta y los nombres de contenedores
+> conservan `orminorth` por compatibilidad con los comandos ya documentados.
 
 Implementación del **Módulo 0 (PostgreSQL + JSONB)**, **Módulo 1 (WhatsApp:
 debounce + Juez Binario + Bunny.net)**, **Módulo 2 (motor determinístico de
-planta)** y **Módulo 5 (Nodo Centinela)** del PDR v4.0.
+planta)**, **Módulo 3 (Secretaría + Caja)**, **Módulo 4 (Dashboard gerencial)**
+y **Módulo 5 (Nodo Centinela)** del PDR v4.0.
 
-Estado actual: **Hitos 1, 2 y 3 construidos y verificados en local** (157 tests,
-candado del Hito 1 **CERRADO** y candado del Hito 3 con 34/34). El Hito 1 quedó
-cerrado con la semilla oficial de Dirección (5 recetas confirmadas) y el **Centro
-de Configuración Superadmin** de 7 secciones, editable en caliente. El Hito 3
-sigue abierto solo por credenciales reales de Evolution/Bunny/Gemini y los
-teléfonos del personal. Ver `docs/00_DECISIONES_PENDIENTES.md`.
+Estado actual: **Hitos 1, 2 y 3 construidos y verificados en local** (**180
+tests**, candado del Hito 1 **CERRADO** y candado del Hito 3 **CERRADO EN
+SANDBOX**). El Hito 1 quedó cerrado con la semilla oficial de Dirección (5
+recetas confirmadas) y el **Centro de Configuración Superadmin** de 7 secciones,
+editable en caliente. La producción real solo espera credenciales de
+Evolution/Bunny/Gemini y los teléfonos del personal. Ver
+`docs/00_DECISIONES_PENDIENTES.md`.
 
 ## Estructura
 
@@ -22,15 +27,21 @@ orminorth/
 │  ├─ 020_seed_recipes.sql     recetas + materiales (con datos PENDIENTES marcados)
 │  ├─ 030_umbral_termico.sql   parámetro de aviso térmico (legado)
 │  ├─ 040_ratificacion_hito3.sql  dos umbrales térmicos + códigos de operador
-│  └─ 050_seed_oficial_superadmin.sql  semilla oficial + Centro de Configuración
+│  ├─ 050_seed_oficial_superadmin.sql  semilla oficial + Centro de Configuración
+│  ├─ 060_modulos_3_4_sandbox.sql  tablas M3/M4 + modo SANDBOX
+│  ├─ 061_benchmarks_limpieza.sql  limpieza de benchmarks heredados
+│  └─ 062_rebrand_horminor.sql     corrección de marca (Horminor)
 ├─ services/core-api/
 │  ├─ app/m1_whatsapp/         webhook, debounce, identidad, Juez "Jeb", Bunny
 │  ├─ app/m2_planta/           motor determinístico (dosificador, kardex)
+│  ├─ app/m3_secretaria/       ventanilla, carpeta forense y cierre de caja
+│  ├─ app/m4_dashboard/        KPIs, cuota de mercado, simulador y dossier
 │  ├─ app/superadmin/          configuración en caliente (7 secciones, sin login)
 │  ├─ app/m5_sentinel/         salud de infraestructura, canales y operación
+│  ├─ app/web/                 panel HTML en `/panel` + estáticos (Poppins, logo)
 │  ├─ app/services/            alta de órdenes (M0 + M2)
 │  ├─ app/routers/             health, catálogo, órdenes
-│  └─ tests/                   pytest
+│  └─ tests/                   pytest (180 tests)
 ├─ scripts/
 │  ├─ db_migrate.py            aplica migraciones a mano
 │  ├─ hito1_lock_test.py       Test de Candado del Hito 1 (pedido Ing. Reyes)

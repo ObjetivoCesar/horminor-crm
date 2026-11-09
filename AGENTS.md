@@ -1,4 +1,4 @@
-# AGENTS.md — Orminorth / Centinela
+# AGENTS.md — Horminor / Centinela
 
 Contrato de trabajo para cualquier agente (OpenCode, Antigravity, Codex, Claude)
 que toque este repositorio. Léelo completo antes de editar. No es documentación
@@ -8,8 +8,9 @@ decorativa: son reglas operativas.
 
 ## 1. Contexto en 30 segundos
 
-- **Cliente:** Julio Villavicencio — Orminorth (hormigón premezclado y planta
-  móvil, El Coca / Orellana y Sucumbíos, Ecuador).
+- **Cliente:** Julio Villavicencio — Horminor (hormigón premezclado y planta
+  móvil, El Coca / Orellana y Sucumbíos, Ecuador). El repositorio y la carpeta
+  conservan el nombre histórico `orminorth`; la marca visible es **HORMINOR**.
 - **Producto:** ERP/CRM modular + automatización por WhatsApp + Nodo Centinela
   de telemetría para el CRM de la agencia.
 - **Fuente de verdad del alcance:** `docs/PDR_v4.0.pdf` y su versión de texto
@@ -20,9 +21,10 @@ decorativa: son reglas operativas.
   y el Centro de Configuración Superadmin de 7 secciones. Hito 3 **cerrado en
   modo SANDBOX** (WhatsApp encolado, Bunny simulado, Juez determinístico).
   Módulos 3 (Secretaría + Caja) y 4 (Dashboard de Julio y Ases) construidos y
-  verificados en local. La producción real solo espera credenciales y
-  teléfonos, que se cargan desde el Superadmin sin reiniciar. Ver
-  `.agents/ESTADO.md`.
+  verificados en local. El panel `/panel` usa la marca **HORMINOR**, sidebar
+  tipo CRM, tipografía Poppins servida desde `/static` y tema día/noche. La
+  producción real solo espera credenciales y teléfonos, que se cargan desde el
+  Superadmin sin reiniciar. Ver `.agents/ESTADO.md`.
 - **Datos que faltan:** `docs/00_DECISIONES_PENDIENTES.md`.
 
 ## 2. Arranque de sesión (obligatorio, en este orden)
@@ -109,7 +111,7 @@ docker compose stop
 | `services/core-api/app/m4_dashboard/` | KPIs, cuota de mercado, simulador y dossier |
 | `services/core-api/app/m5_sentinel/` | Centinela (12 chequeos) |
 | `services/core-api/app/sandbox.py` | Adaptadores SANDBOX (WhatsApp, Bunny, Juez) |
-| `services/core-api/app/web/` | Panel HTML en `/panel` (3 vistas, sin build) |
+| `services/core-api/app/web/` | Panel HTML en `/panel` (3 vistas, sin build) + `/static` (Poppins y logo Horminor) |
 | `services/core-api/app/services/ordenes.py` | Alta de orden: M0 + M2 |
 | `services/core-api/app/routers/` | HTTP: health, catálogo, órdenes |
 | `services/core-api/tests/` | pytest (180 tests) |

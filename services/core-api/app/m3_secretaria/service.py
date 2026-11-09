@@ -575,7 +575,7 @@ class MemorySecretariaStore:
                 "salida_planta": datetime.now(timezone.utc).isoformat(),
                 "limite_termico_fraguado": None,
                 "evidencias": [
-                    "https://orminorth.b-cdn.net/sandbox/evidencias/MIXER-01/viaje-1.jpg"
+                    "https://horminor.b-cdn.net/sandbox/evidencias/MIXER-01/viaje-1.jpg"
                 ],
             }
         ]

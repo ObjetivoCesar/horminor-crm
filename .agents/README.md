@@ -1,4 +1,4 @@
-# `.agents/` — Memoria operativa de Orminorth
+# `.agents/` — Memoria operativa de Horminor
 
 Esta carpeta existe para que el proyecto siga siendo entendible dentro de tres
 días, tres semanas o tres meses, y para que **cualquier agente** (OpenCode,

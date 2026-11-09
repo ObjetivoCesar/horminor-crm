@@ -44,7 +44,7 @@ def construir_dossier_html(
 ) -> str:
     datos = dict(empresa or {})
     nombre = escape(
-        str(datos.get("company_name") or "ORMINORTH HORMIGONES Y PREFABRICADOS S.A.S.")
+        str(datos.get("company_name") or "HORMINOR HORMIGONES Y PREFABRICADOS S.A.S.")
     )
     ruc = escape(str(datos.get("ruc") or "—"))
     direccion = escape(str(datos.get("main_plant_address") or "—"))
@@ -90,7 +90,7 @@ def construir_dossier_html(
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Dossier Financiero de Pre-Calificacion Bancaria — Orminorth</title>
+<title>Dossier Financiero de Pre-Calificacion Bancaria — Horminor</title>
 <style>
   @page {{ size: A4; margin: 18mm; }}
   * {{ box-sizing: border-box; }}
@@ -120,7 +120,7 @@ def construir_dossier_html(
   <p class="muted" style="margin:0 0 4px;font-size:10px;letter-spacing:.12em;text-transform:uppercase">
     Documento de trabajo — no constituye solicitud formal de credito
   </p>
-  <h1>Dossier Financiero de Pre-Calificacion Bancaria — Orminorth</h1>
+  <h1>Dossier Financiero de Pre-Calificacion Bancaria — Horminor</h1>
   <p class="muted" style="margin:0">{nombre} · RUC {ruc} · {direccion}</p>
   <p class="muted" style="margin:4px 0 0">Generado: {fecha}</p>
 </header>
@@ -161,7 +161,7 @@ def construir_dossier_html(
 <div class="nota">
   <strong>Lectura:</strong> el DSCR proyectado mide solo el flujo incremental del
   equipo (m3 extra x margen neto). El DSCR respaldado suma el flujo operativo
-  historico de Orminorth. Un valor igual o superior a 1.50x se considera verde
+  historico de Horminor. Un valor igual o superior a 1.50x se considera verde
   para pre-calificacion.
 </div>
 
@@ -169,7 +169,7 @@ def construir_dossier_html(
 <table>
   <thead>
     <tr>
-      <th>Provincia</th><th>Demanda anual</th><th>Ventas Orminorth</th>
+      <th>Provincia</th><th>Demanda anual</th><th>Ventas Horminor</th>
       <th>Cuota</th><th>Valor del mercado</th><th>En manos de la competencia</th>
     </tr>
   </thead>
@@ -185,14 +185,14 @@ def construir_dossier_html(
 
 <h2>4. Declaracion de alcance</h2>
 <p>
-  Orminorth opera con planta fija en El Coca y planta movil en campamento.
+  Horminor opera con planta fija en El Coca y planta movil en campamento.
   El presente dossier usa exclusivamente datos registrados en el sistema
   (ordenes, cobros, inventario y benchmarks cargados por Direccion).
   No incluye facturacion electronica SRI, que esta fuera de alcance.
 </p>
 
 <footer>
-  Orminorth / Centinela · Dossier generado automaticamente por el Modulo 4.
+  Horminor / Centinela · Dossier generado automaticamente por el Modulo 4.
   Los datos provisionales son editables desde el Centro de Configuracion Superadmin.
 </footer>
 <p class="no-print" style="margin-top:18px">

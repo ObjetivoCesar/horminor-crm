@@ -197,7 +197,7 @@ async def test_clave_valida_responde_200(monkeypatch: pytest.MonkeyPatch) -> Non
             _check("despachos_ayer", "OK", {"total": 6}),
         ]
         return {
-            "cliente": "ORMINORTH",
+            "cliente": "HORMINOR",
             "generado_at": "2026-11-08T10:15:00-05:00",
             "latencia_total_ms": 12.5,
             "estado_global": audit.agregar_estado_global(
@@ -219,7 +219,7 @@ async def test_clave_valida_responde_200(monkeypatch: pytest.MonkeyPatch) -> Non
 
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
-    assert cuerpo["cliente"] == "ORMINORTH"
+    assert cuerpo["cliente"] == "HORMINOR"
     assert cuerpo["estado_global"] == "WARN"
     assert len(cuerpo["checks"]) == 12
     assert {c["id"] for c in cuerpo["checks"]} >= {"db", "redis", "infra"}

@@ -112,8 +112,10 @@ valor nuevo, sin reiniciar el servidor. El Gate #4 lee
 La migración 060 carga la razón social `ORMINORTH HORMIGONES Y PREFABRICADOS
 S.A.S.`, RUC `2290000000001`, dirección y horario, cuentas de Banco Pichincha y
 BanEcuador, placas/choferes y `finanzas.tope_credito_auto` (cupo por defecto
-$1.500, mora máxima 15 días). Son **datos de puesta en marcha**, editables en
-caliente. Siguen `NULL`/`NO_CONFIGURADO` el precio de mercado por provincia, el
+$1.500, mora máxima 15 días). La migración **062** corrigió la marca a
+`HORMINOR HORMIGONES Y PREFABRICADOS S.A.S.` / `Horminor Hormigones` y el host
+Bunny a `horminor.b-cdn.net`, sin editar la 060 ya aplicada. Son **datos de
+puesta en marcha**, editables en caliente. Siguen `NULL`/`NO_CONFIGURADO` el precio de mercado por provincia, el
 umbral de merma y el webhook real del CRM; el bot y el panel los omiten en
 lugar de inventarlos.
 

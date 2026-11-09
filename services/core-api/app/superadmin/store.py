@@ -44,7 +44,7 @@ _DESCRIPCIONES = {
         "Ventana de agrupacion de mensajes de WhatsApp. Editable en Superadmin."
     ),
     "empresa.bot_publico": (
-        "ADN publico de Orminorth que usa el bot para responder leads. "
+        "ADN publico de Horminor que usa el bot para responder leads. "
         "Editable en Superadmin > empresa_bot_publico."
     ),
     "flota.mixers": (
@@ -755,14 +755,14 @@ class MemoryConfigStore:
                 "sandbox": True,
             },
             "integraciones.bunny": {
-                "storage_zone": "orminorth-media",
-                "cdn_host": "https://orminorth.b-cdn.net",
+                "storage_zone": "horminor-media",
+                "cdn_host": "https://horminor.b-cdn.net",
                 "api_key": None,
                 "sandbox": True,
             },
             "ia.juez": {"model": "gemini-2.5-flash", "modo": "AUTO"},
             "empresa.bot_publico": {
-                "company_name": "Orminorth Hormigones",
+                "company_name": "Horminor Hormigones",
                 "ruc": None,
                 "main_plant_address": "El Coca, Orellana",
                 "coverage_zones": ["Orellana", "Sucumbios"],

@@ -104,7 +104,7 @@ async def test_sandbox_notifier_encola_sin_evolution() -> None:
 
 @pytest.mark.asyncio
 async def test_sandbox_bunny_url_deterministica_y_sin_red() -> None:
-    bunny = SandboxBunnyStorageClient(cdn_host="https://orminorth.b-cdn.net")
+    bunny = SandboxBunnyStorageClient(cdn_host="https://horminor.b-cdn.net")
 
     primera = await bunny.subir(
         nombre_archivo="evidencias/MIXER-01/viaje-1.jpg",
@@ -119,7 +119,7 @@ async def test_sandbox_bunny_url_deterministica_y_sin_red() -> None:
 
     assert primera == segunda
     assert primera == (
-        "https://orminorth.b-cdn.net/sandbox/evidencias/MIXER-01/viaje-1.jpg"
+        "https://horminor.b-cdn.net/sandbox/evidencias/MIXER-01/viaje-1.jpg"
     )
     assert len(bunny.subidas) == 2
     assert bunny.subidas[0]["bytes"] == 4
@@ -165,7 +165,7 @@ async def test_simulador_procesa_lead_y_deja_respuesta_en_outbox() -> None:
     repo = MemoriaRepositorio(
         parametros={
             "empresa.bot_publico": {
-                "company_name": "ORMINORTH HORMIGONES Y PREFABRICADOS S.A.S.",
+                "company_name": "HORMINOR HORMIGONES Y PREFABRICADOS S.A.S.",
                 "main_plant_address": "El Coca, Orellana",
                 "coverage_zones": ["Orellana", "Sucumbios"],
                 "mobile_plant_pitch": "Planta movil desde 1,000 m3",
@@ -201,7 +201,7 @@ async def test_simulador_procesa_lead_y_deja_respuesta_en_outbox() -> None:
     assert cuerpo["compuerta"] == "GATE_4_LEAD"
     assert cuerpo["modo"] == "SANDBOX"
     assert cuerpo["judge_mode"] == "DETERMINISTIC_FALLBACK"
-    assert "orminorth" in (cuerpo["respuesta"] or "").lower()
+    assert "horminor" in (cuerpo["respuesta"] or "").lower()
     assert len(repo.leads) == 1
 
     assert outbox.status_code == 200

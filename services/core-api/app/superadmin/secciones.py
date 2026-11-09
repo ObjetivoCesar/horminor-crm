@@ -108,13 +108,13 @@ def componer_respuesta_lead(
     config: Mapping[str, Any] | None,
     recetas: Iterable[Mapping[str, Any]] | None = None,
 ) -> str:
-    """Arma la respuesta de atencion al publico usando el ADN de Orminorth.
+    """Arma la respuesta de atencion al publico usando el ADN de Horminor.
 
     Todo sale de ``empresa.bot_publico`` y de ``concrete_recipes``. Si un dato
     no existe, la linea se omite: el bot nunca inventa RUC, cuentas ni horario.
     """
     datos = dict(config or {})
-    empresa = _texto(datos.get("company_name")) or "Orminorth Hormigones"
+    empresa = _texto(datos.get("company_name")) or "Horminor Hormigones"
     direccion = _texto(datos.get("main_plant_address"))
     zonas = _lista_texto(datos.get("coverage_zones"))
     horario = _texto(datos.get("business_hours"))

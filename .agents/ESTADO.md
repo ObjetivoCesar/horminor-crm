@@ -1,7 +1,7 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-08**
+> Última actualización: **2026-11-08** (rebranding Horminor + panel CRM)
 
 ## Hitos
 
@@ -25,7 +25,7 @@ Leyenda: ⚪ no iniciado · 🟡 en curso / candado abierto · 🟢 cerrado y co
 | PostgreSQL 15 | `localhost:5433` (contenedor `orminorth-postgres`) | — |
 | Redis 7 | `localhost:6380` (contenedor `orminorth-redis`) | — |
 | Core API | `http://localhost:8000` (contenedor `orminorth-core-api`) | — |
-| Panel (M3 + M4 + Superadmin) | `http://localhost:8000/panel` · tema V2 día/noche | — |
+| Panel (M3 + M4 + Superadmin) | `http://localhost:8000/panel` · Horminor, sidebar CRM, Poppins local, tema día/noche | — |
 
 Datos de demo en local: órdenes del Ing. Reyes (320 m³ FC-210 y 52 m³ FC-350),
 orden del candado del Hito 3 (16 m³) y clientes de fixture con provincia
@@ -96,6 +96,9 @@ scripts de candado.
 | 21 | **Centinela sin llamadas externas en SANDBOX** | Un WARN por el CDN real confundía la salud del sistema |
 | 22 | **Migración 061 separada** | La 060 ya estaba aplicada; no se edita una migración aplicada |
 | 23 | **Tema visual V2 en tokens CSS** (`data-theme` + `localStorage`) | Oscuro ejecutivo por defecto para Julio; claro de oficina conmutable para Secretaría; sin build ni CDN y sin tocar contratos ni tests |
+| 24 | **Marca visible Horminor; carpeta/repo siguen como `orminorth`** | Es lo que ve el cliente; renombrar rutas, contenedores e historial rompería comandos sin aportar valor |
+| 25 | **Poppins local y sidebar CRM de 258 px** | La tipografía de la referencia queda servida desde `/static` (sin Google Fonts); la sidebar reproduce la captura y colapsa a barra superior en <900 px |
+| 26 | **Corrección de marca en migración 062** | Las migraciones 050/060 ya estaban aplicadas; se corrige el ADN público y Bunny sin editar el pasado |
 
 ## Riesgos abiertos
 

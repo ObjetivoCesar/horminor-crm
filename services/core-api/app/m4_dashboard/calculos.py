@@ -202,17 +202,17 @@ def calcular_cuota_mercado(
     faltante = max(Decimal("0"), demanda - ventas)
     if cuota >= Decimal("15"):
         mensaje = (
-            f"Orminorth controla {cuota}% del mercado de {provincia}. "
+            f"Horminor controla {cuota}% del mercado de {provincia}. "
             "La Planta Movil permite sostener el ritmo sin depender de la planta fija."
         )
     elif cuota >= Decimal("5"):
         mensaje = (
-            f"Orminorth tiene {cuota}% de {provincia}. Cada 10,000 m3 adicionales "
+            f"Horminor tiene {cuota}% de {provincia}. Cada 10,000 m3 adicionales "
             "con la Planta Movil suman aproximadamente $1.18M capturados a la competencia."
         )
     else:
         mensaje = (
-            f"Orminorth tiene {cuota}% de {provincia}: el mercado vale "
+            f"Horminor tiene {cuota}% de {provincia}: el mercado vale "
             f"${float(demanda * precio):,.0f}. La Planta Movil es la palanca para "
             "capturar obra petrolera y vial fuera de El Coca."
         )

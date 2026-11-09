@@ -1,12 +1,15 @@
-"""Orminorth - Core API (Modulos 0, 1, 2 y 5)."""
+"""Horminor - Core API (Modulos 0, 1, 2 y 5)."""
 
 from __future__ import annotations
 
 import logging
+import mimetypes
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from .db import create_pool, run_migrations
 from .m1_whatsapp.router import router as whatsapp_router
@@ -65,13 +68,21 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Orminorth Core API",
+    title="Horminor Core API",
     version="0.3.0",
     description=(
         "Modulos 0 (datos), 1 (WhatsApp), 2 (planta), 3 (Secretaria), "
-        "4 (Dashboard) y 5 (Centinela) de Orminorth."
+        "4 (Dashboard) y 5 (Centinela) de Horminor."
     ),
     lifespan=lifespan,
+)
+
+mimetypes.add_type("font/woff2", ".woff2")
+
+app.mount(
+    "/static",
+    StaticFiles(directory=Path(__file__).resolve().parent / "web" / "static"),
+    name="static",
 )
 
 

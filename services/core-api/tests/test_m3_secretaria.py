@@ -110,7 +110,7 @@ async def test_listar_clientes_y_carpeta_forense() -> None:
         assert datos["cliente"]["nombre"]
         assert "saldo" in datos and "ordenes" in datos
         assert datos["viajes"][0]["juez"]["despacho_validado"] is True
-        assert datos["evidencias"][0]["url"].startswith("https://orminorth.b-cdn.net/")
+        assert datos["evidencias"][0]["url"].startswith("https://horminor.b-cdn.net/")
 
 
 @pytest.mark.asyncio
