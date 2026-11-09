@@ -1,7 +1,7 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-08** (dashboard número-primero: mercado El Coca, ventas y provincias; Banca sin párrafos)
+> Última actualización: **2026-11-08** (dashboard V2 aprobado por Julio; próxima sesión 2026-11-09: pantallas restantes, base de datos y pruebas)
 
 ## Hitos
 
@@ -72,17 +72,23 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **Validar el dashboard con Julio:** mostrar
-   `.agents/evidencias/panel_horminor_dashboard_dark.png` y confirmar que el
-   ángulo de venta es **372 m³ vendidos de 120,000 m³ (0.31%)** en El Coca;
-   pedir la **capacidad operativa de planta** para un KPI de capacidad.
-2. **Producción del Hito 3:** cargar credenciales reales en
+1. **Dashboard V2 aprobado por Julio (2026-11-08).** La captura de referencia es
+   `.agents/evidencias/panel_horminor_dashboard_v2_dark_2026-11-08.png`; el
+   ángulo comercial es **372 m³ vendidos de 120,000 m³ (0.31%)** en El Coca.
+   Sigue pendiente que Julio entregue la **capacidad operativa de planta**.
+2. **Sesión del 2026-11-09 — otras pantallas, base de datos y pruebas:**
+   revisar con Julio las vistas restantes (`Carpetas de Clientes`, `Planta,
+   Flota y Kardex`, `Banca y Mercado`, `Secretaría y Caja`, `Superadmin`),
+   revisar el esquema/migraciones y los datos reales de PostgreSQL, y ejecutar
+   la batería completa (`pytest` + Playwright escritorio/móvil) registrando la
+   evidencia en `.agents/evidencias/`.
+3. **Producción del Hito 3:** cargar credenciales reales en
    `PUT /api/v1/superadmin/config/whatsapp_evolution_y_cdn`, poner
    `evolution_sandbox=false` y `bunny_sandbox=false`, y repetir
    `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py`.
-3. **Autenticación:** login para Superadmin/Secretaría antes de publicar el
+4. **Autenticación:** login para Superadmin/Secretaría antes de publicar el
    panel en el VPS.
-4. **Despliegue:** cuando exista el VPS, copiar el repo, levantar el stack y
+5. **Despliegue:** cuando exista el VPS, copiar el repo, levantar el stack y
    configurar TLS, proxy inverso y backups.
 
 ## Decisiones de arquitectura vigentes

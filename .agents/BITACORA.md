@@ -941,3 +941,56 @@ rectangulares con borde apenas redondeado.
 - `.agents/evidencias/panel_horminor_*_v2_2026-11-08.png`
 - `.agents/evidencias/pytest_dashboard_v2_2026-11-08.txt`
 - `.agents/evidencias/playwright_dashboard_v2_2026-11-08.txt`
+
+
+## 2026-11-08 - Cierre de sesión: Dashboard V2 aprobado por Julio
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash Free)
+**Duración:** cierre de la misma sesión
+**Objetivo:** Registrar la aprobación del dashboard V2 por parte de Julio y dejar el plan exacto para la sesión del 2026-11-09.
+
+### Hecho
+
+1. Julio revisó el rediseño y lo aprobó: **“Gran trabajo!!”**. El dashboard V2 queda congelado como referencia visual.
+2. Se confirma la captura aprobada: `.agents/evidencias/panel_horminor_dashboard_v2_dark_2026-11-08.png`.
+3. Se dejó el plan de mañana: revisar las pantallas restantes, revisar las bases de datos y volver a probar todo.
+4. En este cierre no se modificó código, datos ni configuración: solo la memoria del proyecto (`ESTADO.md` y esta bitácora).
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| Revisión del usuario | **aprobado** (“Gran trabajo!!”) |
+| `git status --short` antes del cierre | árbol limpio |
+| pytest de la sesión | **180 passed**, exit 0 |
+| Playwright de la sesión | **0 errores de consola**, **0 requests fallidos** |
+| Captura aprobada | `panel_horminor_dashboard_v2_dark_2026-11-08.png` |
+| Commits de la sesión | `7a3f0f4` (código) + `d42a256` (bitácora) |
+
+### Decisiones tomadas
+
+1. **El Dashboard V2 se congela como base visual aprobada.** Los cambios de las demás pantallas no deben alterar sus tres tarjetas, su jerarquía ni sus números. Alternativa descartada: seguir iterando el dashboard antes de revisar el resto.
+2. **La prioridad de mañana es revisar, no construir.** Primero pantallas restantes + base de datos + pruebas; cualquier funcionalidad nueva se evalúa después. Alternativa descartada: agregar funciones sin validar los datos que las alimentan.
+
+### Bloqueos / preguntas al cliente
+
+1. **Capacidad operativa de planta (m³ por período).** Falta para un KPI de capacidad. Dueño: Julio.
+2. **Sin POST de pagos/abonos.** Secretaría sigue en solo lectura para cobros nuevos.
+3. **Sin dirección/provincia/hora por orden.** La agenda usa `created_at` real y no inventa despachos.
+4. **Sin autenticación.** `/panel`, `/api/v1/secretaria/*` y `/api/v1/superadmin/*` siguen abiertos.
+
+### Próximo paso exacto
+
+**2026-11-09:** abrir `http://localhost:8000/panel`, recorrer con Julio las 5 vistas restantes (`Secretaría y Caja`, `Carpetas de Clientes`, `Planta, Flota y Kardex`, `Banca y Mercado`, `Superadmin y WhatsApp`), revisar el esquema de PostgreSQL y las migraciones/seed, y ejecutar:
+
+```powershell
+docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto
+python "C:\Users\Cesar\AppData\Local\Temp\opencode\verificar_panel_horminor.py"
+```
+
+Registrar la salida y las capturas nuevas en `.agents/evidencias/`.
+
+### Archivos tocados
+
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`
