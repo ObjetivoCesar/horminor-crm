@@ -1299,3 +1299,90 @@ Implementar `gate.py`, `witness.py` y `catalog_hygiene.py` contra los contratos 
 - `README.md`
 - `AGENTS.md`
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - Custodio v4.3 ejecutable: Gate, ledger y testigo con 14 intents
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash Free)
+**Duración:** sesión única
+**Objetivo:** Implementar el Custodio v4.3 sobre los contratos 1.3.0: Gate de mutaciones, libro mayor de partida doble, testigo inmutable, higiene del catálogo contable y consultas, sin inventar datos ni tocar la base real.
+
+### Hecho
+
+1. Paquete nuevo `services/core-api/app/custodio/`:
+   - `contracts.py`: validación de los 4 contratos v1.3.0 (14 intents, 9 consultas, testigo y respuesta del Gate).
+   - `ledger.py`: asientos balanceados, catálogo de cuentas, reversa del asiento vigente y balance que respeta cuentas contra.
+   - `catalog_hygiene.py`: normalización de nombres, similitud para duplicados, siguiente código por grupo y fusión de cuentas.
+   - `witness.py`: correcciones con testigo para pagos, pagos a proveedor, compras y catálogo.
+   - `gate.py`: autorización por rol y canal, idempotencia por `request_id` + SHA-256, 14 handlers de mutación y 9 consultas.
+2. `crear_orden` acepta una conexión externa (`conn`) para que el Gate ejecute la venta y su asiento en la misma transacción.
+3. Se corrigieron defectos detectados antes de probar:
+   - subtotales de compra con `ROUND_HALF_UP`;
+   - el pago inicial de una compra se asienta como `SUPPLIER_PAYMENT` separado de `PURCHASE`;
+   - coherencia método/bolsa (`EFECTIVO` → `CAJA_DIARIA`, `TRANSFERENCIA` → `BANCO_GERENCIA`);
+   - referencia obligatoria cuando la cuenta exige comprobante;
+   - contra-cuentas restan del grupo en el balance (depreciación acumulada);
+   - la apertura solo admite cuentas `ASSET`/`LIABILITY`/`EQUITY`;
+   - una cuenta base bloqueada no puede ser origen de fusión;
+   - la corrección revierte solo el asiento vigente, no todo el histórico;
+   - una compra con inventario o varias líneas no se corrige por testigo: exige nota de crédito;
+   - la consulta de testigo incluye `deleted_at` en pagos a proveedor.
+4. `services/core-api/tests/test_custodio_v43.py`: **26 tests puros** de contratos, partida doble, balance con contra-cuentas, higiene de catálogo, roles, hash y respuesta del Gate.
+5. `scripts/custodio_v43_check.py`: escenario completo contra el clon `orminorth_v43` en una sola conexión con `ROLLBACK`. Cubre las 14 mutaciones, las 9 consultas, idempotencia (mismo hash, hash distinto y actor distinto), 8 solicitudes de testigo, 2 aprobaciones y los rechazos esperados. El resumen se calcula solo (no está escrito a mano) y el script se niega a correr si la conexión no apunta a `orminorth_v43`.
+6. Se reconstruyó `core-api` (la imagen no usa bind mount) y se corrieron la batería completa y los dos candados.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps -e DATABASE_URL=postgresql://orminorth:orminorth@postgres:5432/orminorth_v43 core-api python scripts/custodio_v43_check.py` | `CUSTODIO V4.3: OK \| 14/14 intents de mutacion, 23 solicitudes (17 ACCEPT, 4 REJECT, 2 PENDING), 8 testigos (6 ACCEPT/2 REJECT), 2 aprobaciones, 9 consultas`; `ROLLBACK verificado: 17 tablas con el mismo conteo que antes` |
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | `223 passed in 4.20s` (197 previos + 26 del Custodio) |
+| `docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py` | `[CANDADO CERRADO]`, 235 movimientos de kardex, `EXIT=0` |
+| `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]`, `EXIT=0` |
+| `psql -d orminorth` | 11 migraciones, 28 tablas, 6 vistas, 26 cuentas; órdenes #9/#49/#50/#51; `payments=0`, `ledger_entries=0`, `audit_witness_log=0`, `approval_requests=0`, `processed_requests=0`, `purchases=0`, `supplier_payments=0` |
+| `SELECT ... FROM v_cliente_saldo` | cartera **55,043.60 / 2 clientes con deuda / fiado 55,043.60** |
+| `SELECT ... FROM materials` | 249 movimientos; costos **8.2000 / 14.0000 / 16.5000 / 3.8000** y stocks **3,500 / 450 / 550 / 600** sin cambios |
+
+Evidencia guardada en `.agents/evidencias/custodio_v43_check_2026-11-09.txt`, `pytest_custodio_v43_2026-11-09.txt`, `hito1_lock_custodio_v43_2026-11-09.txt`, `hito3_lock_custodio_v43_2026-11-09.txt` y `base_real_post_custodio_2026-11-09.txt`.
+
+### Decisiones tomadas
+
+1. **El pago inicial de una compra va en un asiento `SUPPLIER_PAYMENT` separado.** Si estuviera dentro de `PURCHASE`, corregir el pago con testigo revertiría también la compra. Alternativa descartada: un único asiento, que mezclaba dos documentos con ciclos de corrección distintos.
+2. **La corrección revierte solo el asiento vigente.** Se busca el asiento sin reversa previa; revertir todo el histórico duplicaba el ajuste en una segunda corrección. Alternativa descartada: revertir todos los asientos del documento.
+3. **Una compra con inventario o varias líneas no se corrige por testigo.** La cabecera no redistribuye stock ni costos; hacerlo sería inventar la distribución. Exige nota de crédito. Alternativa descartada: ajustar el promedio desde la cabecera.
+4. **Valoración 10 años, DSCR y anulación con cobros devuelven `PENDIENTE`.** El PDR no fija esas fórmulas/reglas. El Gate reporta `VALUATION_FORMULA_NOT_CONFIRMED`, `DSCR_DEFINITION_NOT_CONFIRMED` y `REFUND_RULE_NOT_CONFIRMED` en lugar de calcular una cifra inventada. Alternativa descartada: asumir una fórmula "razonable".
+5. **La verificación corre en el clon y siempre revierte.** El script se niega a correr contra `orminorth` y cierra con `ROLLBACK`; la base real no recibe datos de prueba. Alternativa descartada: probar contra la base real y limpiar después, que deja residuos si falla.
+
+### Bloqueos / preguntas al cliente
+
+1. **IVA histórico:** confirmar si la orden #9 y las anteriores se backfillean al 15 % o quedan sin IVA. Dueño: Julio.
+2. **Fecha de conteo:** los 5 materiales siguen `SIN_FECHA_CONTEO`. Dueño: Julio.
+3. **Fórmula de valoración 10 años/DSCR:** el PDR no la trae completa. Dueño: Julio / Dirección.
+4. **Rol `CONTADORA`:** no existe en la base; decidir si se agrega o todo queda en `SUPERADMIN`. Dueño: Julio / Dirección.
+5. **Regla de reembolso:** una anulación con cobros activos queda `PENDING_JULIO_APPROVAL` y, sin regla, `REFUND_RULE_NOT_CONFIRMED`. Dueño: Julio / Dirección.
+6. **Nota de crédito de compras:** una compra con inventario o varias líneas no se corrige por testigo; falta definir el flujo formal. Dueño: Julio / Dirección.
+7. **Endpoint de pagos/abonos posteriores:** falta definir abono parcial, validación de saldo y permisos. Dueño: definición funcional + backend.
+8. **Custodio operativo de la BD en producción:** sigue sin designación formal. Dueño: Julio / Dirección.
+
+### Próximo paso exacto
+
+Confirmar con Julio/Dirección el IVA histórico, la fecha de conteo, la fórmula de valoración/DSCR, el rol `CONTADORA`, la regla de reembolso y el flujo de nota de crédito. Con esas respuestas, implementar el `POST /api/v1/secretaria/pagos` (abono parcial, validación contra `v_cliente_saldo` y permisos) y exponer el Gate por un router autenticado.
+
+### Archivos tocados
+
+- `services/core-api/app/custodio/__init__.py` (nuevo)
+- `services/core-api/app/custodio/contracts.py` (nuevo)
+- `services/core-api/app/custodio/ledger.py` (nuevo)
+- `services/core-api/app/custodio/catalog_hygiene.py` (nuevo)
+- `services/core-api/app/custodio/witness.py` (nuevo)
+- `services/core-api/app/custodio/gate.py` (nuevo)
+- `services/core-api/app/services/ordenes.py`
+- `services/core-api/tests/test_custodio_v43.py` (nuevo)
+- `scripts/custodio_v43_check.py` (nuevo)
+- `docs/BASE_DE_DATOS.md`
+- `docs/00_DECISIONES_PENDIENTES.md`
+- `docs/MODELO_DATOS.md`
+- `.agents/ESTADO.md`
+- `AGENTS.md`
+- `.agents/BITACORA.md`

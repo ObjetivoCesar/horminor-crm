@@ -7,6 +7,7 @@ orden en viajes y como se descuenta el kardex teorico.
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
@@ -201,7 +202,26 @@ def _payload_base(
     }
 
 
-async def crear_orden(pool: asyncpg.Pool, datos: NuevaOrden) -> ResultadoOrden:
+
+@asynccontextmanager
+async def _conexion_transaccional(
+    pool: asyncpg.Pool, conn: asyncpg.Connection | None = None
+):
+    """Usa la conexion recibida o abre una nueva con transaccion propia."""
+    if conn is not None:
+        yield conn
+        return
+    async with pool.acquire() as nueva:
+        async with nueva.transaction():
+            yield nueva
+
+
+async def crear_orden(
+    pool: asyncpg.Pool,
+    datos: NuevaOrden,
+    *,
+    conn: asyncpg.Connection | None = None,
+) -> ResultadoOrden:
     forma_pago = str(datos.forma_pago).upper()
     if forma_pago not in FORMAS_PAGO:
         raise OrdenInvalidaError(
@@ -258,269 +278,268 @@ async def crear_orden(pool: asyncpg.Pool, datos: NuevaOrden) -> ResultadoOrden:
             f"{plan.excedente_m3} m3 de mas sobre el volumen pedido."
         )
 
-    async with pool.acquire() as conn:
-        async with conn.transaction():
-            planta = await conn.fetchrow(
-                "SELECT id, nombre FROM plants WHERE codigo = $1 AND activa",
-                datos.planta_codigo,
-            )
-            if planta is None:
-                raise OrdenInvalidaError(
-                    f"Planta inexistente o inactiva: {datos.planta_codigo}"
-                )
-
-            receta_row = await conn.fetchrow(
-                "SELECT * FROM concrete_recipes WHERE resistencia = $1",
-                datos.resistencia,
-            )
-            if receta_row is None:
-                raise OrdenInvalidaError(f"Resistencia no registrada: {datos.resistencia}")
-            receta = Receta.from_row(dict(receta_row))
-
-            # Precio de la orden: si no viene explicito se usa el de la receta.
-            # Si la receta tampoco tiene precio, queda NULL (nunca se inventa):
-            # la orden se registra igual y el total queda pendiente de valorar.
-            precio_ref = _decimal(
-                datos.precio_m3, _decimal(receta_row["precio_m3"])
+    async with _conexion_transaccional(pool, conn) as conn:
+        planta = await conn.fetchrow(
+            "SELECT id, nombre FROM plants WHERE codigo = $1 AND activa",
+            datos.planta_codigo,
+        )
+        if planta is None:
+            raise OrdenInvalidaError(
+                f"Planta inexistente o inactiva: {datos.planta_codigo}"
             )
 
-            total_neto = (
-                None
-                if precio_ref is None
-                else _redondear(precio_ref * datos.volumen_m3)
-            )
-            iva_pct = Decimal("0")
-            if aplica_iva:
-                iva_pct = _decimal(receta_row["iva_pct"], Decimal("0")) or Decimal("0")
-                iva_pct = _redondear(iva_pct)
-            iva_monto, total_con_iva = calcular_iva(
-                total_neto,
-                iva_pct,
-                aplica_iva=aplica_iva,
-            )
+        receta_row = await conn.fetchrow(
+            "SELECT * FROM concrete_recipes WHERE resistencia = $1",
+            datos.resistencia,
+        )
+        if receta_row is None:
+            raise OrdenInvalidaError(f"Resistencia no registrada: {datos.resistencia}")
+        receta = Receta.from_row(dict(receta_row))
 
-            # Regla de contado/abono (decision 2026-11-09): el abono inicial se
-            # cobra en la misma transaccion. FIADO no genera COBRO.
-            abono_monto, abono_metodo = validar_abono_inicial(
-                forma_pago=forma_pago,
-                monto=_decimal(datos.abono_inicial_monto),
-                metodo=datos.abono_inicial_metodo,
-                total_con_iva=total_con_iva,
-            )
+        # Precio de la orden: si no viene explicito se usa el de la receta.
+        # Si la receta tampoco tiene precio, queda NULL (nunca se inventa):
+        # la orden se registra igual y el total queda pendiente de valorar.
+        precio_ref = _decimal(
+            datos.precio_m3, _decimal(receta_row["precio_m3"])
+        )
 
-            # Cupo de credito (Directriz 2026-11-08): se marca la orden, nunca
-            # se bloquea la venta. El aviso al Centinela va en advertencias.
-            # Se evalua sobre el total bruto, igual que v_cliente_saldo.
-            excede_cupo = False
-            cupo_usd: Decimal | None = None
-            saldo_usd: Decimal | None = None
-            if forma_pago == "FIADO":
-                if cupo_cfg.get("enabled", True):
-                    cliente_row = await conn.fetchrow(
-                        """
-                        SELECT c.credit_limit_usd,
-                               COALESCE(s.saldo_pendiente, 0) AS saldo_pendiente
-                          FROM clients c
-                          LEFT JOIN v_cliente_saldo s ON s.id = c.id
-                         WHERE c.id = $1
-                        """,
-                        datos.cliente_id,
-                    )
-                    if cliente_row is not None:
-                        cupo_usd = _decimal(
-                            cliente_row["credit_limit_usd"],
-                            _decimal(
-                                cupo_cfg.get("default_credit_limit_usd"),
-                                _CUPO_POR_DEFECTO,
-                            ),
-                        )
-                        saldo_usd = _decimal(cliente_row["saldo_pendiente"], Decimal("0"))
-                    total_orden = (
-                        Decimal("0") if total_con_iva is None else total_con_iva
-                    )
-                    if (
-                        cupo_usd is not None
-                        and saldo_usd is not None
-                        and saldo_usd + total_orden > cupo_usd
-                    ):
-                        excede_cupo = True
-                        advertencias.append(
-                            "ALERTA DE CREDITO: la orden supera el cupo de fiado "
-                            f"del cliente (saldo ${saldo_usd:,.2f} + orden "
-                            f"${total_orden:,.2f} > cupo ${cupo_usd:,.2f}). "
-                            "La venta se registra; el Centinela y Julio reciben el aviso."
-                        )
+        total_neto = (
+            None
+            if precio_ref is None
+            else _redondear(precio_ref * datos.volumen_m3)
+        )
+        iva_pct = Decimal("0")
+        if aplica_iva:
+            iva_pct = _decimal(receta_row["iva_pct"], Decimal("0")) or Decimal("0")
+            iva_pct = _redondear(iva_pct)
+        iva_monto, total_con_iva = calcular_iva(
+            total_neto,
+            iva_pct,
+            aplica_iva=aplica_iva,
+        )
 
-            orden = await conn.fetchrow(
-                """
-                INSERT INTO orders
-                    (cliente_id, resistencia, volumen_m3, planta_id, forma_pago,
-                     precio_m3, creada_por, notas, excede_cupo_credito,
-                     aplica_iva, iva_pct, iva_monto, total_con_iva)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-                RETURNING id::text, numero, total, iva_pct, iva_monto,
-                          total_con_iva
-                """,
-                datos.cliente_id,
-                datos.resistencia,
-                datos.volumen_m3,
-                planta["id"],
-                forma_pago,
-                precio_ref,
-                datos.creada_por,
-                datos.notas,
-                excede_cupo,
-                aplica_iva,
-                iva_pct,
-                iva_monto,
-                total_con_iva,
-            )
+        # Regla de contado/abono (decision 2026-11-09): el abono inicial se
+        # cobra en la misma transaccion. FIADO no genera COBRO.
+        abono_monto, abono_metodo = validar_abono_inicial(
+            forma_pago=forma_pago,
+            monto=_decimal(datos.abono_inicial_monto),
+            metodo=datos.abono_inicial_metodo,
+            total_con_iva=total_con_iva,
+        )
 
-            # COBRO inicial dentro de la misma transaccion: si algo falla, la
-            # orden y el pago se revierten juntos. FIADO no entra aqui.
-            cobro_inicial_id: str | None = None
-            cobro_inicial_monto: Decimal | None = None
-            if forma_pago in ("EFECTIVO", "TRANSFERENCIA"):
-                cobro_inicial_monto = total_con_iva
-                cobro_metodo = forma_pago
-            else:
-                cobro_inicial_monto = abono_monto
-                cobro_metodo = abono_metodo
-
-            if cobro_inicial_monto is None or cobro_inicial_monto <= 0:
-                if forma_pago != "FIADO":
-                    advertencias.append(
-                        "La orden no tiene monto cobrable (precio nulo o cero): "
-                        "no se registro COBRO automatico."
-                    )
-            else:
-                bolsa = (
-                    "CAJA_DIARIA"
-                    if cobro_metodo == "EFECTIVO"
-                    else "BANCO_GERENCIA"
-                )
-                cuenta_slug = (
-                    "caja_diaria_secretaria"
-                    if cobro_metodo == "EFECTIVO"
-                    else "bancos_gerencia"
-                )
-                etiqueta = "Abono" if forma_pago == "ABONO" else "Cobro"
-                pago = await conn.fetchrow(
+        # Cupo de credito (Directriz 2026-11-08): se marca la orden, nunca
+        # se bloquea la venta. El aviso al Centinela va en advertencias.
+        # Se evalua sobre el total bruto, igual que v_cliente_saldo.
+        excede_cupo = False
+        cupo_usd: Decimal | None = None
+        saldo_usd: Decimal | None = None
+        if forma_pago == "FIADO":
+            if cupo_cfg.get("enabled", True):
+                cliente_row = await conn.fetchrow(
                     """
-                    INSERT INTO payments
-                        (order_id, cliente_id, fecha, tipo_movimiento, metodo,
-                         monto, referencia, account_id, bolsa, es_anticipo)
-                    VALUES ($1, $2, CURRENT_DATE, 'COBRO', $3, $4, $5,
-                            (SELECT id FROM accounting_accounts WHERE slug = $6),
-                            $7, false)
-                    RETURNING id::text, monto
+                    SELECT c.credit_limit_usd,
+                           COALESCE(s.saldo_pendiente, 0) AS saldo_pendiente
+                      FROM clients c
+                      LEFT JOIN v_cliente_saldo s ON s.id = c.id
+                     WHERE c.id = $1
                     """,
-                    orden["id"],
                     datos.cliente_id,
-                    cobro_metodo,
-                    cobro_inicial_monto,
-                    f"{etiqueta} inicial orden #{orden['numero']}",
-                    cuenta_slug,
-                    bolsa,
                 )
-                cobro_inicial_id = pago["id"]
-                cobro_inicial_monto = pago["monto"]
+                if cliente_row is not None:
+                    cupo_usd = _decimal(
+                        cliente_row["credit_limit_usd"],
+                        _decimal(
+                            cupo_cfg.get("default_credit_limit_usd"),
+                            _CUPO_POR_DEFECTO,
+                        ),
+                    )
+                    saldo_usd = _decimal(cliente_row["saldo_pendiente"], Decimal("0"))
+                total_orden = (
+                    Decimal("0") if total_con_iva is None else total_con_iva
+                )
+                if (
+                    cupo_usd is not None
+                    and saldo_usd is not None
+                    and saldo_usd + total_orden > cupo_usd
+                ):
+                    excede_cupo = True
+                    advertencias.append(
+                        "ALERTA DE CREDITO: la orden supera el cupo de fiado "
+                        f"del cliente (saldo ${saldo_usd:,.2f} + orden "
+                        f"${total_orden:,.2f} > cupo ${cupo_usd:,.2f}). "
+                        "La venta se registra; el Centinela y Julio reciben el aviso."
+                    )
 
-            consumo_orden = None
+        orden = await conn.fetchrow(
+            """
+            INSERT INTO orders
+                (cliente_id, resistencia, volumen_m3, planta_id, forma_pago,
+                 precio_m3, creada_por, notas, excede_cupo_credito,
+                 aplica_iva, iva_pct, iva_monto, total_con_iva)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING id::text, numero, total, iva_pct, iva_monto,
+                      total_con_iva
+            """,
+            datos.cliente_id,
+            datos.resistencia,
+            datos.volumen_m3,
+            planta["id"],
+            forma_pago,
+            precio_ref,
+            datos.creada_por,
+            datos.notas,
+            excede_cupo,
+            aplica_iva,
+            iva_pct,
+            iva_monto,
+            total_con_iva,
+        )
+
+        # COBRO inicial dentro de la misma transaccion: si algo falla, la
+        # orden y el pago se revierten juntos. FIADO no entra aqui.
+        cobro_inicial_id: str | None = None
+        cobro_inicial_monto: Decimal | None = None
+        if forma_pago in ("EFECTIVO", "TRANSFERENCIA"):
+            cobro_inicial_monto = total_con_iva
+            cobro_metodo = forma_pago
+        else:
+            cobro_inicial_monto = abono_monto
+            cobro_metodo = abono_metodo
+
+        if cobro_inicial_monto is None or cobro_inicial_monto <= 0:
+            if forma_pago != "FIADO":
+                advertencias.append(
+                    "La orden no tiene monto cobrable (precio nulo o cero): "
+                    "no se registro COBRO automatico."
+                )
+        else:
+            bolsa = (
+                "CAJA_DIARIA"
+                if cobro_metodo == "EFECTIVO"
+                else "BANCO_GERENCIA"
+            )
+            cuenta_slug = (
+                "caja_diaria_secretaria"
+                if cobro_metodo == "EFECTIVO"
+                else "bancos_gerencia"
+            )
+            etiqueta = "Abono" if forma_pago == "ABONO" else "Cobro"
+            pago = await conn.fetchrow(
+                """
+                INSERT INTO payments
+                    (order_id, cliente_id, fecha, tipo_movimiento, metodo,
+                     monto, referencia, account_id, bolsa, es_anticipo)
+                VALUES ($1, $2, CURRENT_DATE, 'COBRO', $3, $4, $5,
+                        (SELECT id FROM accounting_accounts WHERE slug = $6),
+                        $7, false)
+                RETURNING id::text, monto
+                """,
+                orden["id"],
+                datos.cliente_id,
+                cobro_metodo,
+                cobro_inicial_monto,
+                f"{etiqueta} inicial orden #{orden['numero']}",
+                cuenta_slug,
+                bolsa,
+            )
+            cobro_inicial_id = pago["id"]
+            cobro_inicial_monto = pago["monto"]
+
+        consumo_orden = None
+        try:
+            consumo_orden = calcular_consumo(
+                receta,
+                datos.volumen_m3,
+                permitir_provisional=datos.permitir_receta_provisional,
+            )
+        except ErrorPlanta as exc:
+            advertencias.append(f"Consumo de materiales no calculado: {exc}")
+
+        viajes: list[dict[str, Any]] = []
+        for numero, volumen_viaje in enumerate(plan.viajes, start=1):
+            dispatch_id = uuid4()
+            payload = _payload_base(
+                dispatch_id=dispatch_id,
+                viaje_numero=numero,
+                total_viajes=plan.total_viajes,
+                volumen=volumen_viaje,
+                resistencia=datos.resistencia,
+                mixer_codigo=mixer.get("codigo"),
+                chofer_nombre=datos.chofer_nombre,
+                receta_provisional=not receta.confirmado,
+            )
+
+            consumo_viaje = None
             try:
-                consumo_orden = calcular_consumo(
+                consumo_viaje = calcular_consumo(
                     receta,
-                    datos.volumen_m3,
+                    volumen_viaje,
                     permitir_provisional=datos.permitir_receta_provisional,
                 )
-            except ErrorPlanta as exc:
-                advertencias.append(f"Consumo de materiales no calculado: {exc}")
-
-            viajes: list[dict[str, Any]] = []
-            for numero, volumen_viaje in enumerate(plan.viajes, start=1):
-                dispatch_id = uuid4()
-                payload = _payload_base(
-                    dispatch_id=dispatch_id,
-                    viaje_numero=numero,
-                    total_viajes=plan.total_viajes,
-                    volumen=volumen_viaje,
-                    resistencia=datos.resistencia,
-                    mixer_codigo=mixer.get("codigo"),
-                    chofer_nombre=datos.chofer_nombre,
-                    receta_provisional=not receta.confirmado,
-                )
-
+            except ErrorPlanta:
                 consumo_viaje = None
-                try:
-                    consumo_viaje = calcular_consumo(
-                        receta,
-                        volumen_viaje,
-                        permitir_provisional=datos.permitir_receta_provisional,
-                    )
-                except ErrorPlanta:
-                    consumo_viaje = None
 
-                if consumo_viaje is not None:
-                    payload["consumo_materiales"] = {
-                        "cemento_sacos_teorico": float(consumo_viaje.cemento_sacos),
-                        "cemento_sacos_real": None,
-                        "retardante_litros": (
-                            None
-                            if consumo_viaje.retardante_litros is None
-                            else float(consumo_viaje.retardante_litros)
-                        ),
-                        "arena_m3": (
-                            None if consumo_viaje.arena_m3 is None else float(consumo_viaje.arena_m3)
-                        ),
-                        "ripio_m3": (
-                            None if consumo_viaje.ripio_m3 is None else float(consumo_viaje.ripio_m3)
-                        ),
-                        "agua_litros": (
-                            None
-                            if consumo_viaje.agua_litros is None
-                            else float(consumo_viaje.agua_litros)
-                        ),
-                        "provisional": consumo_viaje.provisional,
-                        "campos_faltantes": list(consumo_viaje.campos_faltantes),
-                    }
-
-                await conn.execute(
-                    """
-                    INSERT INTO mixer_dispatches
-                        (id, order_id, viaje_numero, total_viajes_orden,
-                         volumen_m3, tracking_payload)
-                    VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-                    """,
-                    dispatch_id,
-                    orden["id"],
-                    numero,
-                    plan.total_viajes,
-                    volumen_viaje,
-                    json.dumps(payload, ensure_ascii=False, default=str),
-                )
-
-                if consumo_viaje is not None:
-                    await registrar_consumo_teorico(
-                        conn,
-                        order_id=orden["id"],
-                        dispatch_id=str(dispatch_id),
-                        consumo=consumo_viaje,
-                        referencia="provisional" if consumo_viaje.provisional else "receta",
-                    )
-
-                viajes.append(
-                    {
-                        "dispatch_id": str(dispatch_id),
-                        "viaje_numero": numero,
-                        "volumen_m3": float(volumen_viaje),
-                        "estado_actual": "PROGRAMADO",
-                        "consumo_materiales": payload["consumo_materiales"],
-                    }
-                )
+            if consumo_viaje is not None:
+                payload["consumo_materiales"] = {
+                    "cemento_sacos_teorico": float(consumo_viaje.cemento_sacos),
+                    "cemento_sacos_real": None,
+                    "retardante_litros": (
+                        None
+                        if consumo_viaje.retardante_litros is None
+                        else float(consumo_viaje.retardante_litros)
+                    ),
+                    "arena_m3": (
+                        None if consumo_viaje.arena_m3 is None else float(consumo_viaje.arena_m3)
+                    ),
+                    "ripio_m3": (
+                        None if consumo_viaje.ripio_m3 is None else float(consumo_viaje.ripio_m3)
+                    ),
+                    "agua_litros": (
+                        None
+                        if consumo_viaje.agua_litros is None
+                        else float(consumo_viaje.agua_litros)
+                    ),
+                    "provisional": consumo_viaje.provisional,
+                    "campos_faltantes": list(consumo_viaje.campos_faltantes),
+                }
 
             await conn.execute(
-                "UPDATE orders SET estado = 'CONFIRMADA' WHERE id = $1", orden["id"]
+                """
+                INSERT INTO mixer_dispatches
+                    (id, order_id, viaje_numero, total_viajes_orden,
+                     volumen_m3, tracking_payload)
+                VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+                """,
+                dispatch_id,
+                orden["id"],
+                numero,
+                plan.total_viajes,
+                volumen_viaje,
+                json.dumps(payload, ensure_ascii=False, default=str),
             )
+
+            if consumo_viaje is not None:
+                await registrar_consumo_teorico(
+                    conn,
+                    order_id=orden["id"],
+                    dispatch_id=str(dispatch_id),
+                    consumo=consumo_viaje,
+                    referencia="provisional" if consumo_viaje.provisional else "receta",
+                )
+
+            viajes.append(
+                {
+                    "dispatch_id": str(dispatch_id),
+                    "viaje_numero": numero,
+                    "volumen_m3": float(volumen_viaje),
+                    "estado_actual": "PROGRAMADO",
+                    "consumo_materiales": payload["consumo_materiales"],
+                }
+            )
+
+        await conn.execute(
+            "UPDATE orders SET estado = 'CONFIRMADA' WHERE id = $1", orden["id"]
+        )
 
     if not receta.confirmado:
         advertencias.append(

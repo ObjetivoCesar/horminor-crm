@@ -24,7 +24,9 @@ decorativa: son reglas operativas.
   verificados en local. El panel `/panel` usa la marca **HORMINOR**, sidebar
   tipo CRM, tipografía Poppins servida desde `/static` y tema día/noche. La
   producción real solo espera credenciales y teléfonos, que se cargan desde el
-  Superadmin sin reiniciar. Ver `.agents/ESTADO.md`.
+  Superadmin sin reiniciar. El Custodio v4.3 (Gate contable, libro mayor y
+  testigo) está implementado y verificado contra el clon con `ROLLBACK`; faltan
+  su router HTTP y el POST de pagos/abonos posteriores. Ver `.agents/ESTADO.md`.
 - **Datos que faltan:** `docs/00_DECISIONES_PENDIENTES.md`.
 
 ## 2. Arranque de sesión (obligatorio, en este orden)
@@ -113,10 +115,12 @@ docker compose stop
 | `services/core-api/app/sandbox.py` | Adaptadores SANDBOX (WhatsApp, Bunny, Juez) |
 | `services/core-api/app/web/` | Panel HTML en `/panel` (3 vistas, sin build) + `/static` (Poppins y logo Horminor) |
 | `services/core-api/app/services/ordenes.py` | Alta de orden: M0 + M2 |
+| `services/core-api/app/custodio/` | Gate contable: 14 intents, 9 consultas, ledger, testigo y catálogo |
 | `services/core-api/app/routers/` | HTTP: health, catálogo, órdenes |
-| `services/core-api/tests/` | pytest (197 tests) |
+| `services/core-api/tests/` | pytest (223 tests) |
 | `scripts/hito1_lock_test.py` | Test de Candado del Hito 1 |
 | `scripts/hito3_lock_test.py` | Test de Candado del Hito 3 |
+| `scripts/custodio_v43_check.py` | Check de integración del Custodio en el clon, con `ROLLBACK` |
 | `docs/` | Decisiones pendientes y modelo de datos |
 | `.agents/` | Memoria, procesos, skills y evidencias |
 

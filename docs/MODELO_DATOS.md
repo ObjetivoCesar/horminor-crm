@@ -11,8 +11,9 @@ Migraciones aplicadas automáticamente al arrancar la API (idempotentes, con
 > `crear_orden` ya escribe IVA/bruto y registra el `COBRO` de contado o abono;
 > caja y dashboard filtran `payments.deleted_at` y usan el bruto; el kardex
 > calcula costo promedio ponderado, guarda `costo_unitario_snapshot` y anula
-> consumos `TEORICO` con `ANULACION`. Los servicios `gate.py`/`witness.py`
-> siguen pendientes.
+> consumos `TEORICO` con `ANULACION`. El Custodio (`app/custodio/`) implementa
+> el Gate con 14 intents, 9 consultas, idempotencia por `request_id` + hash,
+> partida doble, reversa del asiento vigente y testigo inmutable.
 
 ## Tablas
 
@@ -77,6 +78,22 @@ ledger.
 Ingresos y gastos agrupados por mes y cuenta. El servicio filtra el rango de
 fechas y suma los períodos.
 
+## Custodio: Gate, libro mayor y testigo
+
+- **`Gate.mutar()`** valida el contrato v1.3.0, autoriza por rol y canal,
+  comprueba idempotencia (`request_id` + SHA-256 del payload) y ejecuta la
+  mutación y su asiento en **una sola transacción**. Si el asiento no cuadra,
+  no queda la mutación.
+- **`ledger_entries`** es inmutable. Una corrección inserta una reversa del
+  asiento vigente (el que aún no tiene reversa) y luego el asiento nuevo; no
+  reescribe el pasado.
+- **`audit_witness_log`** guarda el valor anterior, el nuevo y el motivo de cada
+  corrección. Pagos y pagos a proveedor revierten y rehacen su asiento; una
+  compra solo se corrige si es de servicio y tiene una única línea.
+- **Pendiente por diseño:** anular una orden con cobros activos devuelve
+  `PENDING_JULIO_APPROVAL` y, sin regla de reembolso, `REFUND_RULE_NOT_CONFIRMED`;
+  valoración 10 años y DSCR devuelven `PENDIENTE` con su código de riesgo.
+
 ## Contrato `tracking_payload`
 
 Definido en el PDR §5.2. Se construye en `app/services/ordenes.py` y se expone
@@ -131,7 +148,8 @@ Campos extra que agregamos (compatibles, no rompen el contrato del PDR):
 6. `orders.total_con_iva = total + iva_monto`; si `aplica_iva = false`, el IVA
    es cero. Los históricos sin IVA confirmado usan `total_con_iva = total`.
 7. `ledger_entries` y `audit_witness_log` son inmutables: solo INSERT. Una
-   corrección se hace con reversa (`is_reversal = true`) y un testigo nuevo.
+   corrección revierte únicamente el asiento vigente (`is_reversal = true`) y
+   deja un testigo nuevo; el histórico anterior no se toca.
 8. `processed_requests` es idempotente por `request_id` + hash; el mismo
    payload devuelve la misma respuesta y un hash distinto se rechaza.
 9. `v_stock_proyectado` no aplica consumos teóricos si

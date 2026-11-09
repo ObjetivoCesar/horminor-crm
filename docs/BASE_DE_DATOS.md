@@ -211,13 +211,13 @@ calcula:
 | 4 | Secretaría | Registra cobros posteriores | `COBRO` con método, bolsa y referencia |
 | 5 | Caja | Calcula el cierre del día | Ventas desde `orders`; cobros y gastos desde `payments` sin borrados |
 | 6 | Dashboard | Lee cartera y saldo | `v_cliente_saldo` |
-| 7 | Custodio | Asienta la partida doble | Pendiente de implementar el Gate |
+| 7 | Custodio | Asienta la partida doble | `Gate.mutar()` registra el asiento en la misma transacción; el pago inicial de una compra va en un asiento `SUPPLIER_PAYMENT` separado |
 
 ### 4.4 Estado real del código hoy
 
-El código de ventas, caja, dashboard y kardex **ya consume v4.3** desde el
-refactor del 2026-11-09. Lo que sigue pendiente es el Custodio ejecutable y el
-endpoint de pagos posteriores:
+El código de ventas, caja, dashboard, kardex y el Custodio **ya consume v4.3**
+desde el 2026-11-09. Lo que sigue pendiente es el endpoint HTTP de pagos
+posteriores y exponer el Gate por un router:
 
 | Pieza | Base v4.3 | Código actual | Qué falta |
 |---|---|---|---|
@@ -226,18 +226,18 @@ endpoint de pagos posteriores:
 | Endpoint de pagos/abonos | Tabla lista | No existe `POST /api/v1/secretaria/pagos` | Implementar router + reglas de abono parcial y permisos |
 | Cierre de caja | `payments.deleted_at` disponible | `_movimientos()` filtra `deleted_at`; `ventas_*` usa `total_con_iva` con fallback a `total` | Nada; sigue sin POST de pagos |
 | Dashboard | `v_cliente_saldo` ya usa bruto y filtra borrados | `hero_kpis()` y `flujo_operativo_mensual()` filtran `deleted_at`; `fiado_hoy` usa el bruto | Nada |
-| Kardex | `ANULACION`, `costo_unitario_snapshot` y promedio disponibles | `kardex.py` calcula promedio ponderado en `COMPRA`, guarda `costo_unitario_snapshot` en todos los movimientos y anula `TEORICO` con una fila `ANULACION` idempotente; las correcciones físicas usan `AJUSTE` | Nada para el flujo actual; la recepción de compras del Gate aún no existe |
-| Gate y testigo | Tablas, triggers y contratos v1.3.0 listos | No existe `gate.py`, `witness.py` ni `catalog_hygiene.py` | Implementar los servicios y sus pruebas |
+| Kardex | `ANULACION`, `costo_unitario_snapshot` y promedio disponibles | `kardex.py` calcula promedio ponderado en `COMPRA`, guarda `costo_unitario_snapshot` en todos los movimientos y anula `TEORICO` con una fila `ANULACION` idempotente; las correcciones físicas usan `AJUSTE` | Nada para el flujo actual; la recepción de compras del Gate ya usa el kardex |
+| Gate y testigo | Tablas, triggers y contratos v1.3.0 listos | `app/custodio/` implementa 14 intents, 9 consultas, idempotencia por `request_id` + SHA-256, partida doble, reversa del asiento vigente y testigo inmutable | Exponerlo por HTTP cuando exista autenticación |
 
 **Consecuencia verificada hoy:** las 4 órdenes reales son la #9 histórica
-(`total` y `total_con_iva` `NULL`, FIADO) y las #46/#47/#48 recreadas por los
+(`total` y `total_con_iva` `NULL`, FIADO) y las #49/#50/#51 recreadas por los
 candados con el código nuevo. Las tres ya tienen IVA 15 % y bruto:
-**$43,424.00**, **$9,448.40** y **$2,171.20**. La cartera subió a
-**55,043.60 / 2 clientes / fiado 55,043.60** porque ahora el candado del Hito 1
+**$43,424.00**, **$9,448.40** y **$2,171.20**. La cartera sigue en
+**55,043.60 / 2 clientes / fiado 55,043.60** porque el candado del Hito 1
 también valoriza las órdenes de prueba con IVA. El fallback de la vista queda
 solo para la #9 y para cualquier orden histórica sin bruto. Los costos de
 materiales siguen en **8.2000 / 14.0000 / 16.5000 / 3.8000** y el stock en
-**3,500 / 450 / 550 / 600**; el kardex no alteró datos reales.
+**3,500 / 450 / 550 / 600**; ni el kardex ni el Custodio alteraron datos reales.
 
 ### 4.5 Qué falta para registrar ingresos desde la aplicación
 
@@ -294,9 +294,10 @@ sí se puede probar:
    persiste y existe un respaldo manual previo a v4.3
    (`.agents/evidencias/pre_v43_orminorth.dump`), pero no hay política
    automática de backup/restauración ni retención.
-3. **Código desactualizado solo en el Custodio ejecutable.**
-   `crear_orden`, caja, dashboard y kardex ya consumen v4.3; faltan `gate.py`,
-   `witness.py` y `catalog_hygiene.py`. La tabla completa está en la sección 4.4.
+3. **Código pendiente solo en el POST de pagos/abonos y el router del Gate.**
+   `crear_orden`, caja, dashboard, kardex y el Custodio ya consumen v4.3;
+   `gate.py`, `witness.py`, `ledger.py` y `catalog_hygiene.py` existen y pasan
+   su check de integración. La tabla completa está en la sección 4.4.
 4. **Sin endpoint de pagos/abonos** (sección 4.5). Mientras no exista, un cobro
    posterior solo se puede insertar por SQL.
 5. **Credenciales por defecto** (`orminorth`/`orminorth`). Antes de producción
@@ -306,7 +307,7 @@ sí se puede probar:
    `COBRO`. El camino de contado/abono se verificó en el clon
    `orminorth_v43` con `scripts/refactor_v43_check.py`.
 7. **IVA histórico sin confirmar.** La orden #9 (histórica) sigue con
-   `total`/`total_con_iva` `NULL`; las órdenes #46/#47/#48 ya se crearon con IVA
+   `total`/`total_con_iva` `NULL`; las órdenes #49/#50/#51 ya se crearon con IVA
    15 % y bruto. Julio debe decidir si la #9 y cualquier orden anterior se
    backfillean al 15 % o quedan sin IVA.
 8. **Fecha de conteo sin confirmar.** `materials.ultimo_levantamiento_at` sigue
@@ -317,6 +318,10 @@ sí se puede probar:
    `v_valoracion_proyeccion_10y`.
 10. **Rol `CONTADORA` inexistente.** La base no tiene ese rol; falta decidir si
     se agrega o si el Custodio queda solo en `SUPERADMIN`.
+11. **Regla de reembolso y nota de crédito sin confirmar.** Una anulación con
+    cobros activos queda en `PENDING_JULIO_APPROVAL` y, sin regla, responde
+    `REFUND_RULE_NOT_CONFIRMED`. Una compra con inventario o varias líneas no
+    se corrige por testigo: exige una nota de crédito que aún no está definida.
 
 ---
 
@@ -379,9 +384,9 @@ SELECT count(*) FROM accounting_accounts;
 SELECT numero, total, iva_pct, iva_monto, total_con_iva, forma_pago, creada_por
   FROM orders ORDER BY numero;
 → #9  (histórica, total/total_con_iva NULL, FIADO)
-→ #46 $37,760.00 + IVA 5,664.00 = $43,424.00 (FIADO, hito1_lock_test)
-→ #47  $8,216.00 + IVA 1,232.40 =  $9,448.40 (FIADO, hito1_lock_test)
-→ #48  $1,888.00 + IVA   283.20 =  $2,171.20 (FIADO, hito3_lock_test)
+→ #49 $37,760.00 + IVA 5,664.00 = $43,424.00 (FIADO, hito1_lock_test)
+→ #50  $8,216.00 + IVA 1,232.40 =  $9,448.40 (FIADO, hito1_lock_test)
+→ #51  $1,888.00 + IVA   283.20 =  $2,171.20 (FIADO, hito3_lock_test)
 
 SELECT sum(saldo_pendiente), count(*) FILTER (WHERE saldo_pendiente > 0),
        sum(total_fiado), sum(total_facturado), sum(total_cobrado)
@@ -403,7 +408,7 @@ SELECT ordinal_position, column_name FROM information_schema.columns
 → 11 columnas: las 8 originales + ruc, credit_limit_usd, saldo_a_favor
 
 docker compose run --rm --no-deps core-api python -m pytest /app/tests -q
-→ 197 passed, EXIT=0
+→ 223 passed, EXIT=0
 
 docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py
 → [CANDADO CERRADO], 235 movimientos de kardex, EXIT=0
@@ -430,6 +435,16 @@ Kardex v4.3 en el clon orminorth_v43
 → todos los movimientos de prueba tienen `costo_unitario_snapshot`
 → ROLLBACK total: 0 materiales y 0 movimientos de prueba al terminar
 
+Custodio v4.3 en el clon orminorth_v43
+→ scripts/custodio_v43_check.py: CUSTODIO V4.3: OK
+→ 14/14 intents de mutación · 23 solicitudes (17 ACCEPT, 4 REJECT,
+   2 PENDING) · 8 testigos (6 ACCEPT/2 REJECT) · 2 aprobaciones · 9 consultas
+→ asiento de venta balanceado (CAJA/CxC + IVA + ingreso), cobro, gasto,
+   compra a crédito con recepción parcial/completa, pago a proveedor,
+   corrección con testigo, depreciación, cuota de préstamo, anulación con
+   y sin cobros, apertura de saldos y catálogo contable
+→ ROLLBACK verificado: 17 tablas con el mismo conteo que antes
+
 Pruebas SQL en el clon orminorth_v43
 → 7 guardas OK, 0 FALLO
 → venta contado+COBRO sin deuda fantasma; FIADO sí aumenta deuda;
@@ -450,7 +465,7 @@ Contratos JSON v1.3.0
 
 ## 9. Documentos relacionados
 
-- `docs/MODELO_DATOS.md` — descripción corta de las 12 tablas y vistas.
+- `docs/MODELO_DATOS.md` — descripción corta de las 26 tablas y 6 vistas.
 - `db/migrations/001_init.sql` — esquema base.
 - `db/migrations/060_modulos_3_4_sandbox.sql` — columnas M3/M4 y `sandbox_outbox`.
 - `db/migrations/063_custodio_core.sql` — núcleo v4.3: IVA, pagos, plan de cuentas, compras, activos, pasivos, ledger y testigo.
