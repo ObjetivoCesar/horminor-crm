@@ -75,8 +75,12 @@ Variables relevantes (`services/core-api/app/settings.py` y `.env.example`):
 | `060_modulos_3_4_sandbox.sql` | 2026-11-08 18:40 |
 | `061_benchmarks_limpieza.sql` | 2026-11-08 18:46 |
 | `062_rebrand_horminor.sql` | 2026-11-08 21:35 |
+| `063_custodio_core.sql` | 2026-11-09 12:50 |
+| `064_custodio_views.sql` | 2026-11-09 12:50 |
 
-No hay migraciones pendientes: son 9 de 9.
+No hay migraciones pendientes: son **11 de 11**. La v4.3 del Custodio se
+aplicó después de probarla en el clon `orminorth_v43` y de guardar el respaldo
+`.agents/evidencias/pre_v43_orminorth.dump`.
 
 ---
 
@@ -86,53 +90,86 @@ No hay migraciones pendientes: son 9 de 9.
 
 | Tabla | Para qué | Filas hoy |
 |---|---|---|
-| `system_settings` | Parámetros maestros `key → value` (JSONB) | 29 |
+| `system_settings` | Parámetros maestros `key → value` (JSONB) | 33 |
 | `plants` | Plantas fija y móvil | 2 |
 | `concrete_recipes` | Dosificación por resistencia | 5 |
 | `clients` | Clientes y prospectos | 6 |
 | `orders` | Orden de hormigón (la venta) | 4 |
 | `mixer_dispatches` | Viajes de mixer | 51 |
-| `materials` | Stock real por material | — |
-| `inventory_movements` | Kardex (teórico / real / compra / ajuste) | — |
-| `payments` | Cobros y gastos de caja chica | 0 |
+| `materials` | Stock real por material | 5 |
+| `inventory_movements` | Kardex (teórico / real / compra / ajuste / anulación) | 249 |
+| `payments` | Cobros, gastos de caja y gastos bancarios | 0 |
 | `cash_closures` | Cierre de caja diario (snapshot) | 0 |
-| `market_benchmarks` | Benchmarks de mercado Orellana/Sucumbíos | — |
+| `market_benchmarks` | Benchmarks de mercado Orellana/Sucumbíos | 4 |
 | `error_logs` | Errores del sistema | — |
 | `sandbox_outbox` | Cola de salida del modo SANDBOX | — |
-| `schema_migrations` | Control del runner (no es de negocio) | 9 |
+| `processed_requests` | Idempotencia del Gate (`request_id` + hash) | 0 |
+| `accounting_accounts` | Plan de cuentas del Custodio | 26 |
+| `suppliers` | Proveedores | 0 |
+| `purchases` | Compras multi-ítem | 0 |
+| `purchase_items` | Ítems de compra | 0 |
+| `goods_receipts` | Recepciones de material | 0 |
+| `supplier_payments` | Pagos a proveedores | 0 |
+| `fixed_assets` | Activos fijos | 0 |
+| `depreciation_runs` | Corridas de depreciación mensual | 0 |
+| `financial_liabilities` | Préstamos y obligaciones bancarias | 0 |
+| `loan_payments` | Pagos de préstamos | 0 |
+| `ledger_entries` | Libro mayor inmutable (partida doble) | 0 |
+| `audit_witness_log` | Testigo forense de correcciones | 0 |
+| `approval_requests` | Cola de aprobación de Julio | 0 |
+| `schema_migrations` | Control del runner (no es de negocio) | 11 |
 
 > **Nota:** `schema_migrations` la crea el runner, no una migración.
-> `sandbox_outbox` la agrega `060_modulos_3_4_sandbox.sql`.
+> `sandbox_outbox` la agrega `060_modulos_3_4_sandbox.sql`. Las 14 tablas del
+> Custodio (`processed_requests` … `approval_requests`) las agrega
+> `063_custodio_core.sql`.
 
 ### 3.2 Vistas
 
 | Vista | Qué entrega |
 |---|---|
-| `v_cliente_saldo` | Por cliente: `total_m3`, `total_facturado`, `total_cobrado`, `total_fiado`, `saldo_pendiente` |
+| `v_cliente_saldo` | Por cliente: `id`, `nombre`, `estado`, `total_m3`, `total_facturado`, `total_cobrado`, `total_fiado`, `saldo_pendiente`, `ruc`, `credit_limit_usd` y `saldo_a_favor`. Conserva las 8 columnas originales y agrega 3 al final |
 | `v_dispatch_timeline` | Un viaje de mixer con sus sellos de tiempo y veredictos del Juez |
-| `v_inventario` | Stock por material y estado (`SIN_LEVANTAR`, `SIN_UMBRAL`, `CRITICO`, `OK`) |
+| `v_inventario` | Stock físico por material y estado (`SIN_LEVANTAR`, `SIN_UMBRAL`, `CRITICO`, `OK`) |
+| `v_stock_proyectado` | Stock físico + consumos `TEORICO` posteriores al último conteo; `ANULACION` se suma en valor absoluto. Sin fecha de conteo no aplica teóricos y marca `SIN_FECHA_CONTEO` |
+| `v_balance_general` | Saldo por cada una de las 26 cuentas contables según su naturaleza; respeta `merged_into_id` sin reescribir el libro mayor |
+| `v_estado_resultados` | Ingresos y gastos agrupados por mes y cuenta para el estado de resultados |
 
-La definición completa está en `db/migrations/001_init.sql` y se puede
-releer con `\d+ <vista>` o `pg_get_viewdef()`.
+**Compatibilidad de `v_cliente_saldo`:** la vista usa
+`COALESCE(total_con_iva, total)` para `total_facturado` y `total_fiado`. Así una
+orden creada por el código actual —que todavía no escribe `total_con_iva`— no
+desaparece del saldo. `total_cobrado` solo suma `payments` con
+`tipo_movimiento = 'COBRO'`, `metodo <> 'FIADO'` y `deleted_at IS NULL`.
+
+La definición de las 3 vistas originales está en `db/migrations/001_init.sql`;
+las 3 nuevas y la versión v4.3 de `v_cliente_saldo` están en
+`db/migrations/064_custodio_views.sql`. Se pueden releer con `\d+ <vista>` o
+`pg_get_viewdef()`.
 
 ---
 
-## 4. Cómo se registra un ingreso (lo que preguntaste)
+## 4. Cómo se registra un ingreso (modelo v4.3)
 
 ### 4.1 El modelo: venta ≠ cobro
 
 Hay dos tablas separadas a propósito:
 
 1. **`orders` = la venta (factura).** Se crea cuando Secretaría da de alta la
-   orden. Su `total` es una columna generada `volumen_m3 * precio_m3`
-   (`NULL` si no hay precio). Tiene `forma_pago`:
-   `EFECTIVO`, `TRANSFERENCIA`, `ABONO`, `FIADO`.
+   orden. `total` es una columna generada `round(volumen_m3 * precio_m3, 2)`
+   (`NULL` si no hay precio). Desde v4.3 tiene además:
+   - `aplica_iva`, `iva_pct`, `iva_monto`;
+   - `total_con_iva = total + iva_monto` (total bruto de la venta).
+   `forma_pago` sigue siendo `EFECTIVO`, `TRANSFERENCIA`, `ABONO` o `FIADO`.
    Un `FIADO` factura igual, pero **no** significa dinero recibido.
 2. **`payments` = el dinero que entra o sale de caja.** Cada fila es un
    movimiento con `tipo_movimiento`:
-   - `COBRO` → dinero recibido (efectivo, transferencia o fiado).
+   - `COBRO` → dinero recibido.
    - `GASTO_CAJA_CHICA` → salida de caja chica.
-   Y `metodo`: `EFECTIVO`, `TRANSFERENCIA`, `FIADO`.
+   - `GASTO_BANCARIO` → salida desde banco.
+   - `REEMBOLSO_CAJA` → devolución o reposición de caja.
+   `metodo`: `EFECTIVO`, `TRANSFERENCIA` o `FIADO`. `bolsa` distingue
+   `CAJA_DIARIA` de `BANCO_GERENCIA`; `account_id` enlaza la cuenta contable;
+   `es_anticipo` marca cobros sin orden; `deleted_at` es borrado lógico.
 
 El **cierre de caja** (`cash_closures` + `/api/v1/secretaria/cierre-caja`)
 calcula:
@@ -143,35 +180,72 @@ calcula:
 - `efectivo_esperado` = `cobros EFECTIVO` − `caja_chica`.
 - `diferencia` = `efectivo_contado` − `efectivo_esperado`.
 
-### 4.2 Flujo actual, paso a paso
+### 4.2 Regla de negocio confirmada (2026-11-09)
 
-| Paso | Qué pasa | Estado |
-|---|---|---|
-| 1 | Secretaría crea la orden con `POST /api/v1/secretaria/ordenes` o `POST /api/v1/orders` | ✅ funciona |
-| 2 | La orden guarda `forma_pago` y `total`; si es `FIADO`, se marca y se cruza el cupo de crédito | ✅ funciona |
-| 3 | El cobro real (abono o pago total) debería registrarse en `payments` | ❌ **no hay endpoint POST** |
-| 4 | Secretaría ve los cobros en modo lectura y hace el cierre de caja | ✅ funciona |
-| 5 | Cartera y saldo por cliente salen de `v_cliente_saldo` | ✅ funciona |
+1. **Venta de contado** (`EFECTIVO` o `TRANSFERENCIA`): al crear la orden se
+   registra un `payments` tipo `COBRO` por el **total con IVA** y en la bolsa
+   que corresponda. La venta no debe quedar como deuda.
+2. **Venta con abono inicial** (`ABONO`): la orden guarda el total y se registra
+   un `COBRO` por el abono inicial; el resto queda como saldo pendiente.
+3. **Venta fiada** (`FIADO`): **no** genera `COBRO`. Aumenta la deuda del
+   cliente y el cupo se evalúa sobre el total bruto. Si se excede, la orden se
+   registra igual con `excede_cupo_credito = true`; no se bloquea.
+4. **Cobro posterior:** un pago o abono nuevo se registra como `COBRO` con su
+   método y bolsa. El pago con `deleted_at` no cuenta para caja ni para saldo.
+5. **IVA:** las ventas nuevas usan el `iva_pct` de la receta (15 % en la semilla
+   oficial). Los históricos anteriores al 2026-11-09 quedaron sin IVA
+   (`total_con_iva = total`) hasta que Julio confirme el tratamiento retroactivo.
+6. **Saldo del cliente:** `total_facturado − total_cobrado`, con
+   `COALESCE(total_con_iva, total)` y sin sumar `FIADO` como cobrado. El
+   resultado vive en `v_cliente_saldo`.
 
-**La brecha real:** hoy se puede crear la venta, pero **no existe un endpoint
-para registrar un pago o abono nuevo**. `payments` está creada y las vistas la
-consumen, pero la única forma de insertar un cobro es manual (SQL) o todavía no
-existe desde la interfaz. Por eso el panel muestra los cobros en **solo
-lectura**.
+### 4.3 Flujo esperado, paso a paso
 
-### 4.3 Qué falta para registrar ingresos desde la aplicación
+| Paso | Quién | Qué pasa | Regla v4.3 |
+|---|---|---|---|
+| 1 | Secretaría | Crea la orden con `POST /api/v1/secretaria/ordenes` o `POST /api/v1/orders` | Guarda `forma_pago`, `total`, IVA y `total_con_iva` |
+| 2 | Servicio de órdenes | Calcula el IVA desde la receta confirmada | 15 % por defecto; el histórico queda sin IVA |
+| 3 | Servicio de órdenes | Si es contado o abono, inserta el `COBRO` inicial | `EFECTIVO` → `CAJA_DIARIA`; `TRANSFERENCIA` → `BANCO_GERENCIA` |
+| 4 | Secretaría | Registra cobros posteriores | `COBRO` con método, bolsa y referencia |
+| 5 | Caja | Calcula el cierre del día | Ventas desde `orders`; cobros y gastos desde `payments` sin borrados |
+| 6 | Dashboard | Lee cartera y saldo | `v_cliente_saldo` |
+| 7 | Custodio | Asienta la partida doble | Pendiente de implementar el Gate |
 
-Decisión pendiente contigo, no una suposición:
+### 4.4 Estado real del código hoy
+
+La base ya soporta el modelo v4.3, pero **el código todavía no lo usa
+completo**. Esta separación es deliberada para no documentar como hecho algo
+que aún no ocurre:
+
+| Pieza | Base v4.3 | Código actual | Qué falta |
+|---|---|---|---|
+| IVA en la orden | Columnas y CHECK listos | `crear_orden` no escribe `aplica_iva`, `iva_pct`, `iva_monto` ni `total_con_iva`; las órdenes nuevas quedan con los defaults | Refactorizar `services/core-api/app/services/ordenes.py` |
+| COBRO automático de contado | `payments` acepta `COBRO`, bolsa y cuenta | `crear_orden` no inserta ningún `payments` | Refactorizar `crear_orden` dentro de la misma transacción |
+| Endpoint de pagos/abonos | Tabla lista | No existe `POST /api/v1/secretaria/pagos` | Implementar router + reglas de abono parcial y permisos |
+| Cierre de caja | `payments.deleted_at` disponible | `_movimientos()` no filtra `deleted_at`; `ventas_*` usa `orders.total` (neto) | Filtrar borrados y decidir si el cierre muestra bruto o neto |
+| Dashboard | `v_cliente_saldo` ya usa bruto y filtra borrados | `hero_kpis()` y `flujo_operativo_mensual()` consultan `payments` sin `deleted_at` | Agregar el filtro |
+| Kardex | `ANULACION`, `costo_unitario_snapshot` y promedio disponibles | `kardex.py` solo inserta `TEORICO`, `REAL`, `COMPRA` y `AJUSTE`; no calcula promedio ni anulación | Refactorizar kardex y recepción de compras |
+| Gate y testigo | Tablas, triggers y contratos v1.3.0 listos | No existe `gate.py`, `witness.py` ni `catalog_hygiene.py` | Implementar los servicios y sus pruebas |
+
+**Consecuencia verificada hoy:** las 4 órdenes reales tienen
+`total_con_iva = NULL` porque 3 las recrearon los candados con el código
+anterior y la #9 es histórica. La vista usa el fallback y sigue mostrando
+**47,864 / 2 clientes / fiado 47,864**. En cuanto se refactorice `crear_orden`,
+las ventas nuevas escribirán el bruto y el fallback quedará solo para históricos.
+
+### 4.5 Qué falta para registrar ingresos desde la aplicación
 
 1. **Endpoint** `POST /api/v1/secretaria/pagos` (o `/cobros`) con:
-   `cliente_id`, `order_id` (opcional), `fecha`, `tipo_movimiento`,
-   `metodo`, `monto`, `referencia`.
-2. **Regla de negocio:** si el cobro es `EFECTIVO`/`TRANSFERENCIA`, ¿se
-   permite abonar parcial? ¿Se valida contra el saldo de `v_cliente_saldo`?
+   `cliente_id`, `order_id` (opcional), `fecha`, `metodo`, `bolsa`, `monto`,
+   `referencia` y `es_anticipo`.
+2. **Regla de abono parcial:** confirmar si se permite y si se valida contra
+   `v_cliente_saldo` antes de insertar.
 3. **Formulario** en la vista de Secretaría para capturarlo.
 4. **Permisos:** hoy `/api/v1/secretaria/*` no tiene login.
 
-Sin esas definiciones no se implementa, para no inventar reglas de cobro.
+Sin esas definiciones no se implementa el endpoint, para no inventar reglas de
+cobro. La regla de contado/abono inicial/fiado ya está confirmada y se aplicará
+en el refactor de `crear_orden`.
 
 ---
 
@@ -210,12 +284,30 @@ sí se puede probar:
 1. **Sin autenticación** en `/panel`, `/api/v1/secretaria/*` y
    `/api/v1/superadmin/*`. No exponer a Internet hasta implementar login.
 2. **Sin respaldo automático documentado.** El volumen `orminorth-pgdata`
-   persiste, pero no hay política de backup/restauración escrita.
-3. **Sin endpoint de pagos/abonos** (sección 4.3).
-4. **Credenciales por defecto** (`orminorth`/`orminorth`). Antes de producción
+   persiste y existe un respaldo manual previo a v4.3
+   (`.agents/evidencias/pre_v43_orminorth.dump`), pero no hay política
+   automática de backup/restauración ni retención.
+3. **Código desactualizado respecto de la base v4.3.** `crear_orden` todavía no
+   escribe IVA/`total_con_iva` ni inserta el `COBRO` de contado; caja y dashboard
+   no filtran `payments.deleted_at`; el kardex no maneja `ANULACION` ni costo
+   promedio. La tabla completa está en la sección 4.4.
+4. **Sin endpoint de pagos/abonos** (sección 4.5). Mientras no exista, un cobro
+   posterior solo se puede insertar por SQL.
+5. **Credenciales por defecto** (`orminorth`/`orminorth`). Antes de producción
    hay que cambiarlas en `.env`.
-5. **`payments` vacía** (0 filas) y `cash_closures` vacía (0 filas): la lógica
+6. **`payments` vacía** (0 filas) y `cash_closures` vacía (0 filas): la lógica
    existe, pero aún no hay cobros reales registrados.
+7. **IVA histórico sin confirmar.** Las órdenes anteriores al 2026-11-09 y las
+   que recrean los candados tienen `total_con_iva = NULL`; la vista las muestra
+   con fallback, pero Julio debe decidir si se backfillean al 15 %.
+8. **Fecha de conteo sin confirmar.** `materials.ultimo_levantamiento_at` sigue
+   `NULL` en los 5 materiales; por eso `v_stock_proyectado` no aplica consumos
+   teóricos y marca `SIN_FECHA_CONTEO`.
+9. **Fórmula de valoración/DSCR sin confirmar.** El PDR describe escenarios y
+   parámetros, pero no la fórmula completa; no se creó una vista especulativa
+   `v_valoracion_proyeccion_10y`.
+10. **Rol `CONTADORA` inexistente.** La base no tiene ese rol; falta decidir si
+    se agrega o si el Custodio queda solo en `SUPERADMIN`.
 
 ---
 
@@ -242,32 +334,82 @@ docker compose run --rm --no-deps core-api python scripts/db_migrate.py
 
 ## 8. Evidencia ejecutada (2026-11-09)
 
-Comandos y salida real:
+La evidencia completa está en
+`.agents/evidencias/revision_v43_2026-11-09.txt`, con los logs separados de
+pytest, candados, pruebas SQL y contratos. Resumen de comandos y salida real:
 
 ```text
-docker ps
-→ orminorth-postgres   Up 18 hours (healthy)   0.0.0.0:5433->5432/tcp
-→ orminorth-core-api   Up 10 hours (healthy)   0.0.0.0:8000->8000/tcp
+docker ps --filter name=orminorth
+→ orminorth-postgres  Up 21 hours (healthy)  0.0.0.0:5433->5432/tcp
+→ orminorth-core-api  Up 14 hours (healthy)  0.0.0.0:8000->8000/tcp
+→ orminorth-redis     Up 21 hours (healthy)  0.0.0.0:6380->6379/tcp
 
-docker exec orminorth-postgres psql -U orminorth -d orminorth -c "SELECT version();"
+SELECT version();
 → PostgreSQL 15.19 on x86_64-pc-linux-musl
 
 SELECT version FROM schema_migrations ORDER BY version;
-→ 9 filas (001 a 062), última aplicada 2026-11-08 21:35
+→ 11 filas: 001_init … 064_custodio_views
+→ 063 y 064 aplicadas el 2026-11-09 12:50
 
-SELECT table_name, table_type FROM information_schema.tables WHERE table_schema='public';
-→ 14 BASE TABLE + 3 VIEW
+SELECT count(*) FROM information_schema.tables
+ WHERE table_schema='public' AND table_type='BASE TABLE';
+→ 28
 
-SELECT count(*) FROM payments;   → 0
-SELECT count(*) FROM orders;     → 4
-SELECT count(*) FROM clients;    → 6
-SELECT count(*) FROM mixer_dispatches; → 51
+SELECT count(*) FROM pg_views WHERE schemaname='public';
+→ 6
 
-\d payments
-→ tipo_movimiento CHECK IN ('COBRO','GASTO_CAJA_CHICA')
-→ metodo CHECK IN ('EFECTIVO','TRANSFERENCIA','FIADO')
-→ monto > 0
+SELECT count(*) FROM accounting_accounts;
+→ 26
+
+SELECT numero, total, total_con_iva, forma_pago, estado, creada_por
+  FROM orders ORDER BY numero;
+→ #9  (histórica, total NULL, FIADO)
+→ #37 $37,760.00 (total_con_iva NULL, FIADO, hito1_lock_test)
+→ #38  $8,216.00 (total_con_iva NULL, FIADO, hito1_lock_test)
+→ #39  $1,888.00 (total_con_iva NULL, FIADO, hito3_lock_test)
+
+SELECT sum(saldo_pendiente), count(*) FILTER (WHERE saldo_pendiente > 0),
+       sum(total_fiado)
+  FROM v_cliente_saldo;
+→ por_cobrar = 47,864.00 · clientes = 2 · fiado = 47,864.00
+
+SELECT codigo, stock_real_fisico, stock_proyectado_disponible,
+       estado_alerta_proyectada
+  FROM v_stock_proyectado ORDER BY codigo;
+→ AGUA NULL SIN_LEVANTAR
+→ ARENA 450 / 450 SIN_FECHA_CONTEO
+→ CEMENTO 3,500 / 3,500 SIN_FECHA_CONTEO
+→ RETARDANTE 600 / 600 SIN_FECHA_CONTEO
+→ RIPIO 550 / 550 SIN_FECHA_CONTEO
+
+SELECT ordinal_position, column_name FROM information_schema.columns
+ WHERE table_name='v_cliente_saldo';
+→ 11 columnas: las 8 originales + ruc, credit_limit_usd, saldo_a_favor
+
+docker compose run --rm --no-deps core-api python -m pytest /app/tests -q
+→ 180 passed, EXIT=0
+
+docker compose run --rm --no-deps core-api python scripts/hito1_lock_test.py
+→ [CANDADO CERRADO], 235 movimientos de kardex, EXIT=0
+
+docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py
+→ [CANDADO CERRADO EN SANDBOX], EXIT=0
+
+Pruebas SQL en el clon orminorth_v43
+→ 7 guardas OK, 0 FALLO
+→ venta contado+COBRO sin deuda fantasma; FIADO sí aumenta deuda;
+   pago con deleted_at ignorado; TEORICO -10 baja a 3,490;
+   ANULACION -10 devuelve a 3,500; balance y P&L cuadran
+
+Contratos JSON v1.3.0
+→ 4 esquemas válidos · 14/14 ramas de mutación · 9 consultas · 4 correcciones
+→ rechazados: resistencia_fc entero, changes={}, REJECT sin códigos,
+   P&L sin fechas y PENDING sin approval_request_id
 ```
+
+**Respaldo previo a la migración:**
+`.agents/evidencias/pre_v43_orminorth.dump` (54,571 bytes), generado con
+`pg_dump -Fc` antes de aplicar `063` y `064`.
 
 ---
 
@@ -276,6 +418,9 @@ SELECT count(*) FROM mixer_dispatches; → 51
 - `docs/MODELO_DATOS.md` — descripción corta de las 12 tablas y vistas.
 - `db/migrations/001_init.sql` — esquema base.
 - `db/migrations/060_modulos_3_4_sandbox.sql` — columnas M3/M4 y `sandbox_outbox`.
+- `db/migrations/063_custodio_core.sql` — núcleo v4.3: IVA, pagos, plan de cuentas, compras, activos, pasivos, ledger y testigo.
+- `db/migrations/064_custodio_views.sql` — `v_cliente_saldo` v4.3, stock proyectado, balance y estado de resultados.
+- `.agents/skills/custodio-bd-horminor/contracts/` — contratos JSON v1.3.0 del Gate.
 - `services/core-api/app/db.py` — runner de migraciones.
 - `services/core-api/app/settings.py` — variables de conexión.
 - `docker-compose.yml` — contenedor, volumen y puertos.

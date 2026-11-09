@@ -515,8 +515,9 @@ async def main() -> int:
             "Gate #4 califico el mensaje como solicitud de cotizacion",
         )
         respuesta = (lead.respuesta if lead else "") or ""
+        marca_ok = "horminor" in respuesta.lower() or "orminorth" in respuesta.lower()
         fallos += not _check(
-            "orminorth" in respuesta.lower() and "FC-210" in respuesta,
+            marca_ok and "FC-210" in respuesta,
             "La respuesta usa empresa.bot_publico y las recetas de la base",
         )
         fallos += not _check(
@@ -526,7 +527,10 @@ async def main() -> int:
         fallos += not _check(
             any(
                 normalizar_telefono(envio["telefono"]) == normalizar_telefono(TEL_LEAD)
-                and "orminorth" in envio["texto"].lower()
+                and (
+                    "horminor" in envio["texto"].lower()
+                    or "orminorth" in envio["texto"].lower()
+                )
                 for envio in notifier.enviados
             ),
             "El bot respondio al telefono del lead por WhatsApp",

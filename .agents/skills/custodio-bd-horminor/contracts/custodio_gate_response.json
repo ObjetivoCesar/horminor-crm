@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_name": "custodio_gate_response",
+  "version": "1.3.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "status",
+    "rejection_codes",
+    "residual_risks",
+    "data"
+  ],
+  "properties": {
+    "contract_version": { "type": "string", "const": "1.3.0" },
+    "request_id": { "type": "string", "format": "uuid" },
+    "status": {
+      "type": "string",
+      "enum": ["ACCEPT", "REJECT", "PENDING_JULIO_APPROVAL"]
+    },
+    "rejection_codes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "UNAUTHORIZED_ACTOR",
+          "UNAUTHORIZED_DOMAIN_ACCESS",
+          "UNKNOWN_CRITICAL_FIELD",
+          "MISSING_VOUCHER_REFERENCE",
+          "MISSING_INVENTORY_ITEM_DATA",
+          "INSUFFICIENT_SILO_STOCK",
+          "DUPLICATE_CATEGORY_SIMILARITY",
+          "IMMUTABLE_ROOT_ACCOUNT",
+          "WITNESS_REASON_TOO_SHORT",
+          "DEPRECIATION_ALREADY_RUN_FOR_PERIOD",
+          "PAYLOAD_HASH_MISMATCH_ON_RETRY",
+          "SCHEMA_VALIDATION_FAILED",
+          "INVALID_IVA_COHERENCE",
+          "INVALID_PURCHASE_TOTAL",
+          "INVALID_ASSET_VALUES",
+          "MISSING_MASTER_DATA",
+          "DUPLICATE_REQUEST"
+        ]
+      }
+    },
+    "residual_risks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "CREDIT_LIMIT_EXCEEDED_WARNING",
+          "MATERIAL_COST_OR_STOCK_UNSET",
+          "PROVISIONAL_RECIPE_USED",
+          "USING_BASELINE_SEED_FOR_10Y_PROJECTION",
+          "OPENING_BALANCES_NOT_SET",
+          "UNCONFIRMED_FINANCIAL_RATES",
+          "SILO_STOCK_CRITICAL_ALERT",
+          "PENDING_PHYSICAL_INVENTORY_RECONCILIATION",
+          "COUNT_DATE_NOT_CONFIRMED",
+          "HISTORICAL_IVA_NOT_CONFIRMED",
+          "VALUATION_FORMULA_NOT_CONFIRMED",
+          "DSCR_DEFINITION_NOT_CONFIRMED"
+        ]
+      }
+    },
+    "witness_id": { "type": ["string", "null"], "format": "uuid" },
+    "transaction_group_id": { "type": ["string", "null"], "format": "uuid" },
+    "approval_request_id": { "type": ["string", "null"], "format": "uuid" },
+    "data": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "REJECT" } } },
+      "then": {
+        "properties": { "rejection_codes": { "minItems": 1 } }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "ACCEPT" } } },
+      "then": {
+        "properties": { "rejection_codes": { "maxItems": 0 } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "PENDING_JULIO_APPROVAL" } }
+      },
+      "then": {
+        "properties": { "rejection_codes": { "maxItems": 0 } },
+        "required": ["approval_request_id"]
+      }
+    }
+  ]
+}

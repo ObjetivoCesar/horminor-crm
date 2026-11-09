@@ -1,0 +1,580 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_name": "custodio_mutation_request",
+  "version": "1.3.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "channel",
+    "intent",
+    "payload"
+  ],
+  "properties": {
+    "contract_version": { "type": "string", "const": "1.3.0" },
+    "request_id": { "type": "string", "format": "uuid" },
+    "channel": {
+      "type": "string",
+      "enum": ["WEB_PANEL", "WHATSAPP", "SYSTEM_CRON", "TEST"]
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "CREATE_CONCRETE_ORDER",
+        "CANCEL_CONCRETE_ORDER",
+        "REGISTER_CLIENT_PAYMENT",
+        "REGISTER_PURCHASE",
+        "RECEIVE_PURCHASED_MATERIAL",
+        "REGISTER_EXPENSE",
+        "PAY_SUPPLIER_DEBT",
+        "PAY_BANK_LOAN_INSTALLMENT",
+        "RUN_MONTHLY_DEPRECIATION",
+        "SET_OPENING_BALANCES",
+        "RESOLVE_APPROVAL_REQUEST",
+        "CREATE_SUPPLIER",
+        "CREATE_FIXED_ASSET",
+        "CREATE_FINANCIAL_LIABILITY"
+      ]
+    },
+    "payload": { "type": "object" }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "intent": { "const": "CREATE_CONCRETE_ORDER" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cliente_id",
+            "resistencia",
+            "volumen_m3",
+            "forma_pago",
+            "planta_codigo"
+          ],
+          "properties": {
+            "cliente_id": { "type": "string", "format": "uuid" },
+            "planta_codigo": { "type": "string", "minLength": 1, "maxLength": 40 },
+            "planta_id": { "type": ["string", "null"], "format": "uuid" },
+            "resistencia": { "type": "string", "pattern": "^FC-[0-9]{3}$" },
+            "volumen_m3": {
+              "type": "string",
+              "pattern": "^(?!0+(\\.0{1,2})?$)[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "precio_m3_override": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9]+(\\.[0-9]{1,4})?$"
+            },
+            "aplica_iva": { "type": "boolean", "default": true },
+            "forma_pago": {
+              "type": "string",
+              "enum": ["EFECTIVO", "TRANSFERENCIA", "ABONO", "FIADO"]
+            },
+            "abono_inicial_monto": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "abono_inicial_metodo": {
+              "type": ["string", "null"],
+              "enum": ["EFECTIVO", "TRANSFERENCIA", null]
+            },
+            "politica_viajes": { "type": ["string", "null"], "maxLength": 40 },
+            "mixer_codigo": { "type": ["string", "null"], "maxLength": 40 },
+            "chofer_nombre": { "type": ["string", "null"], "maxLength": 120 },
+            "permitir_receta_provisional": { "type": "boolean", "default": false },
+            "notas": { "type": ["string", "null"], "maxLength": 500 }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "forma_pago": { "const": "ABONO" } },
+                "required": ["forma_pago"]
+              },
+              "then": {
+                "required": ["abono_inicial_monto", "abono_inicial_metodo"]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "forma_pago": {
+                    "enum": ["EFECTIVO", "TRANSFERENCIA", "FIADO"]
+                  }
+                },
+                "required": ["forma_pago"]
+              },
+              "then": {
+                "properties": {
+                  "abono_inicial_monto": { "type": "null" },
+                  "abono_inicial_metodo": { "type": "null" }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "CANCEL_CONCRETE_ORDER" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["order_id", "motivo"],
+          "properties": {
+            "order_id": { "type": "string", "format": "uuid" },
+            "motivo": { "type": "string", "minLength": 10, "maxLength": 300 }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "REGISTER_CLIENT_PAYMENT" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cliente_id", "fecha", "metodo", "monto"],
+          "properties": {
+            "cliente_id": { "type": "string", "format": "uuid" },
+            "order_id": { "type": ["string", "null"], "format": "uuid" },
+            "fecha": { "type": "string", "format": "date" },
+            "metodo": {
+              "type": "string",
+              "enum": ["EFECTIVO", "TRANSFERENCIA"]
+            },
+            "bolsa": {
+              "type": "string",
+              "enum": ["CAJA_DIARIA", "BANCO_GERENCIA"],
+              "default": "CAJA_DIARIA"
+            },
+            "monto": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "es_anticipo": { "type": "boolean", "default": false },
+            "referencia": { "type": ["string", "null"], "maxLength": 120 }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "REGISTER_PURCHASE" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "supplier_id",
+            "fecha_compra",
+            "modalidad_pago",
+            "modo_recepcion",
+            "items"
+          ],
+          "properties": {
+            "supplier_id": { "type": "string", "format": "uuid" },
+            "fecha_compra": { "type": "string", "format": "date" },
+            "modalidad_pago": {
+              "type": "string",
+              "enum": [
+                "CONTADO_EFECTIVO",
+                "CONTADO_TRANSFERENCIA",
+                "CREDITO_PROVEEDOR",
+                "MIXTO_ABONO_CREDITO"
+              ]
+            },
+            "bolsa_pago_hoy": {
+              "type": ["string", "null"],
+              "enum": ["CAJA_DIARIA", "BANCO_GERENCIA", null]
+            },
+            "monto_pagado_hoy": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "fecha_vencimiento": { "type": ["string", "null"], "format": "date" },
+            "iva_monto": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$",
+              "default": "0.00"
+            },
+            "modo_recepcion": {
+              "type": "string",
+              "enum": ["INMEDIATA", "EN_TRANSITO", "NO_APLICA"]
+            },
+            "referencia_comprobante": {
+              "type": ["string", "null"],
+              "maxLength": 120
+            },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "account_slug",
+                  "descripcion",
+                  "cantidad",
+                  "costo_unitario"
+                ],
+                "properties": {
+                  "material_id": {
+                    "type": ["string", "null"],
+                    "format": "uuid"
+                  },
+                  "account_slug": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$"
+                  },
+                  "descripcion": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 160
+                  },
+                  "cantidad": {
+                    "type": "string",
+                    "pattern": "^(?!0+(\\.0{1,4})?$)[0-9]+(\\.[0-9]{1,4})?$"
+                  },
+                  "costo_unitario": {
+                    "type": "string",
+                    "pattern": "^[0-9]+(\\.[0-9]{1,4})?$"
+                  }
+                }
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "modalidad_pago": {
+                    "enum": ["CONTADO_EFECTIVO", "CONTADO_TRANSFERENCIA"]
+                  }
+                },
+                "required": ["modalidad_pago"]
+              },
+              "then": {
+                "required": ["bolsa_pago_hoy", "monto_pagado_hoy"]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "modalidad_pago": {
+                    "enum": ["CREDITO_PROVEEDOR", "MIXTO_ABONO_CREDITO"]
+                  }
+                },
+                "required": ["modalidad_pago"]
+              },
+              "then": {
+                "required": ["fecha_vencimiento"]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "RECEIVE_PURCHASED_MATERIAL" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["purchase_item_id", "cantidad_recibida"],
+          "properties": {
+            "purchase_item_id": { "type": "string", "format": "uuid" },
+            "cantidad_recibida": {
+              "type": "string",
+              "pattern": "^(?!0+(\\.0{1,4})?$)[0-9]+(\\.[0-9]{1,4})?$"
+            },
+            "guia_remision": { "type": ["string", "null"], "maxLength": 100 }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "REGISTER_EXPENSE" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fecha",
+            "account_slug",
+            "metodo",
+            "bolsa",
+            "monto",
+            "descripcion"
+          ],
+          "properties": {
+            "fecha": { "type": "string", "format": "date" },
+            "account_slug": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+            "metodo": {
+              "type": "string",
+              "enum": ["EFECTIVO", "TRANSFERENCIA"]
+            },
+            "bolsa": {
+              "type": "string",
+              "enum": ["CAJA_DIARIA", "BANCO_GERENCIA"]
+            },
+            "monto": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "referencia_comprobante": {
+              "type": ["string", "null"],
+              "maxLength": 120
+            },
+            "descripcion": { "type": "string", "minLength": 3, "maxLength": 250 }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "PAY_SUPPLIER_DEBT" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "supplier_id",
+            "purchase_id",
+            "fecha",
+            "metodo",
+            "bolsa",
+            "monto"
+          ],
+          "properties": {
+            "supplier_id": { "type": "string", "format": "uuid" },
+            "purchase_id": { "type": "string", "format": "uuid" },
+            "fecha": { "type": "string", "format": "date" },
+            "metodo": {
+              "type": "string",
+              "enum": ["EFECTIVO", "TRANSFERENCIA"]
+            },
+            "bolsa": {
+              "type": "string",
+              "enum": ["CAJA_DIARIA", "BANCO_GERENCIA"]
+            },
+            "monto": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "referencia": { "type": ["string", "null"], "maxLength": 120 }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "PAY_BANK_LOAN_INSTALLMENT" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "liability_id",
+            "fecha",
+            "bolsa",
+            "monto_capital",
+            "monto_interes"
+          ],
+          "properties": {
+            "liability_id": { "type": "string", "format": "uuid" },
+            "fecha": { "type": "string", "format": "date" },
+            "bolsa": {
+              "type": "string",
+              "enum": ["CAJA_DIARIA", "BANCO_GERENCIA"]
+            },
+            "monto_capital": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "monto_interes": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "referencia": { "type": ["string", "null"], "maxLength": 120 }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "RUN_MONTHLY_DEPRECIATION" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["periodo_ym"],
+          "properties": {
+            "periodo_ym": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$" },
+            "asset_id": { "type": ["string", "null"], "format": "uuid" }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "SET_OPENING_BALANCES" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fecha_corte", "saldos"],
+          "properties": {
+            "fecha_corte": { "type": "string", "format": "date" },
+            "saldos": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["account_slug", "monto"],
+                "properties": {
+                  "account_slug": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$"
+                  },
+                  "monto": {
+                    "type": "string",
+                    "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "RESOLVE_APPROVAL_REQUEST" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["approval_request_id", "decision", "comentario"],
+          "properties": {
+            "approval_request_id": { "type": "string", "format": "uuid" },
+            "decision": {
+              "type": "string",
+              "enum": ["APPROVED", "REJECTED"]
+            },
+            "comentario": { "type": "string", "minLength": 3, "maxLength": 250 }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "CREATE_SUPPLIER" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["nombre"],
+          "properties": {
+            "nombre": { "type": "string", "minLength": 2, "maxLength": 160 },
+            "identificacion": {
+              "type": ["string", "null"],
+              "maxLength": 40
+            },
+            "telefono": { "type": ["string", "null"], "maxLength": 40 }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "CREATE_FIXED_ASSET" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "codigo",
+            "nombre",
+            "categoria",
+            "fecha_adquisicion",
+            "fecha_inicio_depreciacion",
+            "costo_historico",
+            "valor_residual",
+            "vida_util_meses"
+          ],
+          "properties": {
+            "codigo": { "type": "string", "minLength": 1, "maxLength": 40 },
+            "nombre": { "type": "string", "minLength": 2, "maxLength": 160 },
+            "categoria": {
+              "type": "string",
+              "enum": [
+                "VEHICULO_PESADO",
+                "MAQUINARIA_PLANTA",
+                "EQUIPO_OFICINA",
+                "TERRENO_INFRAESTRUCTURA"
+              ]
+            },
+            "fecha_adquisicion": { "type": "string", "format": "date" },
+            "fecha_inicio_depreciacion": {
+              "type": "string",
+              "format": "date"
+            },
+            "costo_historico": {
+              "type": "string",
+              "pattern": "^(?!0+(\\.0{1,2})?$)[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "valor_residual": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "vida_util_meses": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "intent": { "const": "CREATE_FINANCIAL_LIABILITY" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "entidad_financiera",
+            "numero_operacion",
+            "fecha_desembolso",
+            "monto_original",
+            "saldo_capital_actual",
+            "tasa_interes_anual_pct",
+            "cuota_mensual_referencial",
+            "plazo_restante_meses"
+          ],
+          "properties": {
+            "entidad_financiera": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 120
+            },
+            "numero_operacion": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "fecha_desembolso": { "type": "string", "format": "date" },
+            "monto_original": {
+              "type": "string",
+              "pattern": "^(?!0+(\\.0{1,2})?$)[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "saldo_capital_actual": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "tasa_interes_anual_pct": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "cuota_mensual_referencial": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+            },
+            "plazo_restante_meses": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    }
+  ]
+}

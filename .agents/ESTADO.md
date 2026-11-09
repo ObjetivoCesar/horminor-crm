@@ -1,7 +1,9 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-09** (v4.2 revisada contra un clon: `063` compila, `064` no; pendientes 5 decisiones de negocio para v4.3)
+> Última actualización: **2026-11-09** (Custodio v4.3 aplicado: 11 migraciones,
+> 28 tablas, 6 vistas, 26 cuentas; 180 tests y los 2 candados en verde. El
+> código de ventas/caja/kardex todavía no consume las columnas nuevas)
 
 ## Hitos
 
@@ -34,7 +36,13 @@ scripts de candado.
 
 ## Evidencia de la última sesión
 
-- `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` → **180 passed**, exit 0 (`.agents/evidencias/pytest_panel_horminor_2026-11-08.txt`).
+- **Custodio v4.3 aplicado el 2026-11-09.** `.agents/evidencias/revision_v43_2026-11-09.txt`: 11 migraciones, 28 tablas, 6 vistas, 26 cuentas, `por_cobrar 47,864 / 2 clientes / fiado 47,864`; respaldo previo `pre_v43_orminorth.dump`.
+- `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` → **180 passed**, exit 0 (`.agents/evidencias/pytest_v43_2026-11-09.txt`).
+- Hito 1 → `[CANDADO CERRADO]`, 235 movimientos de kardex (`.agents/evidencias/hito1_lock_v43_2026-11-09.txt`).
+- Hito 3 → `[CANDADO CERRADO EN SANDBOX]` (`.agents/evidencias/hito3_lock_v43_2026-11-09.txt`).
+- Pruebas SQL en `orminorth_v43` → 7 guardas OK, 0 FALLO (`.agents/evidencias/sql_tests_v43_2026-11-09.txt`).
+- Contratos v1.3.0 → 4 esquemas válidos, 14/14 ramas (`.agents/evidencias/contracts_v13_2026-11-09.txt`).
+- `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` (sesión previa) → **180 passed**, exit 0 (`.agents/evidencias/pytest_panel_horminor_2026-11-08.txt`).
 - Playwright 1440×1000 → 3 tarjetas de **253 px** cada una, anillo **0.31%**, **372 / 120,000 m³**, ventas **404 m³ / $47,864 / 4 órdenes / 51 viajes**, provincias Orellana/Sucumbíos/sin provincia, 2 obras con SVG locales, **3 KPIs plegados**, Poppins OK, overflow 0, **0 errores de consola**, **0 requests fallidos**.
 - Playwright Banca → **mercado 215,000 m³ · ventas 404 m³ · 0.19% · brecha 214,596 m³**, 2 provincias, 2 escenarios.
 - Playwright 390×844 → las 3 tarjetas se apilan, overflow 0, 6 tabs visibles, top header sticky, 2 obras.
@@ -68,12 +76,17 @@ scripts de candado.
    técnico lo sostiene César Reyes y los datos de negocio son de Julio; el
    custodio operativo del VPS queda **pendiente de confirmar** (ver
    `docs/BASE_DE_DATOS.md`, sección 5).
-8. **Respaldo externo.** Todo el proyecto y la base viven en un solo disco.
-9. **Especificación v4.2 sin cerrar.** `063` compila en un clon, pero `064`
-   falla porque la vista real tiene 8 columnas (`estado` en la posición 3) y
-   los casts `numeric(12,2)` cambian el tipo. Faltan 5 decisiones: cobro de
-   contado, IVA, costo de inventario, datos maestros y fecha de conteo.
-   Evidencia: `.agents/evidencias/revision_v42_2026-11-09.txt`.
+8. **Respaldo externo.** Todo el proyecto y la base viven en un solo disco. Hay
+   un respaldo manual previo a v4.3, pero no política automática.
+9. **Código desactualizado respecto de la base v4.3.** `crear_orden` todavía no
+   escribe IVA/`total_con_iva` ni inserta el `COBRO` de contado; kardex no
+   maneja `ANULACION` ni promedio ponderado; caja/dashboard no filtran
+   `payments.deleted_at`; faltan `gate.py`, `witness.py` y
+   `catalog_hygiene.py`.
+10. **IVA histórico, fecha de conteo, fórmula 10 años/DSCR y rol `CONTADORA`
+    siguen pendientes de Julio/Dirección.** No se inventaron: los históricos
+    quedaron `total_con_iva = total` (o `NULL` si los recreó un candado), los
+    materiales `SIN_FECHA_CONTEO` y no existe vista de valoración especulativa.
 
 > **Repositorio: solo local (ratificado 2026-11-08).** El código vivirá en el
 > VPS; GitHub no es requisito para avanzar. Los commits locales en `orminorth/`
@@ -82,30 +95,34 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **Dashboard V2 aprobado por Julio (2026-11-08).** La captura de referencia es
+1. **Refactorizar el código para consumir v4.3** (prioridad):
+   - `services/core-api/app/services/ordenes.py`: leer `iva_pct` de la receta,
+     escribir `aplica_iva`, `iva_pct`, `iva_monto` y `total_con_iva`; insertar
+     el `COBRO` de contado/abono dentro de la misma transacción.
+   - `services/core-api/app/m2_planta/kardex.py`: costo promedio ponderado,
+     `ANULACION` como reversa y `costo_unitario_snapshot`.
+   - `services/core-api/app/m3_secretaria/service.py` y
+     `m4_dashboard/service.py`: filtrar `payments.deleted_at` y usar el bruto
+     donde corresponda.
+   - Pruebas nuevas + **180 tests + Hito 1 + Hito 3** después del refactor.
+2. **Implementar el Custodio ejecutable:** `gate.py`, `witness.py`,
+   `catalog_hygiene.py` y sus pruebas contra los contratos v1.3.0.
+3. **Confirmar con Julio/Dirección:** IVA histórico, fecha de conteo, fórmula
+   de valoración 10 años/DSCR y rol `CONTADORA`.
+4. **Dashboard V2 aprobado por Julio (2026-11-08).** La captura de referencia es
    `.agents/evidencias/panel_horminor_dashboard_v2_dark_2026-11-08.png`; el
    ángulo comercial es **372 m³ vendidos de 120,000 m³ (0.31%)** en El Coca.
    Sigue pendiente que Julio entregue la **capacidad operativa de planta**.
-2. **Base de datos documentada (2026-11-09).** `docs/BASE_DE_DATOS.md` describe
-   la creación vía Docker, el runner de migraciones, el esquema real (14 tablas
-   + 3 vistas, 9 migraciones aplicadas) y el flujo de ingresos `orders` →
-   `payments`. Falta que Julio confirme **quién responde por la BD** y si se
-   autoriza el `POST` de pagos/abonos.
-3. **Sesión del 2026-11-09 — pantallas restantes y pruebas:** revisar con Julio
-   las vistas (`Carpetas de Clientes`, `Planta, Flota y Kardex`, `Banca y
-   Mercado`, `Secretaría y Caja`, `Superadmin`) y ejecutar la batería completa
-   (`pytest` + Playwright escritorio/móvil) registrando la evidencia en
-   `.agents/evidencias/`.
-4. **Producción del Hito 3:** cargar credenciales reales en
+5. **Producción del Hito 3:** cargar credenciales reales en
    `PUT /api/v1/superadmin/config/whatsapp_evolution_y_cdn`, poner
    `evolution_sandbox=false` y `bunny_sandbox=false`, y repetir
    `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py`.
-4. **Autenticación:** login para Superadmin/Secretaría antes de publicar el
+6. **Autenticación:** login para Superadmin/Secretaría antes de publicar el
    panel en el VPS.
-5. **Despliegue:** cuando exista el VPS, copiar el repo, levantar el stack y
+7. **Despliegue:** cuando exista el VPS, copiar el repo, levantar el stack y
    configurar TLS, proxy inverso y backups.
-6. **Backups de PostgreSQL:** definir política y custodio del volumen
-   `orminorth-pgdata` (hoy no existe).
+8. **Backups de PostgreSQL:** definir política y custodio del volumen
+   `orminorth-pgdata` (hoy solo existe el respaldo manual previo a v4.3).
 
 ## Decisiones de arquitectura vigentes
 
@@ -140,6 +157,11 @@ scripts de candado.
 | 27 | **Panel con shell ShikshaQ y jerarquía número-primero** | Top header fijo, sidebar de 6 tabs, donut/actividad/calendario y 3 obras; los párrafos se reemplazan por cifras grandes y barras. Se conservan IDs, `data-*`, rutas y contratos; cero build y cero CDN. Alternativa descartada: copiar los textos largos del API, que cansan la lectura |
 | 28 | **`_json_objeto()` normaliza JSONB en M3** | `obtener_carpeta` hacía `dict(tracking_payload)` y devolvía 500 cuando asyncpg entrega JSONB como texto. El helper acepta texto o mapping y devuelve `{}` si no se puede parsear; la carpeta forense volvió a 200 sin tocar el contrato |
 | 29 | **Dashboard V2 número-primero con el mercado como ancla comercial** | Tres tarjetas iguales (Mercado El Coca, Ventas 2026, Dónde vendes) que responden qué necesita Julio; agenda y actividad bajan a una fila inferior; caja/mixers/bodega quedan en `<details>`. La tarjeta de mercado muestra **0.31% / 372 m³ / 120,000 m³** y la de Banca **215,000 / 404 / 0.19% / 214,596 m³** sin párrafos. Se conservan IDs, `data-*`, rutas API y los 180 tests; ilustraciones SVG locales sin build ni CDN. Alternativa descartada: seguir mostrando el anillo de eficiencia (2/51 viajes) como protagonista, que no vende posicionamiento |
+| 30 | **`v_cliente_saldo` conserva las 8 columnas originales** | Los 3 consumidores y `catalog.py` dependen de `id, nombre, estado, total_m3, total_facturado, total_cobrado, total_fiado, saldo_pendiente`; v4.3 agrega `ruc`, `credit_limit_usd` y `saldo_a_favor` al final. Alternativa descartada: reordenar o cambiar tipos, que rompía consumidores |
+| 31 | **Fallback `COALESCE(total_con_iva, total)` en la vista** | Permite que una orden creada por código viejo siga visible mientras se refactoriza `crear_orden`; no se inventa el IVA de históricos. Se retirará el fallback cuando todo el código escriba el bruto |
+| 32 | **IVA 15 % solo para ventas nuevas; históricos sin IVA** | La decisión de Julio fue default 15 % en ventas nuevas; las anteriores quedan `total_con_iva = total` y `finanzas.iva_historico_confirmado=false` hasta confirmación retroactiva |
+| 33 | **Inventario por promedio ponderado** | Confirmado el 2026-11-09; `inventory_movements.costo_unitario_snapshot` guarda el costo vigente y el kardex calculará COGS con esa base |
+| 34 | **Gate idempotente + ledger/testigo inmutables** | `processed_requests` guarda `request_id` + hash; `ledger_entries` y `audit_witness_log` solo permiten INSERT y las correcciones se hacen con reversa/testigo. Alternativa descartada: `UPDATE` directo, que borra la trazabilidad |
 
 ## Riesgos abiertos
 

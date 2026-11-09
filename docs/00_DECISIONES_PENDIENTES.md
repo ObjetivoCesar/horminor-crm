@@ -1,10 +1,12 @@
 # Decisiones pendientes y datos que el PDR no trae
 
-Última actualización: 2026-11-08
+Última actualización: 2026-11-09
 Estado: **Hitos 1 y 3 cerrados; el Hito 3 en modo SANDBOX. Módulos 3
 (Secretaría + Caja) y 4 (Dashboard de Julio y Ases) construidos y verificados
-localmente. El Centro de Configuración Superadmin opera sin login en esta
-etapa.** Las credenciales reales y los teléfonos ya no bloquean: se cargan en
+localmente. La especificación del Custodio v4.3 (`063`/`064`) está aplicada en
+la base real; el código de ventas, caja y kardex todavía debe refactorizarse
+para usarla.** El Centro de Configuración Superadmin opera sin login en esta
+etapa. Las credenciales reales y los teléfonos ya no bloquean: se cargan en
 caliente y se apaga el switch SANDBOX.
 
 Este documento existe porque el PDR v4.0 define la arquitectura pero **no**
@@ -186,7 +188,35 @@ producción sin tocar el pipeline.
 
 ---
 
-## D. Decisiones de ingeniería ya tomadas (no requieren al cliente)
+## D. Custodio v4.3 — decisiones resueltas y pendientes (2026-11-09)
+
+> La base se migró después de probar `063` y `064` en el clon `orminorth_v43`
+> y de guardar `.agents/evidencias/pre_v43_orminorth.dump`. Evidencia:
+> `.agents/evidencias/revision_v43_2026-11-09.txt`.
+
+### D1. Decisiones de negocio resueltas
+
+| # | Tema | Decisión vigente | Implementación |
+|---|---|---|---|
+| E1 | Cobro de contado | Cada venta `EFECTIVO`, `TRANSFERENCIA` o `ABONO` inicial genera un `payments` tipo `COBRO` por el total con IVA. `FIADO` no genera `COBRO`: queda como deuda | `063` deja la tabla lista; **falta** refactorizar `crear_orden` |
+| E2 | IVA | 15 % por defecto para ventas nuevas, tomado de `concrete_recipes.iva_pct`. Saldo, cupo y cartera usan `total_con_iva` (bruto) | `063` agrega columnas y CHECK; `064` usa `COALESCE(total_con_iva, total)` |
+| E3 | Costo de inventario | Promedio ponderado para COGS y valor de inventario | `finanzas.costo_inventario_metodo = "PROMEDIO_PONDERADO"`; **falta** refactorizar kardex y recepción |
+| E4 | Datos maestros | El Gate puede crear proveedores, activos fijos y pasivos bancarios | `CREATE_SUPPLIER`, `CREATE_FIXED_ASSET` y `CREATE_FINANCIAL_LIABILITY` en contratos v1.3.0 |
+| E5 | Fecha de conteo | No se inventa: `materials.ultimo_levantamiento_at` queda `NULL` hasta que Julio entregue la fecha real | `063` la deja nullable; `v_stock_proyectado` marca `SIN_FECHA_CONTEO` |
+
+### D2. Pendientes que siguen abiertos
+
+| # | Tema | Qué falta | Dueño |
+|---|---|---|---|
+| P1 | IVA histórico | Confirmar si las órdenes anteriores al 2026-11-09 se backfillean al 15 % o quedan sin IVA | Julio |
+| P2 | Fecha de conteo | Entregar la fecha del último levantamiento físico de los 5 materiales | Julio |
+| P3 | Valoración 10 años / DSCR | El PDR trae escenarios y parámetros, pero no la fórmula completa; no se creó vista especulativa | Julio / Dirección |
+| P4 | Rol `CONTADORA` | Decidir si se agrega a la base o si el Custodio queda solo en `SUPERADMIN` | Julio / Dirección |
+| P5 | Refactor del código | `crear_orden` (IVA + COBRO), kardex (promedio + `ANULACION`), caja/dashboard (`deleted_at`) y Gate/testigo | Desarrollo |
+
+---
+
+## E. Decisiones de ingeniería ya tomadas (no requieren al cliente)
 
 1. **12 tablas en lugar de "10".** El PDR dice "las 10 tablas" pero nunca las
    enumera. Se implementaron 10 de negocio (`system_settings`, `plants`,

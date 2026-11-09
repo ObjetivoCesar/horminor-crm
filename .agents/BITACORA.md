@@ -1093,3 +1093,70 @@ Responder las 5 decisiones y generar **v4.3** con: `063` corregida, `064` correg
 - `.agents/evidencias/revision_v42_2026-11-09.txt` (nuevo)
 - `.agents/evidencias/064_custodio_views_corregida.sql` (nuevo)
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - Custodio v4.3 aplicado: migraciones 063/064, contratos 1.3.0 y evidencia
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash Free)
+**Objetivo:** Cerrar la especificación v4.3 del Custodio, aplicarla sin inventar datos y dejar la base real, los contratos y la documentación con evidencia reproducible.
+
+### Hecho
+
+1. Se completó `063_custodio_core.sql` con IVA, pagos, plan de 26 cuentas, proveedores/compras, activos fijos, pasivos, ledger inmutable, testigo forense, cola de aprobaciones e idempotencia del Gate.
+2. Se completó `064_custodio_views.sql` con `v_cliente_saldo` v4.3 (11 columnas, conserva las 8 originales), `v_stock_proyectado`, `v_balance_general` y `v_estado_resultados`.
+3. Se probó la migración en el clon `orminorth_v43`: compila, es idempotente, mantiene `por_cobrar = 47,864 / 2 clientes` y pasa las guardas de integridad.
+4. Se guardó el respaldo `.agents/evidencias/pre_v43_orminorth.dump` (54,571 bytes) antes de tocar la base real.
+5. Se aplicaron `063` y `064` con el runner canónico: la base real quedó con **11 migraciones, 28 tablas, 6 vistas y 26 cuentas**.
+6. Se crearon los 4 contratos JSON **v1.3.0** (14 intents de mutación, 9 de consulta, 4 de corrección y respuesta del Gate) y se validaron con `jsonschema` Draft 2020-12.
+7. Se ejecutaron los 180 tests y los dos candados: `180 passed`, Hito 1 `[CANDADO CERRADO]` y Hito 3 `[CANDADO CERRADO EN SANDBOX]`.
+8. Se corrigió `scripts/hito3_lock_test.py` para aceptar la marca `HORMINOR` además de `orminorth`; las 2 fallas eran del rebrand de `062`, no de v4.3.
+9. Se actualizaron `docs/BASE_DE_DATOS.md` (vistas, flujo de ingresos v4.3, riesgos y evidencia) y `docs/00_DECISIONES_PENDIENTES.md` (decisiones resueltas y pendientes reales).
+
+### Evidencia
+
+- `.agents/evidencias/revision_v43_2026-11-09.txt` (índice y consultas reales).
+- `.agents/evidencias/pytest_v43_2026-11-09.txt` → `180 passed`, EXIT=0.
+- `.agents/evidencias/hito1_lock_v43_2026-11-09.txt` → `[CANDADO CERRADO]`, 235 movimientos de kardex.
+- `.agents/evidencias/hito3_lock_v43_2026-11-09.txt` → `[CANDADO CERRADO EN SANDBOX]`.
+- `.agents/evidencias/sql_tests_v43_2026-11-09.txt` → 7 guardas OK, 0 FALLO.
+- `.agents/evidencias/contracts_v13_2026-11-09.txt` → 4 esquemas válidos, 14/14 ramas.
+- `.agents/evidencias/pre_v43_orminorth.dump` → respaldo previo (54,571 bytes).
+
+### Decisiones tomadas
+
+1. **Venta de contado = orden + COBRO.** `EFECTIVO`, `TRANSFERENCIA` y el abono inicial generan `payments` tipo `COBRO`; `FIADO` no genera cobro y queda como deuda. El código se refactorizará después; la base ya lo soporta.
+2. **IVA 15 % para ventas nuevas y saldo sobre el bruto.** Se usa `total_con_iva` para cartera/cupo. Los históricos quedan `total_con_iva = total` (o `NULL` si los recreó un candado) y se marcan como pendientes de confirmación.
+3. **Inventario por promedio ponderado.** `costo_unitario_snapshot` guarda el costo vigente; el COGS se calculará con esa base.
+4. **Compatibilidad de `v_cliente_saldo`.** Se conservan las 8 columnas y tipos originales y se agregan 3 al final; el fallback `COALESCE(total_con_iva, total)` evita que las órdenes del código viejo desaparezcan.
+5. **Fecha de conteo = NULL.** No se inventó: los 5 materiales quedan `SIN_FECHA_CONTEO` hasta que Julio entregue la fecha real.
+6. **Valoración 10 años/DSCR no se implementa todavía.** El PDR no trae la fórmula completa; se descartó crear una vista especulativa.
+7. **Migración aplicada no se edita.** Cualquier ajuste posterior va en una migración nueva.
+
+### Bloqueos / preguntas al cliente
+
+1. **IVA histórico:** ¿las órdenes anteriores al 2026-11-09 se backfillean al 15 % o quedan sin IVA?
+2. **Fecha de conteo:** Julio debe entregar la fecha del último levantamiento físico.
+3. **Fórmula de valoración 10 años y DSCR:** falta la definición completa.
+4. **Rol `CONTADORA`:** no existe en la base; decidir si se agrega o el Custodio queda solo en `SUPERADMIN`.
+5. **Endpoint de pagos/abonos:** falta definir abono parcial, validación de saldo y permisos.
+6. **Custodio operativo de la BD en producción:** sigue sin designación formal.
+
+### Próximo paso exacto
+
+1. Refactorizar `crear_orden` para escribir IVA/`total_con_iva` e insertar el `COBRO` de contado/abono en la misma transacción.
+2. Refactorizar `kardex.py` (promedio ponderado, `ANULACION`, snapshot) y filtrar `payments.deleted_at` en caja/dashboard.
+3. Implementar `gate.py`, `witness.py` y `catalog_hygiene.py` contra los contratos v1.3.0.
+4. Re-ejecutar 180 tests + Hito 1 + Hito 3 y registrar la nueva evidencia.
+5. Confirmar con Julio/Dirección los 4 datos pendientes antes de tocar históricos.
+
+### Archivos tocados
+
+- `db/migrations/063_custodio_core.sql` (nuevo, aplicado)
+- `db/migrations/064_custodio_views.sql` (nuevo, aplicado)
+- `.agents/skills/custodio-bd-horminor/contracts/` (4 contratos v1.3.0)
+- `docs/BASE_DE_DATOS.md`
+- `docs/00_DECISIONES_PENDIENTES.md`
+- `scripts/hito3_lock_test.py` (fix de marca)
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`

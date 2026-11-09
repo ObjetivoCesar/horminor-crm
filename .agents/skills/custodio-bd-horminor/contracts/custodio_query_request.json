@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_name": "custodio_query_request",
+  "version": "1.3.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "channel",
+    "intent",
+    "filters"
+  ],
+  "properties": {
+    "contract_version": { "type": "string", "const": "1.3.0" },
+    "request_id": { "type": "string", "format": "uuid" },
+    "channel": {
+      "type": "string",
+      "enum": ["WEB_PANEL", "WHATSAPP", "TEST"]
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "GET_CLIENT_BALANCE",
+        "GET_DAILY_CASH_CLOSURE",
+        "GET_ACCOUNTS_PAYABLE",
+        "GET_INVENTORY_AND_ALERTS",
+        "GET_DISPATCH_TIMELINE",
+        "GET_INCOME_STATEMENT_PL",
+        "GET_BALANCE_SHEET_REALTIME",
+        "GET_VALUATION_AND_10Y_PROJECTION",
+        "GET_DEBT_CAPACITY_DSCR"
+      ]
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cliente_id": { "type": ["string", "null"], "format": "uuid" },
+        "order_id": { "type": ["string", "null"], "format": "uuid" },
+        "supplier_id": { "type": ["string", "null"], "format": "uuid" },
+        "fecha_desde": { "type": ["string", "null"], "format": "date" },
+        "fecha_hasta": { "type": ["string", "null"], "format": "date" },
+        "horizon_years": {
+          "type": ["integer", "null"],
+          "enum": [1, 3, 5, 10, null]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "intent": { "const": "GET_CLIENT_BALANCE" } } },
+      "then": {
+        "properties": { "filters": { "required": ["cliente_id"] } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "intent": { "const": "GET_DAILY_CASH_CLOSURE" } }
+      },
+      "then": {
+        "properties": { "filters": { "required": ["fecha_desde"] } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "intent": { "const": "GET_INCOME_STATEMENT_PL" } }
+      },
+      "then": {
+        "properties": {
+          "filters": { "required": ["fecha_desde", "fecha_hasta"] }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "intent": { "const": "GET_VALUATION_AND_10Y_PROJECTION" }
+        }
+      },
+      "then": {
+        "properties": { "filters": { "required": ["horizon_years"] } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "intent": { "const": "GET_DEBT_CAPACITY_DSCR" } }
+      },
+      "then": {
+        "properties": { "filters": { "required": ["horizon_years"] } }
+      }
+    }
+  ]
+}
