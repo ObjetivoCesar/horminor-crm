@@ -1,7 +1,7 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-08** (dashboard V2 aprobado por Julio; próxima sesión 2026-11-09: pantallas restantes, base de datos y pruebas)
+> Última actualización: **2026-11-09** (base de datos documentada en `docs/BASE_DE_DATOS.md`; ingresos y responsable de la BD explicados; pendiente confirmar custodio)
 
 ## Hitos
 
@@ -63,7 +63,12 @@ scripts de candado.
 6. **Sin autenticación.** `/panel`, `/api/v1/secretaria/*` y
    `/api/v1/superadmin/*` están abiertos: no exponerlos a Internet hasta
    implementar login.
-7. **Respaldo externo.** Todo el proyecto y la base viven en un solo disco.
+7. **Responsable/custodio de la base de datos sin designar.** No hay un DBA ni
+   un custodio formal de PostgreSQL en producción documentado. El desarrollo
+   técnico lo sostiene César Reyes y los datos de negocio son de Julio; el
+   custodio operativo del VPS queda **pendiente de confirmar** (ver
+   `docs/BASE_DE_DATOS.md`, sección 5).
+8. **Respaldo externo.** Todo el proyecto y la base viven en un solo disco.
 
 > **Repositorio: solo local (ratificado 2026-11-08).** El código vivirá en el
 > VPS; GitHub no es requisito para avanzar. Los commits locales en `orminorth/`
@@ -76,13 +81,17 @@ scripts de candado.
    `.agents/evidencias/panel_horminor_dashboard_v2_dark_2026-11-08.png`; el
    ángulo comercial es **372 m³ vendidos de 120,000 m³ (0.31%)** en El Coca.
    Sigue pendiente que Julio entregue la **capacidad operativa de planta**.
-2. **Sesión del 2026-11-09 — otras pantallas, base de datos y pruebas:**
-   revisar con Julio las vistas restantes (`Carpetas de Clientes`, `Planta,
-   Flota y Kardex`, `Banca y Mercado`, `Secretaría y Caja`, `Superadmin`),
-   revisar el esquema/migraciones y los datos reales de PostgreSQL, y ejecutar
-   la batería completa (`pytest` + Playwright escritorio/móvil) registrando la
-   evidencia en `.agents/evidencias/`.
-3. **Producción del Hito 3:** cargar credenciales reales en
+2. **Base de datos documentada (2026-11-09).** `docs/BASE_DE_DATOS.md` describe
+   la creación vía Docker, el runner de migraciones, el esquema real (14 tablas
+   + 3 vistas, 9 migraciones aplicadas) y el flujo de ingresos `orders` →
+   `payments`. Falta que Julio confirme **quién responde por la BD** y si se
+   autoriza el `POST` de pagos/abonos.
+3. **Sesión del 2026-11-09 — pantallas restantes y pruebas:** revisar con Julio
+   las vistas (`Carpetas de Clientes`, `Planta, Flota y Kardex`, `Banca y
+   Mercado`, `Secretaría y Caja`, `Superadmin`) y ejecutar la batería completa
+   (`pytest` + Playwright escritorio/móvil) registrando la evidencia en
+   `.agents/evidencias/`.
+4. **Producción del Hito 3:** cargar credenciales reales en
    `PUT /api/v1/superadmin/config/whatsapp_evolution_y_cdn`, poner
    `evolution_sandbox=false` y `bunny_sandbox=false`, y repetir
    `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py`.
@@ -90,6 +99,8 @@ scripts de candado.
    panel en el VPS.
 5. **Despliegue:** cuando exista el VPS, copiar el repo, levantar el stack y
    configurar TLS, proxy inverso y backups.
+6. **Backups de PostgreSQL:** definir política y custodio del volumen
+   `orminorth-pgdata` (hoy no existe).
 
 ## Decisiones de arquitectura vigentes
 

@@ -994,3 +994,56 @@ Registrar la salida y las capturas nuevas en `.agents/evidencias/`.
 
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - Documentación de la base de datos y cómo se registran ingresos
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash Free)
+**Objetivo:** Explicar cómo está creada la base de datos, dejar por escrito cómo se registra un ingreso y aclarar quién responde por la BD, sin inventar datos.
+
+### Hecho
+
+1. Se verificó el stack real: `orminorth-postgres` (PostgreSQL 15.19), `orminorth-core-api` y `orminorth-redis` arriba y saludables.
+2. Se consultó `schema_migrations`: **9 de 9 migraciones aplicadas** (`001` a `062`), última el 2026-11-08 21:35.
+3. Se listó el esquema real: **14 tablas base + 3 vistas** (`v_cliente_saldo`, `v_dispatch_timeline`, `v_inventario`).
+4. Se documentó el flujo de ingresos: `orders` es la venta (factura) y `payments` es el movimiento de caja (`COBRO` / `GASTO_CAJA_CHICA`), pero **no existe endpoint POST de pagos/abonos**.
+5. Se creó `docs/BASE_DE_DATOS.md` con: creación vía Docker, runner de migraciones, esquema actual, flujo de ingresos, responsables y evidencia ejecutada.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `docker ps` | `orminorth-postgres` Up 18 h (healthy), puerto `5433` |
+| `SELECT version();` | PostgreSQL **15.19** x86_64-pc-linux-musl |
+| `schema_migrations` | **9 filas** (`001_init` … `062_rebrand_horminor`) |
+| `information_schema.tables` | **14 tablas base + 3 vistas** |
+| `SELECT count(*) FROM payments;` | **0** |
+| `SELECT count(*) FROM orders;` | **4** (320 + 52 + 16 + 16 m³, todas `FIADO`) |
+| `SELECT count(*) FROM clients;` | **6** |
+| `SELECT count(*) FROM mixer_dispatches;` | **51** |
+| `\d payments` | `COBRO`/`GASTO_CAJA_CHICA`, `EFECTIVO`/`TRANSFERENCIA`/`FIADO`, `monto > 0` |
+
+### Decisiones tomadas
+
+1. **El documento vive en `docs/BASE_DE_DATOS.md`.** Se separó de `MODELO_DATOS.md` porque este último describe el modelo lógico; el nuevo describe creación, operación, responsables y el flujo de ingresos. Alternativa descartada: ampliar `MODELO_DATOS.md` y mezclar responsabilidades operativas con el modelo de tablas.
+2. **La figura de "responsable de la BD" no se inventa.** Se documentan los roles probables con evidencia (Julio = dueño del negocio y del dato; César Reyes = desarrollo técnico) y se marca **PENDIENTE** el custodio operativo en producción y el DBA formal.
+3. **El registro de ingresos se explica desde el modelo existente** (`orders` → `payments`), sin proponer reglas de cobro que Julio no haya confirmado.
+
+### Bloqueos / preguntas al cliente
+
+1. **¿Quién es el responsable/custodio de la base de datos en el VPS de producción?** No está designado en ningún documento. Opciones a confirmar: Julio, el proveedor del VPS, la agencia o César.
+2. **¿Se implementa el POST de pagos/abonos?** Falta definir si se permiten abonos parciales, si se valida contra `v_cliente_saldo` y quién puede cobrar.
+3. **Sin backups documentados** para el volumen `orminorth-pgdata`.
+4. **Credenciales por defecto** (`orminorth`/`orminorth`) antes de producción.
+
+### Próximo paso exacto
+
+1. Mostrar `docs/BASE_DE_DATOS.md` a Julio y pedir que confirme quién responde por la BD.
+2. Si autoriza el registro de cobros, definir la regla (abono parcial sí/no, validación de saldo) y recién entonces abrir el endpoint `POST /api/v1/secretaria/pagos`.
+3. Continuar la revisión de pantallas restantes: Secretaría, Clientes, Planta, Banca y Superadmin.
+
+### Archivos tocados
+
+- `docs/BASE_DE_DATOS.md` (nuevo)
+- `.agents/BITACORA.md`
