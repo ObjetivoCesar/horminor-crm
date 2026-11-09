@@ -1,10 +1,10 @@
 {
   "meta": {
     "name": "Horminor Design System",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "updated": "2026-11-08",
     "scope": "/panel (FastAPI + Jinja/HTML estático)",
-    "reference": "ShikshaQ Tablet Dashboard (estructura), adaptado a Horminor",
+    "reference": "ShikshaQ Tablet Dashboard (shell), dashboard número-primero propio de Horminor",
     "constraints": [
       "Cero build y cero CDN: SVG nativo y CSS puro",
       "Poppins servida desde /static/fonts",
@@ -110,69 +110,76 @@
     }
   },
   "dashboard": {
-    "greeting": "Bienvenido de nuevo, Julio!",
-    "filters": [
-      {"id": "f-periodo", "label": "Período", "options": ["HOY", "7D", "MES", "12M", "ANIO"]},
-      {"id": "f-planta", "label": "Planta", "options": ["", "PLANTA-COCA", "PLANTA-MOVIL"]},
-      {"id": "f-resistencia", "label": "Resistencia", "options": ["", "FC-180", "FC-210", "FC-240", "FC-280", "FC-350"]},
-      {"id": "f-pago", "label": "Estado Pago", "options": ["", "EFECTIVO", "TRANSFERENCIA", "ABONO", "FIADO"]}
-    ],
-    "grid": {
-      "columns": "minmax(290px,0.92fr) minmax(320px,1.18fr) minmax(300px,1fr)",
-      "cards": ["donut", "actividad", "calendario"]
+    "greeting": "Buenos días, Julio",
+    "principle": "Jerarquía número-primero: 3 tarjetas iguales que responden qué necesita ver Julio; el detalle operativo queda plegado.",
+    "filters": {
+      "container": "details.filter-drop con summary 'Filtros de obras'",
+      "visible": ["f-planta", "f-resistencia", "f-pago"],
+      "hidden": ["f-periodo"]
     },
-    "donut": {
-      "size": "190px",
-      "stroke": "12px",
+    "metric_cards": [
+      {
+        "id": "market",
+        "title": "Mercado El Coca",
+        "ring_value": "0.31%",
+        "sold_m3": 372,
+        "demand_m3": 120000,
+        "caption": "372 m³ vendidos de 120,000 m³ al año",
+        "cta": "Ver mercado → Banca",
+        "source": "/api/v1/dashboard/mercado"
+      },
+      {
+        "id": "sales",
+        "title": "Ventas 2026",
+        "sold_m3": 404,
+        "billed_usd": 47864,
+        "orders": 4,
+        "trips": 51,
+        "avg_ticket_usd": 11966,
+        "source": "/api/v1/orders"
+      },
+      {
+        "id": "places",
+        "title": "Dónde vendes",
+        "rows": [
+          {"name": "Orellana", "m3": 372, "share_pct": 0.31},
+          {"name": "Sucumbíos", "m3": 16, "share_pct": 0.02},
+          {"name": "Sin provincia", "m3": 16, "share_note": "asignar en Secretaría"}
+        ],
+        "footer": "Planta El Coca · FC-210 · 466.7 m³ disponibles",
+        "source": "/api/v1/dashboard/mercado"
+      }
+    ],
+    "equal_height_measured": "253 px por tarjeta en 1440×1000",
+    "market_ring": {
+      "size": "132px",
+      "stroke": "donut-arc",
       "radius": 80,
       "circumference": 502.65,
-      "modes": [
-        {
-          "id": 0,
-          "label": "Despacho",
-          "metric": "viajes con despacho_validado / viajes contratados",
-          "source": "/api/v1/orders + /api/v1/orders/{id}"
-        },
-        {
-          "id": 1,
-          "label": "Mercado",
-          "metric": "capturado_usd / valor_mercado_usd",
-          "source": "/api/v1/dashboard/mercado"
-        },
-        {
-          "id": 2,
-          "label": "Cobrado",
-          "metric": "(facturado - saldo_pendiente) / facturado",
-          "source": "/api/v1/secretaria/clientes"
-        }
-      ],
-      "minimum_visible_arc": "1.5% (solo visual; la etiqueta muestra el valor real)"
+      "minimum_visible_arc": "1.5% (solo visual; la etiqueta muestra 0.31%)"
     },
-    "activity": {
-      "max_items": 7,
-      "sources": ["órdenes", "viajes validados", "incidencias", "mixers en ruta", "cartera", "stock crítico"]
+    "lower_row": {
+      "columns": ["agenda (calendario + próximos)", "actividad (4 movimientos visibles)"],
+      "note": "El calendario baja de la primera pantalla y comparte fila con actividad."
     },
-    "calendar": {
-      "week_start": "L",
-      "today_style": "#3B82F6",
-      "event_style": "rgba(59,130,246,0.16)",
-      "events_source": "created_at real de órdenes + cierre de caja",
-      "note": "No se inventan fechas ni horas de despacho: se muestra el registro real"
+    "collapsed": {
+      "detail": "Caja · mixers · bodega dentro de <details class='dash2-more'>",
+      "hero_kpis_ids": ["hero-kpis"]
     },
     "works": {
-      "cards": ["orden 1", "orden 2", "simulación bancaria Pluma China"],
-      "progress": "viajes despachados / contratados; DSCR / 1.50x",
-      "thumb_height": "110px",
-      "thumb_gradients": {
-        "cyan_blue": "linear-gradient(135deg,#0E7490 0%,#1D4ED8 55%,#172554 100%)",
-        "amber": "linear-gradient(135deg,#B45309 0%,#F59E0B 48%,#78350F 100%)",
-        "slate": "linear-gradient(135deg,#1E293B 0%,#334155 55%,#0F172A 100%)"
-      }
+      "title": "Obras activas · Mixers en calle",
+      "cards": "hasta 2 órdenes activas ordenadas por volumen",
+      "thumb_height": "148px",
+      "illustrations": [
+        "/static/brand/panel-obra-planta.svg",
+        "/static/brand/panel-obra-mixer.svg"
+      ],
+      "progress": "viajes despachados / contratados"
     }
   },
   "views": {
     "secretaria": {
-      "blocks": ["alta rápida de orden", "cierre de caja", "cobros del día (solo lectura)", "cartera"],
+      "blocks": ["alta rápida de orden", "cierre de caja (plegable)", "cobros del día (plegable, solo lectura)", "cartera"],
       "limitation": "No existe POST de pagos/abonos: no se inventan movimientos"
     },
     "clientes": {
@@ -186,12 +193,19 @@
       "source": "/api/v1/inventory + /api/v1/dashboard/hero-kpis + /api/v1/secretaria/opciones"
     },
     "banca": {
-      "blocks": ["cuota de mercado", "dossier", "simulador francés"],
-      "source": "/api/v1/dashboard/mercado + /api/v1/dashboard/simulador"
+      "summary": {
+        "market_m3": 215000,
+        "sales_m3": 404,
+        "share_pct": 0.19,
+        "gap_m3": 214596
+      },
+      "blocks": ["resumen numérico de mercado", "filas por provincia", "dossier", "simulador francés"],
+      "source": "/api/v1/dashboard/mercado + /api/v1/dashboard/simulador + /api/v1/orders",
+      "note": "Sin párrafos largos: 4 cifras grandes y barras por provincia"
     },
     "superadmin": {
-      "blocks": ["simulador WhatsApp", "outbox", "7 secciones de configuración"],
-      "ids": ["sim-remitente", "sim-texto", "sim-foto", "sim-resultado", "outbox-panel", "config-tabs", "config-panel"]
+      "blocks": ["simulador WhatsApp", "outbox plegado (4 mensajes resumidos)", "configuración en caliente con selector desplegable"],
+      "ids": ["sim-remitente", "sim-texto", "sim-foto", "sim-resultado", "outbox-card", "outbox-count", "outbox-panel", "config-tabs", "config-seccion", "config-panel"]
     }
   },
   "preserved_contracts": {
@@ -200,8 +214,14 @@
       "page-title", "page-date", "buscar-cliente", "lista-clientes", "carpeta-card",
       "cierre-fecha", "cierre-estado", "cierre-resumen", "cierre-contado", "cierre-por", "cierre-resultado",
       "hero-kpis", "mercado-modo", "mercado-anio", "mercado-periodo", "mercado-rango", "mercado-panel",
+      "mercado-total", "mercado-ventas", "mercado-cuota", "mercado-brecha",
+      "donut-value", "donut-arc", "donut-title", "donut-note", "donut-kpis", "donut-mode-0", "donut-mode-1", "donut-mode-2",
+      "market-year", "market-sold", "market-demand", "sales-m3", "sales-orders", "sales-total", "sales-trips", "sales-ticket",
+      "places-list", "places-count", "places-bodega", "dash-actualizado",
+      "f-periodo", "f-planta", "f-resistencia", "f-pago",
+      "obras-grid", "calendario-grid", "proximos-despachos", "actividad-lista", "act-contador",
       "simulador-panel", "sim-remitente", "sim-texto", "sim-foto", "sim-resultado",
-      "outbox-panel", "config-tabs", "config-panel", "dlg-cliente", "dlg-orden", "toasts"
+      "outbox-panel", "outbox-count", "config-tabs", "config-seccion", "config-panel", "dlg-cliente", "dlg-orden", "toasts"
     ],
     "endpoints": [
       "/api/v1/orders",
@@ -218,18 +238,19 @@
     ]
   },
   "responsive": {
-    "desktop": "3 columnas, sidebar fija 258px, top header fijo 72px",
-    "tablet_1280": "2 columnas; calendario a todo el ancho",
-    "mobile_980": "sidebar horizontal scrolleable, header sticky, 1 columna",
-    "mobile_520": "theme toggle compacto, gaps de 14px"
+    "desktop": "3 tarjetas métricas iguales, sidebar fija 258px, top header fijo 72px",
+    "tablet_1180": "2 tarjetas + 'Dónde vendes' a todo el ancho; agenda y actividad en 1 columna",
+    "mobile_980": "sidebar horizontal scrolleable, header sticky, tarjetas en 1 columna",
+    "mobile_520": "theme toggle compacto, gaps de 12px, anillo de mercado 112px"
   },
   "motion": {
     "view_in": "opacity 0→1 + translateY(6px→0), 280ms ease",
     "donut": "stroke-dashoffset 800ms cubic-bezier(0.22,1,0.36,1)",
+    "fold": "summary::after rota 180° en 180ms",
     "reduced_motion": "respeta prefers-reduced-motion"
   },
   "pending_data": [
-    "Capacidad operativa de planta (m³) para el modo 1 del donut",
+    "Capacidad operativa de planta (m³) para un KPI de capacidad",
     "Endpoint POST de pagos/abonos para Secretaría",
     "Provincia y dirección de obra por cliente para el calendario"
   ]

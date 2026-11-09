@@ -1394,7 +1394,7 @@ main { padding: 96px 24px 64px; }
 .works-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 26px 0 12px; flex-wrap: wrap; }
 .works-head h2 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
 .works-head a { font-size: 11px; font-weight: 600; color: var(--accent-bank-pill); text-decoration: none; }
-.works-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.works-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .work-card {
   border: var(--border-subtle);
   border-radius: 20px;
@@ -1568,6 +1568,366 @@ tbody tr:last-child td { border-bottom: 0; }
   .works-grid { gap: 14px; }
 }
 
+/* ======================================================= DASHBOARD V2 */
+.dash2-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.dash2-head-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dash2-head .dash-sub { margin-top: 3px; }
+
+.filter-drop { position: relative; }
+.filter-drop summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 999px;
+  background: var(--surface-row-pill);
+  color: var(--text-slate);
+  font-size: 11px;
+  font-weight: 600;
+  user-select: none;
+}
+.filter-drop summary::-webkit-details-marker { display: none; }
+.filter-drop summary::after { content: "⌄"; font-size: 12px; line-height: 1; color: var(--text-muted); }
+.filter-drop[open] summary { color: var(--text-pure); border-color: rgba(59, 130, 246, 0.55); }
+.filter-drop-body {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: 260px;
+  padding: 12px;
+  border: var(--border-subtle);
+  border-radius: 14px;
+  background: var(--bg-obsidian);
+  box-shadow: 0 22px 48px -18px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.filter-drop-body .filter-pill { justify-content: space-between; width: 100%; }
+.filter-drop-body .filter-pill select { max-width: 150px; text-align: right; }
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+.metric-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 248px;
+  padding: 20px;
+  border: var(--border-subtle);
+  border-radius: 20px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-bento);
+  display: flex;
+  flex-direction: column;
+}
+.metric-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #06B6D4, #3B82F6, #F59E0B);
+  opacity: 0.9;
+}
+.metric-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.055) 1px, transparent 1px);
+  background-size: 30px 30px;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,0.35), transparent 78%);
+  -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0.35), transparent 78%);
+}
+.metric-card > * { position: relative; z-index: 1; }
+.metric-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.metric-chip {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--surface-row-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Mercado */
+.metric-market { background: linear-gradient(160deg, rgba(8, 51, 68, 0.55) 0%, var(--surface-card) 68%); }
+.market-layout { display: flex; align-items: center; gap: 16px; margin: 14px 0 10px; flex: 1 1 auto; }
+.market-ring { position: relative; width: 132px; height: 132px; flex: 0 0 132px; }
+.market-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.market-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.metric-market .donut-value { font-size: 1.55rem; }
+.metric-market .donut-cap { font-size: 8.5px; letter-spacing: 0.12em; margin-top: 3px; }
+.market-numbers { min-width: 0; }
+.market-numbers > strong {
+  display: block;
+  font-size: 2.55rem;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  color: var(--text-pure);
+}
+.market-numbers > span { display: block; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.market-numbers .market-of { font-size: 11px; color: var(--text-slate); margin-top: 8px; }
+.market-numbers .market-of b { color: var(--text-pure); font-weight: 700; }
+.market-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: var(--border-subtle);
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+.market-foot .link-btn { color: var(--accent-bank-pill); font-weight: 700; }
+
+/* Ventas */
+.metric-sales { background: linear-gradient(160deg, rgba(120, 53, 15, 0.45) 0%, var(--surface-card) 68%); }
+.sales-main {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 16px;
+  color: var(--text-pure);
+}
+.sales-main strong { font-size: 3.45rem; line-height: 0.92; letter-spacing: -0.055em; font-weight: 700; }
+.sales-main span { font-size: 15px; font-weight: 600; color: var(--text-muted); }
+.sales-money { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--text-slate); }
+.sales-foot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: var(--border-subtle);
+}
+.mini-stat span { display: block; font-size: 9px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+.mini-stat strong { display: block; font-size: 13px; margin-top: 3px; color: var(--text-pure); }
+
+/* Ciudades */
+.metric-places { background: linear-gradient(160deg, rgba(30, 58, 138, 0.38) 0%, var(--surface-card) 68%); }
+.place-list { display: flex; flex-direction: column; gap: 11px; margin: 16px 0 12px; flex: 1 1 auto; }
+.place-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+.place-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.place-top span { font-size: 12px; font-weight: 600; color: var(--text-pure); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.place-top em { font-style: normal; font-size: 10px; color: var(--text-muted); }
+.place-top strong { font-size: 16px; color: var(--text-pure); letter-spacing: -0.02em; white-space: nowrap; }
+.place-bar { grid-column: 1 / -1; height: 5px; border-radius: 999px; background: rgba(148, 163, 184, 0.16); overflow: hidden; }
+.place-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #06B6D4, #3B82F6); }
+.place-bar.amber span { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.place-bar.slate span { background: linear-gradient(90deg, #64748B, #94A3B8); }
+.places-foot {
+  padding-top: 11px;
+  border-top: var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+.places-foot strong { color: var(--text-pure); font-size: 11.5px; }
+
+.dash2-section { margin-top: 26px; }
+.dash2-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.dash2-section-head h2 { margin: 2px 0 0; font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+.dash2-section-head a { font-size: 11px; font-weight: 600; color: var(--accent-bank-pill); text-decoration: none; }
+
+/* Obras con imagen */
+.work-thumb2 { position: relative; height: 148px; overflow: hidden; background: #0B1220; }
+.work-thumb2 img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.work-thumb2::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 42%, rgba(2, 6, 23, 0.78) 100%);
+}
+.work-thumb2 .thumb-tag {
+  position: absolute;
+  left: 13px;
+  bottom: 11px;
+  z-index: 2;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #FFFFFF;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.work-body h3 { font-size: 13px; margin-top: 10px; }
+.work-body p { font-size: 10.5px; margin-bottom: 10px; }
+
+/* Agenda + actividad */
+.dash2-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 22px;
+}
+.dash2-lower > .dash-card { min-height: 100%; }
+.cal-card .cal-cell { width: 30px; height: 30px; aspect-ratio: auto; margin: 0 auto; }
+.cal-card .cal-grid { gap: 4px 6px; }
+.cal-card .prox-item strong { font-size: 11.5px; }
+.cal-card .prox-item span { font-size: 10px; }
+.act-card .act-list { margin-top: 10px; }
+.act-card .act-item { padding: 8px 6px; }
+.act-card .act-item:nth-child(n+5) { display: none; }
+.act-card .act-ico { width: 28px; height: 28px; flex-basis: 28px; font-size: 12px; }
+.act-card .act-body strong { font-size: 11.5px; }
+.act-card .act-body span { font-size: 10px; }
+
+/* Detalle plegado */
+.dash2-more {
+  margin-top: 22px;
+  border: var(--border-subtle);
+  border-radius: 18px;
+  background: var(--surface-card);
+  overflow: hidden;
+}
+.dash2-more summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 18px;
+  user-select: none;
+}
+.dash2-more summary::-webkit-details-marker { display: none; }
+.dash2-more summary span { font-size: 13px; font-weight: 600; color: var(--text-pure); }
+.dash2-more summary small { font-size: 10.5px; color: var(--text-muted); }
+.dash2-more summary::after { content: "⌄"; color: var(--text-muted); font-size: 14px; transition: transform 0.18s ease; }
+.dash2-more[open] summary::after { transform: rotate(180deg); }
+.dash2-more[open] summary { border-bottom: var(--border-subtle); }
+.dash2-more .grid.kpis { padding: 18px; margin: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dash2-more .grid.kpis > .card { grid-column: auto; }
+.dash2-more .card.kpi { padding: 16px; min-height: 0; }
+
+/* Tarjetas plegables */
+.card.fold-card { padding: 0; }
+.card.fold-card > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  user-select: none;
+}
+.card.fold-card > summary::-webkit-details-marker { display: none; }
+.card.fold-card > summary h2 { margin: 0; }
+.card.fold-card > summary::after {
+  content: "+";
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-muted);
+}
+.card.fold-card[open] > summary { border-bottom: var(--border-subtle); }
+.card.fold-card[open] > summary::after { content: "−"; }
+.card.fold-card .fold-body { padding: 16px 20px 20px; }
+.card.fold-card[open] > summary h2 { color: var(--text-pure); }
+.outbox-item { padding: 8px 0; border-bottom: 1px solid var(--input-border); }
+.outbox-item:last-of-type { border-bottom: 0; }
+.outbox-txt {
+  margin: 3px 0;
+  font-size: 10.5px;
+  color: var(--text-slate);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Mercado Banca */
+.mercado-resumen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 4px 0 18px;
+}
+.mercado-resumen > div {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-row-pill);
+  border: 1px solid var(--border-subtle);
+}
+.mercado-resumen .kpi-label { margin-bottom: 3px; }
+.mercado-resumen strong { display: block; font-size: 22px; line-height: 1.1; letter-spacing: -0.03em; color: var(--text-pure); }
+.mercado-resumen span { display: block; font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.mercado-resumen .mercado-gap strong { color: #FBBF24; }
+.mercado-row { margin-bottom: 16px; }
+.mercado-row .place-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 8px; }
+.mercado-row .place-top span { font-size: 12.5px; font-weight: 600; color: var(--text-pure); }
+.mercado-row .place-top em { font-style: normal; font-size: 10px; color: var(--text-muted); grid-column: 1; }
+.mercado-row .place-top strong { font-size: 17px; color: var(--text-pure); grid-row: 1 / span 2; grid-column: 2; }
+.mercado-row .place-bar { margin-top: 6px; }
+.mercado-sin { font-size: 10.5px; color: var(--text-muted); }
+.mercado-sin strong { color: var(--text-slate); }
+
+@media (max-width: 1180px) {
+  .metric-grid { grid-template-columns: 1fr 1fr; }
+  .metric-places { grid-column: 1 / -1; min-height: 0; }
+  .dash2-lower { grid-template-columns: 1fr; }
+}
+@media (max-width: 980px) {
+  .metric-grid { grid-template-columns: 1fr; }
+  .metric-places { grid-column: auto; }
+  .metric-card { min-height: 0; }
+  .dash2-more .grid.kpis { grid-template-columns: 1fr; }
+  .mercado-resumen { grid-template-columns: 1fr; }
+  .filter-drop-body { position: fixed; left: 14px; right: 14px; top: auto; width: auto; }
+}
+@media (max-width: 520px) {
+  .metric-grid, .dash2-lower { gap: 12px; }
+  .metric-card { border-radius: 16px; padding: 16px; }
+  .market-ring { width: 112px; height: 112px; flex-basis: 112px; }
+  .market-numbers > strong { font-size: 2.2rem; }
+  .sales-main strong { font-size: 2.9rem; }
+  .dash2-head-right { width: 100%; justify-content: space-between; }
+  .dash2-section-head h2 { font-size: 16px; }
+}
+
 </style>
 </head>
 <body>
@@ -1664,106 +2024,141 @@ tbody tr:last-child td { border-bottom: 0; }
 <main>
   <!-- ===================== DASHBOARD JULIO ===================== -->
   <section class="view active" data-view="dashboard">
-    <div class="dash-welcome">
+    <div class="dash2-head">
       <div>
-        <h1 class="dash-hi">Bienvenido de nuevo, Julio!</h1>
-        <p class="dash-sub">Así se mueve la producción, facturación y cuota de mercado de Horminor hoy.</p>
+        <h1 class="dash-hi">Buenos días, Julio</h1>
+        <p class="dash-sub">Tus números clave de 2026.</p>
       </div>
-      <span class="badge neutral" id="dash-actualizado">Actualizando…</span>
+      <div class="dash2-head-right">
+        <span class="badge neutral" id="dash-actualizado">Actualizando…</span>
+        <details class="filter-drop">
+          <summary>Filtros de obras</summary>
+          <div class="filter-drop-body">
+            <div hidden>
+              <select id="f-periodo" onchange="cargarDashboard()" aria-label="Período">
+                <option value="ANIO" selected>Año 2026</option>
+              </select>
+            </div>
+            <label class="filter-pill"><span aria-hidden="true">🏭</span>
+              <select id="f-planta" onchange="cargarDashboard()" aria-label="Planta">
+                <option value="">Todas las plantas</option>
+                <option value="PLANTA-COCA">Fija El Coca</option>
+                <option value="PLANTA-MOVIL">Móvil Campamento</option>
+              </select>
+            </label>
+            <label class="filter-pill"><span aria-hidden="true">🧱</span>
+              <select id="f-resistencia" onchange="cargarDashboard()" aria-label="Resistencia">
+                <option value="">Todas</option>
+                <option>FC-180</option><option>FC-210</option><option>FC-240</option>
+                <option>FC-280</option><option>FC-350</option>
+              </select>
+            </label>
+            <label class="filter-pill"><span aria-hidden="true">💳</span>
+              <select id="f-pago" onchange="cargarDashboard()" aria-label="Estado de pago">
+                <option value="">Todos</option>
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="ABONO">Abono</option>
+                <option value="FIADO">Crédito / Fiado</option>
+              </select>
+            </label>
+          </div>
+        </details>
+      </div>
     </div>
 
-    <div class="filter-bar" aria-label="Filtros del dashboard">
-      <label class="filter-pill"><span aria-hidden="true">📅</span>
-        <select id="f-periodo" onchange="cargarDashboard()" aria-label="Período">
-          <option value="HOY">Hoy</option>
-          <option value="7D">Últimos 7 días</option>
-          <option value="MES" selected>Este Mes</option>
-          <option value="12M">12 Meses Móviles</option>
-          <option value="ANIO">Año 2026</option>
-        </select>
-      </label>
-      <label class="filter-pill"><span aria-hidden="true">🏭</span>
-        <select id="f-planta" onchange="cargarDashboard()" aria-label="Planta">
-          <option value="">Todas las Plantas</option>
-          <option value="PLANTA-COCA">Planta Fija El Coca</option>
-          <option value="PLANTA-MOVIL">Planta Móvil Campamento</option>
-        </select>
-      </label>
-      <label class="filter-pill"><span aria-hidden="true">🧱</span>
-        <select id="f-resistencia" onchange="cargarDashboard()" aria-label="Resistencia">
-          <option value="">Todas</option>
-          <option>FC-180</option><option>FC-210</option><option>FC-240</option>
-          <option>FC-280</option><option>FC-350</option>
-        </select>
-      </label>
-      <label class="filter-pill"><span aria-hidden="true">💳</span>
-        <select id="f-pago" onchange="cargarDashboard()" aria-label="Estado de pago">
-          <option value="">Todos</option>
-          <option value="EFECTIVO">Pagado (efectivo)</option>
-          <option value="TRANSFERENCIA">Transferencia</option>
-          <option value="ABONO">Abono</option>
-          <option value="FIADO">Crédito / Fiado</option>
-        </select>
-      </label>
+    <div class="metric-grid">
+      <!-- Mercado: el número que importa -->
+      <article class="metric-card metric-market">
+        <div class="metric-head">
+          <span class="card-kicker">Mercado El Coca</span>
+          <span class="metric-chip" id="market-year">2026</span>
+        </div>
+        <div class="market-layout">
+          <div class="market-ring">
+            <svg viewBox="0 0 200 200" role="img" aria-labelledby="donut-a11y">
+              <title id="donut-a11y">Cuota de Horminor en el mercado de El Coca</title>
+              <defs>
+                <linearGradient id="donut-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#06B6D4"/>
+                  <stop offset="58%" stop-color="#3B82F6"/>
+                  <stop offset="100%" stop-color="#F59E0B"/>
+                </linearGradient>
+              </defs>
+              <circle class="donut-track" cx="100" cy="100" r="80"></circle>
+              <circle class="donut-arc" id="donut-arc" cx="100" cy="100" r="80"
+                      stroke="url(#donut-grad)" stroke-dasharray="502.65" stroke-dashoffset="502.65"></circle>
+            </svg>
+            <div class="market-ring-center">
+              <span class="donut-value" id="donut-value">—</span>
+              <span class="donut-cap" id="donut-cap">cuota</span>
+            </div>
+          </div>
+          <div class="market-numbers">
+            <strong id="market-sold">—</strong>
+            <span>m³ vendidos</span>
+            <span class="market-of">de <b id="market-demand">—</b> m³ al año</span>
+          </div>
+        </div>
+        <div class="market-foot">
+          <span id="donut-title">Orellana · 2026</span>
+          <button class="link-btn" type="button" onclick="setView('banca')">Ver mercado →</button>
+        </div>
+        <div hidden aria-hidden="true">
+          <span id="donut-note"></span>
+          <div id="donut-kpis"></div>
+          <button id="donut-mode-0" type="button" onclick="setDonutMode(0)">Despacho</button>
+          <button id="donut-mode-1" type="button" onclick="setDonutMode(1)">Mercado</button>
+          <button id="donut-mode-2" type="button" onclick="setDonutMode(2)">Cobrado</button>
+        </div>
+      </article>
+
+      <!-- Ventas -->
+      <article class="metric-card metric-sales">
+        <div class="metric-head">
+          <span class="card-kicker">Ventas 2026</span>
+          <span class="metric-chip" id="sales-orders">—</span>
+        </div>
+        <div class="sales-main"><strong id="sales-m3">—</strong><span>m³</span></div>
+        <div class="sales-money" id="sales-total">—</div>
+        <div class="sales-foot">
+          <div class="mini-stat"><span>Viajes</span><strong id="sales-trips">—</strong></div>
+          <div class="mini-stat"><span>Ticket promedio</span><strong id="sales-ticket">—</strong></div>
+        </div>
+      </article>
+
+      <!-- Ciudades -->
+      <article class="metric-card metric-places">
+        <div class="metric-head">
+          <span class="card-kicker">Dónde vendes</span>
+          <span class="metric-chip" id="places-count">—</span>
+        </div>
+        <div class="place-list" id="places-list">
+          <div class="place-row"><div class="place-top"><span>Cargando…</span></div></div>
+        </div>
+        <div class="places-foot"><span>Planta El Coca · FC-210</span><strong id="places-bodega">—</strong></div>
+      </article>
     </div>
 
-    <div class="dash-grid">
-      <!-- Donut -->
-      <div class="dash-card">
-        <div class="donut-head">
-          <div>
-            <p class="card-kicker">Rendimiento de hormigón</p>
-            <h2>Vendido vs. producido &amp; mercado</h2>
-          </div>
+    <div class="dash2-section">
+      <div class="dash2-section-head">
+        <div>
+          <span class="card-kicker">Obras activas</span>
+          <h2>Mixers en calle</h2>
         </div>
-        <div class="donut-wrap">
-          <svg class="donut-svg" viewBox="0 0 200 200" role="img" aria-labelledby="donut-a11y">
-            <title id="donut-a11y">Indicador circular de rendimiento</title>
-            <defs>
-              <linearGradient id="donut-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#06B6D4"/>
-                <stop offset="58%" stop-color="#3B82F6"/>
-                <stop offset="100%" stop-color="#F59E0B"/>
-              </linearGradient>
-            </defs>
-            <circle class="donut-track" cx="100" cy="100" r="80"></circle>
-            <circle class="donut-arc" id="donut-arc" cx="100" cy="100" r="80"
-                    stroke="url(#donut-grad)" stroke-dasharray="502.65" stroke-dashoffset="502.65"></circle>
-          </svg>
-          <div class="donut-center">
-            <span class="donut-value" id="donut-value">—</span>
-            <span class="donut-cap" id="donut-cap">Eficiencia comercial</span>
-          </div>
-        </div>
-        <div class="donut-modes" role="tablist" aria-label="Métrica del anillo">
-          <button type="button" id="donut-mode-0" class="active" onclick="setDonutMode(0)">Despacho</button>
-          <button type="button" id="donut-mode-1" onclick="setDonutMode(1)">Mercado</button>
-          <button type="button" id="donut-mode-2" onclick="setDonutMode(2)">Cobrado</button>
-        </div>
-        <h3 class="donut-title" id="donut-title">Despachado vs. contratado</h3>
-        <p class="donut-note" id="donut-note">Viajes de mixer validados por el Juez contra el total contratado.</p>
-        <div class="donut-kpis" id="donut-kpis"></div>
-        <button class="btn bank donut-cta" type="button" onclick="setView('planta')">Ver detalle de producción</button>
+        <a href="#" onclick="setView('clientes');return false;">Ver carpetas →</a>
       </div>
-
-      <!-- Actividad -->
-      <div class="dash-card">
-        <p class="card-kicker">Actividad reciente</p>
-        <div class="donut-head">
-          <h2>En tiempo real &amp; Juez Jeb</h2>
-          <span class="badge neutral" id="act-contador">—</span>
-        </div>
-        <ul class="act-list" id="actividad-lista">
-          <li class="act-item"><span class="act-ico">⏳</span><div class="act-body"><strong>Cargando actividad…</strong><span>Leyendo órdenes, viajes e inventario.</span></div></li>
-        </ul>
-        <div class="act-foot"><a href="#" onclick="setView('clientes');return false;">Ver toda la bitácora forense →</a></div>
+      <div class="works-grid" id="obras-grid">
+        <div class="work-card"><div class="work-thumb2"><span class="thumb-tag">Cargando</span></div><div class="work-body"><h3>Leyendo órdenes activas…</h3><p>Sin datos todavía.</p></div></div>
       </div>
+    </div>
 
+    <div class="dash2-lower">
       <!-- Calendario -->
-      <div class="dash-card">
+      <div class="dash-card cal-card">
         <div class="cal-head">
           <div>
-            <p class="card-kicker">Calendario</p>
+            <p class="card-kicker">Agenda</p>
             <h2 id="cal-titulo">—</h2>
           </div>
           <div class="cal-nav">
@@ -1772,23 +2167,31 @@ tbody tr:last-child td { border-bottom: 0; }
           </div>
         </div>
         <div class="cal-grid" id="calendario-grid"></div>
-        <p class="prox-title">Próximos despachos / eventos</p>
+        <p class="prox-title">Próximos</p>
         <ul class="prox-list" id="proximos-despachos"></ul>
-        <div class="cal-cta">
-          <button class="btn bank" type="button" onclick="abrirOrden()">Programar nuevo despacho</button>
+        <div class="cal-cta"><button class="btn small ghost" type="button" onclick="abrirOrden()">+ Programar despacho</button></div>
+      </div>
+
+      <!-- Actividad -->
+      <div class="dash-card act-card">
+        <div class="donut-head">
+          <div>
+            <p class="card-kicker">Actividad</p>
+            <h2>Últimos movimientos</h2>
+          </div>
+          <span class="badge neutral" id="act-contador">—</span>
         </div>
+        <ul class="act-list" id="actividad-lista">
+          <li class="act-item"><span class="act-ico">⏳</span><div class="act-body"><strong>Cargando…</strong><span>Leyendo órdenes y viajes.</span></div></li>
+        </ul>
+        <div class="act-foot"><a href="#" onclick="setView('clientes');return false;">Ver bitácora →</a></div>
       </div>
     </div>
 
-    <div class="works-head">
-      <h2>Obras activas, avance de mixers y evidencia Bunny.net</h2>
-      <a href="#" onclick="setView('clientes');return false;">Ver todas las carpetas de clientes →</a>
-    </div>
-    <div class="works-grid" id="obras-grid">
-      <div class="work-card"><div class="work-thumb"><span class="thumb-tag">Cargando</span></div><div class="work-body"><h3>Leyendo órdenes activas…</h3><p>Sin datos todavía.</p></div></div>
-    </div>
-
-    <div class="grid kpis" id="hero-kpis"></div>
+    <details class="dash2-more">
+      <summary><span>Detalle operativo</span><small>Caja · mixers · bodega</small></summary>
+      <div class="grid kpis" id="hero-kpis"></div>
+    </details>
   </section>
 
   <!-- ===================== SECRETARIA Y CAJA ===================== -->
@@ -1803,26 +2206,36 @@ tbody tr:last-child td { border-bottom: 0; }
           <p class="small muted" style="margin-top:0">Calcula viajes, cemento y retardante con la receta confirmada antes de guardar.</p>
           <div id="sec-ordenes" class="table-wrap"><p class="muted small">Cargando órdenes…</p></div>
         </div>
-        <div class="card">
-          <div class="spread"><h2>Cierre de Caja</h2><span class="badge neutral" id="cierre-estado">—</span></div>
-          <label class="field">Fecha</label>
-          <input type="date" id="cierre-fecha" onchange="cargarCierre()">
-          <div id="cierre-resumen" class="small" style="margin-top:10px"></div>
-          <label class="field" style="margin-top:10px">Efectivo contado (USD)</label>
-          <input type="number" id="cierre-contado" step="0.01" min="0" placeholder="0.00">
-          <label class="field" style="margin-top:10px">Cerrado por</label>
-          <input type="text" id="cierre-por" value="Secretaría">
-          <button class="btn bank" style="margin-top:10px;width:100%" onclick="cerrarCaja()">Cerrar caja del día</button>
-          <div id="cierre-resultado"></div>
-        </div>
+        <details class="card fold-card" id="cierre-card">
+          <summary>
+            <h2>Cierre de Caja</h2>
+            <span class="badge neutral" id="cierre-estado">—</span>
+          </summary>
+          <div class="fold-body">
+            <label class="field">Fecha</label>
+            <input type="date" id="cierre-fecha" onchange="cargarCierre()">
+            <div id="cierre-resumen" class="small" style="margin-top:10px"></div>
+            <label class="field" style="margin-top:10px">Efectivo contado (USD)</label>
+            <input type="number" id="cierre-contado" step="0.01" min="0" placeholder="0.00">
+            <label class="field" style="margin-top:10px">Cerrado por</label>
+            <input type="text" id="cierre-por" value="Secretaría">
+            <button class="btn bank" style="margin-top:10px;width:100%" onclick="cerrarCaja()">Cerrar caja del día</button>
+            <div id="cierre-resultado"></div>
+          </div>
+        </details>
       </div>
 
       <div class="stack">
-        <div class="card">
-          <div class="spread"><h2>Cobros y abonos del día</h2><span class="badge neutral">Solo lectura</span></div>
-          <div id="sec-cobros" class="small"><p class="muted">Cargando movimientos…</p></div>
-          <div class="notice info" style="margin-top:12px">El alta de cobros y abonos se registra en el cierre de caja; el API aún no expone un POST de pagos. No se inventan movimientos desde la UI.</div>
-        </div>
+        <details class="card fold-card">
+          <summary>
+            <h2>Cobros y abonos del día</h2>
+            <span class="badge neutral">Solo lectura</span>
+          </summary>
+          <div class="fold-body">
+            <div id="sec-cobros" class="small"><p class="muted">Cargando movimientos…</p></div>
+            <div class="notice info" style="margin-top:12px">El alta de cobros y abonos se registra en el cierre de caja; el API aún no expone un POST de pagos. No se inventan movimientos desde la UI.</div>
+          </div>
+        </details>
         <div class="card">
           <h2>Cartera de clientes</h2>
           <div id="sec-cartera" class="table-wrap"><p class="muted small">Cargando cartera…</p></div>
@@ -1879,14 +2292,36 @@ tbody tr:last-child td { border-bottom: 0; }
             <h2>Cuota de Mercado Regional</h2>
             <span class="badge neutral" id="mercado-periodo"></span>
           </div>
-          <div class="row" style="margin-bottom:10px">
-            <select id="mercado-modo" onchange="cargarMercado()" style="max-width:220px">
+          <div class="row" style="margin-bottom:10px;flex-wrap:nowrap">
+            <select id="mercado-modo" onchange="cargarMercado()" style="flex:1 1 auto;min-width:0">
               <option value="12_MESES_MOVILES">12 meses móviles</option>
               <option value="ANIO_CALENDARIO">Año calendario</option>
             </select>
-            <input type="number" id="mercado-anio" value="2026" min="2020" max="2100" style="max-width:110px" onchange="cargarMercado()">
+            <input type="number" id="mercado-anio" value="2026" min="2020" max="2100" style="flex:0 0 88px;width:88px" onchange="cargarMercado()">
           </div>
           <div class="small muted" id="mercado-rango" style="margin:-2px 0 12px"></div>
+          <div class="mercado-resumen">
+            <div>
+              <span class="kpi-label">Mercado anual</span>
+              <strong id="mercado-total">—</strong>
+              <span>m³ en la región</span>
+            </div>
+            <div>
+              <span class="kpi-label">Ventas Horminor</span>
+              <strong id="mercado-ventas">—</strong>
+              <span>m³ vendidos</span>
+            </div>
+            <div>
+              <span class="kpi-label">Participación</span>
+              <strong id="mercado-cuota">—</strong>
+              <span>del mercado</span>
+            </div>
+            <div class="mercado-gap">
+              <span class="kpi-label">Brecha</span>
+              <strong id="mercado-brecha">—</strong>
+              <span>m³ por capturar</span>
+            </div>
+          </div>
           <div id="mercado-panel"></div>
         </div>
         <div class="card">
@@ -1917,10 +2352,19 @@ tbody tr:last-child td { border-bottom: 0; }
           <button class="btn" style="margin-top:10px;width:100%" onclick="enviarSimulacion()">Enviar al pipeline</button>
           <div id="sim-resultado" style="margin-top:12px"></div>
         </div>
-        <div class="card">
-          <div class="spread"><h2>Outbox Sandbox</h2><button class="btn small ghost" onclick="cargarOutbox()">Refrescar</button></div>
-          <div id="outbox-panel" class="small muted">Sin mensajes.</div>
-        </div>
+        <details class="card fold-card" id="outbox-card">
+          <summary>
+            <h2>Outbox Sandbox</h2>
+            <span class="badge neutral" id="outbox-count">—</span>
+          </summary>
+          <div class="fold-body">
+            <div class="spread" style="margin-bottom:8px">
+              <span class="small muted">Últimos mensajes encolados</span>
+              <button class="btn small ghost" onclick="cargarOutbox()">Refrescar</button>
+            </div>
+            <div id="outbox-panel" class="small muted">Sin mensajes.</div>
+          </div>
+        </details>
       </div>
 
       <div class="card">
@@ -2284,35 +2728,11 @@ function setDonutMode(i) {
 }
 
 function renderDonut() {
-  const m = metricasDashboard();
-  const modo = state.donutMode || 0;
-  let pct = 0, cap = '', title = '', note = '', kpis = '';
-  if (modo === 0) {
-    pct = m.totalViajes ? (m.viajesDesp / m.totalViajes) * 100 : 0;
-    cap = 'Eficiencia comercial';
-    title = 'Despachado vs. contratado';
-    note = 'Viajes validados por Jeb sobre el total contratado.';
-    kpis = `<div class="spread"><span>m³ contratados</span><strong>${num(m.m3Contratado)} m³</strong></div>
-      <div class="spread"><span>Viajes validados</span><strong>${m.viajesDesp} / ${m.totalViajes}</strong></div>
-      <div class="spread"><span>Capacidad de planta</span><span class="muted">Pendiente de Julio</span></div>`;
-  } else if (modo === 1) {
-    pct = m.valorMercado ? (m.capturado / m.valorMercado) * 100 : 0;
-    cap = 'Cuota de mercado';
-    title = 'Orellana + Sucumbíos';
-    note = money(m.valorMercado) + ' de mercado regional a FC-210.';
-    kpis = ((state.mercado && state.mercado.provincias) || []).map(p => `
-      <div class="spread"><span>${esc(p.provincia)} · ${num(p.demanda_m3)} m³ demanda</span>
-        <strong>${Number(p.cuota_pct || 0).toFixed(2)}%</strong></div>`).join('') +
-      `<div class="spread"><span>Mercado sin capturar</span><strong>${money(m.valorMercado - m.capturado)}</strong></div>`;
-  } else {
-    pct = m.facturado ? (m.cobrado / m.facturado) * 100 : 0;
-    cap = 'Efectivo cobrado';
-    title = 'Cobrado vs. fiado en calle';
-    note = 'Por cobrar: ' + money(m.facturado - m.cobrado) + '.';
-    kpis = `<div class="spread"><span>Facturado</span><strong>${money(m.facturado)}</strong></div>
-      <div class="spread"><span>Cobrado</span><strong>${money(m.cobrado)}</strong></div>
-      <div class="spread"><span>Por cobrar</span><strong>${money(m.facturado - m.cobrado)}</strong></div>`;
-  }
+  const provincias = (state.mercado && state.mercado.provincias) || [];
+  const orellana = provincias.find(p => String(p.provincia || '').toLowerCase().startsWith('orellana')) || provincias[0] || null;
+  const pct = Number((orellana && orellana.cuota_pct) || 0);
+  const sold = Number((orellana && orellana.ventas_m3) || 0);
+  const demand = Number((orellana && orellana.demanda_m3) || 0);
   const safe = Math.max(0, Math.min(100, pct));
   const visual = safe > 0 ? Math.max(1.5, safe) : 0;
   const circ = 2 * Math.PI * 80;
@@ -2323,60 +2743,102 @@ function renderDonut() {
   }
   const valor = $('#donut-value');
   if (valor) valor.textContent = safe === 0 ? '0%' : (safe < 1 ? safe.toFixed(2) : safe.toFixed(1)) + '%';
-  const capEl = $('#donut-cap'); if (capEl) capEl.textContent = cap;
-  const titleEl = $('#donut-title'); if (titleEl) titleEl.textContent = title;
-  const noteEl = $('#donut-note'); if (noteEl) noteEl.textContent = note;
-  const kpisEl = $('#donut-kpis'); if (kpisEl) kpisEl.innerHTML = kpis;
-  [0, 1, 2].forEach(i => {
-    const b = $('#donut-mode-' + i);
-    if (b) b.classList.toggle('active', i === modo);
+  const capEl = $('#donut-cap'); if (capEl) capEl.textContent = 'cuota';
+  const titleEl = $('#donut-title');
+  if (titleEl) titleEl.textContent = orellana ? `${orellana.provincia} · ${orellana.anio || new Date().getFullYear()}` : 'Sin datos';
+  const soldEl = $('#market-sold'); if (soldEl) soldEl.textContent = orellana ? num(sold) : '—';
+  const demandEl = $('#market-demand'); if (demandEl) demandEl.textContent = orellana ? num(demand) : '—';
+  const yearEl = $('#market-year'); if (yearEl) yearEl.textContent = (orellana && orellana.anio) || new Date().getFullYear();
+  const noteEl = $('#donut-note');
+  if (noteEl) noteEl.textContent = orellana ? `${num(sold)} de ${num(demand)} m³ en ${orellana.provincia}.` : '';
+  const kpisEl = $('#donut-kpis');
+  if (kpisEl) kpisEl.innerHTML = provincias.map(p => `
+    <div class="spread"><span>${esc(p.provincia)}</span><strong>${num(p.ventas_m3)} / ${num(p.demanda_m3)} m³</strong></div>`).join('');
+}
+
+function renderVentas() {
+  const ordenes = state.ordenes || [];
+  const m3 = ordenes.reduce((s, o) => s + Number(o.volumen_m3 || 0), 0);
+  const total = ordenes.reduce((s, o) => s + Number(o.total || 0), 0);
+  const viajes = ordenes.reduce((s, o) => s + Number(o.viajes || 0), 0);
+  const clienteEl = $('#sales-m3'); if (clienteEl) clienteEl.textContent = ordenes.length ? num(m3) : '—';
+  const ordersEl = $('#sales-orders'); if (ordersEl) ordersEl.textContent = ordenes.length ? `${ordenes.length} órdenes` : 'Sin órdenes';
+  const totalEl = $('#sales-total');
+  if (totalEl) totalEl.textContent = ordenes.length ? `${money(total)} facturados` : 'Sin facturación';
+  const tripsEl = $('#sales-trips'); if (tripsEl) tripsEl.textContent = ordenes.length ? num(viajes) : '—';
+  const ticketEl = $('#sales-ticket');
+  if (ticketEl) ticketEl.textContent = ordenes.length ? money(total / ordenes.length) : '—';
+}
+
+function renderCiudades() {
+  const provincias = (state.mercado && state.mercado.provincias) || [];
+  const sinProvincia = Number((state.mercado && state.mercado.sin_provincia_m3) || 0);
+  const filas = provincias.map((p, i) => {
+    const m3 = Number(p.ventas_m3 || 0);
+    const cuota = p.cuota_pct === null || p.cuota_pct === undefined ? '—' : Number(p.cuota_pct).toFixed(2) + '%';
+    return { nombre: p.provincia, m3, cuota: cuota + ' del mercado', clase: i === 0 ? '' : 'amber' };
   });
+  if (sinProvincia > 0) filas.push({nombre:'Sin provincia', m3: sinProvincia, cuota:'asignar en Secretaría', clase:'slate'});
+  const max = Math.max(...filas.map(f => f.m3), 1);
+  const lista = $('#places-list');
+  if (lista) lista.innerHTML = filas.map(f => `
+    <div class="place-row">
+      <div class="place-top"><span>${esc(f.nombre)}</span><em>${esc(f.cuota)}</em><strong>${num(f.m3)} m³</strong></div>
+      <div class="place-bar ${f.clase}"><span style="width:${Math.max(2, Math.min(100, (f.m3 / max) * 100))}%"></span></div>
+    </div>`).join('') || '<div class="place-row"><div class="place-top"><span>Sin datos de mercado.</span></div></div>';
+  const countEl = $('#places-count');
+  if (countEl) countEl.textContent = provincias.length ? `${provincias.length} provincias` : 'Sin datos';
+  const bodega = state.kpis && state.kpis.kpi_bodega;
+  const bodegaEl = $('#places-bodega');
+  if (bodegaEl) bodegaEl.textContent = bodega ? `${num(bodega.m3_fc210_disponibles)} m³` : '—';
 }
 
 function renderActividad() {
   const eventos = [];
   const ordenes = ordenesFiltradas();
-  ordenes.slice(0, 3).forEach(o => {
+  ordenes.slice(0, 2).forEach(o => {
     eventos.push({
-      ico:'🟢', kind:'ok',
-      t:`Orden #${o.numero} — ${o.cliente}`,
-      s:`${num(o.volumen_m3)} m³ ${o.resistencia} (${money(o.total)}) · ${o.viajes} viajes · ${o.estado}`
+      ico:'●', kind:'ok',
+      t:`Orden #${o.numero} · ${o.cliente}`,
+      s:`${num(o.volumen_m3)} m³ ${o.resistencia} · ${o.viajes} viajes`
     });
   });
   Object.keys(state.detalle).forEach(id => {
     const d = state.detalle[id];
     const numeroOrden = (d.orden && d.orden.numero) || ((state.ordenes || []).find(o => o.id === id) || {}).numero || '—';
-    (d.viajes || []).forEach(v => {
-      if (v.estado_actual === 'INCIDENCIA_RECLAMO') {
-        eventos.push({ico:'⚠️', kind:'bad', t:`Incidencia en viaje ${v.viaje_numero} — Orden #${numeroOrden}`, s:`Reclamo del cliente · ${v.mixer_codigo || 'sin mixer'} · Juez Jeb`});
-      } else if (v.recepcion_validada) {
-        eventos.push({ico:'✅', kind:'ok', t:`Sello forense — Orden #${numeroOrden} viaje ${v.viaje_numero}`, s:`Recepción validada por el Juez Binario “Jeb” · ${v.mixer_codigo || 'sin mixer'}`});
-      }
-    });
+    const viaje = (d.viajes || []).find(v => v.estado_actual === 'INCIDENCIA_RECLAMO' || v.recepcion_validada);
+    if (!viaje) return;
+    if (viaje.estado_actual === 'INCIDENCIA_RECLAMO') {
+      eventos.push({ico:'!', kind:'bad', t:`Incidencia · viaje ${viaje.viaje_numero}`, s:`Orden #${numeroOrden} · ${viaje.mixer_codigo || 'sin mixer'}`});
+    } else {
+      eventos.push({ico:'✓', kind:'ok', t:`Sello forense · viaje ${viaje.viaje_numero}`, s:`Orden #${numeroOrden} · ${viaje.mixer_codigo || 'sin mixer'}`});
+    }
   });
   const op = state.kpis && state.kpis.kpi_operacion;
   (op && op.detalle_mixers || []).forEach(m => eventos.push({
     ico:'🚚', kind: m.semaforo === 'ROJO' ? 'bad' : m.semaforo === 'AMBAR' ? 'warn' : 'ok',
-    t:`${m.mixer_codigo} — ${m.chofer || 'sin chofer'}`,
-    s:`En ruta · reloj térmico ${m.minutos_en_ruta ?? '—'} min · ${m.semaforo}`
+    t:`${m.mixer_codigo} en ruta`,
+    s:`${m.minutos_en_ruta ?? '—'} min · ${m.semaforo}`
   }));
   const caja = state.kpis && state.kpis.kpi_caja;
   if (caja) eventos.push({
-    ico:'⚠️', kind: Number(caja.por_cobrar_total) > 0 ? 'warn' : 'ok',
-    t:`Cartera por cobrar — ${money(caja.por_cobrar_total)}`,
-    s:`${caja.clientes_con_saldo || 0} cliente(s) con saldo · ${caja.ordenes_fiado_excedidas || 0} orden(es) sobre cupo`
+    ico:'💳', kind: Number(caja.por_cobrar_total) > 0 ? 'warn' : 'ok',
+    t:'Cartera por cobrar',
+    s:`${money(caja.por_cobrar_total)} · ${caja.clientes_con_saldo || 0} clientes`
   });
-  (state.inventario || []).filter(i => i.estado === 'CRITICO').forEach(i => eventos.push({
-    ico:'📦', kind:'bad', t:`Stock crítico — ${i.nombre}`,
-    s:`${num(i.stock_actual)} ${i.unidad} · mínimo ${num(i.stock_minimo)}`
-  }));
+  const bodega = state.kpis && state.kpis.kpi_bodega;
+  if (bodega) eventos.push({
+    ico:'▣', kind: bodega.alerta_merma ? 'warn' : 'ok',
+    t:`FC-210 disponible`,
+    s:`${num(bodega.m3_fc210_disponibles)} m³ · ${num(bodega.cemento_sacos)} sacos`
+  });
   const lista = $('#actividad-lista');
-  if (lista) lista.innerHTML = eventos.slice(0, 7).map(e => `
+  if (lista) lista.innerHTML = eventos.slice(0, 6).map(e => `
     <li class="act-item"><span class="act-ico ${e.kind}">${e.ico}</span>
       <div class="act-body"><strong>${esc(e.t)}</strong><span>${esc(e.s)}</span></div></li>`).join('')
-    || '<li class="act-item"><span class="act-ico">•</span><div class="act-body"><strong>Sin actividad registrada</strong><span>No hay órdenes ni viajes en el período.</span></div></li>';
+    || '<li class="act-item"><span class="act-ico">•</span><div class="act-body"><strong>Sin actividad</strong><span>No hay movimientos en el período.</span></div></li>';
   const c = $('#act-contador');
-  if (c) c.textContent = eventos.length + ' eventos';
+  if (c) c.textContent = eventos.length + ' hoy';
 }
 
 function eventosCalendario() {
@@ -2444,6 +2906,7 @@ function moverCalendario(delta) {
 
 function renderObras() {
   const ordenes = ordenesFiltradas();
+  const arte = ['panel-obra-planta.svg', 'panel-obra-mixer.svg'];
   const cards = ordenes.slice(0, 2).map((o, idx) => {
     const d = state.detalle[o.id];
     const total = Number(o.viajes || 0);
@@ -2451,42 +2914,28 @@ function renderObras() {
     const pct = total ? Math.round((desp / total) * 100) : 0;
     const badge = o.forma_pago === 'FIADO' ? ['amber', 'Crédito / Fiado'] : ['green', esc(o.forma_pago)];
     return `<article class="work-card">
-      <div class="work-thumb ${idx ? 'amber' : ''}"><span class="thumb-mix">🚛</span>
-        <span class="thumb-tag">${esc(o.planta || 'Planta')}</span></div>
+      <div class="work-thumb2">
+        <img src="/static/brand/${arte[idx % arte.length]}" alt="" loading="lazy">
+        <span class="thumb-tag">${esc(o.planta || 'Planta')}</span>
+      </div>
       <div class="work-body">
         <span class="work-badge ${badge[0]}">${badge[1]}</span>
-        <h3>${esc(o.cliente)} — ${num(o.volumen_m3)} m³ ${esc(o.resistencia)}</h3>
+        <h3>${esc(o.cliente)} · ${num(o.volumen_m3)} m³ ${esc(o.resistencia)}</h3>
         <p>#${o.numero} · ${o.viajes} viajes · ${money(o.total)}</p>
         <div class="work-progress">
-          <div class="spread"><span>Viajes despachados</span><strong>${desp}/${total} · ${pct}%</strong></div>
+          <div class="spread"><span>Despachado</span><strong>${desp}/${total} · ${pct}%</strong></div>
           <div class="bar-track thin"><div class="bar-fill ${pct < 100 ? 'warn' : ''}" style="width:${pct}%"></div></div>
         </div>
       </div></article>`;
   });
-  const sim = state.simulador;
-  if (sim && !sim.error && (sim.escenarios || []).length) {
-    const e = sim.escenarios[0];
-    const dscr = Number(e.dscr_proyectado || 0);
-    const pct = Math.min(100, Math.round((dscr / 1.5) * 100));
-    const badge = e.semaforo === 'VERDE' ? 'green' : e.semaforo === 'AMBAR' ? 'amber' : 'blue';
-    cards.push(`<article class="work-card">
-      <div class="work-thumb slate"><span class="thumb-mix">🏦</span><span class="thumb-tag">Banca</span></div>
-      <div class="work-body">
-        <span class="work-badge ${badge}">${esc(e.semaforo)} · DSCR ${dscr.toFixed(2)}x</span>
-        <h3>Simulación bancaria ${esc(e.nombre)} (${money(e.monto_usd)})</h3>
-        <p>${e.plazo_meses} meses · cuota ${money(e.cuota_mensual)}/mes · cobertura sobre umbral 1.50x.</p>
-        <div class="work-progress">
-          <div class="spread"><span>Cobertura DSCR</span><strong>${dscr.toFixed(2)}x / 1.50x</strong></div>
-          <div class="bar-track thin"><div class="bar-fill" style="width:${pct}%"></div></div>
-        </div>
-      </div></article>`);
-  }
   const grid = $('#obras-grid');
   if (grid) grid.innerHTML = cards.join('') || '<p class="muted small">Sin órdenes activas para los filtros seleccionados.</p>';
 }
 
 function renderDashboard() {
   renderDonut();
+  renderVentas();
+  renderCiudades();
   renderActividad();
   renderCalendario();
   renderObras();
@@ -2538,36 +2987,26 @@ function renderKpis() {
   if (!k || !host) return;
   const caja = k.kpi_caja || {}, op = k.kpi_operacion || {}, bodega = k.kpi_bodega || {};
   const sem = op.semaforo_termico || 'SIN_DATOS';
+  const mixers = op.detalle_mixers || [];
   host.innerHTML = `
     <div class="card kpi kpi-bank">
-      <div class="kpi-label">Caja y cartera · hoy</div>
-      <div class="kpi-value">${money(caja.cobrado_hoy)}</div>
-      <div class="kpi-sub">Efectivo ${money(caja.efectivo_hoy)} · Transferencias ${money(caja.transferencias_hoy)}</div>
-      <div class="divider"></div>
-      <div class="spread"><span class="small">Fiado en calle</span><strong>${money(caja.por_cobrar_total)}</strong></div>
-      <div class="spread small muted"><span>Clientes con saldo</span><span>${caja.clientes_con_saldo ?? '—'}</span></div>
-      ${caja.ordenes_fiado_excedidas ? `<div class="notice warn">${caja.ordenes_fiado_excedidas} orden(es) de hoy exceden cupo de crédito.</div>` : ''}
+      <div class="kpi-label">Por cobrar</div>
+      <div class="kpi-value">${money(caja.por_cobrar_total)}</div>
+      <div class="kpi-sub">${caja.clientes_con_saldo || 0} clientes con saldo · cobrado hoy ${money(caja.cobrado_hoy)}</div>
+      ${caja.ordenes_fiado_excedidas ? `<div class="kpi-sub" style="color:#FBBF24;margin-top:6px">${caja.ordenes_fiado_excedidas} órdenes sobre cupo</div>` : ''}
     </div>
     <div class="card kpi kpi-amber">
-      <div class="kpi-label">Operación · hoy</div>
-      <div class="kpi-value">${num(op.m3_hoy)} m³ <span class="muted" style="font-size:13px;font-weight:600">hoy</span></div>
-      <div class="kpi-sub">${num(op.m3_mes)} m³ en el mes · ${op.mixers_en_ruta ?? 0} mixer(s) en ruta</div>
-      <div class="divider"></div>
-      <div class="spread"><span class="small">Reloj térmico de fraguado</span><span><span class="semaforo ${sem}"></span> <strong>${sem}</strong></span></div>
-      <div class="small muted" style="margin-top:6px">VERDE &lt; 90 min · ÁMBAR 90–120 min · ROJO &gt; 120 min</div>
-      <div style="margin-top:8px">
-        ${(op.detalle_mixers || []).map(m => `<div class="spread small"><span>${esc(m.mixer_codigo)} · ${esc(m.chofer || 'sin chofer')}</span><span><span class="semaforo ${m.semaforo}"></span> ${m.minutos_en_ruta ?? '—'} min</span></div>`).join('') || '<span class="muted small">Sin mixers en ruta.</span>'}
-      </div>
+      <div class="kpi-label">Operación hoy</div>
+      <div class="kpi-value">${num(op.m3_hoy)} m³</div>
+      <div class="kpi-sub">${num(op.m3_mes)} m³ en el mes · ${op.mixers_en_ruta ?? 0} en ruta</div>
+      <div class="kpi-sub" style="margin-top:6px"><span class="semaforo ${sem}"></span> Reloj térmico ${sem.toLowerCase()}</div>
+      ${mixers.length ? `<div class="kpi-sub" style="margin-top:4px">${mixers.length} mixer(s) con lectura</div>` : ''}
     </div>
     <div class="card kpi kpi-bodega">
-      <div class="kpi-label">Bodega · FC-210</div>
+      <div class="kpi-label">Bodega FC-210</div>
       <div class="kpi-value">${num(bodega.m3_fc210_disponibles)} m³</div>
-      <div class="kpi-sub">Disponibles antes de parar planta</div>
-      <div class="divider"></div>
-      <div class="spread small"><span>Cemento</span><strong>${num(bodega.cemento_sacos)} sacos</strong></div>
-      <div class="spread small"><span>Retardante</span><strong>${num(bodega.retardante_litros)} L</strong></div>
-      <div class="spread small"><span>Merma cemento (30 d)</span><strong>${num(bodega.merma_cemento_sacos_30d)} sacos</strong></div>
-      ${bodega.alerta_merma ? '<div class="notice warn">Alerta de merma: el consumo real supera el teórico.</div>' : ''}
+      <div class="kpi-sub">${num(bodega.cemento_sacos)} sacos · ${num(bodega.retardante_litros)} L retardante</div>
+      <div class="kpi-sub" style="margin-top:6px">Merma 30 d: ${num(bodega.merma_cemento_sacos_30d)} sacos</div>
     </div>`;
 }
 
@@ -2953,12 +3392,14 @@ async function cargarMercado() {
 
 async function cargarBanca() {
   try {
-    const [mercado, simulador] = await Promise.all([
+    const [mercado, simulador, ordenes] = await Promise.all([
       api('/api/v1/dashboard/mercado?periodo=' + (($('#mercado-modo') || {}).value || '12_MESES_MOVILES') + '&anio=' + (($('#mercado-anio') || {}).value || new Date().getFullYear())),
-      api('/api/v1/dashboard/simulador')
+      api('/api/v1/dashboard/simulador'),
+      api('/api/v1/orders?limit=50').catch(() => state.ordenes || [])
     ]);
     state.mercado = mercado;
     state.simulador = simulador;
+    state.ordenes = Array.isArray(ordenes) ? ordenes : state.ordenes;
     renderMercado();
     renderSimulador();
   } catch(e) { toast('Banca no disponible: ' + e.message, 'bad'); }
@@ -2970,26 +3411,36 @@ function renderMercado() {
   const etiqueta = r.periodo === '12_MESES_MOVILES' ? '12M móviles' : 'Año ' + (r.anio || '');
   const per = $('#mercado-periodo'); if (per) per.textContent = etiqueta;
   const rango = $('#mercado-rango'); if (rango) rango.textContent = (r.desde || '—') + '  →  ' + (r.hasta || '—');
+  const provincias = r.provincias || [];
+  const totalMercado = provincias.reduce((s, p) => s + Number(p.demanda_m3 || 0), 0);
+  const ventas = (state.ordenes || []).reduce((s, o) => s + Number(o.volumen_m3 || 0), 0);
+  const cuota = totalMercado ? (ventas / totalMercado) * 100 : 0;
+  const brecha = Math.max(0, totalMercado - ventas);
+  const set = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
+  set('#mercado-total', totalMercado ? num(totalMercado) : '—');
+  set('#mercado-ventas', ventas ? num(ventas) : '—');
+  set('#mercado-cuota', totalMercado ? (cuota < 1 ? cuota.toFixed(2) : cuota.toFixed(1)) + '%' : '—');
+  set('#mercado-brecha', totalMercado ? num(brecha) : '—');
   const panel = $('#mercado-panel');
   if (!panel) return;
-  panel.innerHTML = (r.provincias || []).map(p => {
-    const cuota = Math.max(0, Math.min(100, Number(p.cuota_pct || 0)));
-    const clase = cuota >= 15 ? '' : 'warn';
-    const ancho = cuota > 0 ? Math.max(1.5, cuota) : 0;
+  const maxVentas = Math.max(...provincias.map(p => Number(p.ventas_m3 || 0)), 1);
+  const filas = provincias.map(p => {
+    const m3 = Number(p.ventas_m3 || 0);
+    const share = Number(p.cuota_pct || 0);
+    const ancho = Math.max(2, Math.min(100, (m3 / maxVentas) * 100));
     return `
-      <div style="margin-bottom:18px">
-        <div class="spread" style="align-items:flex-end">
-          <strong style="font-size:13px">${esc(p.provincia)}</strong>
-          <span style="font-size:26px;font-weight:700;letter-spacing:-0.03em">${p.cuota_pct === null ? '—' : Number(p.cuota_pct).toFixed(2) + '%'}</span>
+      <div class="mercado-row">
+        <div class="place-top">
+          <span>${esc(p.provincia)}</span>
+          <em>${num(m3)} / ${num(p.demanda_m3)} m³</em>
+          <strong>${share.toFixed(2)}%</strong>
         </div>
-        <div class="bar-track" style="margin:4px 0 8px"><div class="bar-fill ${clase}" style="width:${ancho}%"></div></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-          <div><div class="kpi-label">Ventas</div><strong>${num(p.ventas_m3)} m³</strong></div>
-          <div><div class="kpi-label">Demanda</div><strong>${num(p.demanda_m3)} m³</strong></div>
-          <div><div class="kpi-label">Capturado</div><strong>${money(p.capturado_usd)}</strong></div>
-        </div>
+        <div class="place-bar"><span style="width:${ancho}%"></span></div>
       </div>`;
-  }).join('') + `<div class="notice info">FC-210 a ${money(r.precio_valorizacion_m3)}/m³${r.sin_provincia_m3 ? ' · sin provincia: ' + num(r.sin_provincia_m3) + ' m³' : ''}.</div>`;
+  }).join('');
+  const sinProvincia = Number(r.sin_provincia_m3 || 0);
+  panel.innerHTML = filas + (sinProvincia > 0
+    ? `<div class="mercado-sin">Sin provincia: <strong>${num(sinProvincia)} m³</strong> · asignar en Secretaría</div>` : '');
 }
 
 function renderSimulador() {
@@ -3096,9 +3547,13 @@ function renderRemitentes() {
 function renderConfigTabs() {
   const el = $('#config-tabs');
   if (!el) return;
-  el.innerHTML = SECCIONES.map(([id,label]) =>
-    `<button class="${state.seccionConfig === id ? 'active' : ''}" onclick="cambiarSeccion('${id}')">${label}</button>`
-  ).join('');
+  el.innerHTML = `
+    <label class="field" for="config-seccion" style="margin:0 0 6px">Sección de configuración</label>
+    <select id="config-seccion" onchange="cambiarSeccion(this.value)" aria-label="Sección de configuración">
+      ${SECCIONES.map(([id,label]) =>
+        `<option value="${id}" ${state.seccionConfig === id ? 'selected' : ''}>${label}</option>`
+      ).join('')}
+    </select>`;
 }
 
 function cambiarSeccion(id) { state.seccionConfig = id; renderConfigTabs(); renderConfig(); }
@@ -3193,12 +3648,21 @@ async function cargarOutbox() {
 function renderOutbox() {
   const el = $('#outbox-panel');
   if (!el) return;
-  el.innerHTML = state.outbox.length ? state.outbox.map(o => `
-    <div style="border-bottom:1px solid var(--input-border);padding:8px 0">
-      <div class="spread"><strong>${esc(o.canal)} → ${esc(o.destino)}</strong><span class="badge neutral">${esc(o.estado)}</span></div>
-      <div class="small">${esc(o.contenido)}</div>
-      <div class="small muted">${new Date(o.created_at).toLocaleString('es-EC')} · ${esc(o.tipo)}</div>
-    </div>`).join('') : '<p class="muted">Sin mensajes encolados.</p>';
+  const total = state.outbox.length;
+  const contar = $('#outbox-count');
+  if (contar) contar.textContent = total ? `${total} mensajes` : 'Vacío';
+  const visibles = state.outbox.slice(0, 4);
+  el.innerHTML = visibles.length ? visibles.map(o => {
+    const texto = String(o.contenido || '');
+    const corto = texto.length > 120 ? texto.slice(0, 120).trimEnd() + '…' : texto;
+    return `
+      <div class="outbox-item">
+        <div class="spread"><strong>${esc(o.canal)} → ${esc(o.destino)}</strong><span class="badge neutral">${esc(o.estado)}</span></div>
+        <div class="outbox-txt">${esc(corto)}</div>
+        <div class="small muted">${new Date(o.created_at).toLocaleString('es-EC')} · ${esc(o.tipo)}</div>
+      </div>`;
+  }).join('') + (total > visibles.length ? `<div class="small muted" style="margin-top:6px">+${total - visibles.length} mensajes más</div>` : '')
+    : '<p class="muted">Sin mensajes encolados.</p>';
 }
 
 /* ----------------------------- EVENTOS GLOBALES / INIT ----------------------------- */

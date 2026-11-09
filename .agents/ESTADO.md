@@ -1,7 +1,7 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-08** (panel ShikshaQ: top header, 6 tabs, dashboard numérico y fix de carpeta forense)
+> Última actualización: **2026-11-08** (dashboard número-primero: mercado El Coca, ventas y provincias; Banca sin párrafos)
 
 ## Hitos
 
@@ -13,7 +13,7 @@
 | 2 | M5 — Nodo Centinela | 🟡 Construido, verificado local | `evidencias/hito3_4_live_2026-11-08.txt`: 12 checks, `modo=SANDBOX`, `judge_mode=DETERMINISTIC_FALLBACK`; Evolution/Bunny en OK | Webhook real del CRM; umbral de merma que defina Julio |
 | 3 | M1 — WhatsApp (Evolution + Jeb + Bunny) | 🟢 **Cerrado en SANDBOX** | `evidencias/hito3_lock_2026-11-08.txt`: `[CANDADO CERRADO EN SANDBOX]`; 4 compuertas, JSONB y outbox | Producción real: cargar credenciales, apagar SANDBOX y repetir el candado |
 | 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 Construido y verificado local | `/panel` (tab Secretaría), carpeta forense con 47 viajes de mixer, `GET .../carpeta` 200 tras fix JSONB; tests `test_m3_secretaria.py` | Autenticación; validación con la secretaria real; POST de pagos/abonos |
-| 5 | M4 — Dashboard de Julio + Ases | 🟢 Construido y verificado local | *Dashboard Julio* con donut real **3.9%** (2/51 viajes), 6 eventos, calendario, 3 obras y 3 KPIs; 2 provincias y 2 escenarios; tests `test_m4_dashboard.py` | Validar el 3.9% y la capacidad de planta con Julio; auth para exponer |
+| 5 | M4 — Dashboard de Julio + Ases | 🟢 Construido y verificado local | *Dashboard Julio* con 3 tarjetas iguales: mercado El Coca **0.31% (372/120,000 m³)**, ventas **404 m³ / $47,864 / 51 viajes**, y provincias **Orellana 372 + Sucumbíos 16 + sin provincia 16**; Banca **215,000 / 404 / 0.19% / 214,596 m³**; 2 escenarios; tests `test_m4_dashboard.py` | Validar con Julio el ángulo de mercado; auth para exponer |
 | — | Despliegue en VPS | ⚪ No iniciado | — | VPS, dominio, TLS, proxy, backups |
 
 Leyenda: ⚪ no iniciado · 🟡 en curso / candado abierto · 🟢 cerrado y congelado
@@ -25,7 +25,7 @@ Leyenda: ⚪ no iniciado · 🟡 en curso / candado abierto · 🟢 cerrado y co
 | PostgreSQL 15 | `localhost:5433` (contenedor `orminorth-postgres`) | — |
 | Redis 7 | `localhost:6380` (contenedor `orminorth-redis`) | — |
 | Core API | `http://localhost:8000` (contenedor `orminorth-core-api`) | — |
-| Panel (M3 + M4 + Superadmin) | `http://localhost:8000/panel` · Horminor, top header 72 px, sidebar de 6 tabs, dashboard numérico, Poppins local, tema día/noche | — |
+| Panel (M3 + M4 + Superadmin) | `http://localhost:8000/panel` · Horminor, top header 72 px, sidebar de 6 tabs, dashboard número-primero (mercado, ventas y provincias), obras con SVG locales, agenda y actividad plegables, Poppins local, tema día/noche | — |
 
 Datos de demo en local: órdenes del Ing. Reyes (320 m³ FC-210 y 52 m³ FC-350),
 orden del candado del Hito 3 (16 m³) y clientes de fixture con provincia
@@ -35,9 +35,10 @@ scripts de candado.
 ## Evidencia de la última sesión
 
 - `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` → **180 passed**, exit 0 (`.agents/evidencias/pytest_panel_horminor_2026-11-08.txt`).
-- Playwright 1440×1000 → sidebar 258 px, top header 72 px, 6 tabs, donut **3.9%**, 6 eventos, 36 celdas, 3 obras, 3 KPIs, Poppins OK, overflow 0, **0 errores de consola**, **0 requests fallidos** (`.agents/evidencias/playwright_panel_horminor_2026-11-08.txt`).
-- Playwright 390×844 → overflow 0, 6 tabs visibles, top header sticky.
-- Capturas: `.agents/evidencias/panel_horminor_dashboard_dark.png`, `panel_horminor_dashboard_light.png`, `panel_horminor_clientes.png`, `panel_horminor_planta.png`, `panel_horminor_banca.png`, `panel_horminor_secretaria.png`, `panel_horminor_movil.png`, `panel_horminor_notificaciones.png`, `panel_horminor_busqueda.png`.
+- Playwright 1440×1000 → 3 tarjetas de **253 px** cada una, anillo **0.31%**, **372 / 120,000 m³**, ventas **404 m³ / $47,864 / 4 órdenes / 51 viajes**, provincias Orellana/Sucumbíos/sin provincia, 2 obras con SVG locales, **3 KPIs plegados**, Poppins OK, overflow 0, **0 errores de consola**, **0 requests fallidos**.
+- Playwright Banca → **mercado 215,000 m³ · ventas 404 m³ · 0.19% · brecha 214,596 m³**, 2 provincias, 2 escenarios.
+- Playwright 390×844 → las 3 tarjetas se apilan, overflow 0, 6 tabs visibles, top header sticky, 2 obras.
+- Capturas: `.agents/evidencias/panel_horminor_dashboard_dark.png`, `panel_horminor_dashboard_light.png`, `panel_horminor_banca.png`, `panel_horminor_secretaria.png`, `panel_horminor_superadmin.png`, `panel_horminor_movil.png`, `panel_horminor_clientes.png`, `panel_horminor_planta.png`, `panel_horminor_notificaciones.png`, `panel_horminor_busqueda.png`.
 - Design system: `.agents/diseno/horminor_design_system.json`.
 
 ## Bloqueos actuales (ordenados por impacto)
@@ -54,9 +55,9 @@ scripts de candado.
 3. **Datos que Julio todavía no entregó:** RUC, horario, cuentas bancarias,
    placas, choferes, precio de mercado por provincia y umbral de merma. Quedan
    `NULL`/vacíos o como semilla marcada; no se inventaron.
-4. **Capacidad operativa de planta (m³ por período) sin definir.** Sin ese dato
-   el modo 1 del donut no puede mostrar “% vs capacidad”; hoy muestra viajes
-   despachados vs contratados (**3.9%**, 2/51). Dueño del dato: Julio.
+4. **Capacidad operativa de planta (m³ por período) sin definir.** El dashboard
+   ya no la usa para el anillo principal (muestra el mercado real de El Coca);
+   sigue faltando para un KPI de capacidad operativa. Dueño del dato: Julio.
 5. **Sin POST de pagos/abonos.** Secretaría muestra los cobros del cierre en
    solo lectura; no se pueden registrar abonos nuevos desde el panel.
 6. **Sin autenticación.** `/panel`, `/api/v1/secretaria/*` y
@@ -73,8 +74,8 @@ scripts de candado.
 
 1. **Validar el dashboard con Julio:** mostrar
    `.agents/evidencias/panel_horminor_dashboard_dark.png` y confirmar que el
-   **3.9% (2/51 viajes)** es el indicador que quiere ver; pedir la **capacidad
-   operativa de planta** para completar el modo 1 del donut.
+   ángulo de venta es **372 m³ vendidos de 120,000 m³ (0.31%)** en El Coca;
+   pedir la **capacidad operativa de planta** para un KPI de capacidad.
 2. **Producción del Hito 3:** cargar credenciales reales en
    `PUT /api/v1/superadmin/config/whatsapp_evolution_y_cdn`, poner
    `evolution_sandbox=false` y `bunny_sandbox=false`, y repetir
@@ -116,6 +117,7 @@ scripts de candado.
 | 26 | **Corrección de marca en migración 062** | Las migraciones 050/060 ya estaban aplicadas; se corrige el ADN público y Bunny sin editar el pasado |
 | 27 | **Panel con shell ShikshaQ y jerarquía número-primero** | Top header fijo, sidebar de 6 tabs, donut/actividad/calendario y 3 obras; los párrafos se reemplazan por cifras grandes y barras. Se conservan IDs, `data-*`, rutas y contratos; cero build y cero CDN. Alternativa descartada: copiar los textos largos del API, que cansan la lectura |
 | 28 | **`_json_objeto()` normaliza JSONB en M3** | `obtener_carpeta` hacía `dict(tracking_payload)` y devolvía 500 cuando asyncpg entrega JSONB como texto. El helper acepta texto o mapping y devuelve `{}` si no se puede parsear; la carpeta forense volvió a 200 sin tocar el contrato |
+| 29 | **Dashboard V2 número-primero con el mercado como ancla comercial** | Tres tarjetas iguales (Mercado El Coca, Ventas 2026, Dónde vendes) que responden qué necesita Julio; agenda y actividad bajan a una fila inferior; caja/mixers/bodega quedan en `<details>`. La tarjeta de mercado muestra **0.31% / 372 m³ / 120,000 m³** y la de Banca **215,000 / 404 / 0.19% / 214,596 m³** sin párrafos. Se conservan IDs, `data-*`, rutas API y los 180 tests; ilustraciones SVG locales sin build ni CDN. Alternativa descartada: seguir mostrando el anillo de eficiencia (2/51 viajes) como protagonista, que no vende posicionamiento |
 
 ## Riesgos abiertos
 
