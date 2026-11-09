@@ -1,7 +1,7 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-09** (base de datos documentada en `docs/BASE_DE_DATOS.md`; ingresos y responsable de la BD explicados; pendiente confirmar custodio)
+> Última actualización: **2026-11-09** (v4.2 revisada contra un clon: `063` compila, `064` no; pendientes 5 decisiones de negocio para v4.3)
 
 ## Hitos
 
@@ -69,6 +69,11 @@ scripts de candado.
    custodio operativo del VPS queda **pendiente de confirmar** (ver
    `docs/BASE_DE_DATOS.md`, sección 5).
 8. **Respaldo externo.** Todo el proyecto y la base viven en un solo disco.
+9. **Especificación v4.2 sin cerrar.** `063` compila en un clon, pero `064`
+   falla porque la vista real tiene 8 columnas (`estado` en la posición 3) y
+   los casts `numeric(12,2)` cambian el tipo. Faltan 5 decisiones: cobro de
+   contado, IVA, costo de inventario, datos maestros y fecha de conteo.
+   Evidencia: `.agents/evidencias/revision_v42_2026-11-09.txt`.
 
 > **Repositorio: solo local (ratificado 2026-11-08).** El código vivirá en el
 > VPS; GitHub no es requisito para avanzar. Los commits locales en `orminorth/`

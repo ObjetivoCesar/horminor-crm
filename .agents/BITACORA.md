@@ -1047,3 +1047,49 @@ Registrar la salida y las capturas nuevas en `.agents/evidencias/`.
 
 - `docs/BASE_DE_DATOS.md` (nuevo)
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - Revisión de la especificación maestra v4.2 (sin aplicar)
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash Free)
+**Objetivo:** Validar la v4.2 contra el esquema real antes de aplicar `063`/`064`, sin tocar la base de producción local.
+
+### Hecho
+
+1. Se clonó la base real a `orminorth_v42` con `pg_dump`/`psql`; la base `orminorth` no se modificó.
+2. `063_custodio_core.sql` **compila completo** en el clon: 14 tablas nuevas, 25 cuentas, columnas y constraints.
+3. `064_custodio_views.sql` **falla** en la primera vista: la real tiene 8 columnas (`estado` en la posición 3), no 7; además los `::numeric(12,2)` cambian el tipo de columnas existentes.
+4. Se escribió una `064` corregida que conserva las 8 columnas/tipos y agrega `ruc`, `credit_limit_usd` y `saldo_a_favor` al final; compila y mantiene `por_cobrar` en 47,864 y 2 clientes.
+5. Se probaron los puntos de lógica: cobro parcial, venta de contado sin COBRO (deuda fantasma), IVA con `total_con_iva` ignorado, `ANULACION` negativa (doble resta), compra sobrepagada, activo con residual mayor al costo, ítem con subtotal incoherente y `ledger_entries` modificable.
+6. Los 4 contratos JSON son válidos y cubren los 11 intents, pero aceptan casos incompletos: `CREATE_ACCOUNTING_CATEGORY` con `changes={}`, `REJECT` sin códigos, `GET_INCOME_STATEMENT_PL` sin filtros y `resistencia_fc` entero contra una FK de texto.
+7. Se detectaron 2 vistas faltantes (`v_estado_resultados`, `v_valoracion_proyeccion_10y`) y la ausencia de intents para crear proveedores, activos fijos y pasivos bancarios.
+
+### Evidencia
+
+- `.agents/evidencias/revision_v42_2026-11-09.txt` (comandos y salidas reales).
+- `.agents/evidencias/064_custodio_views_corregida.sql` (vista que sí compila).
+- Base real intacta; no se aplicó ninguna migración nueva.
+
+### Decisiones tomadas
+
+1. **v4.2 no se aplica todavía.** `063` es compilable, pero `064` no; y las reglas de saldo/IVA/costo siguen abiertas. Alternativa descartada: aplicar `063` sola y dejar la vista vieja, porque dejaría datos históricos engañosos (`total_con_iva=0`, `ultimo_levantamiento_at=NOW()`).
+2. **La compatibilidad de `v_cliente_saldo` exige conservar `estado`.** No basta con las 7 columnas que dice v4.2; los 3 consumidores y `catalog.py` usan la vista real de 8 columnas.
+
+### Bloqueos / preguntas al cliente
+
+1. **Ventas de contado:** ¿cada venta EFECTIVO/TRANSFERENCIA/ABONO genera un `payments` COBRO? Sin eso, `saldo_pendiente` inventa deuda y el cierre de caja no ve el efectivo.
+2. **IVA:** ¿se aplica 15% por defecto (receta confirmada) o solo si `aplica_iva=true`? ¿El saldo/cupo/dashboard usan `total` (neto) o `total_con_iva` (bruto)?
+3. **Costo de inventario:** promedio ponderado, FIFO o costo manual; define COGS y valor de `1104`.
+4. **Datos maestros:** ¿se agregan intents para proveedores, activos fijos y pasivos, o se cargan por Superadmin/seed?
+5. **Fecha de conteo:** `ultimo_levantamiento_at` debe quedar NULL hasta un conteo real, o Julio entrega la fecha del último levantamiento.
+
+### Próximo paso exacto
+
+Responder las 5 decisiones y generar **v4.3** con: `063` corregida, `064` corregida, contratos 1.3.0, las 2 vistas faltantes, guardas de integridad, triggers de inmutabilidad y el plan de pruebas. Recién después aplicar en un clon limpio y correr los 180 tests + los 7 tests de candado.
+
+### Archivos tocados
+
+- `.agents/evidencias/revision_v42_2026-11-09.txt` (nuevo)
+- `.agents/evidencias/064_custodio_views_corregida.sql` (nuevo)
+- `.agents/BITACORA.md`
