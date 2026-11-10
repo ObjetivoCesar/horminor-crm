@@ -37,6 +37,7 @@ class PagoCreate(BaseModel):
         default=None, pattern=r"^[a-z0-9_]+$"
     )
     es_anticipo: bool = False
+    autorizado_exceso_caja: bool = False
     request_id: UUID | None = None
 
     @model_validator(mode="after")

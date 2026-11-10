@@ -82,7 +82,14 @@ PERMISOS_MUTACION: dict[str, set[str]] = {
         "SECRETARIA",
         "CAJA_SECRETARIA",
     },
-    "REGISTER_PURCHASE": {"SUPERADMIN", "CONTADORA", "BODEGA", "BODEGA_PLANTA"},
+    "REGISTER_PURCHASE": {
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "CAJA_SECRETARIA",
+        "BODEGA",
+        "BODEGA_PLANTA",
+    },
     "RECEIVE_PURCHASED_MATERIAL": {"SUPERADMIN", "BODEGA", "BODEGA_PLANTA"},
     "REGISTER_EXPENSE": {
         "SUPERADMIN",
@@ -95,7 +102,14 @@ PERMISOS_MUTACION: dict[str, set[str]] = {
     "RUN_MONTHLY_DEPRECIATION": {"SUPERADMIN", "CONTADORA", "SYSTEM_CRON"},
     "SET_OPENING_BALANCES": {"SUPERADMIN", "CONTADORA"},
     "RESOLVE_APPROVAL_REQUEST": {"SUPERADMIN"},
-    "CREATE_SUPPLIER": {"SUPERADMIN", "CONTADORA", "BODEGA", "BODEGA_PLANTA"},
+    "CREATE_SUPPLIER": {
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "CAJA_SECRETARIA",
+        "BODEGA",
+        "BODEGA_PLANTA",
+    },
     "CREATE_FIXED_ASSET": {"SUPERADMIN", "CONTADORA"},
     "CREATE_FINANCIAL_LIABILITY": {"SUPERADMIN", "CONTADORA"},
 }
@@ -993,7 +1007,23 @@ class Gate:
             raise RechazoGate(
                 "MISSING_MASTER_DATA", {"errores": [str(exc)]}
             ) from exc
-        if cuenta["account_type"] != "EXPENSE":
+        if str(cuenta["default_bolsa"] or "").upper() == "NO_MONETARIO":
+            raise RechazoGate(
+                "NON_MONETARY_ACCOUNT_IN_PAYMENT",
+                {
+                    "cuenta": cuenta["slug"],
+                    "errores": [
+                        "una cuenta NO_MONETARIO (depreciacion, merma) no se "
+                        "paga en ventanilla"
+                    ],
+                },
+            )
+        # El anticipo de sueldo es un ACTIVO: se entrega dinero hoy y se cruza
+        # contra la nomina. No es un gasto, pero si un movimiento de ventanilla.
+        if (
+            cuenta["account_type"] != "EXPENSE"
+            and cuenta["slug"] != "anticipos_sueldo_personal"
+        ):
             raise RechazoGate(
                 "SCHEMA_VALIDATION_FAILED",
                 {"errores": ["la cuenta del gasto debe ser de tipo EXPENSE"]},

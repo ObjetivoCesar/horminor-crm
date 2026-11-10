@@ -43,14 +43,18 @@ def calcular_resumen_caja(
     fecha: date,
     ordenes: Sequence[Mapping[str, Any]],
     movimientos: Sequence[Mapping[str, Any]],
+    pagos_proveedores: Sequence[Mapping[str, Any]] = (),
     efectivo_contado: Decimal | None = None,
 ) -> dict[str, Any]:
-    """Totales del dia a partir de ordenes y ``payments``.
+    """Totales del dia a partir de ordenes, ``payments`` y pagos a proveedores.
 
     - ``ventas_*``: ordenes creadas ese dia por forma de pago.
     - ``cobros_*``: movimientos ``COBRO`` registrados ese dia.
     - ``caja_chica``: movimientos ``GASTO_CAJA_CHICA``.
-    - ``efectivo_esperado`` = cobros en efectivo - caja chica.
+    - ``compras_efectivo``: pagos a proveedores en efectivo desde caja diaria.
+    - ``efectivo_esperado`` = cobros en efectivo - caja chica - compras en
+      efectivo. Si una compra de insumos se pago del cajon de Secretaria, el
+      cierre debe reflejarlo o descuadra contra el conteo fisico.
     """
     ventas = {forma: Decimal("0") for forma in FORMAS_VENTA}
     for orden in ordenes:
@@ -84,7 +88,16 @@ def calcular_resumen_caja(
             }
         )
 
-    esperado = cobros["EFECTIVO"] - caja_chica
+    compras_efectivo = Decimal("0")
+    for pago in pagos_proveedores:
+        if pago.get("deleted_at") is not None:
+            continue
+        metodo = str(pago.get("metodo") or "").upper()
+        bolsa = str(pago.get("bolsa") or "").upper()
+        if metodo == "EFECTIVO" and bolsa == "CAJA_DIARIA":
+            compras_efectivo += _d(pago.get("monto"))
+
+    esperado = cobros["EFECTIVO"] - caja_chica - compras_efectivo
     diferencia = None if efectivo_contado is None else (_d(efectivo_contado) - esperado)
 
     return {
@@ -103,6 +116,7 @@ def calcular_resumen_caja(
             "total": float(sum(cobros.values())),
         },
         "caja_chica": float(caja_chica),
+        "compras_efectivo": float(compras_efectivo),
         "efectivo_sistema": float(esperado),
         "efectivo_contado": None if efectivo_contado is None else float(_d(efectivo_contado)),
         "diferencia": None if diferencia is None else float(diferencia),
@@ -331,6 +345,18 @@ class PostgresSecretariaStore:
         )
         return [dict(fila) for fila in filas]
 
+    async def _pagos_proveedores(self, fecha: date) -> list[dict[str, Any]]:
+        filas = await self._pool.fetch(
+            """
+            SELECT id::text, purchase_id::text, fecha, metodo, bolsa, monto,
+                   created_at, deleted_at
+              FROM supplier_payments
+             WHERE fecha = $1
+            """,
+            fecha,
+        )
+        return [dict(fila) for fila in filas]
+
     async def _ordenes_del_dia(self, fecha: date) -> list[dict[str, Any]]:
         filas = await self._pool.fetch(
             """
@@ -357,6 +383,7 @@ class PostgresSecretariaStore:
             fecha=fecha,
             ordenes=await self._ordenes_del_dia(fecha),
             movimientos=await self._movimientos(fecha),
+            pagos_proveedores=await self._pagos_proveedores(fecha),
             efectivo_contado=efectivo_contado,
         )
         cierre = await self._pool.fetchrow(
@@ -520,6 +547,7 @@ class MemorySecretariaStore:
     ordenes: list[dict[str, Any]] = field(default_factory=list)
     viajes: list[dict[str, Any]] = field(default_factory=list)
     movimientos: list[dict[str, Any]] = field(default_factory=list)
+    pagos_proveedores: list[dict[str, Any]] = field(default_factory=list)
     cierres: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -710,6 +738,11 @@ class MemorySecretariaStore:
             fecha=fecha,
             ordenes=self._ordenes_del_dia(fecha),
             movimientos=self._movimientos_del_dia(fecha),
+            pagos_proveedores=[
+                p
+                for p in self.pagos_proveedores
+                if str(p.get("fecha"))[:10] == fecha.isoformat()
+            ],
             efectivo_contado=efectivo_contado,
         )
         cierre = next(

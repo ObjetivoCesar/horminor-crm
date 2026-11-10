@@ -212,3 +212,34 @@ async def test_alta_de_orden_expone_alerta_de_cupo_sin_bloquear() -> None:
     assert cuerpo["excede_cupo_credito"] is True
     assert cuerpo["cupo_credito_usd"] == 1500.0
     assert cuerpo["advertencias"]
+
+
+def test_resumen_caja_descuenta_compras_pagadas_en_efectivo() -> None:
+    resumen = calcular_resumen_caja(
+        fecha=date(2026, 11, 9),
+        ordenes=[],
+        movimientos=[
+            {
+                "id": "c1",
+                "tipo_movimiento": "COBRO",
+                "metodo": "EFECTIVO",
+                "monto": "500.00",
+            },
+            {
+                "id": "g1",
+                "tipo_movimiento": "GASTO_CAJA_CHICA",
+                "metodo": "EFECTIVO",
+                "monto": "25.00",
+            },
+        ],
+        pagos_proveedores=[
+            {"metodo": "EFECTIVO", "bolsa": "CAJA_DIARIA", "monto": "94.00"},
+            {"metodo": "TRANSFERENCIA", "bolsa": "BANCO_GERENCIA", "monto": "300.00"},
+            {"metodo": "EFECTIVO", "bolsa": "CAJA_DIARIA", "monto": "50.00", "deleted_at": "x"},
+        ],
+        efectivo_contado=Decimal("381.00"),
+    )
+
+    assert resumen["compras_efectivo"] == 94.0
+    assert resumen["efectivo_sistema"] == 381.0
+    assert resumen["diferencia"] == 0.0

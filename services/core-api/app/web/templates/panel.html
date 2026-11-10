@@ -654,7 +654,7 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
   margin-bottom: 6px;
 }
 .sec-ventanilla h2 { margin: 0 0 4px; }
-.sec-acciones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.sec-acciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .sec-accion {
   display: flex;
   align-items: center;
@@ -690,9 +690,27 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
 .cartera-acciones { display: flex; gap: 6px; justify-content: flex-end; }
 .tabla-cartera tbody tr:hover td { background: var(--surface-row-pill-hover); }
 .cierre-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+
+/* Agenda de entregas en Secretaría */
+.agenda-sec { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; }
+.agenda-mini { border: var(--border-subtle); border-radius: 12px; padding: 12px; }
+.agenda-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow: auto; }
+.agenda-item { display: flex; gap: 10px; align-items: flex-start; padding: 9px 10px; border-radius: 10px; background: var(--surface-row-pill); border: var(--border-subtle); }
+.agenda-item .hora { font-weight: 700; font-size: 12px; min-width: 44px; color: var(--accent-cat-amber); }
+.agenda-item .detalle { flex: 1; min-width: 0; }
+.agenda-item .detalle strong { display: block; font-size: 12.5px; }
+.agenda-item .detalle span { display: block; font-size: 11px; color: var(--text-muted); }
+.agenda-item .acciones { display: flex; gap: 4px; }
+.tabla-compras td, .tabla-compras th { font-size: 11.5px; }
+.compra-linea { border: var(--border-subtle); border-radius: 12px; padding: 12px; margin-top: 10px; }
+.compra-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 12px; padding-top: 12px; border-top: var(--border-subtle); }
+.compra-total strong { font-size: 20px; }
+.supplier-inline { display: none; margin-top: 10px; padding: 10px; border: 1px dashed rgba(245,158,11,0.5); border-radius: 10px; }
+.supplier-inline.visible { display: block; }
 @media (max-width: 1100px) {
   .sec-ventanilla { grid-template-columns: 1fr; }
   .sec-acciones { grid-template-columns: 1fr; }
+  .agenda-sec { grid-template-columns: 1fr; }
 }
 
 /* ---------------------------------------------------------------- Badges */
@@ -824,6 +842,7 @@ dialog {
   box-shadow: 0 40px 90px -20px rgba(0, 0, 0, 0.75);
 }
 dialog::backdrop { background: rgba(5, 9, 16, 0.68); backdrop-filter: blur(3px); }
+dialog.wide { width: min(880px, 96vw); }
 .dialog-head {
   background: linear-gradient(120deg, rgba(245, 158, 11, 0.20), rgba(53, 114, 221, 0.22));
   border-bottom: var(--border-subtle);
@@ -2269,7 +2288,12 @@ tbody tr:last-child td { border-bottom: 0; }
         </button>
         <button class="sec-accion" onclick="abrirGasto()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></svg>
-          <span class="sec-accion-txt"><strong>Registrar gasto</strong><small>Caja chica o banco</small></span>
+          <span class="sec-accion-txt"><strong>Gasto operativo</strong><small>Caja chica o banco</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button class="sec-accion" onclick="abrirCompra()">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18l-2 12H5L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M9 12h6"/></svg>
+          <span class="sec-accion-txt"><strong>Compra de material</strong><small>Cemento, arena, ripio</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button class="sec-accion" onclick="abrirOrden()">
@@ -2287,28 +2311,43 @@ tbody tr:last-child td { border-bottom: 0; }
             <h2 style="margin-bottom:2px">Resumen de hoy</h2>
             <p class="small muted" style="margin:0">Lo que ya entró y salió de caja.</p>
           </div>
-          <button class="btn small ghost" onclick="cargarCierre()">Actualizar</button>
+          <div class="row" style="gap:6px">
+            <button class="btn small ghost" onclick="cargarCierre()">Actualizar</button>
+            <button class="btn small bank" onclick="abrirCierre()">Cierre de caja del día</button>
+          </div>
         </div>
         <div id="sec-cobros" class="small" style="margin-top:12px"><p class="muted">Cargando movimientos…</p></div>
+        <div class="spread small" style="margin-top:10px;padding-top:10px;border-top:var(--border-subtle)">
+          <span class="muted">Cierre del día</span>
+          <span><span class="badge neutral" id="cierre-estado">—</span></span>
+        </div>
       </div>
 
-      <div class="card" id="cierre-card">
+      <div class="card" id="agenda-card">
         <div class="spread">
           <div>
-            <h2 style="margin-bottom:2px">Cierre de caja</h2>
-            <p class="small muted" style="margin:0">Cuenta el efectivo y cierra el día.</p>
+            <span class="sec-eyebrow">Agenda</span>
+            <h2 style="margin-bottom:2px">Entregas y mixers</h2>
+            <p class="small muted" style="margin:0">Qué máquina está libre y a qué hora se desocupa.</p>
           </div>
-          <span class="badge neutral" id="cierre-estado">—</span>
+          <button class="btn small" onclick="abrirAgenda()">+ Agendar entrega</button>
         </div>
-        <div class="cierre-grid" style="margin-top:10px">
-          <div><label class="field">Fecha</label><input type="date" id="cierre-fecha" onchange="cargarCierre()"></div>
-          <div><label class="field">Efectivo contado (USD)</label><input type="number" id="cierre-contado" step="0.01" min="0" placeholder="0.00"></div>
+        <div class="agenda-sec" style="margin-top:12px">
+          <div class="agenda-mini">
+            <div class="cal-head" style="padding:0 0 6px">
+              <h2 id="agenda-titulo" style="font-size:12px">—</h2>
+              <div class="cal-nav">
+                <button type="button" onclick="moverAgenda(-1)" aria-label="Mes anterior">‹</button>
+                <button type="button" onclick="moverAgenda(1)" aria-label="Mes siguiente">›</button>
+              </div>
+            </div>
+            <div class="cal-grid" id="agenda-grid"></div>
+          </div>
+          <div class="agenda-mini">
+            <p class="card-kicker" style="margin:0 0 8px">Próximas entregas</p>
+            <ul class="agenda-lista" id="agenda-lista"></ul>
+          </div>
         </div>
-        <div id="cierre-resumen" class="small" style="margin-top:10px"></div>
-        <label class="field" style="margin-top:10px">Cerrado por</label>
-        <input type="text" id="cierre-por" value="Secretaría">
-        <button class="btn bank" style="margin-top:10px;width:100%" onclick="cerrarCaja()">Cerrar caja del día</button>
-        <div id="cierre-resultado"></div>
       </div>
     </div>
 
@@ -2359,8 +2398,23 @@ tbody tr:last-child td { border-bottom: 0; }
 
   <!-- ===================== PLANTA, FLOTA Y KARDEX ===================== -->
   <section class="view" data-view="planta">
+    <div class="spread" style="margin-bottom:12px">
+      <div>
+        <span class="sec-eyebrow">Bodega</span>
+        <h2 style="margin:0">Inventario de insumos</h2>
+        <p class="small muted" style="margin:0">Stock real, costo promedio y compras en tránsito.</p>
+      </div>
+      <button class="btn small" onclick="abrirCompra()">+ Registrar compra de material</button>
+    </div>
     <div class="planta-grid" id="planta-stock">
       <div class="stock-card"><div class="kpi-label">Inventario</div><div class="big">Cargando…</div></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="spread">
+        <h2>Compras en tránsito pendientes de recepción</h2>
+        <span class="badge neutral" id="transito-badge">—</span>
+      </div>
+      <div id="planta-transito" class="table-wrap" style="margin-top:8px"><p class="muted small">Leyendo compras…</p></div>
     </div>
     <div class="grid two" style="margin-top:20px">
       <div class="card">
@@ -2371,6 +2425,13 @@ tbody tr:last-child td { border-bottom: 0; }
         <div class="spread"><h2>Flota de mixers</h2><span class="badge neutral" id="flota-badge">—</span></div>
         <div id="planta-mixers"><p class="muted small">Leyendo flota…</p></div>
       </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="spread">
+        <h2>Últimos movimientos de inventario</h2>
+        <span class="badge neutral">20 más recientes</span>
+      </div>
+      <div id="planta-movimientos" class="table-wrap" style="margin-top:8px"><p class="muted small">Leyendo kardex…</p></div>
     </div>
   </section>
 
@@ -2572,23 +2633,159 @@ tbody tr:last-child td { border-bottom: 0; }
 </dialog>
 
 <dialog id="dlg-gasto">
-  <div class="dialog-head"><h2>Registrar gasto</h2><button class="btn small ghost" onclick="document.getElementById('dlg-gasto').close()">Cerrar</button></div>
+  <div class="dialog-head"><h2>Registrar gasto operativo</h2><button class="btn small ghost" onclick="document.getElementById('dlg-gasto').close()">Cerrar</button></div>
   <div class="dialog-body">
     <div class="field-row">
-      <div><label class="field">Rubro</label><select id="gasto-rubro"></select></div>
-      <div><label class="field">Método</label><select id="gasto-metodo"><option>EFECTIVO</option><option>TRANSFERENCIA</option></select></div>
-      <div><label class="field">Monto (USD)</label><input type="number" id="gasto-monto" step="0.01" min="0.01"></div>
+      <div><label class="field">Rubro</label><select id="gasto-rubro" onchange="actualizarRubroGasto()"></select></div>
+      <div><label class="field">Método</label><select id="gasto-metodo" onchange="actualizarLimiteCaja()"><option>EFECTIVO</option><option>TRANSFERENCIA</option></select></div>
+      <div><label class="field">Monto (USD)</label><input type="number" id="gasto-monto" step="0.01" min="0.01" oninput="actualizarLimiteCaja()"></div>
     </div>
     <div class="field-row" style="margin-top:10px">
       <div><label class="field">Referencia / comprobante</label><input type="text" id="gasto-referencia"></div>
       <div style="grid-column:span 2"><label class="field">Descripción</label><input type="text" id="gasto-descripcion" placeholder="Detalle del gasto"></div>
     </div>
-    <div class="notice info" style="margin-top:10px">EFECTIVO sale de CAJA_DIARIA; TRANSFERENCIA sale de BANCO_GERENCIA.</div>
+    <div class="notice info" style="margin-top:10px" id="gasto-limite">EFECTIVO sale de CAJA_DIARIA; TRANSFERENCIA sale de BANCO_GERENCIA.</div>
+    <label class="row small" id="gasto-autorizacion-row" style="margin-top:8px;display:none;gap:8px;align-items:center">
+      <input type="checkbox" id="gasto-autorizado" style="width:auto"> Autorizo el exceso de caja chica
+    </label>
     <div id="gasto-resultado"></div>
   </div>
   <div class="dialog-foot">
     <button class="btn ghost" onclick="document.getElementById('dlg-gasto').close()">Cancelar</button>
     <button class="btn" id="gasto-submit" onclick="registrarGasto()">Registrar gasto</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-compra" class="wide">
+  <div class="dialog-head"><h2>Registrar compra de material</h2><button class="btn small ghost" onclick="document.getElementById('dlg-compra').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <div class="field-row">
+      <div>
+        <label class="field">Proveedor</label>
+        <select id="compra-proveedor"></select>
+        <button class="btn small ghost" style="margin-top:6px" onclick="toggleProveedorInline()">+ Nuevo proveedor</button>
+      </div>
+      <div>
+        <label class="field">Material</label>
+        <select id="compra-material" onchange="onCompraMaterialChange()"></select>
+        <span class="small muted" id="compra-unidad"></span>
+      </div>
+      <div>
+        <label class="field">Fecha de compra</label>
+        <input type="date" id="compra-fecha">
+      </div>
+    </div>
+
+    <div class="supplier-inline" id="compra-nuevo-proveedor">
+      <div class="field-row">
+        <div><label class="field">Nombre *</label><input type="text" id="prov-nombre" placeholder="Holcim, ripiera, ferretería…"></div>
+        <div><label class="field">RUC / Cédula</label><input type="text" id="prov-identificacion"></div>
+        <div><label class="field">Teléfono</label><input type="text" id="prov-telefono"></div>
+      </div>
+      <button class="btn small" style="margin-top:8px" onclick="crearProveedorInline()">Guardar proveedor</button>
+      <div id="prov-resultado"></div>
+    </div>
+
+    <div class="compra-linea">
+      <div class="field-row">
+        <div><label class="field">Cantidad</label><input type="number" id="compra-cantidad" step="0.0001" min="0.0001" value="1" oninput="calcularCompra()"></div>
+        <div><label class="field">Costo unitario (USD)</label><input type="number" id="compra-costo" step="0.0001" min="0" oninput="calcularCompra()"></div>
+        <div><label class="field">IVA (USD)</label><input type="number" id="compra-iva" step="0.01" min="0" value="0" oninput="calcularCompra()"></div>
+      </div>
+      <div class="field-row" style="margin-top:10px">
+        <div><label class="field">Modalidad de pago</label>
+          <select id="compra-modalidad" onchange="onCompraModalidadChange()">
+            <option value="CONTADO_EFECTIVO">Contado efectivo (caja)</option>
+            <option value="CONTADO_TRANSFERENCIA">Contado transferencia (banco)</option>
+            <option value="CREDITO_PROVEEDOR">Crédito proveedor</option>
+            <option value="MIXTO_ABONO_CREDITO">Mixto: abono + crédito</option>
+          </select>
+        </div>
+        <div><label class="field">Recepción</label>
+          <select id="compra-recepcion">
+            <option value="INMEDIATA">Inmediata (ya descargó en planta)</option>
+            <option value="EN_TRANSITO">En tránsito (llega después)</option>
+          </select>
+        </div>
+        <div id="compra-abono-wrap" style="display:none"><label class="field">Abono hoy (USD)</label><input type="number" id="compra-abono" step="0.01" min="0" value="0" oninput="calcularCompra()"></div>
+      </div>
+      <div class="field-row" style="margin-top:10px">
+        <div><label class="field">Comprobante / factura</label><input type="text" id="compra-referencia" placeholder="N.º de factura o guía"></div>
+        <div id="compra-vencimiento-wrap" style="display:none"><label class="field">Vence</label><input type="date" id="compra-vencimiento"></div>
+        <div><label class="field">Descripción</label><input type="text" id="compra-descripcion" placeholder="Detalle del material"></div>
+      </div>
+      <div class="compra-total">
+        <span class="small muted">Total de la compra</span>
+        <strong id="compra-total">$0.00</strong>
+      </div>
+    </div>
+
+    <div class="notice info" style="margin-top:12px">Esta compra <strong>no es un gasto</strong>: debita <code>1104 Inventario de insumos</code> y actualiza el stock. La venta reconoce el costo después.</div>
+    <div id="compra-resultado"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-compra').close()">Cancelar</button>
+    <button class="btn" id="compra-submit" onclick="registrarCompra()">Registrar compra</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-cierre" class="wide">
+  <div class="dialog-head"><h2>Cierre de caja del día</h2><button class="btn small ghost" onclick="document.getElementById('dlg-cierre').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <div class="cierre-grid">
+      <div><label class="field">Fecha</label><input type="date" id="cierre-fecha" onchange="cargarCierre()"></div>
+      <div><label class="field">Efectivo contado (USD)</label><input type="number" id="cierre-contado" step="0.01" min="0" placeholder="0.00" oninput="calcularCierre()"></div>
+      <div><label class="field">Cerrado por</label><input type="text" id="cierre-por" value="Secretaría"></div>
+    </div>
+    <div id="cierre-resumen" class="small" style="margin-top:14px"></div>
+    <div id="cierre-resultado"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-cierre').close()">Cancelar</button>
+    <button class="btn bank" id="cierre-submit" onclick="cerrarCaja()">Confirmar cierre</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-agenda" class="wide">
+  <div class="dialog-head"><h2 id="agenda-dialog-titulo">Agendar entrega</h2><button class="btn small ghost" onclick="document.getElementById('dlg-agenda').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <input type="hidden" id="agenda-id">
+    <div class="field-row">
+      <div><label class="field">Cliente *</label><select id="agenda-cliente"></select></div>
+      <div><label class="field">Orden (opcional)</label><select id="agenda-orden"><option value="">Reserva sin orden</option></select></div>
+      <div><label class="field">Resistencia</label><input type="text" id="agenda-receta" placeholder="FC-210"></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Volumen (m³)</label><input type="number" id="agenda-volumen" step="0.5" min="0.5" value="8" oninput="consultarDisponibilidad()"></div>
+      <div><label class="field">Fecha de entrega</label><input type="date" id="agenda-fecha" onchange="consultarDisponibilidad()"></div>
+      <div><label class="field">Hora de inicio</label><input type="time" id="agenda-hora" step="300" onchange="consultarDisponibilidad()"></div>
+      <div><label class="field">Duración (min)</label><input type="number" id="agenda-duracion" min="30" step="15" value="90" onchange="consultarDisponibilidad()"></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Mixer</label><select id="agenda-mixer"><option value="">Sin asignar</option></select></div>
+      <div><label class="field">Chofer</label><input type="text" id="agenda-chofer"></div>
+      <div><label class="field">Teléfono de obra</label><input type="text" id="agenda-telefono"></div>
+    </div>
+    <label class="field" style="margin-top:10px">Dirección de la obra *</label>
+    <input type="text" id="agenda-direccion" placeholder="Sector, vía, referencia">
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Estado</label><select id="agenda-estado">
+        <option value="PROGRAMADO">Programado</option>
+        <option value="RESERVA_CAMPO">Reserva de campo</option>
+        <option value="EN_PLANTA">En planta</option>
+        <option value="EN_RUTA">En ruta</option>
+        <option value="COMPLETADO">Completado</option>
+      </select></div>
+      <div style="grid-column:span 2"><label class="field">Motivo de reagendamiento (si aplica)</label><input type="text" id="agenda-motivo" placeholder="Lluvia, retraso de obra…"></div>
+    </div>
+    <label class="field" style="margin-top:10px">Notas</label>
+    <input type="text" id="agenda-notas">
+    <div id="agenda-disponibilidad" class="notice info" style="margin-top:12px">Elige fecha y hora para ver qué mixer está libre.</div>
+    <div id="agenda-resultado"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-agenda').close()">Cancelar</button>
+    <button class="btn" id="agenda-submit" onclick="guardarAgenda()">Guardar agendamiento</button>
   </div>
 </dialog>
 
@@ -2600,14 +2797,20 @@ const state = {
   kpis:null, mercado:null, simulador:null, config:null, seccionConfig:null,
   remitentes:[], outbox:[], cierre:null,
   ordenes:[], detalle:{}, inventario:[], donutMode:0, catalogo:null,
-  calY:null, calM:null, notifs:[], cargando:false
+  proveedores:[], inventarioOverview:null, agenda:[], agendaY:null, agendaM:null,
+  reglasPago:{}, calY:null, calM:null, notifs:[], cargando:false
 };
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-const money = v => (v===null||v===undefined||v==='') ? '—' : '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const money = v => {
+  if (v===null||v===undefined||v==='') return '—';
+  const n = Number(v);
+  const signo = n < 0 ? '-' : '';
+  return signo + '$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+};
 const num = v => (v===null||v===undefined||v==='') ? '—' : Number(v).toLocaleString('en-US',{maximumFractionDigits:2});
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const hoy = () => new Date().toISOString().slice(0,10);
+const hoy = () => isoLocal(new Date());
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const VIEW_META = {
@@ -3201,7 +3404,16 @@ async function cargarSecretaria() {
   if (f && !f.value) f.value = hoy();
   await cargarClientes();
   renderSecretariaOrdenes();
+  cargarReglasPago();
   cargarCierre();
+  cargarAgenda();
+}
+
+async function cargarReglasPago() {
+  try {
+    const r = await api('/api/v1/panel/pagos/reglas');
+    state.reglasPago = (r && r.reglas) || {};
+  } catch(e) { state.reglasPago = {}; }
 }
 
 function renderClientes() {
@@ -3371,8 +3583,7 @@ async function abrirGasto() {
       return;
     }
   }
-  const grupos = new Set(['CAJA_CHICA', 'GASTO_ADMIN_FIJO', 'CIF_PLANTA']);
-  const cuentas = (state.catalogo || []).filter(c => grupos.has(c.parent_group));
+  const cuentas = (state.catalogo || []);
   const sel = $('#gasto-rubro');
   sel.innerHTML = cuentas.map(c =>
     `<option value="${esc(c.slug)}">${esc(c.code)} · ${esc(c.name)}</option>`
@@ -3382,8 +3593,47 @@ async function abrirGasto() {
   $('#gasto-referencia').value = '';
   $('#gasto-descripcion').value = '';
   $('#gasto-metodo').value = 'EFECTIVO';
+  $('#gasto-autorizado').checked = false;
   $('#gasto-resultado').innerHTML = '';
+  actualizarLimiteCaja();
   document.getElementById('dlg-gasto').showModal();
+}
+
+function actualizarLimiteCaja() {
+  const metodo = ($('#gasto-metodo') || {}).value || 'EFECTIVO';
+  const monto = Number(($('#gasto-monto') || {}).value || 0);
+  const tope = Number((state.reglasPago || {}).caja_chica_max_monto_usd || 0);
+  const aviso = $('#gasto-limite');
+  const fila = $('#gasto-autorizacion-row');
+  const excede = metodo === 'EFECTIVO' && tope > 0 && monto > tope;
+  if (aviso) {
+    if (metodo !== 'EFECTIVO') {
+      aviso.className = 'notice info';
+      aviso.textContent = 'TRANSFERENCIA sale de BANCO_GERENCIA. No consume la caja chica.';
+    } else if (tope > 0) {
+      aviso.className = 'notice ' + (excede ? 'warn' : 'info');
+      aviso.textContent = `EFECTIVO sale de CAJA_DIARIA. Tope de caja chica: ${money(tope)}${excede ? ' — este gasto lo supera.' : '.'}`;
+    } else {
+      aviso.className = 'notice info';
+      aviso.textContent = 'EFECTIVO sale de CAJA_DIARIA; TRANSFERENCIA sale de BANCO_GERENCIA.';
+    }
+  }
+  if (fila) fila.style.display = excede ? 'flex' : 'none';
+  actualizarRubroGasto();
+}
+
+function actualizarRubroGasto() {
+  const slug = ($('#gasto-rubro') || {}).value;
+  const cuenta = (state.catalogo || []).find(c => c.slug === slug);
+  const ref = $('#gasto-referencia');
+  if (!ref) return;
+  if (cuenta && cuenta.requires_voucher) {
+    ref.setAttribute('required', 'required');
+    ref.placeholder = 'Obligatorio para este rubro';
+  } else {
+    ref.removeAttribute('required');
+    ref.placeholder = 'Opcional';
+  }
 }
 
 async function registrarGasto() {
@@ -3394,6 +3644,13 @@ async function registrarGasto() {
     toast('Completa el monto y una descripción de al menos 3 caracteres', 'bad');
     return;
   }
+  const slug = ($('#gasto-rubro') || {}).value;
+  const cuenta = (state.catalogo || []).find(c => c.slug === slug);
+  const referencia = (($('#gasto-referencia') || {}).value || '').trim();
+  if (cuenta && cuenta.requires_voucher && !referencia) {
+    toast('Este rubro exige referencia o comprobante', 'bad');
+    return;
+  }
   const body = {
     request_id: nuevoRequestId(),
     tipo_movimiento: metodo === 'EFECTIVO' ? 'GASTO_CAJA_CHICA' : 'GASTO_BANCARIO',
@@ -3401,9 +3658,10 @@ async function registrarGasto() {
     metodo,
     bolsa: metodo === 'EFECTIVO' ? 'CAJA_DIARIA' : 'BANCO_GERENCIA',
     monto: monto.toFixed(2),
-    account_slug: ($('#gasto-rubro') || {}).value,
-    referencia: ($('#gasto-referencia') || {}).value || null,
-    descripcion
+    account_slug: slug,
+    referencia: referencia || null,
+    descripcion,
+    autorizado_exceso_caja: !!($('#gasto-autorizado') || {}).checked
   };
   const submit = $('#gasto-submit');
   if (submit) submit.disabled = true;
@@ -3642,16 +3900,44 @@ async function cargarCierre() {
       estado.textContent = r.cerrado ? 'CERRADO' : 'ABIERTO';
       estado.className = 'badge ' + (r.cerrado ? 'ok' : 'warn');
     }
-    const resumen = $('#cierre-resumen');
-    if (resumen) resumen.innerHTML = `
-      <div class="spread"><span>Caja chica del día</span><strong>− ${money(r.caja_chica)}</strong></div>
-      <div class="spread"><span><strong>Efectivo esperado en caja</strong></span><strong>${money(r.efectivo_sistema)}</strong></div>`;
+    renderCierreResumen(r);
     renderCobros(r);
     if (r.cierre && r.cierre.efectivo_contado !== null && r.cierre.efectivo_contado !== undefined) {
-      $('#cierre-contado').value = r.cierre.efectivo_contado;
+      const contado = $('#cierre-contado');
+      if (contado && !contado.value) contado.value = r.cierre.efectivo_contado;
       $('#cierre-resultado').innerHTML = `<div class="notice ${Math.abs(r.cierre.diferencia || 0) < 0.01 ? 'ok' : 'warn'}">Cierre guardado. Diferencia: ${money(r.cierre.diferencia)}</div>`;
     }
   } catch(e) { toast('Cierre no disponible: ' + e.message, 'bad'); }
+}
+
+function renderCierreResumen(r) {
+  const host = $('#cierre-resumen');
+  if (!host || !r) return;
+  const compras = Number(r.compras_efectivo || 0);
+  const esperado = Number(r.efectivo_sistema || 0);
+  const contadoRaw = ($('#cierre-contado') || {}).value;
+  const diferencia = contadoRaw === '' || contadoRaw === undefined || contadoRaw === null
+    ? null : Number(contadoRaw) - esperado;
+  host.innerHTML = `
+    <div class="spread"><span>Cobros en efectivo</span><strong>${money(r.cobros.efectivo)}</strong></div>
+    <div class="spread"><span>− Gastos de caja chica</span><strong>− ${money(r.caja_chica)}</strong></div>
+    <div class="spread"><span>− Compras pagadas en efectivo</span><strong>− ${money(compras)}</strong></div>
+    <div class="divider" style="margin:8px 0"></div>
+    <div class="spread"><span><strong>Efectivo esperado en caja</strong></span><strong>${money(esperado)}</strong></div>
+    <div class="spread" style="margin-top:8px"><span>Efectivo contado</span><strong>${contadoRaw === '' || contadoRaw === undefined ? '—' : money(contadoRaw)}</strong></div>
+    <div class="spread"><span>Diferencia</span><strong style="color:${diferencia === null ? 'inherit' : (Math.abs(diferencia) < 0.01 ? 'var(--accent-cat-amber)' : '#F87171')}">${diferencia === null ? '—' : money(diferencia)}</strong></div>`;
+}
+
+function calcularCierre() {
+  if (state.cierre) renderCierreResumen(state.cierre);
+}
+
+function abrirCierre() {
+  const f = $('#cierre-fecha');
+  if (f && !f.value) f.value = hoy();
+  $('#cierre-resultado').innerHTML = '';
+  cargarCierre();
+  document.getElementById('dlg-cierre').showModal();
 }
 
 function renderCobros(r) {
@@ -3669,6 +3955,8 @@ function renderCobros(r) {
 async function cerrarCaja() {
   const fecha = $('#cierre-fecha').value || hoy();
   const contado = $('#cierre-contado').value;
+  const submit = $('#cierre-submit');
+  if (submit) submit.disabled = true;
   try {
     const r = await api('/api/v1/secretaria/cierre-caja', {method:'POST', body:{
       fecha, efectivo_contado: contado === '' ? null : Number(contado), cerrado_por: $('#cierre-por').value
@@ -3676,23 +3964,494 @@ async function cerrarCaja() {
     const clase = Math.abs(r.diferencia || 0) < 0.01 ? 'ok' : 'warn';
     $('#cierre-resultado').innerHTML = `<div class="notice ${clase}">Caja cerrada. Diferencia: ${money(r.diferencia)}</div>`;
     toast('Cierre de caja guardado', 'ok');
-    cargarCierre();
-  } catch(e) { toast('No se pudo cerrar caja: ' + e.message, 'bad'); }
+    await cargarCierre();
+  } catch(e) {
+    $('#cierre-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+}
+
+/* ----------------------------- COMPRAS ----------------------------- */
+async function cargarProveedores() {
+  try {
+    const r = await api('/api/v1/panel/suppliers');
+    state.proveedores = (r && r.suppliers) || [];
+  } catch(e) { state.proveedores = []; }
+  const sel = $('#compra-proveedor');
+  if (sel) sel.innerHTML = state.proveedores.map(p =>
+    `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`
+  ).join('') || '<option value="">Sin proveedores</option>';
+}
+
+async function cargarMaterialesCompra() {
+  if (!state.inventarioOverview) {
+    try {
+      state.inventarioOverview = await api('/api/v1/panel/inventory-overview');
+    } catch(e) { state.inventarioOverview = null; }
+  }
+  const materiales = (state.inventarioOverview && state.inventarioOverview.materiales) || [];
+  state.materialesCompra = materiales;
+  const sel = $('#compra-material');
+  if (sel) sel.innerHTML = materiales.map(m =>
+    `<option value="${esc(m.id)}" data-unidad="${esc(m.unidad)}" data-costo="${m.costo_unitario || 0}">${esc(m.nombre)} · ${esc(m.unidad)}</option>`
+  ).join('');
+}
+
+async function abrirCompra() {
+  await Promise.all([cargarProveedores(), cargarMaterialesCompra()]);
+  if (!(state.proveedores || []).length) {
+    toast('No hay proveedores: crea uno con «+ Nuevo proveedor»', 'bad');
+  }
+  $('#compra-fecha').value = hoy();
+  $('#compra-cantidad').value = '1';
+  $('#compra-costo').value = '';
+  $('#compra-iva').value = '0';
+  $('#compra-modalidad').value = 'CONTADO_EFECTIVO';
+  $('#compra-recepcion').value = 'INMEDIATA';
+  $('#compra-abono').value = '0';
+  $('#compra-referencia').value = '';
+  $('#compra-vencimiento').value = '';
+  $('#compra-descripcion').value = '';
+  $('#compra-resultado').innerHTML = '';
+  $('#compra-nuevo-proveedor').classList.remove('visible');
+  $('#prov-nombre').value = '';
+  $('#prov-identificacion').value = '';
+  $('#prov-telefono').value = '';
+  $('#prov-resultado').innerHTML = '';
+  onCompraMaterialChange();
+  onCompraModalidadChange();
+  document.getElementById('dlg-compra').showModal();
+}
+
+function onCompraMaterialChange() {
+  const sel = $('#compra-material');
+  if (!sel || !sel.options.length) return;
+  const opt = sel.options[sel.selectedIndex];
+  const unidad = opt ? opt.dataset.unidad || '' : '';
+  const costo = opt ? Number(opt.dataset.costo || 0) : 0;
+  const unidadEl = $('#compra-unidad');
+  if (unidadEl) unidadEl.textContent = unidad ? 'Unidad: ' + unidad : '';
+  const costoEl = $('#compra-costo');
+  if (costoEl && !costoEl.value) costoEl.value = costo ? costo.toFixed(4) : '';
+  const desc = $('#compra-descripcion');
+  if (desc && !desc.value && opt) desc.value = opt.textContent.split(' · ')[0];
+  calcularCompra();
+}
+
+function onCompraModalidadChange() {
+  const modalidad = ($('#compra-modalidad') || {}).value || 'CONTADO_EFECTIVO';
+  const abono = $('#compra-abono-wrap');
+  const vence = $('#compra-vencimiento-wrap');
+  if (abono) abono.style.display = modalidad === 'MIXTO_ABONO_CREDITO' ? 'block' : 'none';
+  if (vence) vence.style.display = (modalidad === 'CREDITO_PROVEEDOR' || modalidad === 'MIXTO_ABONO_CREDITO') ? 'block' : 'none';
+  calcularCompra();
+}
+
+function calcularCompra() {
+  const cantidad = Number(($('#compra-cantidad') || {}).value || 0);
+  const costo = Number(($('#compra-costo') || {}).value || 0);
+  const iva = Number(($('#compra-iva') || {}).value || 0);
+  const total = cantidad * costo + iva;
+  const el = $('#compra-total');
+  if (el) el.textContent = money(total);
+  return total;
+}
+
+function toggleProveedorInline() {
+  const box = $('#compra-nuevo-proveedor');
+  if (box) box.classList.toggle('visible');
+}
+
+async function crearProveedorInline() {
+  const nombre = (($('#prov-nombre') || {}).value || '').trim();
+  if (nombre.length < 2) { toast('Escribe el nombre del proveedor', 'bad'); return; }
+  try {
+    const r = await api('/api/v1/panel/suppliers', {method:'POST', body:{
+      nombre,
+      identificacion: (($('#prov-identificacion') || {}).value || '').trim() || null,
+      telefono: (($('#prov-telefono') || {}).value || '').trim() || null
+    }});
+    const nuevo = r && r.data && r.data.supplier;
+    await cargarProveedores();
+    if (nuevo) $('#compra-proveedor').value = nuevo.id;
+    $('#compra-nuevo-proveedor').classList.remove('visible');
+    toast('Proveedor creado', 'ok');
+  } catch(e) {
+    $('#prov-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+async function registrarCompra() {
+  const supplier = ($('#compra-proveedor') || {}).value;
+  const material = ($('#compra-material') || {}).value;
+  const cantidad = Number(($('#compra-cantidad') || {}).value || 0);
+  const costo = Number(($('#compra-costo') || {}).value || 0);
+  if (!supplier) { toast('Selecciona o crea un proveedor', 'bad'); return; }
+  if (!material || !(cantidad > 0) || costo < 0) {
+    toast('Completa material, cantidad y costo', 'bad');
+    return;
+  }
+  const modalidad = ($('#compra-modalidad') || {}).value;
+  const body = {
+    supplier_id: supplier,
+    fecha_compra: $('#compra-fecha').value || hoy(),
+    modalidad_pago: modalidad,
+    modo_recepcion: ($('#compra-recepcion') || {}).value || 'INMEDIATA',
+    referencia_comprobante: (($('#compra-referencia') || {}).value || '').trim() || null,
+    iva_monto: Number(($('#compra-iva') || {}).value || 0).toFixed(2),
+    fecha_vencimiento: $('#compra-vencimiento').value || null,
+    items: [{
+      material_id: material,
+      account_slug: 'inventario_insumos_silos',
+      descripcion: (($('#compra-descripcion') || {}).value || 'Compra de material').trim(),
+      cantidad: cantidad.toFixed(4),
+      costo_unitario: costo.toFixed(4)
+    }]
+  };
+  if (modalidad === 'MIXTO_ABONO_CREDITO') {
+    body.monto_pagado_hoy = Number(($('#compra-abono') || {}).value || 0).toFixed(2);
+    body.bolsa_pago_hoy = 'CAJA_DIARIA';
+  }
+  const submit = $('#compra-submit');
+  if (submit) submit.disabled = true;
+  try {
+    await api('/api/v1/panel/purchases', {method:'POST', body});
+    $('#compra-resultado').innerHTML = '<div class="notice ok">Compra registrada: el stock y el costo promedio ya se actualizaron.</div>';
+    toast('Compra registrada', 'ok');
+    state.inventarioOverview = null;
+    setTimeout(() => { try { document.getElementById('dlg-compra').close(); } catch(e) {} }, 900);
+    await cargarSecretaria();
+    await cargarDashboard();
+  } catch(e) {
+    $('#compra-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+}
+
+/* ----------------------------- AGENDA ----------------------------- */
+async function cargarAgenda() {
+  const ahora = new Date();
+  if (state.agendaY === null || state.agendaY === undefined) {
+    state.agendaY = ahora.getFullYear();
+    state.agendaM = ahora.getMonth();
+  }
+  const desde = new Date(state.agendaY, state.agendaM, 1);
+  const hasta = new Date(state.agendaY, state.agendaM + 2, 0);
+  try {
+    const r = await api('/api/v1/panel/agenda?desde=' + isoLocal(desde) + '&hasta=' + isoLocal(hasta));
+    state.agenda = (r && r.agenda) || [];
+  } catch(e) {
+    state.agenda = [];
+  }
+  renderAgendaSecretaria();
+}
+
+function isoLocal(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dia = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dia}`;
+}
+
+function moverAgenda(delta) {
+  if (state.agendaY === null || state.agendaY === undefined) {
+    const n = new Date(); state.agendaY = n.getFullYear(); state.agendaM = n.getMonth();
+  }
+  state.agendaM += delta;
+  if (state.agendaM < 0) { state.agendaM = 11; state.agendaY--; }
+  if (state.agendaM > 11) { state.agendaM = 0; state.agendaY++; }
+  cargarAgenda();
+}
+
+function renderAgendaSecretaria() {
+  const grid = $('#agenda-grid');
+  const titulo = $('#agenda-titulo');
+  if (!grid) return;
+  const y = state.agendaY, m = state.agendaM;
+  if (titulo) titulo.textContent = MESES[m] + ' ' + y;
+  const primero = new Date(y, m, 1);
+  const inicio = (primero.getDay() + 6) % 7;
+  const dias = new Date(y, m + 1, 0).getDate();
+  const hoyIso = hoy();
+  const porDia = {};
+  (state.agenda || []).forEach(a => { (porDia[a.fecha_entrega] = porDia[a.fecha_entrega] || []).push(a); });
+  const celdas = ['L','M','X','J','V','S','D'].map(d => `<div class="cal-dow">${d}</div>`);
+  for (let i = 0; i < inicio; i++) celdas.push('<div class="cal-cell blank"></div>');
+  for (let d = 1; d <= dias; d++) {
+    const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const tiene = !!porDia[iso];
+    celdas.push(`<div class="cal-cell ${tiene ? 'has-event' : ''} ${iso === hoyIso ? 'today' : ''}" title="${tiene ? porDia[iso].length + ' entrega(s)' : ''}" onclick="filtrarAgendaDia('${iso}')">${d}</div>`);
+  }
+  grid.innerHTML = celdas.join('');
+
+  const lista = $('#agenda-lista');
+  if (!lista) return;
+  const proximas = (state.agenda || [])
+    .filter(a => a.fecha_entrega >= hoyIso && a.estado !== 'CANCELADO')
+    .sort((a, b) => (a.fecha_entrega + a.hora_inicio).localeCompare(b.fecha_entrega + b.hora_inicio))
+    .slice(0, 8);
+  lista.innerHTML = proximas.length ? proximas.map(a => `
+    <li class="agenda-item">
+      <span class="hora">${esc(a.hora_inicio)}</span>
+      <div class="detalle">
+        <strong>${esc(a.cliente)} · ${num(a.volumen_m3)} m³</strong>
+        <span>${esc(fechaCorta(a.fecha_entrega))} · ${esc(a.mixer_codigo || 'sin mixer')} · ${esc(a.direccion_obra)}</span>
+      </div>
+      <div class="acciones">
+        <button class="btn small ghost" onclick="abrirAgenda('${esc(a.id)}')">Editar</button>
+      </div>
+    </li>`).join('') : '<li class="muted small">Sin entregas agendadas en este rango.</li>';
+}
+
+function fechaCorta(iso) {
+  const [y, m, d] = String(iso).split('-');
+  return `${d}/${m}`;
+}
+
+function filtrarAgendaDia(iso) {
+  const lista = $('#agenda-lista');
+  if (!lista) return;
+  const delDia = (state.agenda || []).filter(a => a.fecha_entrega === iso);
+  if (!delDia.length) { abrirAgenda(null, iso); return; }
+  lista.innerHTML = delDia.map(a => `
+    <li class="agenda-item">
+      <span class="hora">${esc(a.hora_inicio)}</span>
+      <div class="detalle"><strong>${esc(a.cliente)} · ${num(a.volumen_m3)} m³</strong>
+        <span>${esc(a.mixer_codigo || 'sin mixer')} · ${esc(a.estado)} · ${esc(a.direccion_obra)}</span></div>
+      <div class="acciones">
+        <button class="btn small ghost" onclick="abrirAgenda('${esc(a.id)}')">Editar</button>
+      </div>
+    </li>`).join('');
+}
+
+async function abrirAgenda(id, fechaSugerida) {
+  if (!state.opciones) {
+    try { state.opciones = await api('/api/v1/secretaria/opciones'); } catch(e) { state.opciones = {mixers:[]}; }
+  }
+  if (!state.ordenes || !state.ordenes.length) {
+    try { state.ordenes = await api('/api/v1/orders?limit=50'); } catch(e) { state.ordenes = []; }
+  }
+  const clienteSel = $('#agenda-cliente');
+  clienteSel.innerHTML = (state.clientes || []).map(c =>
+    `<option value="${esc(c.cliente_id)}">${esc(c.nombre)}</option>`
+  ).join('');
+  const ordenSel = $('#agenda-orden');
+  ordenSel.innerHTML = '<option value="">Reserva sin orden</option>' + (state.ordenes || [])
+    .filter(o => o.estado !== 'ANULADA')
+    .map(o => `<option value="${esc(o.id)}">#${esc(o.numero)} · ${esc(o.cliente || '')} · ${num(o.volumen_m3)} m³</option>`).join('');
+  const mixers = (state.opciones && state.opciones.mixers) || [];
+  $('#agenda-mixer').innerHTML = '<option value="">Sin asignar</option>' + mixers.map(m =>
+    `<option value="${esc(m.codigo)}">${esc(m.codigo)} · ${num(m.capacidad_m3)} m³ · ${esc(m.chofer_asignado || 'sin chofer')}</option>`
+  ).join('');
+
+  $('#agenda-id').value = '';
+  $('#agenda-receta').value = '';
+  $('#agenda-volumen').value = '8';
+  $('#agenda-fecha').value = fechaSugerida || hoy();
+  $('#agenda-hora').value = '08:00';
+  $('#agenda-duracion').value = '90';
+  $('#agenda-mixer').value = '';
+  $('#agenda-chofer').value = '';
+  $('#agenda-telefono').value = '';
+  $('#agenda-direccion').value = '';
+  $('#agenda-estado').value = 'PROGRAMADO';
+  $('#agenda-motivo').value = '';
+  $('#agenda-notas').value = '';
+  $('#agenda-resultado').innerHTML = '';
+  $('#agenda-dialog-titulo').textContent = 'Agendar entrega';
+
+  if (id) {
+    try {
+      const r = await api('/api/v1/panel/agenda?desde=' + hoy() + '&hasta=' + isoLocal(new Date(Date.now() + 90 * 86400000)));
+      const a = ((r && r.agenda) || []).find(x => x.id === id) || (state.agenda || []).find(x => x.id === id);
+      if (a) {
+        $('#agenda-id').value = a.id;
+        $('#agenda-cliente').value = a.cliente_id;
+        $('#agenda-orden').value = a.order_id || '';
+        $('#agenda-receta').value = a.receta_codigo || '';
+        $('#agenda-volumen').value = a.volumen_m3 || 8;
+        $('#agenda-fecha').value = a.fecha_entrega;
+        $('#agenda-hora').value = a.hora_inicio;
+        $('#agenda-duracion').value = a.duracion_estimada_min || 90;
+        $('#agenda-mixer').value = a.mixer_codigo || '';
+        $('#agenda-chofer').value = a.chofer_nombre || '';
+        $('#agenda-telefono').value = a.contacto_obra_telefono || '';
+        $('#agenda-direccion').value = a.direccion_obra || '';
+        $('#agenda-estado').value = a.estado || 'PROGRAMADO';
+        $('#agenda-notas').value = a.notas || '';
+        $('#agenda-dialog-titulo').textContent = 'Editar entrega';
+      }
+    } catch(e) { toast('No se pudo abrir el agendamiento: ' + e.message, 'bad'); }
+  }
+  document.getElementById('dlg-agenda').showModal();
+  consultarDisponibilidad();
+}
+
+async function consultarDisponibilidad() {
+  const fecha = $('#agenda-fecha').value;
+  const hora = $('#agenda-hora').value;
+  const duracion = Number($('#agenda-duracion').value || 90);
+  const host = $('#agenda-disponibilidad');
+  if (!fecha || !hora || !host) return;
+  try {
+    const r = await api(`/api/v1/panel/agenda/disponibilidad?fecha=${fecha}&hora=${hora}&duracion_min=${duracion}`);
+    const ocupados = (r.mixers || []).filter(m => m.estado === 'OCUPADO');
+    const libres = (r.mixers || []).filter(m => m.estado === 'LIBRE');
+    if (libres.length) {
+      host.className = 'notice ok';
+      host.innerHTML = `Libres a las ${esc(hora)}: <strong>${libres.map(m => esc(m.codigo)).join(', ')}</strong>` +
+        (ocupados.length ? ` · ocupados: ${ocupados.map(m => esc(m.codigo) + ' hasta ' + esc(m.ocupado_hasta)).join(', ')}` : '');
+    } else if (r.proxima_hora_disponible) {
+      host.className = 'notice warn';
+      host.innerHTML = `No hay mixer libre a las ${esc(hora)}. Se desocupa a las <strong>${esc(r.proxima_hora_disponible)}</strong> (${esc(r.mixer_sugerido || 'mixer')}).`;
+    } else {
+      host.className = 'notice warn';
+      host.innerHTML = 'No hay mixers activos configurados o el día está completo.';
+    }
+  } catch(e) {
+    host.className = 'notice warn';
+    host.textContent = 'No se pudo consultar disponibilidad: ' + e.message;
+  }
+}
+
+async function guardarAgenda() {
+  const id = ($('#agenda-id') || {}).value;
+  const cliente = ($('#agenda-cliente') || {}).value;
+  const fecha = ($('#agenda-fecha') || {}).value;
+  const hora = ($('#agenda-hora') || {}).value;
+  const direccion = (($('#agenda-direccion') || {}).value || '').trim();
+  const volumen = Number(($('#agenda-volumen') || {}).value || 0);
+  if (!cliente || !fecha || !hora || direccion.length < 3 || !(volumen > 0)) {
+    toast('Completa cliente, fecha, hora, volumen y dirección', 'bad');
+    return;
+  }
+  const motivo = (($('#agenda-motivo') || {}).value || '').trim() || null;
+  const body = {
+    cliente_id: cliente,
+    order_id: ($('#agenda-orden') || {}).value || null,
+    receta_codigo: (($('#agenda-receta') || {}).value || '').trim() || null,
+    volumen_m3: Number(volumen.toFixed(2)),
+    fecha_entrega: fecha,
+    hora_inicio: hora,
+    duracion_estimada_min: Number($('#agenda-duracion').value || 90),
+    mixer_codigo: ($('#agenda-mixer') || {}).value || null,
+    chofer_nombre: (($('#agenda-chofer') || {}).value || '').trim() || null,
+    contacto_obra_telefono: (($('#agenda-telefono') || {}).value || '').trim() || null,
+    direccion_obra: direccion,
+    estado: ($('#agenda-estado') || {}).value || 'PROGRAMADO',
+    notas: (($('#agenda-notas') || {}).value || '').trim() || null
+  };
+  const submit = $('#agenda-submit');
+  if (submit) submit.disabled = true;
+  try {
+    if (id) {
+      const patch = Object.assign({}, body, { motivo_reagendamiento: motivo });
+      await api('/api/v1/panel/agenda/' + id, {method:'PATCH', body: patch});
+    } else {
+      await api('/api/v1/panel/agenda', {method:'POST', body});
+    }
+    toast('Agendamiento guardado', 'ok');
+    document.getElementById('dlg-agenda').close();
+    await cargarAgenda();
+  } catch(e) {
+    $('#agenda-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+}
+
+async function cancelarAgenda(id) {
+  if (!confirm('¿Cancelar esta entrega agendada?')) return;
+  try {
+    await api('/api/v1/panel/agenda/' + id, {method:'DELETE'});
+    toast('Entrega cancelada', 'ok');
+    await cargarAgenda();
+  } catch(e) { toast('No se pudo cancelar: ' + e.message, 'bad'); }
 }
 
 /* ----------------------------- PLANTA ----------------------------- */
 async function cargarPlanta() {
   try {
-    const [inv, opciones, kpis] = await Promise.all([
+    const [overview, inv, opciones, kpis] = await Promise.all([
+      api('/api/v1/panel/inventory-overview').catch(() => null),
       api('/api/v1/inventory').catch(() => state.inventario || []),
       api('/api/v1/secretaria/opciones').catch(() => state.opciones || {mixers:[]}),
       api('/api/v1/dashboard/hero-kpis?fecha=' + hoy()).catch(() => state.kpis)
     ]);
-    state.inventario = Array.isArray(inv) ? inv : state.inventario;
+    state.inventarioOverview = overview;
+    state.inventario = (overview && overview.materiales && overview.materiales.length)
+      ? overview.materiales
+      : (Array.isArray(inv) ? inv : state.inventario);
     if (opciones) state.opciones = opciones;
     if (kpis) state.kpis = kpis;
     renderPlanta();
   } catch(e) { toast('Planta no disponible: ' + e.message, 'bad'); }
+}
+
+function renderTransito(overview) {
+  const host = $('#planta-transito');
+  if (!host) return;
+  const filas = (overview && overview.en_transito) || [];
+  const badge = $('#transito-badge');
+  if (badge) {
+    badge.textContent = filas.length ? filas.length + ' pendiente(s)' : 'Al día';
+    badge.className = 'badge ' + (filas.length ? 'warn' : 'ok');
+  }
+  if (!filas.length) {
+    host.innerHTML = '<p class="muted small">No hay compras en tránsito pendientes de recepción.</p>';
+    return;
+  }
+  host.innerHTML = `
+    <table class="tabla-compras">
+      <thead><tr><th>Material</th><th>Proveedor</th><th>Compra</th><th class="num">Pendiente</th><th></th></tr></thead>
+      <tbody>${filas.map(f => `
+        <tr>
+          <td><strong>${esc(f.material)}</strong><br><span class="small muted">${esc(f.material_codigo)}</span></td>
+          <td>${esc(f.proveedor)}</td>
+          <td>${esc(f.fecha_compra ? String(f.fecha_compra).slice(0,10) : '—')}</td>
+          <td class="num">${num(f.pendiente)} ${esc(f.unidad)}</td>
+          <td><button class="btn small" onclick="recibirCompra('${esc(f.purchase_item_id)}', '${esc(f.material)}', ${Number(f.pendiente)})">Recibir</button></td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+function renderMovimientos(overview) {
+  const host = $('#planta-movimientos');
+  if (!host) return;
+  const filas = (overview && overview.movimientos) || [];
+  if (!filas.length) {
+    host.innerHTML = '<p class="muted small">Sin movimientos de inventario registrados.</p>';
+    return;
+  }
+  host.innerHTML = `
+    <table class="tabla-compras">
+      <thead><tr><th>Material</th><th>Tipo</th><th class="num">Cantidad</th><th>Costo unit.</th><th>Referencia</th><th>Fecha</th></tr></thead>
+      <tbody>${filas.map(m => `
+        <tr>
+          <td>${esc(m.material)}</td>
+          <td><span class="badge ${String(m.tipo).includes('ENTRADA') ? 'ok' : 'neutral'}">${esc(m.tipo)}</span></td>
+          <td class="num">${num(m.cantidad)} ${esc(m.unidad)}</td>
+          <td class="num">${money(m.costo_unitario_snapshot)}</td>
+          <td>${esc(m.referencia || '—')}</td>
+          <td>${esc(m.created_at ? String(m.created_at).slice(0,16).replace('T',' ') : '—')}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+async function recibirCompra(itemId, material, pendiente) {
+  const texto = prompt(`¿Cuánto ${material} llegó? (pendiente: ${num(pendiente)})`, String(pendiente));
+  if (texto === null) return;
+  const cantidad = Number(texto);
+  if (!(cantidad > 0)) { toast('La cantidad recibida debe ser mayor que cero', 'bad'); return; }
+  try {
+    await api('/api/v1/panel/purchases/items/' + itemId + '/receive', {method:'POST', body:{cantidad_recibida: cantidad.toFixed(4)}});
+    toast('Recepción registrada: stock actualizado', 'ok');
+    state.inventarioOverview = null;
+    await cargarPlanta();
+    await cargarDashboard();
+  } catch(e) {
+    toast('No se pudo recibir: ' + e.message, 'bad');
+  }
 }
 
 function renderPlanta() {
@@ -3734,6 +4493,9 @@ function renderPlanta() {
         <span>${num(m.capacidad_m3)} m³ · placa ${esc(m.placa || '—')}</span></div>
       <span class="badge ${m.activo ? 'ok' : 'neutral'}">${m.activo ? 'ACTIVO' : 'INACTIVO'}</span>
     </div>`).join('') || '<p class="muted small">Sin flota configurada.</p>';
+
+  renderTransito(state.inventarioOverview);
+  renderMovimientos(state.inventarioOverview);
 }
 
 /* ----------------------------- MERCADO / BANCA ----------------------------- */

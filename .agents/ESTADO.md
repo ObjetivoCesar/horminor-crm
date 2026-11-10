@@ -4,9 +4,11 @@
 > Última actualización: **2026-11-09** (Hito **Custodio + Panel de
 > Pagos/Gastos/Tasas/Conteo** cerrado: Custodio v4.4.0 con HTTP, panel de
 > cobros/abonos/gastos, Superadmin de tasas y conteo, y backup diario.
-> 13 migraciones, 28 tablas, 6 vistas, 26 cuentas; **247 tests** y los 2
+> 14 migraciones, 29 tablas, 6 vistas, 27 cuentas; **265 tests** y los 2
 > candados en verde. Quedan operativos: cargar tasas, ejecutar el conteo real
-> e instalar el cron de backups. El login de usuario pasa al **backlog
+> e instalar el cron de backups.
+> Se sum� la operaci�n v6.0: compras de material, tope de caja chica,
+> cierre con compras y agenda real de entregas/mixers. El login de usuario pasa al **backlog
 > exclusivo pre-VPS**.)
 
 ## Hitos
@@ -20,6 +22,7 @@
 | 3 | M1 — WhatsApp (Evolution + Jeb + Bunny) | 🟢 **Cerrado en SANDBOX** | `evidencias/hito3_lock_2026-11-08.txt`: `[CANDADO CERRADO EN SANDBOX]`; 4 compuertas, JSONB y outbox | Producción real: cargar credenciales, apagar SANDBOX y repetir el candado |
 | 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 **Cerrado** y verificado local | `/panel` (tab Secretaría) con formularios de cobro/abono y gasto; carpeta forense; `POST /api/v1/panel/pagos` probado; tests `test_m3_secretaria.py` | Validación con la secretaria real (afinamiento, no bloqueante) |
 | 4b | Custodio v4.4 + Panel de Pagos/Gastos/Tasas/Conteo | 🟢 **Cerrado** (2026-11-09) | `evidencias/pytest_panel_v44_2026-11-09.txt` (**247 tests**); `evidencias/http_gate_v44_check_2026-11-09.txt` (`HTTP GATE V4.4: OK`, 12 pasos, `ROLLBACK` 17 tablas); `/panel` con `dlg-pago`, `dlg-gasto`, `conteo-materiales`, `fin-wacc`; `GET /api/v1/panel/catalog` → 26 cuentas | Nada bloqueante. Cargar tasas, ejecutar conteo real e instalar cron quedan como operación del cliente/VPS |
+| 4c | v6.0 - Compras, caja chica y agenda | OK **Cerrado** (2026-11-09) | 067 aplicada; panel con compras/cierre/agenda; recepcion en Planta; `evidencias/pytest_v6_2026-11-09.txt` (**265 tests**); `evidencias/clone_v6_2026-11-09.txt` | Confirmar tope y proveedores reales |
 | 5 | M4 — Dashboard de Julio + Ases | 🟢 Construido y verificado local | *Dashboard Julio* con 3 tarjetas iguales: mercado El Coca **0.31% (372/120,000 m³)**, ventas **404 m³ / $55,043.60 / 51 viajes** (la captura aprobada 2026-11-08 mostraba $47,864 sin IVA), y provincias **Orellana 372 + Sucumbíos 16 + sin provincia 16**; Banca **215,000 / 404 / 0.19% / 214,596 m³**; 2 escenarios; tests `test_m4_dashboard.py` | Validar con Julio el ángulo de mercado; auth para exponer |
 | — | Despliegue en VPS | ⚪ No iniciado | — | VPS, dominio, TLS, proxy, backups |
 
@@ -41,6 +44,7 @@ scripts de candado.
 
 ## Evidencia de la última sesión
 
+- **v6.0 cerrada el 2026-11-09.** Migraci�n 067 aplicada a la base real: ventanilla curada (5401/5301/5201 + 1106), tope de caja chica configurable, compras con proveedores y recepci�n, cierre que resta compras en efectivo y agenda real de entregas/mixers. pytest /app/tests -> **265 passed**. Evidencia: .agents/evidencias/pytest_v6_2026-11-09.txt, clone_v6_2026-11-09.txt, panel_v6_2026-11-09.txt.
 - **UX de Secretaría ajustada el 2026-11-09.** La vista abre con acciones
   visibles (cobrar/abonar, gasto, nueva orden) y el orden por tarea: acciones →
   resumen + cierre → cartera → órdenes. Cartera con buscador y cobro por fila.

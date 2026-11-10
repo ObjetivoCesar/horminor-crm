@@ -1623,3 +1623,70 @@ Se descarta instalar `UI UX Pro Max` por ahora: no faltaba una tipografía ni un
 
 - `services/core-api/app/web/templates/panel.html`
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - v6.0: compras, tope de caja chica, cierre y agenda real
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** Cerrar la operación diaria de la ventanilla: separar gasto de compra de material, poner tope a la caja chica, descontar compras del cierre y reemplazar el calendario decorativo por un motor real de entregas y ocupación de mixers.
+
+### Hecho
+
+1. **Migración 067** (`db/migrations/067_operacion_compras_y_agenda.sql`): columna `accounting_accounts.visible_en_ventanilla`, cuenta `1106_anticipos_sueldo_personal`, tope `secretaria.pagos.caja_chica_max_monto_usd = 100.00`, proveedor comodín `PROVEEDOR GENERAL (POR CLASIFICAR)` sin RUC y tabla `dispatch_schedule` con índices de fecha/mixer.
+2. **Ventanilla curada:** el catálogo de gastos devuelve solo `5401`, `5301`, `5201` y `1106`; no se borró ninguna cuenta. El orden pone primero viáticos/caja chica y deja el anticipo al final. El modal de gasto muestra el tope, exige comprobante cuando la cuenta lo pide y ofrece autorización explícita de exceso.
+3. **Compras separadas del gasto:** botón propio en Secretaría y en Planta. `POST /api/v1/panel/purchases` arma `REGISTER_PURCHASE` y debita `1104 Inventario de insumos`; soporta contado efectivo/transferencia, crédito y mixto, recepción inmediata o en tránsito. Se agregó alta de proveedor desde el mismo modal y recepción de compras en tránsito desde Planta.
+4. **Tope de caja chica:** `POST /api/v1/panel/pagos` rechaza con `CAJA_CHICA_LIMIT_EXCEEDED` un gasto en efectivo que supere el tope. `autorizado_exceso_caja=true` lo permite y queda registrado en el pago.
+5. **Cierre de caja popout:** el resumen muestra cobros, gastos, compras pagadas en efectivo y efectivo esperado; `calcular_resumen_caja` ahora recibe `supplier_payments` y resta `compras_efectivo`.
+6. **Agenda real:** `app/m3_secretaria/agenda.py` calcula disponibilidad, próxima hora libre y choques por mixer con la regla `inicio_a < fin_b && inicio_b < fin_a`. `dispatch_schedule` guarda cliente, orden, planta, mixer, chofer, receta, volumen, duración, dirección, estado y motivo de reagendamiento. Endpoints GET/POST/PATCH/DELETE y `GET /agenda/disponibilidad`; el panel permite agendar, reagendar y cancelar, y muestra el calendario y las próximas entregas.
+7. **Correcciones encontradas en la verificación:** se registró `NON_MONETARY_ACCOUNT_IN_PAYMENT` en el contrato; `_leer_setting` dejó de convertir arreglos JSON (flota de mixers) en `{}`; `hoy()` del panel usa fecha local y no UTC; el resumen de cierre y el calendario se actualizan tras guardar.
+
+### Evidencia
+
+| Verificación | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **265 passed in 4.96s** (`.agents/evidencias/pytest_v6_2026-11-09.txt`) |
+| Migración en base real | `+ 067_operacion_compras_y_agenda.sql`; `schema_migrations` la reporta como última |
+| `GET http://localhost:8000/panel` | HTTP 200; contiene `dlg-gasto`, `dlg-compra`, `dlg-cierre`, `dlg-agenda`, `recibirCompra` (`.agents/evidencias/panel_v6_2026-11-09.txt`) |
+| Catálogo real | 4 cuentas: 5401, 5301, 5201, 1106; tope `100.00` |
+| Pruebas en clon `orminorth_panel_test` | agenda creada 08:00-09:30; segundo POST 409 `MIXER_SCHEDULE_CONFLICT`; disponibilidad con 3 mixers; gasto de 150 bloqueado 422; cuenta `merma_ajuste_inventario` bloqueada `NON_MONETARY_ACCOUNT_IN_PAYMENT`; compra en efectivo 41.00 y cierre con `compras_efectivo=41.0` (`.agents/evidencias/clone_v6_2026-11-09.txt`) |
+| Navegador en `http://localhost:8001/panel` | consola sin errores; compra UI, agenda UI, cierre y recepción en Planta verificados; calendario muestra la entrega agendada |
+| Base real después de la migración | `payments=0`, `purchases=0`, `dispatch=0`; sin datos de prueba |
+| Respaldo previo | `.agents/evidencias/orminorth_pre_067_2026-11-09.dump` |
+
+### Decisiones
+
+1. **No se borran cuentas:** la ventanilla se cura con `visible_en_ventanilla`; las 26 cuentas históricas siguen disponibles para contabilidad y reportes.
+2. **El anticipo de sueldo es un activo, no un gasto:** se creó `1106` (1105 ya es IVA crédito) y el Gate lo acepta como movimiento de ventanilla sin relajar la regla de tipo `EXPENSE`.
+3. **Secretaría puede registrar compras:** se amplió `REGISTER_PURCHASE` y `CREATE_SUPPLIER` a `SECRETARIA`/`CAJA_SECRETARIA` porque la compra se captura en la ventanilla; la recepción física sigue reservada a `BODEGA`/`BODEGA_PLANTA`.
+4. **El tope es parámetro, no código:** vive en `system_settings` para que Superadmin lo ajuste sin despliegue. El valor 100.00 es el del plan y queda pendiente de confirmación de Julio.
+5. **Comodín sin RUC:** el proveedor genérico se crea con `identificacion NULL`; no se inventó un RUC. Se reemplaza cuando Julio entregue la lista real.
+6. **Agenda en tabla propia:** `dispatch_schedule` separa la programación de la orden; un bloque sin mixer no reserva una máquina concreta hasta que Secretaría asigne una.
+
+### Bloqueos / preguntas al cliente
+
+1. Julio debe entregar la lista real de proveedores (RUC, teléfono) para reemplazar el comodín.
+2. Confirmar el tope de caja chica (`$100.00`) y si las compras en efectivo deben tener el mismo límite o uno propio.
+3. Confirmar horario de planta, duración estándar de entrega y reglas de disponibilidad (hoy son parámetros editables; 90 min por defecto).
+4. El calendario del Dashboard sigue leyendo `orders.created_at`; la agenda operativa ya es real en Secretaría. Conectar el Dashboard a `state.agenda` queda como siguiente afinamiento visual.
+
+### Próximo paso exacto
+
+Abrir `http://localhost:8000/panel` en Secretaría y registrar una compra de cemento con el proveedor comodín: verificar que el stock suba, que el cierre reste la compra en efectivo y que el agendamiento de una entrega bloquee el mixer. Después cargar los proveedores reales desde el Superadmin o el modal de compra.
+
+### Archivos tocados
+
+- `db/migrations/067_operacion_compras_y_agenda.sql`
+- `services/core-api/app/m3_secretaria/agenda.py`
+- `services/core-api/app/m3_secretaria/service.py`
+- `services/core-api/app/custodio/contracts.py`
+- `services/core-api/app/custodio/gate.py`
+- `services/core-api/app/http_gate/panel.py`
+- `services/core-api/app/http_gate/payments.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_agenda_v6.py`
+- `services/core-api/tests/test_panel_v6.py`
+- `services/core-api/tests/test_m3_secretaria.py`
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`
+- `.agents/evidencias/`
