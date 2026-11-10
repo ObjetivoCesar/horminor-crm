@@ -1905,3 +1905,19 @@ Abrir `http://localhost:8000/panel` > Carpetas de Clientes, buscar `16m3`, `FC-2
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
 - `.agents/evidencias/`
+
+---
+
+## 2026-11-09 - Cierre de sesión (v6.6)
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+
+**Estado al cerrar:** v6.6 commiteada en `6c345e5`, con **277 tests** en verde y la migración `069_clientes_sabueso.sql` aplicada a la base real. Carpetas de Clientes quedó con banner de 4 filtros, buscador Sabueso, filtros combinables, paginación y expediente en 3 pestañas. `docs/tutoriales/` quedó listo para el futuro bot. La base real sigue sin datos de prueba (`payments=0`, `purchases=0`, `dispatch_schedule=0`) y el clon `orminorth_panel_test` quedó limpio.
+
+**Pendiente para la próxima sesión:**
+1. Validar con Julio los textos/orden de las 4 tarjetas y la definición de “prospecto”.
+2. Confirmar la ventana de “En obra activa” (hoy: 90 días de órdenes y ±30 días de agenda).
+3. Cargar ciudad/obra frecuente en los clientes reales para activar filtros por zona.
+4. Retomar login y despliegue VPS cuando el cliente confirme.
+
+**Próximo paso exacto:** abrir `http://localhost:8000/panel` > Carpetas de Clientes y probar `16m3`, `FC-210`, `#56`, filtro por deuda/ciudad y la ficha editable.
