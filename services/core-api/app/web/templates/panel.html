@@ -707,6 +707,35 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
 .compra-total strong { font-size: 20px; }
 .supplier-inline { display: none; margin-top: 10px; padding: 10px; border: 1px dashed rgba(245,158,11,0.5); border-radius: 10px; }
 .supplier-inline.visible { display: block; }
+
+/* HorminorAgenda v6.2 - componente unico */
+.ha-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.ha-title { font-size: 16px; margin: 2px 0 0; }
+.ha-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ha-fecha { max-width: 150px; }
+.ha-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; margin-top: 12px; }
+.ha-body-planta { grid-template-columns: 1fr; }
+.ha-cal { min-width: 0; }
+.ha-list-wrap { min-width: 0; }
+.ha-list { max-height: 330px; }
+.ha-msg { margin-top: 10px; }
+.ha-msg:empty { display: none; }
+.cal-cell.selected { box-shadow: inset 0 0 0 2px var(--accent-cat-amber); }
+.ha-empty { padding: 10px 2px; }
+.perfil-select-wrap { display: flex; align-items: center; gap: 8px; margin-right: 4px; }
+.perfil-select-wrap label { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+.perfil-select-wrap select { min-width: 150px; max-width: 220px; padding: 7px 10px; font-size: 11.5px; }
+body.perfil-solo-lectura [data-mutacion="1"] { display: none !important; }
+body.perfil-solo-lectura .sec-acciones { opacity: 0.85; }
+.acl-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 12px; margin-top: 10px; }
+.acl-checks label { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-slate); }
+.acl-checks input { width: auto; }
+.acl-tabla td, .acl-tabla th { font-size: 11.5px; }
+.config-op-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+@media (max-width: 1100px) {
+  .ha-body { grid-template-columns: 1fr; }
+  .perfil-select-wrap { display: none; }
+}
 @media (max-width: 1100px) {
   .sec-ventanilla { grid-template-columns: 1fr; }
   .sec-acciones { grid-template-columns: 1fr; }
@@ -2079,6 +2108,10 @@ tbody tr:last-child td { border-bottom: 0; }
     <div class="search-results" id="search-results" hidden></div>
   </div>
   <div class="top-actions">
+    <div class="perfil-select-wrap" title="Simular la vista de un usuario sin login">
+      <label for="sim-user">Viendo como</label>
+      <select id="sim-user" onchange="cambiarPerfilSimulado(this.value)"></select>
+    </div>
     <div class="notif-wrap">
       <button class="icon-button" id="btn-notif" type="button" onclick="toggleNotif()" aria-label="Alertas del Centinela" aria-expanded="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -2232,22 +2265,9 @@ tbody tr:last-child td { border-bottom: 0; }
     </div>
 
     <div class="dash2-lower">
-      <!-- Calendario -->
+      <!-- Agenda real compartida (HorminorAgenda) -->
       <div class="dash-card cal-card">
-        <div class="cal-head">
-          <div>
-            <p class="card-kicker">Agenda</p>
-            <h2 id="cal-titulo">—</h2>
-          </div>
-          <div class="cal-nav">
-            <button type="button" onclick="moverCalendario(-1)" aria-label="Mes anterior">‹</button>
-            <button type="button" onclick="moverCalendario(1)" aria-label="Mes siguiente">›</button>
-          </div>
-        </div>
-        <div class="cal-grid" id="calendario-grid"></div>
-        <p class="prox-title">Próximos</p>
-        <ul class="prox-list" id="proximos-despachos"></ul>
-        <div class="cal-cta"><button class="btn small ghost" type="button" onclick="abrirOrden()">+ Programar despacho</button></div>
+        <div id="agenda-mount-dashboard"></div>
       </div>
 
       <!-- Actividad -->
@@ -2281,22 +2301,22 @@ tbody tr:last-child td { border-bottom: 0; }
         <p class="small muted" style="margin:0">Cobra a un cliente, registra un gasto o crea una orden. Todo pasa por el Custodio.</p>
       </div>
       <div class="sec-acciones">
-        <button class="sec-accion primary" onclick="abrirPago()">
+        <button class="sec-accion primary" data-modulo="secretaria_cobros_gastos" data-mutacion="1" onclick="abrirPago()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg>
           <span class="sec-accion-txt"><strong>Cobrar / abonar</strong><small>Pago de cliente u orden</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
-        <button class="sec-accion" onclick="abrirGasto()">
+        <button class="sec-accion" data-modulo="secretaria_cobros_gastos" data-mutacion="1" onclick="abrirGasto()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></svg>
           <span class="sec-accion-txt"><strong>Gasto operativo</strong><small>Caja chica o banco</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
-        <button class="sec-accion" onclick="abrirCompra()">
+        <button class="sec-accion" data-modulo="compras_materiales" data-mutacion="1" onclick="abrirCompra()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18l-2 12H5L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M9 12h6"/></svg>
           <span class="sec-accion-txt"><strong>Compra de material</strong><small>Cemento, arena, ripio</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
-        <button class="sec-accion" onclick="abrirOrden()">
+        <button class="sec-accion" data-modulo="secretaria_ventanilla" data-mutacion="1" onclick="abrirOrden()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17V7h11v10"/><path d="M14 10h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
           <span class="sec-accion-txt"><strong>Nueva orden</strong><small>Venta de hormigón</small></span>
           <span class="sec-accion-arrow">→</span>
@@ -2313,7 +2333,7 @@ tbody tr:last-child td { border-bottom: 0; }
           </div>
           <div class="row" style="gap:6px">
             <button class="btn small ghost" onclick="cargarCierre()">Actualizar</button>
-            <button class="btn small bank" onclick="abrirCierre()">Cierre de caja del día</button>
+            <button class="btn small bank" data-modulo="secretaria_cierre_caja" data-mutacion="1" onclick="abrirCierre()">Cierre de caja del día</button>
           </div>
         </div>
         <div id="sec-cobros" class="small" style="margin-top:12px"><p class="muted">Cargando movimientos…</p></div>
@@ -2323,35 +2343,12 @@ tbody tr:last-child td { border-bottom: 0; }
         </div>
       </div>
 
-      <div class="card" id="agenda-card">
-        <div class="spread">
-          <div>
-            <span class="sec-eyebrow">Agenda</span>
-            <h2 style="margin-bottom:2px">Entregas y mixers</h2>
-            <p class="small muted" style="margin:0">Qué máquina está libre y a qué hora se desocupa.</p>
-          </div>
-          <button class="btn small" onclick="abrirAgenda()">+ Agendar entrega</button>
-        </div>
-        <div class="agenda-sec" style="margin-top:12px">
-          <div class="agenda-mini">
-            <div class="cal-head" style="padding:0 0 6px">
-              <h2 id="agenda-titulo" style="font-size:12px">—</h2>
-              <div class="cal-nav">
-                <button type="button" onclick="moverAgenda(-1)" aria-label="Mes anterior">‹</button>
-                <button type="button" onclick="moverAgenda(1)" aria-label="Mes siguiente">›</button>
-              </div>
-            </div>
-            <div class="cal-grid" id="agenda-grid"></div>
-          </div>
-          <div class="agenda-mini">
-            <p class="card-kicker" style="margin:0 0 8px">Próximas entregas</p>
-            <ul class="agenda-lista" id="agenda-lista"></ul>
-          </div>
-        </div>
+      <div class="card" id="agenda-card" data-modulo="agenda_despachos">
+        <div id="agenda-mount-secretaria"></div>
       </div>
     </div>
 
-    <div class="card" style="margin-top:16px">
+    <div class="card" style="margin-top:16px" data-modulo="clientes_cartera">
       <div class="spread">
         <div>
           <h2 style="margin-bottom:2px">Cartera de clientes</h2>
@@ -2362,13 +2359,13 @@ tbody tr:last-child td { border-bottom: 0; }
       <div id="sec-cartera" class="table-wrap" style="margin-top:10px"><p class="muted small">Cargando cartera…</p></div>
     </div>
 
-    <div class="card" style="margin-top:16px">
+    <div class="card" style="margin-top:16px" data-modulo="secretaria_ventanilla">
       <div class="spread">
         <div>
           <h2 style="margin-bottom:2px">Órdenes recientes</h2>
           <p class="small muted" style="margin:0">Últimas ventas registradas.</p>
         </div>
-        <button class="btn small" onclick="abrirOrden()">+ Nueva orden</button>
+        <button class="btn small" data-modulo="secretaria_ventanilla" data-mutacion="1" onclick="abrirOrden()">+ Nueva orden</button>
       </div>
       <div id="sec-ordenes" class="table-wrap" style="margin-top:10px"><p class="muted small">Cargando órdenes…</p></div>
     </div>
@@ -2381,7 +2378,7 @@ tbody tr:last-child td { border-bottom: 0; }
         <div class="card">
           <div class="spread">
             <h2>Clientes</h2>
-            <button class="btn small ghost" onclick="abrirCliente()">+ Nuevo</button>
+            <button class="btn small ghost" data-mutacion="1" onclick="abrirCliente()">+ Nuevo</button>
           </div>
           <input type="search" id="buscar-cliente" placeholder="Buscar por nombre o constructora…" oninput="filtrarClientes()">
           <div id="lista-clientes" style="margin-top:10px"></div>
@@ -2404,12 +2401,24 @@ tbody tr:last-child td { border-bottom: 0; }
         <h2 style="margin:0">Inventario de insumos</h2>
         <p class="small muted" style="margin:0">Stock real, costo promedio y compras en tránsito.</p>
       </div>
-      <button class="btn small" onclick="abrirCompra()">+ Registrar compra de material</button>
+      <button class="btn small" data-modulo="compras_materiales" data-mutacion="1" onclick="abrirCompra()">+ Registrar compra de material</button>
+    </div>
+    <div class="card" style="margin-bottom:16px" data-modulo="agenda_despachos">
+      <div class="spread" style="margin-bottom:8px">
+        <div>
+          <span class="sec-eyebrow">Agenda de planta</span>
+          <p class="small muted" style="margin:0">Cola real de despachos; elige un mixer para filtrar.</p>
+        </div>
+        <select id="planta-mixer-filtro" onchange="HorminorAgenda.refreshAll()" style="max-width:220px">
+          <option value="">Todos los mixers</option>
+        </select>
+      </div>
+      <div id="agenda-mount-planta"></div>
     </div>
     <div class="planta-grid" id="planta-stock">
       <div class="stock-card"><div class="kpi-label">Inventario</div><div class="big">Cargando…</div></div>
     </div>
-    <div class="card" style="margin-top:16px">
+    <div class="card" style="margin-top:16px" data-modulo="compras_materiales">
       <div class="spread">
         <h2>Compras en tránsito pendientes de recepción</h2>
         <span class="badge neutral" id="transito-badge">—</span>
@@ -2554,6 +2563,88 @@ tbody tr:last-child td { border-bottom: 0; }
         <label class="row small" style="margin-top:10px"><input type="checkbox" id="conteo-confirmar" style="width:auto"> Confirmo que estos valores son el conteo físico real</label>
         <button class="btn bank" style="margin-top:10px" onclick="registrarConteo()">Registrar conteo</button>
         <div id="conteo-resultado"></div>
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:16px">
+      <div class="card" data-modulo="superadmin_config">
+        <h2>Parámetros de Caja Chica y Efectivo</h2>
+        <p class="small muted" style="margin-top:0">Se aplican en la siguiente petición, sin reiniciar. El Gate y la ventanilla leen esta misma llave.</p>
+        <div class="config-op-grid" style="margin-top:10px">
+          <div><label class="field">Tope por gasto en caja chica (USD)</label><input type="number" id="cc-max-gasto" step="0.01" min="0.01"></div>
+          <div><label class="field">Tope por compra en efectivo (USD)</label><input type="number" id="cc-max-compra" step="0.01" min="0.01"></div>
+          <div><label class="field">Fondo base de caja chica (USD)</label><input type="number" id="cc-fondo-base" step="0.01" min="0"></div>
+        </div>
+        <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarConfigCaja()">Guardar parámetros de caja</button>
+        <div id="cc-resultado"></div>
+      </div>
+
+      <div class="card" data-modulo="superadmin_config">
+        <h2>Horarios de Planta y Reglas de Agenda</h2>
+        <p class="small muted" style="margin-top:0">Definen los slots del componente <code>HorminorAgenda</code> y el cálculo de mixers libres.</p>
+        <div class="config-op-grid" style="margin-top:10px">
+          <div><label class="field">Hora de apertura</label><input type="time" id="ag-hora-apertura"></div>
+          <div><label class="field">Hora de cierre</label><input type="time" id="ag-hora-cierre"></div>
+          <div><label class="field">Duración estándar (min)</label><input type="number" id="ag-duracion" min="30" max="720" step="15"></div>
+          <div><label class="field">Intervalo de grilla (min)</label><input type="number" id="ag-intervalo" min="5" max="120" step="5"></div>
+        </div>
+        <label class="field" style="margin-top:10px">Días laborables</label>
+        <div class="acl-checks" id="ag-dias" style="margin-top:4px">
+          <label><input type="checkbox" data-dia="LUN"> Lun</label>
+          <label><input type="checkbox" data-dia="MAR"> Mar</label>
+          <label><input type="checkbox" data-dia="MIE"> Mié</label>
+          <label><input type="checkbox" data-dia="JUE"> Jue</label>
+          <label><input type="checkbox" data-dia="VIE"> Vie</label>
+          <label><input type="checkbox" data-dia="SAB"> Sáb</label>
+          <label><input type="checkbox" data-dia="DOM"> Dom</label>
+        </div>
+        <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarConfigAgenda()">Guardar horarios de agenda</button>
+        <div id="ag-resultado"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px" data-modulo="superadmin_config">
+      <div class="spread">
+        <div>
+          <h2 style="margin-bottom:2px">Usuarios y Permisos de Módulos</h2>
+          <p class="small muted" style="margin:0">Crea perfiles y marca con checklist qué pestañas y acciones ven. El selector «Viendo como» prueba el resultado sin login.</p>
+        </div>
+        <button class="btn small ghost" onclick="nuevoUsuarioACL()">+ Nuevo usuario</button>
+      </div>
+      <div class="grid two" style="margin-top:14px">
+        <div>
+          <input type="hidden" id="acl-id">
+          <div class="field-row">
+            <div><label class="field">Nombre *</label><input type="text" id="acl-nombre" maxlength="120"></div>
+            <div><label class="field">Rol base</label>
+              <select id="acl-rol">
+                <option value="SECRETARIA">Secretaría</option>
+                <option value="CONTADORA">Contadora</option>
+                <option value="BODEGA">Bodega</option>
+                <option value="CHOFER">Chofer</option>
+                <option value="VENDEDOR">Vendedor</option>
+                <option value="AUDITOR_EXTERNO">Auditor externo</option>
+                <option value="SUPERADMIN">Superadmin</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row" style="margin-top:10px">
+            <div><label class="field">WhatsApp (opcional)</label><input type="text" id="acl-telefono" maxlength="30"></div>
+            <div><label class="field">Modo de acceso</label>
+              <select id="acl-modo"><option value="EDICION">Edición</option><option value="SOLO_LECTURA">Solo lectura</option></select>
+            </div>
+          </div>
+          <label class="field" style="margin-top:10px">Módulos permitidos *</label>
+          <div class="acl-checks" id="acl-modulos"></div>
+          <div class="row" style="margin-top:12px;gap:8px">
+            <button class="btn" data-mutacion="1" onclick="guardarUsuarioACL()">Guardar usuario</button>
+            <button class="btn ghost" onclick="nuevoUsuarioACL()">Limpiar</button>
+          </div>
+          <div id="acl-resultado"></div>
+        </div>
+        <div class="table-wrap acl-tabla">
+          <div id="acl-tabla"><p class="muted small">Leyendo usuarios…</p></div>
+        </div>
       </div>
     </div>
   </section>
@@ -2791,6 +2882,7 @@ tbody tr:last-child td { border-bottom: 0; }
 
 <div class="toast-wrap" id="toasts"></div>
 
+<script src="/static/horminor-agenda.js"></script>
 <script>
 const state = {
   view:'dashboard', clientes:[], carpeta:null, opciones:null,
@@ -2798,7 +2890,8 @@ const state = {
   remitentes:[], outbox:[], cierre:null,
   ordenes:[], detalle:{}, inventario:[], donutMode:0, catalogo:null,
   proveedores:[], inventarioOverview:null, agenda:[], agendaY:null, agendaM:null,
-  reglasPago:{}, calY:null, calM:null, notifs:[], cargando:false
+  reglasPago:{}, agendaParams:null, perfil:null, perfiles:[], operacionConfig:null,
+  usuariosACL:[], aclEditId:null, notifs:[], cargando:false
 };
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
@@ -2893,7 +2986,10 @@ function toast(msg, kind='') {
 }
 
 async function api(path, options={}) {
-  const opts = Object.assign({headers:{'Content-Type':'application/json'}}, options);
+  const headers = {'Content-Type':'application/json'};
+  const simUser = localStorage.getItem('horminor.panel.user');
+  if (simUser) headers['X-Panel-User'] = simUser;
+  const opts = Object.assign({}, options, {headers: Object.assign(headers, options.headers || {})});
   if (opts.body && typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
   const res = await fetch(path, opts);
   const texto = await res.text();
@@ -2931,6 +3027,100 @@ function setView(v) {
   if (v === 'banca') cargarBanca();
   if (v === 'superadmin') cargarSuperadmin();
   try { window.scrollTo({top:0, behavior:'smooth'}); } catch (e) { window.scrollTo(0,0); }
+}
+
+/* ----------------------------- PERFIL SIMULADO / ACL ----------------------------- */
+const MODULOS_PANEL = {
+  dashboard_gerencial: 'Dashboard gerencial',
+  secretaria_ventanilla: 'Ventanilla y pedidos',
+  secretaria_cobros_gastos: 'Cobros, abonos y gastos',
+  secretaria_cierre_caja: 'Cierre de caja',
+  agenda_despachos: 'Agenda de despachos',
+  compras_materiales: 'Compras de materiales',
+  planta_kardex: 'Planta, flota y kardex',
+  clientes_cartera: 'Clientes y cartera',
+  finanzas_balance_auditoria: 'Finanzas, balance y auditoría',
+  superadmin_config: 'Superadmin y configuración'
+};
+
+const MODULO_POR_VISTA = {
+  dashboard: ['dashboard_gerencial'],
+  secretaria: ['secretaria_ventanilla', 'secretaria_cobros_gastos', 'secretaria_cierre_caja', 'agenda_despachos', 'compras_materiales'],
+  clientes: ['clientes_cartera'],
+  planta: ['planta_kardex', 'compras_materiales'],
+  banca: ['finanzas_balance_auditoria'],
+  superadmin: ['superadmin_config']
+};
+
+function puedeModulo(modulo) {
+  if (!state.perfil || !state.perfil.modulos_permitidos) return true;
+  return !!state.perfil.modulos_permitidos[modulo];
+}
+
+function puedeVista(v) {
+  const modulos = MODULO_POR_VISTA[v] || [];
+  return !modulos.length || modulos.some(puedeModulo);
+}
+
+function _primerVistaPermitida() {
+  const orden = ['dashboard', 'secretaria', 'clientes', 'planta', 'banca', 'superadmin'];
+  return orden.find(puedeVista) || 'dashboard';
+}
+
+function aplicarPerfilUI(perfil) {
+  state.perfil = perfil;
+  const soloLectura = !!(perfil && perfil.modo_acceso === 'SOLO_LECTURA');
+  document.body.classList.toggle('perfil-solo-lectura', soloLectura);
+
+  $$('[data-role-btn]').forEach(el => {
+    el.style.display = puedeVista(el.dataset.roleBtn) ? '' : 'none';
+  });
+  $$('[data-modulo]').forEach(el => {
+    el.style.display = puedeModulo(el.dataset.modulo) ? '' : 'none';
+  });
+  if (!puedeVista(state.view)) setView(_primerVistaPermitida());
+  if (state.view === 'dashboard') montarAgendaDashboard();
+  if (state.view === 'secretaria') montarAgendaSecretaria();
+  if (state.view === 'planta') montarAgendaPlanta();
+  if (window.HorminorAgenda) HorminorAgenda.refreshAll();
+}
+
+async function cargarPerfilesUI() {
+  const sel = $('#sim-user');
+  let perfiles = [];
+  try {
+    const r = await api('/api/v1/panel/profiles');
+    perfiles = (r && r.perfiles) || [];
+  } catch(e) { perfiles = []; }
+  state.perfiles = perfiles;
+  if (sel) {
+    sel.innerHTML = '<option value="">Julio (base Superadmin)</option>' + perfiles.map(p =>
+      `<option value="${esc(p.id)}">${esc(p.nombre)} · ${esc(p.rol_base)}${p.modo_acceso === 'SOLO_LECTURA' ? ' · lectura' : ''}</option>`
+    ).join('');
+    const guardado = localStorage.getItem('horminor.panel.user') || '';
+    if (guardado && perfiles.some(p => p.id === guardado)) sel.value = guardado;
+    else if (guardado) localStorage.removeItem('horminor.panel.user');
+  }
+  try {
+    const r = await api('/api/v1/panel/profile');
+    aplicarPerfilUI((r && r.perfil) || null);
+  } catch(e) {
+    localStorage.removeItem('horminor.panel.user');
+    toast('Perfil simulado no válido; se vuelve a Julio base', 'warn');
+    aplicarPerfilUI(null);
+  }
+}
+
+async function cambiarPerfilSimulado(id) {
+  if (id) localStorage.setItem('horminor.panel.user', id);
+  else localStorage.removeItem('horminor.panel.user');
+  try {
+    const r = await api('/api/v1/panel/profile');
+    aplicarPerfilUI((r && r.perfil) || null);
+    toast('Vista cambiada a ' + ((r && r.perfil && r.perfil.nombre) || 'Julio base'), 'ok');
+  } catch(e) {
+    toast('No se pudo cambiar la vista: ' + e.message, 'bad');
+  }
 }
 
 async function cargarSalud() {
@@ -3212,69 +3402,6 @@ function renderActividad() {
   if (c) c.textContent = eventos.length + ' hoy';
 }
 
-function eventosCalendario() {
-  const lista = [];
-  ordenesFiltradas().slice(0, 4).forEach((o, idx) => {
-    const f = new Date(o.created_at);
-    if (isNaN(f.getTime())) return;
-    lista.push({
-      fecha: new Date(f.getFullYear(), f.getMonth(), f.getDate()),
-      y: f.getFullYear(), m: f.getMonth(), d: f.getDate(),
-      kind: idx === 0 ? 'blue' : idx === 1 ? 'amber' : 'green',
-      titulo: `Orden #${o.numero} — ${o.cliente}`,
-      sub: `${num(o.volumen_m3)} m³ ${o.resistencia} · ${o.viajes} viajes · registrada ${f.toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit'})}`
-    });
-  });
-  const ahora = new Date();
-  const base = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-  lista.push({
-    fecha: base, y: base.getFullYear(), m: base.getMonth(), d: base.getDate(), kind:'amber',
-    titulo:'Corte y cierre de caja diario',
-    sub:'Ventanilla El Coca · estado: ' + (state.cierre && state.cierre.cerrado ? 'cerrado' : 'abierto')
-  });
-  return lista;
-}
-
-function renderCalendario() {
-  const ahora = new Date();
-  if (state.calY === null) { state.calY = ahora.getFullYear(); state.calM = ahora.getMonth(); }
-  const y = state.calY, m = state.calM;
-  const offset = (new Date(y, m, 1).getDay() + 6) % 7;
-  const dias = new Date(y, m + 1, 0).getDate();
-  const eventos = eventosCalendario();
-  const set = new Set(eventos.map(e => `${e.y}-${e.m}-${e.d}`));
-  const hoyKey = `${ahora.getFullYear()}-${ahora.getMonth()}-${ahora.getDate()}`;
-  let celdas = '';
-  ['L','M','M','J','V','S','D'].forEach(d => { celdas += `<div class="cal-dow">${d}</div>`; });
-  for (let i = 0; i < offset; i++) celdas += '<div class="cal-cell blank"></div>';
-  for (let d = 1; d <= dias; d++) {
-    const key = `${y}-${m}-${d}`;
-    const clases = ['cal-cell'];
-    if (key === hoyKey) clases.push('today');
-    if (set.has(key)) clases.push('has-event');
-    celdas += `<div class="${clases.join(' ')}" title="${set.has(key) ? 'Despacho / evento registrado' : ''}">${d}</div>`;
-  }
-  const grid = $('#calendario-grid');
-  if (grid) grid.innerHTML = celdas;
-  const titulo = $('#cal-titulo');
-  if (titulo) titulo.textContent = MESES[m] + ' ' + y;
-  const prox = $('#proximos-despachos');
-  if (prox) {
-    prox.innerHTML = eventos.slice(0, 3).map(e => `
-      <li class="prox-item"><span class="prox-dot ${e.kind || ''}"></span>
-        <div><strong>${esc(e.titulo)}</strong><span>${esc(e.sub)}</span></div></li>`).join('')
-      || '<li class="prox-item"><span class="prox-dot"></span><div><strong>Sin despachos programados</strong><span>El calendario se llena con las órdenes activas.</span></div></li>';
-  }
-}
-
-function moverCalendario(delta) {
-  if (state.calY === null) { const n = new Date(); state.calY = n.getFullYear(); state.calM = n.getMonth(); }
-  state.calM += delta;
-  if (state.calM < 0) { state.calM = 11; state.calY--; }
-  if (state.calM > 11) { state.calM = 0; state.calY++; }
-  renderCalendario();
-}
-
 function renderObras() {
   const ordenes = ordenesFiltradas();
   const arte = ['panel-obra-planta.svg', 'panel-obra-mixer.svg'];
@@ -3308,7 +3435,7 @@ function renderDashboard() {
   renderVentas();
   renderCiudades();
   renderActividad();
-  renderCalendario();
+  montarAgendaDashboard();
   renderObras();
   renderKpis();
   renderNotificaciones();
@@ -3402,11 +3529,14 @@ async function cargarClientes(preferId) {
 async function cargarSecretaria() {
   const f = $('#cierre-fecha');
   if (f && !f.value) f.value = hoy();
-  await cargarClientes();
-  renderSecretariaOrdenes();
-  cargarReglasPago();
-  cargarCierre();
-  cargarAgenda();
+  if (puedeModulo('clientes_cartera')) await cargarClientes();
+  if (puedeModulo('secretaria_ventanilla')) renderSecretariaOrdenes();
+  if (puedeModulo('secretaria_cobros_gastos')) cargarReglasPago();
+  if (puedeModulo('secretaria_cierre_caja')) cargarCierre();
+  if (puedeModulo('agenda_despachos')) {
+    montarAgendaSecretaria();
+    cargarAgenda();
+  }
 }
 
 async function cargarReglasPago() {
@@ -3452,6 +3582,7 @@ function renderCartera() {
       <td>${Number(c.saldo_a_favor || 0) > 0 ? money(c.saldo_a_favor) : '—'}</td>
       <td><div class="cartera-acciones">
         <button class="btn small ${Number(c.saldo_pendiente || 0) > 0 ? '' : 'ghost'}"
+                data-modulo="secretaria_cobros_gastos" data-mutacion="1"
                 onclick="abrirPago('${esc(c.cliente_id)}')"
                 title="${Number(c.saldo_pendiente || 0) > 0 ? 'Registrar cobro o abono' : 'Registrar anticipo a favor'}">
           ${Number(c.saldo_pendiente || 0) > 0 ? 'Cobrar' : 'Anticipo'}
@@ -4130,77 +4261,10 @@ async function registrarCompra() {
   }
 }
 
-/* ----------------------------- AGENDA ----------------------------- */
-async function cargarAgenda() {
-  const ahora = new Date();
-  if (state.agendaY === null || state.agendaY === undefined) {
-    state.agendaY = ahora.getFullYear();
-    state.agendaM = ahora.getMonth();
-  }
-  const desde = new Date(state.agendaY, state.agendaM, 1);
-  const hasta = new Date(state.agendaY, state.agendaM + 2, 0);
-  try {
-    const r = await api('/api/v1/panel/agenda?desde=' + isoLocal(desde) + '&hasta=' + isoLocal(hasta));
-    state.agenda = (r && r.agenda) || [];
-  } catch(e) {
-    state.agenda = [];
-  }
-  renderAgendaSecretaria();
-}
-
+/* ----------------------------- AGENDA (HorminorAgenda) ----------------------------- */
 function isoLocal(d) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dia = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dia}`;
-}
-
-function moverAgenda(delta) {
-  if (state.agendaY === null || state.agendaY === undefined) {
-    const n = new Date(); state.agendaY = n.getFullYear(); state.agendaM = n.getMonth();
-  }
-  state.agendaM += delta;
-  if (state.agendaM < 0) { state.agendaM = 11; state.agendaY--; }
-  if (state.agendaM > 11) { state.agendaM = 0; state.agendaY++; }
-  cargarAgenda();
-}
-
-function renderAgendaSecretaria() {
-  const grid = $('#agenda-grid');
-  const titulo = $('#agenda-titulo');
-  if (!grid) return;
-  const y = state.agendaY, m = state.agendaM;
-  if (titulo) titulo.textContent = MESES[m] + ' ' + y;
-  const primero = new Date(y, m, 1);
-  const inicio = (primero.getDay() + 6) % 7;
-  const dias = new Date(y, m + 1, 0).getDate();
-  const hoyIso = hoy();
-  const porDia = {};
-  (state.agenda || []).forEach(a => { (porDia[a.fecha_entrega] = porDia[a.fecha_entrega] || []).push(a); });
-  const celdas = ['L','M','X','J','V','S','D'].map(d => `<div class="cal-dow">${d}</div>`);
-  for (let i = 0; i < inicio; i++) celdas.push('<div class="cal-cell blank"></div>');
-  for (let d = 1; d <= dias; d++) {
-    const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const tiene = !!porDia[iso];
-    celdas.push(`<div class="cal-cell ${tiene ? 'has-event' : ''} ${iso === hoyIso ? 'today' : ''}" title="${tiene ? porDia[iso].length + ' entrega(s)' : ''}" onclick="filtrarAgendaDia('${iso}')">${d}</div>`);
-  }
-  grid.innerHTML = celdas.join('');
-
-  const lista = $('#agenda-lista');
-  if (!lista) return;
-  const proximas = (state.agenda || [])
-    .filter(a => a.fecha_entrega >= hoyIso && a.estado !== 'CANCELADO')
-    .sort((a, b) => (a.fecha_entrega + a.hora_inicio).localeCompare(b.fecha_entrega + b.hora_inicio))
-    .slice(0, 8);
-  lista.innerHTML = proximas.length ? proximas.map(a => `
-    <li class="agenda-item">
-      <span class="hora">${esc(a.hora_inicio)}</span>
-      <div class="detalle">
-        <strong>${esc(a.cliente)} · ${num(a.volumen_m3)} m³</strong>
-        <span>${esc(fechaCorta(a.fecha_entrega))} · ${esc(a.mixer_codigo || 'sin mixer')} · ${esc(a.direccion_obra)}</span>
-      </div>
-      <div class="acciones">
-        <button class="btn small ghost" onclick="abrirAgenda('${esc(a.id)}')">Editar</button>
-      </div>
-    </li>`).join('') : '<li class="muted small">Sin entregas agendadas en este rango.</li>';
 }
 
 function fechaCorta(iso) {
@@ -4208,29 +4272,68 @@ function fechaCorta(iso) {
   return `${d}/${m}`;
 }
 
-function filtrarAgendaDia(iso) {
-  const lista = $('#agenda-lista');
-  if (!lista) return;
-  const delDia = (state.agenda || []).filter(a => a.fecha_entrega === iso);
-  if (!delDia.length) { abrirAgenda(null, iso); return; }
-  lista.innerHTML = delDia.map(a => `
-    <li class="agenda-item">
-      <span class="hora">${esc(a.hora_inicio)}</span>
-      <div class="detalle"><strong>${esc(a.cliente)} · ${num(a.volumen_m3)} m³</strong>
-        <span>${esc(a.mixer_codigo || 'sin mixer')} · ${esc(a.estado)} · ${esc(a.direccion_obra)}</span></div>
-      <div class="acciones">
-        <button class="btn small ghost" onclick="abrirAgenda('${esc(a.id)}')">Editar</button>
-      </div>
-    </li>`).join('');
+function _configAgenda(extra) {
+  return Object.assign({
+    api,
+    getReadOnly: () => !!(state.perfil && state.perfil.modo_acceso === 'SOLO_LECTURA'),
+    onCreate: (fecha) => abrirAgenda(null, fecha),
+    onEdit: (id) => abrirAgenda(id)
+  }, extra || {});
 }
 
-async function abrirAgenda(id, fechaSugerida) {
+function montarAgendaDashboard() {
+  if (!window.HorminorAgenda || !puedeModulo('agenda_despachos')) return;
+  HorminorAgenda.mount('#agenda-mount-dashboard', _configAgenda({
+    mode: 'JULIO', allowCreate: true, allowReschedule: true,
+    onCreate: (fecha) => abrirAgenda(null, fecha, 'RESERVA_CAMPO')
+  }));
+}
+
+function montarAgendaSecretaria() {
+  if (!window.HorminorAgenda || !puedeModulo('agenda_despachos')) return;
+  HorminorAgenda.mount('#agenda-mount-secretaria', _configAgenda({
+    mode: 'SECRETARIA', allowCreate: true, allowReschedule: true
+  }));
+}
+
+function montarAgendaPlanta() {
+  if (!window.HorminorAgenda || !puedeModulo('agenda_despachos')) return;
+  HorminorAgenda.mount('#agenda-mount-planta', _configAgenda({
+    mode: 'PLANTA_CHOFER', allowCreate: false, allowReschedule: false,
+    getFilterMixer: () => (($('#planta-mixer-filtro') || {}).value || null)
+  }));
+}
+
+async function cargarAgenda() {
+  try {
+    const hoyIso = hoy();
+    const hasta = isoLocal(new Date(Date.now() + 14 * 86400000));
+    const r = await api('/api/v1/panel/agenda?desde=' + hoyIso + '&hasta=' + hasta);
+    state.agenda = (r && r.agenda) || [];
+  } catch(e) { state.agenda = []; }
+  HorminorAgenda.refreshAll();
+}
+
+async function abrirAgenda(id, fechaSugerida, estadoSugerido) {
   if (!state.opciones) {
     try { state.opciones = await api('/api/v1/secretaria/opciones'); } catch(e) { state.opciones = {mixers:[]}; }
+  }
+  if (!state.clientes || !state.clientes.length) {
+    try {
+      const rc = await api('/api/v1/secretaria/clientes');
+      state.clientes = (rc && rc.clientes) || [];
+    } catch(e) { state.clientes = state.clientes || []; }
   }
   if (!state.ordenes || !state.ordenes.length) {
     try { state.ordenes = await api('/api/v1/orders?limit=50'); } catch(e) { state.ordenes = []; }
   }
+  if (!state.agendaParams) {
+    try {
+      const rp = await api('/api/v1/panel/agenda/parametros');
+      state.agendaParams = (rp && rp.parametros) || null;
+    } catch(e) { state.agendaParams = null; }
+  }
+  const params = state.agendaParams || {hora_apertura:'07:00', duracion_entrega_default_min:90};
   const clienteSel = $('#agenda-cliente');
   clienteSel.innerHTML = (state.clientes || []).map(c =>
     `<option value="${esc(c.cliente_id)}">${esc(c.nombre)}</option>`
@@ -4248,13 +4351,13 @@ async function abrirAgenda(id, fechaSugerida) {
   $('#agenda-receta').value = '';
   $('#agenda-volumen').value = '8';
   $('#agenda-fecha').value = fechaSugerida || hoy();
-  $('#agenda-hora').value = '08:00';
-  $('#agenda-duracion').value = '90';
+  $('#agenda-hora').value = params.hora_apertura || '08:00';
+  $('#agenda-duracion').value = params.duracion_entrega_default_min || 90;
   $('#agenda-mixer').value = '';
   $('#agenda-chofer').value = '';
   $('#agenda-telefono').value = '';
   $('#agenda-direccion').value = '';
-  $('#agenda-estado').value = 'PROGRAMADO';
+  $('#agenda-estado').value = estadoSugerido || 'PROGRAMADO';
   $('#agenda-motivo').value = '';
   $('#agenda-notas').value = '';
   $('#agenda-resultado').innerHTML = '';
@@ -4272,7 +4375,7 @@ async function abrirAgenda(id, fechaSugerida) {
         $('#agenda-volumen').value = a.volumen_m3 || 8;
         $('#agenda-fecha').value = a.fecha_entrega;
         $('#agenda-hora').value = a.hora_inicio;
-        $('#agenda-duracion').value = a.duracion_estimada_min || 90;
+        $('#agenda-duracion').value = a.duracion_estimada_min || params.duracion_entrega_default_min || 90;
         $('#agenda-mixer').value = a.mixer_codigo || '';
         $('#agenda-chofer').value = a.chofer_nombre || '';
         $('#agenda-telefono').value = a.contacto_obra_telefono || '';
@@ -4295,6 +4398,17 @@ async function consultarDisponibilidad() {
   if (!fecha || !hora || !host) return;
   try {
     const r = await api(`/api/v1/panel/agenda/disponibilidad?fecha=${fecha}&hora=${hora}&duracion_min=${duracion}`);
+    if (r.motivo === 'DIA_NO_LABORABLE') {
+      host.className = 'notice warn';
+      host.textContent = 'Ese día no es laborable según la configuración de planta.';
+      return;
+    }
+    if (r.motivo === 'FUERA_DE_HORARIO') {
+      host.className = 'notice warn';
+      host.textContent = `Fuera de horario de planta (${r.hora_apertura} a ${r.hora_cierre}).` +
+        (r.proxima_hora_disponible ? ` Primer slot: ${r.proxima_hora_disponible}.` : '');
+      return;
+    }
     const ocupados = (r.mixers || []).filter(m => m.estado === 'OCUPADO');
     const libres = (r.mixers || []).filter(m => m.estado === 'LIBRE');
     if (libres.length) {
@@ -4352,7 +4466,7 @@ async function guardarAgenda() {
     }
     toast('Agendamiento guardado', 'ok');
     document.getElementById('dlg-agenda').close();
-    await cargarAgenda();
+    HorminorAgenda.notifyChanged();
   } catch(e) {
     $('#agenda-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
   } finally {
@@ -4365,7 +4479,7 @@ async function cancelarAgenda(id) {
   try {
     await api('/api/v1/panel/agenda/' + id, {method:'DELETE'});
     toast('Entrega cancelada', 'ok');
-    await cargarAgenda();
+    HorminorAgenda.notifyChanged();
   } catch(e) { toast('No se pudo cancelar: ' + e.message, 'bad'); }
 }
 
@@ -4385,7 +4499,22 @@ async function cargarPlanta() {
     if (opciones) state.opciones = opciones;
     if (kpis) state.kpis = kpis;
     renderPlanta();
+    if (puedeModulo('agenda_despachos')) {
+      renderMixerFiltro();
+      montarAgendaPlanta();
+    }
   } catch(e) { toast('Planta no disponible: ' + e.message, 'bad'); }
+}
+
+function renderMixerFiltro() {
+  const sel = $('#planta-mixer-filtro');
+  if (!sel) return;
+  const actual = sel.value;
+  const mixers = (state.opciones && state.opciones.mixers) || [];
+  sel.innerHTML = '<option value="">Todos los mixers</option>' + mixers.filter(m => m.activo !== false).map(m =>
+    `<option value="${esc(m.codigo)}">${esc(m.codigo)} · ${esc(m.chofer_asignado || 'sin chofer')}</option>`
+  ).join('');
+  if (actual && Array.from(sel.options).some(o => o.value === actual)) sel.value = actual;
 }
 
 function renderTransito(overview) {
@@ -4410,7 +4539,7 @@ function renderTransito(overview) {
           <td>${esc(f.proveedor)}</td>
           <td>${esc(f.fecha_compra ? String(f.fecha_compra).slice(0,10) : '—')}</td>
           <td class="num">${num(f.pendiente)} ${esc(f.unidad)}</td>
-          <td><button class="btn small" onclick="recibirCompra('${esc(f.purchase_item_id)}', '${esc(f.material)}', ${Number(f.pendiente)})">Recibir</button></td>
+          <td><button class="btn small" data-modulo="compras_materiales" data-mutacion="1" onclick="recibirCompra('${esc(f.purchase_item_id)}', '${esc(f.material)}', ${Number(f.pendiente)})">Recibir</button></td>
         </tr>`).join('')}</tbody>
     </table>`;
 }
@@ -4644,14 +4773,18 @@ const CAMPOS = {
 
 async function cargarSuperadmin() {
   try {
-    const [config, remitentes, outbox] = await Promise.all([
+    const [config, remitentes, outbox, operacion, usuarios] = await Promise.all([
       api('/api/v1/superadmin/config'),
       api('/api/v1/superadmin/simulador/remitentes').catch(() => ({remitentes:[]})),
-      api('/api/v1/superadmin/sandbox/outbox').catch(() => ({outbox:[]}))
+      api('/api/v1/superadmin/sandbox/outbox').catch(() => ({outbox:[]})),
+      api('/api/v1/superadmin/operacion/config').catch(() => null),
+      api('/api/v1/superadmin/usuarios').catch(() => ({usuarios:[]}))
     ]);
     state.config = config;
     state.remitentes = remitentes.remitentes || [];
     state.outbox = outbox.outbox || [];
+    state.operacionConfig = operacion;
+    state.usuariosACL = usuarios.usuarios || [];
     if (!state.seccionConfig) state.seccionConfig = SECCIONES[0][0];
     renderRemitentes();
     renderConfigTabs();
@@ -4659,7 +4792,170 @@ async function cargarSuperadmin() {
     renderFinanzasForm();
     renderConteo();
     renderOutbox();
+    renderOperacionConfig();
+    renderUsuariosACL();
   } catch(e) { toast('Superadmin no disponible: ' + e.message, 'bad'); }
+}
+
+/* ----------------------------- CONFIG OPERATIVA v6.2 ----------------------------- */
+function renderOperacionConfig() {
+  const op = state.operacionConfig || {};
+  const caja = op.caja_chica || {};
+  const agenda = op.agenda || {};
+  $('#cc-max-gasto').value = caja.caja_chica_max_monto_usd ?? '100.00';
+  $('#cc-max-compra').value = caja.compras_efectivo_max_monto_usd ?? '300.00';
+  $('#cc-fondo-base').value = caja.fondo_base_caja_chica_usd ?? '200.00';
+  $('#ag-hora-apertura').value = agenda.hora_apertura || '07:00';
+  $('#ag-hora-cierre').value = agenda.hora_cierre || '18:00';
+  $('#ag-duracion').value = agenda.duracion_entrega_default_min || 90;
+  $('#ag-intervalo').value = agenda.intervalo_slot_min || 30;
+  const dias = agenda.dias_laborables || ['LUN','MAR','MIE','JUE','VIE','SAB'];
+  $$('#ag-dias input[data-dia]').forEach(chk => {
+    chk.checked = dias.includes(chk.dataset.dia);
+  });
+  $('#cc-resultado').innerHTML = '';
+  $('#ag-resultado').innerHTML = '';
+}
+
+async function guardarConfigCaja() {
+  const body = { caja_chica: {
+    caja_chica_max_monto_usd: $('#cc-max-gasto').value,
+    compras_efectivo_max_monto_usd: $('#cc-max-compra').value,
+    fondo_base_caja_chica_usd: $('#cc-fondo-base').value
+  }};
+  try {
+    state.operacionConfig = await api('/api/v1/superadmin/operacion/config', {method:'PUT', body});
+    renderOperacionConfig();
+    $('#cc-resultado').innerHTML = '<div class="notice ok">Parámetros de caja guardados.</div>';
+    toast('Caja chica actualizada en caliente', 'ok');
+    await cargarReglasPago();
+  } catch(e) {
+    $('#cc-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+async function guardarConfigAgenda() {
+  const dias = $$('#ag-dias input[data-dia]').filter(c => c.checked).map(c => c.dataset.dia);
+  const body = { agenda: {
+    hora_apertura: $('#ag-hora-apertura').value,
+    hora_cierre: $('#ag-hora-cierre').value,
+    duracion_entrega_default_min: Number($('#ag-duracion').value || 90),
+    intervalo_slot_min: Number($('#ag-intervalo').value || 30),
+    dias_laborables: dias
+  }};
+  try {
+    state.operacionConfig = await api('/api/v1/superadmin/operacion/config', {method:'PUT', body});
+    state.agendaParams = null;
+    renderOperacionConfig();
+    $('#ag-resultado').innerHTML = '<div class="notice ok">Horarios de agenda guardados.</div>';
+    toast('Agenda actualizada en caliente', 'ok');
+    HorminorAgenda.refreshAll();
+  } catch(e) {
+    $('#ag-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+/* ----------------------------- USUARIOS / ACL v6.2 ----------------------------- */
+function renderModulosACL() {
+  const host = $('#acl-modulos');
+  if (!host || host.dataset.ready === '1') return;
+  host.innerHTML = Object.entries(MODULOS_PANEL).map(([id, label]) =>
+    `<label><input type="checkbox" data-acl-modulo="${id}"> ${esc(label)}</label>`
+  ).join('');
+  host.dataset.ready = '1';
+}
+
+function renderUsuariosACL() {
+  renderModulosACL();
+  const host = $('#acl-tabla');
+  if (!host) return;
+  const usuarios = state.usuariosACL || [];
+  if (!usuarios.length) {
+    host.innerHTML = '<p class="muted small">Sin usuarios creados.</p>';
+    return;
+  }
+  host.innerHTML = `<table><thead><tr><th>Usuario</th><th>Rol</th><th>Modo</th><th>Módulos</th><th></th></tr></thead><tbody>${
+    usuarios.map(u => `<tr>
+      <td><strong>${esc(u.nombre)}</strong>${u.activo ? '' : ' <span class="badge bad">INACTIVO</span>'}</td>
+      <td>${esc(u.rol_base)}</td>
+      <td><span class="badge ${u.modo_acceso === 'SOLO_LECTURA' ? 'warn' : 'ok'}">${esc(u.modo_acceso)}</span></td>
+      <td class="small">${u.modulos_activos.length} activos</td>
+      <td><div class="cartera-acciones">
+        <button class="btn small ghost" onclick="editarUsuarioACL('${esc(u.id)}')">Editar</button>
+        <button class="btn small ghost" onclick="eliminarUsuarioACL('${esc(u.id)}')">Eliminar</button>
+      </div></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function nuevoUsuarioACL() {
+  state.aclEditId = null;
+  $('#acl-id').value = '';
+  $('#acl-nombre').value = '';
+  $('#acl-rol').value = 'SECRETARIA';
+  $('#acl-telefono').value = '';
+  $('#acl-modo').value = 'EDICION';
+  $$('#acl-modulos input[data-acl-modulo]').forEach(c => { c.checked = false; });
+  $('#acl-resultado').innerHTML = '';
+  $('#acl-nombre').focus();
+}
+
+function editarUsuarioACL(id) {
+  const u = (state.usuariosACL || []).find(x => x.id === id);
+  if (!u) return;
+  state.aclEditId = id;
+  $('#acl-id').value = id;
+  $('#acl-nombre').value = u.nombre || '';
+  $('#acl-rol').value = u.rol_base || 'SECRETARIA';
+  $('#acl-telefono').value = u.telefono_whatsapp || '';
+  $('#acl-modo').value = u.modo_acceso || 'EDICION';
+  $$('#acl-modulos input[data-acl-modulo]').forEach(c => {
+    c.checked = !!(u.modulos_permitidos && u.modulos_permitidos[c.dataset.aclModulo]);
+  });
+  $('#acl-resultado').innerHTML = '';
+}
+
+async function guardarUsuarioACL() {
+  const id = state.aclEditId;
+  const modulos = {};
+  $$('#acl-modulos input[data-acl-modulo]').forEach(c => { modulos[c.dataset.aclModulo] = c.checked; });
+  if (!Object.values(modulos).some(Boolean)) {
+    $('#acl-resultado').innerHTML = '<div class="notice bad">Marca al menos un módulo.</div>';
+    toast('El checklist de módulos no puede quedar vacío', 'bad');
+    return;
+  }
+  const body = {
+    nombre: ($('#acl-nombre').value || '').trim(),
+    rol_base: $('#acl-rol').value,
+    telefono_whatsapp: ($('#acl-telefono').value || '').trim() || null,
+    modo_acceso: $('#acl-modo').value,
+    activo: true,
+    modulos_permitidos: modulos
+  };
+  if (body.nombre.length < 2) { toast('Escribe el nombre del usuario', 'bad'); return; }
+  try {
+    if (id) await api('/api/v1/superadmin/usuarios/' + id, {method:'PUT', body});
+    else await api('/api/v1/superadmin/usuarios', {method:'POST', body});
+    toast('Usuario guardado', 'ok');
+    const r = await api('/api/v1/superadmin/usuarios');
+    state.usuariosACL = (r && r.usuarios) || [];
+    renderUsuariosACL();
+    nuevoUsuarioACL();
+    await cargarPerfilesUI();
+  } catch(e) {
+    $('#acl-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+async function eliminarUsuarioACL(id) {
+  if (!confirm('¿Desactivar este usuario del panel?')) return;
+  try {
+    await api('/api/v1/superadmin/usuarios/' + id, {method:'DELETE'});
+    toast('Usuario desactivado', 'ok');
+    const r = await api('/api/v1/superadmin/usuarios');
+    state.usuariosACL = (r && r.usuarios) || [];
+    renderUsuariosACL();
+    await cargarPerfilesUI();
+  } catch(e) { toast('No se pudo eliminar: ' + e.message, 'bad'); }
 }
 
 function renderRemitentes() {
@@ -4902,7 +5198,11 @@ document.addEventListener('keydown', e => {
 temaInicial();
 const chipFecha = $('#page-date');
 if (chipFecha) chipFecha.textContent = fechaLarga();
-setView('dashboard');
+renderModulosACL();
+cargarPerfilesUI().finally(() => {
+  if (!state.view || !puedeVista(state.view)) setView(_primerVistaPermitida());
+  else setView(state.view);
+});
 cargarSalud();
 setInterval(cargarSalud, 60000);
 </script>

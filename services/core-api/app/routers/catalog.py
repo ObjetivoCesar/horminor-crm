@@ -8,6 +8,8 @@ import asyncpg
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from ..panel_acl import exigir_modulo
+
 router = APIRouter(prefix="/api/v1", tags=["catalogo"])
 
 
@@ -33,6 +35,7 @@ async def listar_clientes(
     q: str | None = Query(default=None, description="Nombre, constructora o RUC"),
     limit: int = Query(default=50, ge=1, le=200),
 ):
+    await exigir_modulo(request, "clientes_cartera")
     pool = _pool(request)
     if q:
         patron = f"%{q.lower()}%"
@@ -56,6 +59,7 @@ async def listar_clientes(
 
 @router.post("/clients", status_code=201)
 async def crear_cliente(request: Request, body: ClienteCreate):
+    await exigir_modulo(request, "clientes_cartera", mutacion=True)
     pool = _pool(request)
     try:
         row = await pool.fetchrow(

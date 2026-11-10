@@ -1690,3 +1690,74 @@ Abrir `http://localhost:8000/panel` en Secretaría y registrar una compra de cem
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
 - `.agents/evidencias/`
+
+---
+
+## 2026-11-09 - v6.2: HorminorAgenda unica, configuracion operativa y perfiles ACL
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** Unificar el calendario real de entregas en un componente, mover caja/horarios a Superadmin y agregar perfiles con checklist de modulos y simulador de vista.
+
+### Hecho
+
+1. **Componente unico `HorminorAgenda`** (`app/web/static/horminor-agenda.js`): calendario + lista + cola de planta, montado con `HorminorAgenda.mount(selector, config)` en Dashboard (`JULIO`), Secretaria (`SECRETARIA`) y Planta (`PLANTA_CHOFER`). Cualquier alta/edicion/cancelacion dispara `horminor:agenda-updated` y refresca las tres vistas. El Dashboard ya no usa `orders.created_at` ni el calendario decorativo.
+2. **Servicio backend unico** (`app/agenda/`): `evaluar_disponibilidad`, `conflicto_mixer`, `validar_ventana`, `mixers_activos` y `PostgresAgendaStore`. `app/m3_secretaria/agenda.py` queda como fachada de compatibilidad. Toda la agenda lee `dispatch_schedule` y `system_settings['agenda.parametros']`.
+3. **Superadmin operativo en caliente:** endpoints `GET/PUT /api/v1/superadmin/operacion/config` y tarjetas en la UI para `caja_chica_max_monto_usd`, `compras_efectivo_max_monto_usd`, `fondo_base_caja_chica_usd`, `hora_apertura`, `hora_cierre`, `duracion_entrega_default_min`, `intervalo_slot_min` y `dias_laborables`.
+4. **Tope de compra en efectivo:** `POST /api/v1/panel/purchases` rechaza con `PURCHASE_CASH_LIMIT_EXCEEDED` cuando el pago desde `CAJA_DIARIA` supera el parametro.
+5. **Perfiles ACL:** migracion 068 crea `panel_users_acl` con 5 perfiles semilla (Julio, Secretaria, Auditor Externo, Vendedor, Bodega). CRUD en `/api/v1/superadmin/usuarios`, checklist de 10 modulos y `EMPTY_MODULE_CHECKLIST` cuando no se marca ninguno.
+6. **Simulador de vista:** selector `Viendo como` en `/panel`; guarda `X-Panel-User` en `localStorage` y lo envia en cada peticion. El panel oculta pestañas/acciones por modulo y el backend devuelve `403 READ_ONLY_PROFILE` o `403 MODULE_NOT_ALLOWED` segun el perfil.
+7. **Pruebas nuevas:** `test_v62_agenda_config_acl.py` cubre componente unico, configuracion en caliente, disponibilidad con nuevo horario, checklist vacio, auditor solo lectura y vendedor con modulos limitados.
+
+### Evidencia
+
+| Verificacion | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **270 passed in 5.67s** (`.agents/evidencias/pytest_v62_2026-11-09.txt`) |
+| Migracion real | `068_agenda_config_y_usuarios_acl.sql` aplicada; `schema_migrations` la reporta como ultima |
+| `GET /panel` real | HTTP 200; contiene `horminor-agenda.js`, `agenda-mount-dashboard`, `agenda-mount-secretaria`, `agenda-mount-planta`; sin `calendario-grid` ni `eventosCalendario` (`.agents/evidencias/panel_v62_2026-11-09.txt`) |
+| Config real | caja 100/300/200; agenda 07:00-18:00, 90 min, slot 30, LUN-SAB |
+| Perfiles reales | 5 semillas: Julio (10 modulos), Secretaria (6), Auditor (4, SOLO_LECTURA), Vendedor (3), Bodega (3) |
+| Pruebas en clon | config 150/450 y 06:30-19:00 aplicada en vivo; disponibilidad 06:30 libre; agenda creada 08:00-09:30; segundo POST 409 `MIXER_SCHEDULE_CONFLICT`; auditor POST 403 `READ_ONLY_PROFILE`; checklist vacio 422 `EMPTY_MODULE_CHECKLIST` (`.agents/evidencias/v62_clone_2026-11-09.txt`) |
+| Navegador `http://localhost:8001/panel` | sin errores de consola; calendario Dashboard/Secretaria/Planta sincronizado; selector Vendedor muestra solo Secretaria/Clientes y Nueva Orden; Auditor en solo-lectura sin acciones |
+| Base real | `payments=0`, `purchases=0`, `dispatch=0`; sin datos de prueba |
+| Respaldo previo | `.agents/evidencias/orminorth_pre_068_2026-11-09.dump` |
+
+### Decisiones
+
+1. **Un solo backend de agenda:** la logica se movio a `app/agenda/` y `m3_secretaria/agenda.py` solo reexporta. Alternativa descartada: mantener dos copias para Dashboard y Secretaria, que garantiza divergencia.
+2. **El contrato de perfiles no bloquea el login:** el selector simula usuarios con `X-Panel-User`. Sin header se conserva el comportamiento historico (Superadmin con todos los modulos) para no romper scripts ni tests. El login real sigue en el backlog pre-VPS.
+3. **Los permisos se validan dos veces:** la UI oculta modulos/acciones y el backend rechaza mutaciones (`READ_ONLY_PROFILE`) y modulos no permitidos (`MODULE_NOT_ALLOWED`). Ocultar en HTML no es seguridad.
+4. **El tope de compra en efectivo es independiente del tope de gasto:** el plan fija 300.00 para compras y 100.00 para gastos; ambos viven en `secretaria.pagos` y se editan en la misma tarjeta.
+5. **Los seeds de perfiles son provisionales:** nombres y checklist son puntos de partida editables; no se crean usuarios con contrasena ni se activa autenticacion.
+
+### Bloqueos / preguntas al cliente
+
+1. Julio debe confirmar los 5 perfiles semilla y el checklist real de cada rol (especialmente Auditor Externo y Vendedor).
+2. Confirmar topes definitivos: gasto en efectivo, compra en efectivo y fondo base de caja chica.
+3. Confirmar horario real de planta, duracion estandar y dias laborables; hoy quedan 07:00-18:00, 90 min y LUN-SAB.
+4. El login real y el despliegue VPS siguen fuera de esta entrega.
+
+### Proximo paso exacto
+
+Entrar a `http://localhost:8000/panel` > Superadmin > Usuarios y Permisos de Modulos, ajustar el checklist de Secretaria/Vendedor/Auditor y probar cada uno con el selector "Viendo como". Luego registrar una reserva desde el Dashboard y verificar que aparece en Secretaria y en la cola de Planta filtrada por mixer.
+
+### Archivos tocados
+
+- `db/migrations/068_agenda_config_y_usuarios_acl.sql`
+- `services/core-api/app/agenda/` (nuevo paquete)
+- `services/core-api/app/panel_acl.py`
+- `services/core-api/app/superadmin/operacion.py`
+- `services/core-api/app/superadmin/usuarios.py`
+- `services/core-api/app/http_gate/panel.py`
+- `services/core-api/app/http_gate/payments.py`
+- `services/core-api/app/m3_secretaria/agenda.py`
+- `services/core-api/app/m3_secretaria/router.py`
+- `services/core-api/app/routers/catalog.py`
+- `services/core-api/app/routers/orders.py`
+- `services/core-api/app/main.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/app/web/static/horminor-agenda.js`
+- `services/core-api/tests/test_v62_agenda_config_acl.py`
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`
+- `.agents/evidencias/`

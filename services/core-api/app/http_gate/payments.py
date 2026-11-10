@@ -15,6 +15,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from ..panel_acl import exigir_modulos
 from .auth import ActorContext, require_payment_actor
 from .router import _gate, http_response
 
@@ -153,6 +154,7 @@ async def registrar_pago(
     ctx: ActorContext = Depends(require_payment_actor),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
+    await exigir_modulos(request, "secretaria_cobros_gastos", mutacion=True)
     request_id = _resolver_request_id(body, idempotency_key)
     gate = _gate(request)
     reintento = await _es_reintento(gate, request_id)

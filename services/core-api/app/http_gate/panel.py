@@ -22,12 +22,19 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Body, Header, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..custodio.gate import Actor
-from ..m3_secretaria.agenda import (
+from ..agenda import (
     PostgresAgendaStore,
     conflicto_mixer,
     evaluar_disponibilidad,
     mixers_activos,
+    normalizar_parametros,
+    validar_ventana,
+)
+from ..custodio.gate import Actor
+from ..panel_acl import (
+    exigir_modulo,
+    exigir_modulos,
+    resolver_perfil,
 )
 from .auth import ActorContext
 from .payments import (
@@ -94,6 +101,10 @@ def _reglas_dict(valor: Any) -> dict[str, Any]:
     return dict(valor) if isinstance(valor, dict) else {}
 
 
+async def _parametros_agenda(pool) -> dict[str, Any]:
+    return normalizar_parametros(await _leer_setting(pool, "agenda.parametros"))
+
+
 def _solicitud_gate(request_id: str, intent: str, payload: dict[str, Any]) -> dict:
     return {
         "contract_version": "1.3.0",
@@ -110,6 +121,7 @@ def _solicitud_gate(request_id: str, intent: str, payload: dict[str, Any]) -> di
 @router.get("/catalog")
 async def catalogo_panel(request: Request) -> dict[str, Any]:
     """Solo las cuentas que la ventanilla puede usar."""
+    await exigir_modulo(request, "secretaria_cobros_gastos")
     filas = await _pool(request).fetch(
         """
         SELECT id::text, code, slug, name, account_type, normal_balance,
@@ -133,8 +145,28 @@ async def catalogo_panel(request: Request) -> dict[str, Any]:
 @router.get("/pagos/reglas")
 async def reglas_pago_panel(request: Request) -> dict[str, Any]:
     """Tope y reglas editables de la ventanilla (Superadmin las cambia)."""
-    reglas = await _leer_setting(_pool(request), "secretaria.pagos")
-    return {"reglas": _reglas_dict(reglas)}
+    await exigir_modulo(request, "secretaria_cobros_gastos")
+    reglas = _reglas_dict(await _leer_setting(_pool(request), "secretaria.pagos"))
+    return {
+        "reglas": reglas,
+        "caja_chica": {
+            "caja_chica_max_monto_usd": reglas.get(
+                "caja_chica_max_monto_usd", "100.00"
+            ),
+            "compras_efectivo_max_monto_usd": reglas.get(
+                "compras_efectivo_max_monto_usd", "300.00"
+            ),
+            "fondo_base_caja_chica_usd": reglas.get(
+                "fondo_base_caja_chica_usd", "200.00"
+            ),
+        },
+    }
+
+
+@router.get("/agenda/parametros")
+async def parametros_agenda_panel(request: Request) -> dict[str, Any]:
+    await exigir_modulo(request, "agenda_despachos")
+    return {"parametros": await _parametros_agenda(_pool(request))}
 
 
 def excede_tope_caja(
@@ -163,6 +195,7 @@ async def registrar_pago_panel(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
     """Fachada interna: mismo contrato y mismas reglas que el endpoint oficial."""
+    await exigir_modulo(request, "secretaria_cobros_gastos", mutacion=True)
     ctx = _contexto_panel(rol, actor_id)
 
     # Tope de caja chica: solo aplica a gastos en efectivo. Lo que supera el
@@ -212,6 +245,7 @@ class ProveedorCreate(BaseModel):
 
 @router.get("/suppliers")
 async def listar_proveedores(request: Request) -> dict[str, Any]:
+    await exigir_modulo(request, "compras_materiales")
     filas = await _pool(request).fetch(
         """
         SELECT id::text, nombre, identificacion, telefono, activo, created_at
@@ -230,6 +264,7 @@ async def crear_proveedor_panel(
     rol: str = Header(default="SECRETARIA", alias="X-Panel-Role"),
     actor_id: str | None = Header(default=None, alias="X-Panel-Actor"),
 ):
+    await exigir_modulo(request, "compras_materiales", mutacion=True)
     ctx = _contexto_panel(rol, actor_id, ROLES_BODEGA)
     gate = _gate(request)
     payload = {
@@ -331,10 +366,32 @@ async def registrar_compra_panel(
     rol: str = Header(default="SECRETARIA", alias="X-Panel-Role"),
     actor_id: str | None = Header(default=None, alias="X-Panel-Actor"),
 ):
+    await exigir_modulo(request, "compras_materiales", mutacion=True)
     ctx = _contexto_panel(rol, actor_id, ROLES_BODEGA)
+    payload = _payload_compra(body)
+    if payload.get("bolsa_pago_hoy") == "CAJA_DIARIA":
+        reglas = _reglas_dict(
+            await _leer_setting(_pool(request), "secretaria.pagos")
+        )
+        monto = Decimal(str(payload.get("monto_pagado_hoy") or "0"))
+        limite = excede_tope_caja(
+            reglas.get("compras_efectivo_max_monto_usd"), monto
+        )
+        if limite is not None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "PURCHASE_CASH_LIMIT_EXCEEDED",
+                    "message": (
+                        "la compra en efectivo supera el tope "
+                        f"({limite:.2f} USD); usa transferencia o credito"
+                    ),
+                    "limite": float(limite),
+                },
+            )
     gate = _gate(request)
     respuesta = await gate.mutar(
-        _solicitud_gate(str(uuid4()), "REGISTER_PURCHASE", _payload_compra(body)),
+        _solicitud_gate(str(uuid4()), "REGISTER_PURCHASE", payload),
         ctx.actor,
     )
     return http_response(respuesta, success_code=201)
@@ -348,6 +405,7 @@ async def recibir_compra_panel(
     rol: str = Header(default="BODEGA", alias="X-Panel-Role"),
     actor_id: str | None = Header(default=None, alias="X-Panel-Actor"),
 ):
+    await exigir_modulo(request, "compras_materiales", mutacion=True)
     ctx = _contexto_panel(rol, actor_id, ROLES_BODEGA)
     gate = _gate(request)
     payload = {
@@ -365,6 +423,7 @@ async def recibir_compra_panel(
 
 @router.get("/purchases")
 async def listar_compras(request: Request, limite: int = Query(default=30, ge=1, le=200)):
+    await exigir_modulo(request, "compras_materiales")
     pool = _pool(request)
     compras = await pool.fetch(
         """
@@ -388,6 +447,7 @@ async def listar_compras(request: Request, limite: int = Query(default=30, ge=1,
 # ---------------------------------------------------------------------------
 @router.get("/inventory-overview")
 async def inventario_panel(request: Request) -> dict[str, Any]:
+    await exigir_modulos(request, ("planta_kardex", "compras_materiales"))
     pool = _pool(request)
     materiales = await pool.fetch(
         """
@@ -450,7 +510,7 @@ class AgendaIn(BaseModel):
     volumen_m3: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     fecha_entrega: date
     hora_inicio: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
-    duracion_estimada_min: int = Field(default=90, ge=30, le=720)
+    duracion_estimada_min: int | None = Field(default=None, ge=30, le=720)
     direccion_obra: str = Field(min_length=3, max_length=300)
     contacto_obra_telefono: str | None = Field(default=None, max_length=40)
     estado: Literal[
@@ -512,6 +572,7 @@ def _conflicto_o_409(
     hora: str,
     duracion: int,
     excluir_id: str | None = None,
+    parametros: dict[str, Any] | None = None,
 ) -> None:
     choque = conflicto_mixer(
         filas=filas,
@@ -520,6 +581,7 @@ def _conflicto_o_409(
         hora=hora,
         duracion_min=duracion,
         excluir_id=excluir_id,
+        parametros=parametros,
     )
     if choque:
         raise HTTPException(
@@ -541,6 +603,7 @@ async def listar_agenda(
     desde: date | None = Query(default=None),
     hasta: date | None = Query(default=None),
 ):
+    await exigir_modulo(request, "agenda_despachos")
     hoy = date.today()
     desde = desde or hoy
     hasta = hasta or (hoy + timedelta(days=14))
@@ -555,11 +618,13 @@ async def disponibilidad_agenda(
     request: Request,
     fecha: date = Query(...),
     hora: str = Query(..., pattern=r"^([01]\d|2[0-3]):[0-5]\d$"),
-    duracion_min: int = Query(default=90, ge=30, le=720),
+    duracion_min: int | None = Query(default=None, ge=30, le=720),
     mixer_codigo: str | None = Query(default=None),
     excluir_id: str | None = Query(default=None),
 ):
+    await exigir_modulo(request, "agenda_despachos")
     pool = _pool(request)
+    params = await _parametros_agenda(pool)
     filas = await _store_agenda(request).listar(fecha, fecha)
     mixers = await _mixers(pool)
     resultado = evaluar_disponibilidad(
@@ -569,6 +634,7 @@ async def disponibilidad_agenda(
         hora=hora,
         duracion_min=duracion_min,
         excluir_id=excluir_id,
+        parametros=params,
     )
     if mixer_codigo:
         resultado["mixer_consultado"] = mixer_codigo
@@ -579,6 +645,7 @@ async def disponibilidad_agenda(
             hora=hora,
             duracion_min=duracion_min,
             excluir_id=excluir_id,
+            parametros=params,
         )
     return resultado
 
@@ -590,7 +657,18 @@ async def crear_agenda(
     rol: str = Header(default="SECRETARIA", alias="X-Panel-Role"),
     actor_id: str | None = Header(default=None, alias="X-Panel-Actor"),
 ):
+    await exigir_modulo(request, "agenda_despachos", mutacion=True)
     ctx = _contexto_panel(rol, actor_id)
+    params = await _parametros_agenda(_pool(request))
+    duracion = body.duracion_estimada_min or params["duracion_entrega_default_min"]
+    error = validar_ventana(
+        parametros=params,
+        fecha=body.fecha_entrega,
+        hora=body.hora_inicio,
+        duracion_min=duracion,
+    )
+    if error:
+        raise HTTPException(status_code=422, detail=error)
     store = _store_agenda(request)
     filas = await store.listar(body.fecha_entrega, body.fecha_entrega)
     _conflicto_o_409(
@@ -598,9 +676,11 @@ async def crear_agenda(
         mixer_codigo=body.mixer_codigo,
         fecha=body.fecha_entrega,
         hora=body.hora_inicio,
-        duracion=body.duracion_estimada_min,
+        duracion=duracion,
+        parametros=params,
     )
     datos = body.model_dump()
+    datos["duracion_estimada_min"] = duracion
     datos["creado_por_rol"] = ctx.actor.role
     datos["creado_por_id"] = ctx.actor.id
     fila = await store.crear(datos)
@@ -615,7 +695,9 @@ async def editar_agenda(
     rol: str = Header(default="SECRETARIA", alias="X-Panel-Role"),
     actor_id: str | None = Header(default=None, alias="X-Panel-Actor"),
 ):
+    await exigir_modulo(request, "agenda_despachos", mutacion=True)
     _contexto_panel(rol, actor_id)
+    params = await _parametros_agenda(_pool(request))
     store = _store_agenda(request)
     actual = await store.obtener(agenda_id)
     if actual is None:
@@ -627,16 +709,26 @@ async def editar_agenda(
 
     fecha = cambios.get("fecha_entrega") or date.fromisoformat(actual["fecha_entrega"])
     hora = cambios.get("hora_inicio") or actual["hora_inicio"]
-    duracion = cambios.get("duracion_estimada_min") or actual["duracion_estimada_min"]
+    duracion = (
+        cambios.get("duracion_estimada_min")
+        or actual["duracion_estimada_min"]
+        or params["duracion_entrega_default_min"]
+    )
     mixer = cambios.get("mixer_codigo", actual.get("mixer_codigo"))
+    error = validar_ventana(
+        parametros=params, fecha=fecha, hora=hora, duracion_min=int(duracion)
+    )
+    if error:
+        raise HTTPException(status_code=422, detail=error)
     filas = await store.listar(fecha, fecha)
     _conflicto_o_409(
         filas=filas,
         mixer_codigo=mixer,
         fecha=fecha,
         hora=hora,
-        duracion=int(duracion or 90),
+        duracion=int(duracion),
         excluir_id=agenda_id,
+        parametros=params,
     )
     fila = await store.actualizar(agenda_id, cambios)
     return {"agenda": fila}
@@ -649,8 +741,24 @@ async def cancelar_agenda(
     rol: str = Header(default="SECRETARIA", alias="X-Panel-Role"),
     actor_id: str | None = Header(default=None, alias="X-Panel-Actor"),
 ):
+    await exigir_modulo(request, "agenda_despachos", mutacion=True)
     _contexto_panel(rol, actor_id)
     ok = await _store_agenda(request).cancelar(agenda_id)
     if not ok:
         raise HTTPException(status_code=404, detail="agendamiento no encontrado")
     return {"cancelado": True, "id": agenda_id}
+
+
+# ---------------------------------------------------------------------------
+# Perfiles simulados del panel (v6.2)
+# ---------------------------------------------------------------------------
+@router.get("/profiles")
+async def listar_perfiles_panel(request: Request) -> dict[str, Any]:
+    from ..panel_acl import _store as _panel_store
+
+    return {"perfiles": await _panel_store(request).listar()}
+
+
+@router.get("/profile")
+async def perfil_panel(request: Request) -> dict[str, Any]:
+    return {"perfil": await resolver_perfil(request)}

@@ -14,6 +14,7 @@ from typing import Any, Awaitable, Callable
 import asyncpg
 from fastapi import APIRouter, Body, HTTPException, Query, Request
 
+from ..panel_acl import exigir_modulo
 from ..services.ordenes import NuevaOrden, crear_orden
 from .service import MemorySecretariaStore, PostgresSecretariaStore, SecretariaStore
 
@@ -52,6 +53,7 @@ def _creador(request: Request) -> Callable[[NuevaOrden], Awaitable[Any]]:
 async def listar_clientes(
     request: Request, q: str | None = Query(default=None)
 ) -> dict[str, Any]:
+    await exigir_modulo(request, "clientes_cartera")
     return {"clientes": await _store(request).listar_clientes(q)}
 
 
@@ -110,6 +112,7 @@ async def opciones(request: Request) -> dict[str, Any]:
 
 @router.get("/clientes/{cliente_id}/carpeta")
 async def carpeta_cliente(request: Request, cliente_id: str) -> dict[str, Any]:
+    await exigir_modulo(request, "clientes_cartera")
     carpeta = await _store(request).obtener_carpeta(cliente_id)
     if carpeta is None:
         raise HTTPException(status_code=404, detail=f"cliente inexistente: {cliente_id}")
@@ -133,6 +136,7 @@ async def listar_ordenes(
 async def crear_orden_secretaria(
     request: Request, datos: dict[str, Any] = Body(...)
 ) -> dict[str, Any]:
+    await exigir_modulo(request, "secretaria_ventanilla", mutacion=True)
     try:
         orden = NuevaOrden(
             cliente_id=str(datos["cliente_id"]),
@@ -206,6 +210,7 @@ async def crear_orden_secretaria(
 async def resumen_cierre(
     request: Request, fecha: date | None = Query(default=None)
 ) -> dict[str, Any]:
+    await exigir_modulo(request, "secretaria_cierre_caja")
     return await _store(request).resumen_cierre(fecha or date.today())
 
 
@@ -213,6 +218,7 @@ async def resumen_cierre(
 async def cerrar_caja(
     request: Request, datos: dict[str, Any] = Body(default={})
 ) -> dict[str, Any]:
+    await exigir_modulo(request, "secretaria_cierre_caja", mutacion=True)
     crudo = datos.get("fecha")
     if crudo:
         try:
@@ -242,4 +248,5 @@ async def cerrar_caja(
 async def listar_cierres(
     request: Request, limite: int = Query(default=30, ge=1, le=120)
 ) -> dict[str, Any]:
+    await exigir_modulo(request, "secretaria_cierre_caja")
     return {"cierres": await _store(request).listar_cierres(limite)}

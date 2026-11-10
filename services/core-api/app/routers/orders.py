@@ -9,6 +9,7 @@ import asyncpg
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from ..panel_acl import exigir_modulo
 from ..services.ordenes import NuevaOrden, OrdenInvalidaError, crear_orden
 
 router = APIRouter(prefix="/api/v1", tags=["ordenes"])
@@ -43,6 +44,7 @@ def _pool(request: Request) -> asyncpg.Pool:
 
 @router.post("/orders", status_code=201)
 async def nueva_orden(request: Request, body: OrdenCreate):
+    await exigir_modulo(request, "secretaria_ventanilla", mutacion=True)
     pool = _pool(request)
     try:
         resultado = await crear_orden(

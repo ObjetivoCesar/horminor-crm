@@ -23,8 +23,10 @@ from .m5_sentinel.router import router as sentinel_router
 from .routers import catalog, health, orders
 from .services.ordenes import OrdenInvalidaError
 from .settings import get_settings
+from .superadmin.operacion import router as operacion_router
 from .superadmin.router import router as superadmin_router
 from .superadmin.store import PostgresConfigStore
+from .superadmin.usuarios import router as usuarios_router
 from .web.panel import router as panel_router
 
 log = logging.getLogger("orminorth")
@@ -103,6 +105,8 @@ app.include_router(catalog.router)
 app.include_router(orders.router)
 app.include_router(whatsapp_router)
 app.include_router(superadmin_router)
+app.include_router(operacion_router)
+app.include_router(usuarios_router)
 app.include_router(secretaria_router)
 app.include_router(custodio_router)
 app.include_router(payments_router)
