@@ -722,9 +722,18 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
 .ha-msg:empty { display: none; }
 .cal-cell.selected { box-shadow: inset 0 0 0 2px var(--accent-cat-amber); }
 .ha-empty { padding: 10px 2px; }
-.perfil-select-wrap { display: flex; align-items: center; gap: 8px; margin-right: 4px; }
-.perfil-select-wrap label { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
-.perfil-select-wrap select { min-width: 150px; max-width: 220px; padding: 7px 10px; font-size: 11.5px; }
+.perfil-select-wrap {
+  display: flex; align-items: center; gap: 8px; margin-right: 4px;
+  padding: 5px 8px 5px 12px; border: 1px solid rgba(245, 158, 11, 0.42);
+  border-radius: 999px; background: var(--surface-row-pill);
+  box-shadow: 0 6px 18px -12px rgba(245, 158, 11, 0.65);
+}
+.perfil-select-wrap label { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-cat-amber); white-space: nowrap; }
+.perfil-select-wrap select {
+  min-width: 160px; max-width: 230px; padding: 6px 8px; font-size: 11.5px;
+  border: 0; background: transparent; color: var(--text-pure); font-weight: 600;
+}
+.perfil-select-wrap select:focus { outline: 2px solid rgba(245, 158, 11, 0.55); outline-offset: 1px; }
 body.perfil-solo-lectura [data-mutacion="1"] { display: none !important; }
 body.perfil-solo-lectura .sec-acciones { opacity: 0.85; }
 .acl-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 12px; margin-top: 10px; }
@@ -732,6 +741,31 @@ body.perfil-solo-lectura .sec-acciones { opacity: 0.85; }
 .acl-checks input { width: auto; }
 .acl-tabla td, .acl-tabla th { font-size: 11.5px; }
 .config-op-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+dialog.extra-wide { width: min(1180px, 98vw); }
+.perfiles-lista { display: flex; flex-direction: column; gap: 8px; }
+.perfil-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border: var(--border-subtle); border-radius: 12px; background: var(--surface-row-pill);
+}
+.perfil-row .perfil-avatar { width: 34px; height: 34px; flex: 0 0 34px; font-size: 11px; }
+.perfil-row .perfil-detalle { flex: 1; min-width: 0; }
+.perfil-row .perfil-detalle strong { display: block; font-size: 12.5px; }
+.perfil-row .perfil-detalle span { display: block; font-size: 10.5px; color: var(--text-muted); }
+.perfil-row .perfil-badges { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.perfil-row .perfil-badges .btn { font-size: 10.5px; padding: 5px 8px; }
+.tabla-editor input[type="text"], .tabla-editor input[type="number"] {
+  min-width: 72px; padding: 6px 7px; font-size: 11px; width: 100%;
+}
+.tabla-editor td, .tabla-editor th { padding: 6px 7px; }
+.tabla-editor td:first-child { min-width: 92px; }
+.tabla-editor input[type="checkbox"] { width: auto; }
+.reglas-resumen { display: flex; flex-direction: column; gap: 7px; }
+.reglas-resumen .spread { font-size: 12px; }
+@media (max-width: 1100px) {
+  dialog.extra-wide { width: 96vw; }
+  .perfil-row { flex-wrap: wrap; }
+  .perfil-row .perfil-badges { width: 100%; justify-content: flex-start; }
+}
 @media (max-width: 1100px) {
   .ha-body { grid-template-columns: 1fr; }
   .perfil-select-wrap { display: none; }
@@ -2109,8 +2143,8 @@ tbody tr:last-child td { border-bottom: 0; }
   </div>
   <div class="top-actions">
     <div class="perfil-select-wrap" title="Simular la vista de un usuario sin login">
-      <label for="sim-user">Viendo como</label>
-      <select id="sim-user" onchange="cambiarPerfilSimulado(this.value)"></select>
+      <label for="sim-user">Viendo como:</label>
+      <select id="sim-user" onchange="cambiarPerfilSimulado(this.value)" aria-label="Simular vista de usuario"></select>
     </div>
     <div class="notif-wrap">
       <button class="icon-button" id="btn-notif" type="button" onclick="toggleNotif()" aria-label="Alertas del Centinela" aria-expanded="false">
@@ -2266,7 +2300,7 @@ tbody tr:last-child td { border-bottom: 0; }
 
     <div class="dash2-lower">
       <!-- Agenda real compartida (HorminorAgenda) -->
-      <div class="dash-card cal-card">
+      <div class="dash-card cal-card" data-modulo="agenda_despachos">
         <div id="agenda-mount-dashboard"></div>
       </div>
 
@@ -2501,21 +2535,69 @@ tbody tr:last-child td { border-bottom: 0; }
 
   <!-- ===================== SUPERADMIN Y WHATSAPP ===================== -->
   <section class="view" data-view="superadmin">
-    <div class="grid two">
-      <div class="stack">
-        <div class="card">
-          <h2>Simulador de WhatsApp en Pantalla</h2>
-          <label class="field">¿Quién escribe?</label>
-          <select id="sim-remitente"></select>
-          <label class="field" style="margin-top:8px">Mensaje</label>
-          <textarea id="sim-texto" placeholder="Ej: #BODEGA salió el mixer MIXER-01 de la orden 1001"></textarea>
-          <label class="row small" style="margin-top:8px"><input type="checkbox" id="sim-foto" style="width:auto"> Adjuntar foto simulada (Bunny sandbox)</label>
-          <button class="btn" style="margin-top:10px;width:100%" onclick="enviarSimulacion()">Enviar al pipeline</button>
-          <div id="sim-resultado" style="margin-top:12px"></div>
+    <div class="card sec-ventanilla" data-modulo="superadmin_config">
+      <div>
+        <span class="sec-eyebrow">CENTRO DE CONTROL</span>
+        <h2>¿Qué vas a configurar hoy?</h2>
+        <p class="small muted" style="margin:0">Gestiona usuarios y permisos, caja chica, horarios de planta, recetas y parámetros financieros.</p>
+      </div>
+      <div class="sec-acciones">
+        <button class="sec-accion primary" data-mutacion="1" onclick="abrirSuperUsuarios()">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 11h5M18.5 8.5v5"/></svg>
+          <span class="sec-accion-txt"><strong>Usuarios y accesos</strong><small>Crear perfiles y checklist de módulos</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button class="sec-accion" data-mutacion="1" onclick="abrirSuperCaja()">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2"/></svg>
+          <span class="sec-accion-txt"><strong>Caja chica y horarios</strong><small>Topes de efectivo y jornada de planta</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button class="sec-accion" data-mutacion="1" onclick="abrirSuperRecetas()">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18l-2 12H5L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M9 12h6"/></svg>
+          <span class="sec-accion-txt"><strong>Recetas, flota y precios</strong><small>Fórmulas, mixers y tarifas por m³</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button class="sec-accion" data-mutacion="1" onclick="abrirSuperTasas()">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l3-4 3 2 4-6"/><path d="M17 7h3v3"/></svg>
+          <span class="sec-accion-txt"><strong>Tasas y conteo de silos</strong><small>WACC, impuestos y stock físico</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:16px">
+      <div class="card" data-modulo="superadmin_config">
+        <div class="spread">
+          <div>
+            <span class="sec-eyebrow">PERFILES Y ACCESOS</span>
+            <h2 style="margin-bottom:2px">Usuarios del sistema</h2>
+            <p class="small muted" style="margin:0">Quién entra y qué módulos puede ver o editar.</p>
+          </div>
+          <button class="btn small" data-mutacion="1" onclick="abrirSuperUsuarios(true)">+ Crear usuario</button>
         </div>
-        <details class="card fold-card" id="outbox-card">
+        <div id="perfiles-lista" class="perfiles-lista" style="margin-top:12px"><p class="muted small">Leyendo perfiles…</p></div>
+      </div>
+
+      <div class="card" data-modulo="superadmin_config">
+        <div class="spread">
+          <div>
+            <span class="sec-eyebrow">CANAL WHATSAPP Y REGLAS VIGENTES</span>
+            <h2 style="margin-bottom:2px">Simulador y estado</h2>
+            <p class="small muted" style="margin:0">Prueba el pipeline y revisa las reglas activas.</p>
+          </div>
+          <button class="btn small ghost" onclick="cargarSuperadmin()">Recargar</button>
+        </div>
+        <label class="field" style="margin-top:12px">¿Quién escribe?</label>
+        <select id="sim-remitente"></select>
+        <label class="field" style="margin-top:8px">Mensaje</label>
+        <textarea id="sim-texto" placeholder="Ej: #BODEGA salió el mixer MIXER-01 de la orden 1001"></textarea>
+        <label class="row small" style="margin-top:8px"><input type="checkbox" id="sim-foto" style="width:auto"> Adjuntar foto simulada (Bunny sandbox)</label>
+        <button class="btn" style="margin-top:10px;width:100%" onclick="enviarSimulacion()">Enviar al pipeline</button>
+        <div id="sim-resultado" style="margin-top:12px"></div>
+
+        <details class="fold-card" id="outbox-card" style="margin-top:12px;border-top:var(--border-subtle);padding-top:10px">
           <summary>
-            <h2>Outbox Sandbox</h2>
+            <strong>Outbox Sandbox</strong>
             <span class="badge neutral" id="outbox-count">—</span>
           </summary>
           <div class="fold-body">
@@ -2526,125 +2608,10 @@ tbody tr:last-child td { border-bottom: 0; }
             <div id="outbox-panel" class="small muted">Sin mensajes.</div>
           </div>
         </details>
-      </div>
 
-      <div class="card">
-        <div class="spread">
-          <h2>Configuración en caliente</h2>
-          <button class="btn small ghost" onclick="cargarSuperadmin()">Recargar</button>
-        </div>
-        <div class="tabs" id="config-tabs"></div>
-        <div id="config-panel"></div>
-      </div>
-    </div>
-
-    <div class="grid two" style="margin-top:16px">
-      <div class="card">
-        <h2>Parámetros contables y valoración 10 años</h2>
-        <p class="small muted" style="margin-top:0">Con estas tasas se activa la proyección DCF y el DSCR. Si quedan vacías, el Custodio devuelve la foto real y <code>UNCONFIRMED_FINANCIAL_RATES</code>.</p>
-        <div class="field-row">
-          <div><label class="field">WACC anual (%)</label><input type="number" id="fin-wacc" step="0.01" min="0" placeholder="null"></div>
-          <div><label class="field">Crecimiento anual (%)</label><input type="number" id="fin-crecimiento" step="0.01" placeholder="null"></div>
-          <div><label class="field">Participación trabajadores (%)</label><input type="number" id="fin-participacion" step="0.01" min="0" placeholder="null"></div>
-        </div>
-        <div class="field-row" style="margin-top:10px">
-          <div><label class="field">Impuesto a la renta (%)</label><input type="number" id="fin-impuesto" step="0.01" min="0" placeholder="null"></div>
-          <div><label class="field">Inflación de costos (%)</label><input type="number" id="fin-inflacion" step="0.01" placeholder="null"></div>
-          <div><label class="field">DSCR mínimo del banco</label><input type="number" id="fin-dscr" step="0.01" min="0" placeholder="null"></div>
-        </div>
-        <button class="btn" style="margin-top:12px" onclick="guardarParametrosFinancieros()">Guardar parámetros</button>
-        <div id="fin-param-resultado"></div>
-      </div>
-
-      <div class="card">
-        <h2>Levantamiento físico de silos / bodega</h2>
-        <p class="small muted" style="margin-top:0">Registra el stock real contado. Al confirmar se sella <code>ultimo_levantamiento_at</code> y desaparece <code>SIN_FECHA_CONTEO</code>.</p>
-        <div id="conteo-materiales" class="table-wrap"></div>
-        <label class="row small" style="margin-top:10px"><input type="checkbox" id="conteo-confirmar" style="width:auto"> Confirmo que estos valores son el conteo físico real</label>
-        <button class="btn bank" style="margin-top:10px" onclick="registrarConteo()">Registrar conteo</button>
-        <div id="conteo-resultado"></div>
-      </div>
-    </div>
-
-    <div class="grid two" style="margin-top:16px">
-      <div class="card" data-modulo="superadmin_config">
-        <h2>Parámetros de Caja Chica y Efectivo</h2>
-        <p class="small muted" style="margin-top:0">Se aplican en la siguiente petición, sin reiniciar. El Gate y la ventanilla leen esta misma llave.</p>
-        <div class="config-op-grid" style="margin-top:10px">
-          <div><label class="field">Tope por gasto en caja chica (USD)</label><input type="number" id="cc-max-gasto" step="0.01" min="0.01"></div>
-          <div><label class="field">Tope por compra en efectivo (USD)</label><input type="number" id="cc-max-compra" step="0.01" min="0.01"></div>
-          <div><label class="field">Fondo base de caja chica (USD)</label><input type="number" id="cc-fondo-base" step="0.01" min="0"></div>
-        </div>
-        <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarConfigCaja()">Guardar parámetros de caja</button>
-        <div id="cc-resultado"></div>
-      </div>
-
-      <div class="card" data-modulo="superadmin_config">
-        <h2>Horarios de Planta y Reglas de Agenda</h2>
-        <p class="small muted" style="margin-top:0">Definen los slots del componente <code>HorminorAgenda</code> y el cálculo de mixers libres.</p>
-        <div class="config-op-grid" style="margin-top:10px">
-          <div><label class="field">Hora de apertura</label><input type="time" id="ag-hora-apertura"></div>
-          <div><label class="field">Hora de cierre</label><input type="time" id="ag-hora-cierre"></div>
-          <div><label class="field">Duración estándar (min)</label><input type="number" id="ag-duracion" min="30" max="720" step="15"></div>
-          <div><label class="field">Intervalo de grilla (min)</label><input type="number" id="ag-intervalo" min="5" max="120" step="5"></div>
-        </div>
-        <label class="field" style="margin-top:10px">Días laborables</label>
-        <div class="acl-checks" id="ag-dias" style="margin-top:4px">
-          <label><input type="checkbox" data-dia="LUN"> Lun</label>
-          <label><input type="checkbox" data-dia="MAR"> Mar</label>
-          <label><input type="checkbox" data-dia="MIE"> Mié</label>
-          <label><input type="checkbox" data-dia="JUE"> Jue</label>
-          <label><input type="checkbox" data-dia="VIE"> Vie</label>
-          <label><input type="checkbox" data-dia="SAB"> Sáb</label>
-          <label><input type="checkbox" data-dia="DOM"> Dom</label>
-        </div>
-        <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarConfigAgenda()">Guardar horarios de agenda</button>
-        <div id="ag-resultado"></div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:16px" data-modulo="superadmin_config">
-      <div class="spread">
-        <div>
-          <h2 style="margin-bottom:2px">Usuarios y Permisos de Módulos</h2>
-          <p class="small muted" style="margin:0">Crea perfiles y marca con checklist qué pestañas y acciones ven. El selector «Viendo como» prueba el resultado sin login.</p>
-        </div>
-        <button class="btn small ghost" onclick="nuevoUsuarioACL()">+ Nuevo usuario</button>
-      </div>
-      <div class="grid two" style="margin-top:14px">
-        <div>
-          <input type="hidden" id="acl-id">
-          <div class="field-row">
-            <div><label class="field">Nombre *</label><input type="text" id="acl-nombre" maxlength="120"></div>
-            <div><label class="field">Rol base</label>
-              <select id="acl-rol">
-                <option value="SECRETARIA">Secretaría</option>
-                <option value="CONTADORA">Contadora</option>
-                <option value="BODEGA">Bodega</option>
-                <option value="CHOFER">Chofer</option>
-                <option value="VENDEDOR">Vendedor</option>
-                <option value="AUDITOR_EXTERNO">Auditor externo</option>
-                <option value="SUPERADMIN">Superadmin</option>
-              </select>
-            </div>
-          </div>
-          <div class="field-row" style="margin-top:10px">
-            <div><label class="field">WhatsApp (opcional)</label><input type="text" id="acl-telefono" maxlength="30"></div>
-            <div><label class="field">Modo de acceso</label>
-              <select id="acl-modo"><option value="EDICION">Edición</option><option value="SOLO_LECTURA">Solo lectura</option></select>
-            </div>
-          </div>
-          <label class="field" style="margin-top:10px">Módulos permitidos *</label>
-          <div class="acl-checks" id="acl-modulos"></div>
-          <div class="row" style="margin-top:12px;gap:8px">
-            <button class="btn" data-mutacion="1" onclick="guardarUsuarioACL()">Guardar usuario</button>
-            <button class="btn ghost" onclick="nuevoUsuarioACL()">Limpiar</button>
-          </div>
-          <div id="acl-resultado"></div>
-        </div>
-        <div class="table-wrap acl-tabla">
-          <div id="acl-tabla"><p class="muted small">Leyendo usuarios…</p></div>
-        </div>
+        <div class="divider" style="margin:14px 0"></div>
+        <p class="card-kicker" style="margin:0 0 8px">REGLAS ACTIVAS HOY</p>
+        <div id="reglas-resumen" class="reglas-resumen"><p class="muted small">Leyendo configuración…</p></div>
       </div>
     </div>
   </section>
@@ -2880,6 +2847,148 @@ tbody tr:last-child td { border-bottom: 0; }
   </div>
 </dialog>
 
+<dialog id="dlg-super-usuarios" class="wide">
+  <div class="dialog-head"><h2>Usuarios y accesos</h2><button class="btn small ghost" onclick="document.getElementById('dlg-super-usuarios').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <div class="grid two">
+      <div class="table-wrap acl-tabla">
+        <p class="card-kicker" style="margin:0 0 8px">PERFILES ACTUALES</p>
+        <div id="acl-tabla"><p class="muted small">Leyendo usuarios…</p></div>
+      </div>
+      <div>
+        <input type="hidden" id="acl-id">
+        <div class="field-row">
+          <div><label class="field">Nombre *</label><input type="text" id="acl-nombre" maxlength="120" placeholder="Ej: María Secretaría"></div>
+          <div><label class="field">Rol base</label>
+            <select id="acl-rol">
+              <option value="SECRETARIA">Secretaría</option>
+              <option value="CONTADORA">Contadora</option>
+              <option value="BODEGA">Bodega</option>
+              <option value="CHOFER">Chofer</option>
+              <option value="VENDEDOR">Vendedor</option>
+              <option value="AUDITOR_EXTERNO">Auditor externo</option>
+              <option value="SUPERADMIN">Superadmin</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row" style="margin-top:10px">
+          <div><label class="field">WhatsApp (opcional)</label><input type="text" id="acl-telefono" maxlength="30" placeholder="+593..."></div>
+          <div><label class="field">Modo de acceso</label>
+            <select id="acl-modo"><option value="EDICION">Edición</option><option value="SOLO_LECTURA">Solo lectura</option></select>
+          </div>
+        </div>
+        <label class="field" style="margin-top:10px">Módulos permitidos *</label>
+        <div class="acl-checks" id="acl-modulos"></div>
+        <div class="row" style="margin-top:12px;gap:8px">
+          <button class="btn" data-mutacion="1" onclick="guardarUsuarioACL()">Guardar usuario</button>
+          <button class="btn ghost" onclick="nuevoUsuarioACL()">Limpiar</button>
+        </div>
+        <div id="acl-resultado"></div>
+      </div>
+    </div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-super-usuarios').close()">Cerrar</button>
+    <button class="btn" data-mutacion="1" onclick="nuevoUsuarioACL()">+ Crear nuevo usuario</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-super-caja" class="wide">
+  <div class="dialog-head"><h2>Caja chica y horarios</h2><button class="btn small ghost" onclick="document.getElementById('dlg-super-caja').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <h3 style="margin-top:0">Parámetros de caja chica y efectivo</h3>
+    <p class="small muted" style="margin-top:0">Se aplican en la siguiente petición, sin reiniciar.</p>
+    <div class="config-op-grid">
+      <div><label class="field">Tope por gasto en caja chica (USD)</label><input type="number" id="cc-max-gasto" step="0.01" min="0.01" placeholder="100.00"></div>
+      <div><label class="field">Tope por compra en efectivo (USD)</label><input type="number" id="cc-max-compra" step="0.01" min="0.01" placeholder="300.00"></div>
+      <div><label class="field">Fondo base de caja chica (USD)</label><input type="number" id="cc-fondo-base" step="0.01" min="0" placeholder="200.00"></div>
+    </div>
+    <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarConfigCaja()">Guardar parámetros de caja</button>
+    <div id="cc-resultado"></div>
+
+    <div class="divider" style="margin:18px 0"></div>
+    <h3 style="margin-top:0">Horarios de planta y agenda</h3>
+    <p class="small muted" style="margin-top:0">Definen los slots de <code>HorminorAgenda</code> y el cálculo de mixers libres.</p>
+    <div class="config-op-grid">
+      <div><label class="field">Hora de apertura</label><input type="time" id="ag-hora-apertura"></div>
+      <div><label class="field">Hora de cierre</label><input type="time" id="ag-hora-cierre"></div>
+      <div><label class="field">Duración estándar (min)</label><input type="number" id="ag-duracion" min="30" max="720" step="15" placeholder="90"></div>
+      <div><label class="field">Intervalo de grilla (min)</label><input type="number" id="ag-intervalo" min="5" max="120" step="5" placeholder="30"></div>
+    </div>
+    <label class="field" style="margin-top:10px">Días laborables</label>
+    <div class="acl-checks" id="ag-dias" style="margin-top:4px">
+      <label><input type="checkbox" data-dia="LUN"> Lun</label>
+      <label><input type="checkbox" data-dia="MAR"> Mar</label>
+      <label><input type="checkbox" data-dia="MIE"> Mié</label>
+      <label><input type="checkbox" data-dia="JUE"> Jue</label>
+      <label><input type="checkbox" data-dia="VIE"> Vie</label>
+      <label><input type="checkbox" data-dia="SAB"> Sáb</label>
+      <label><input type="checkbox" data-dia="DOM"> Dom</label>
+    </div>
+    <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarConfigAgenda()">Guardar horarios de agenda</button>
+    <div id="ag-resultado"></div>
+  </div>
+  <div class="dialog-foot"><button class="btn ghost" onclick="document.getElementById('dlg-super-caja').close()">Cerrar</button></div>
+</dialog>
+
+<dialog id="dlg-super-recetas" class="extra-wide">
+  <div class="dialog-head"><h2>Recetas, flota y precios</h2><button class="btn small ghost" onclick="document.getElementById('dlg-super-recetas').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <div class="spread">
+      <div>
+        <h3 style="margin:0">Recetas de hormigón</h3>
+        <p class="small muted" style="margin:2px 0 0">Cada fila es una resistencia. El precio es por m³ sin IVA.</p>
+      </div>
+      <button class="btn small ghost" onclick="agregarRecetaFila()">+ Nueva receta</button>
+    </div>
+    <div class="table-wrap" style="margin-top:10px"><table class="tabla-editor" id="recetas-tabla"></table></div>
+    <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarRecetasSuper()">Guardar recetas</button>
+    <div id="recetas-resultado"></div>
+
+    <div class="divider" style="margin:18px 0"></div>
+    <div class="spread">
+      <div>
+        <h3 style="margin:0">Flota de mixers</h3>
+        <p class="small muted" style="margin:2px 0 0">Código, placa, capacidad y chofer asignado.</p>
+      </div>
+      <button class="btn small ghost" onclick="agregarMixerFila()">+ Nuevo mixer</button>
+    </div>
+    <div class="table-wrap" style="margin-top:10px"><table class="tabla-editor" id="flota-tabla"></table></div>
+    <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarFlotaSuper()">Guardar flota</button>
+    <div id="flota-resultado"></div>
+  </div>
+  <div class="dialog-foot"><button class="btn ghost" onclick="document.getElementById('dlg-super-recetas').close()">Cerrar</button></div>
+</dialog>
+
+<dialog id="dlg-super-tasas" class="wide">
+  <div class="dialog-head"><h2>Tasas y conteo de silos</h2><button class="btn small ghost" onclick="document.getElementById('dlg-super-tasas').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <h3 style="margin-top:0">Parámetros contables y valoración 10 años</h3>
+    <p class="small muted" style="margin-top:0">Con estas tasas se activa la proyección DCF y el DSCR. Si quedan vacías, el Custodio devuelve la foto real y <code>UNCONFIRMED_FINANCIAL_RATES</code>.</p>
+    <div class="field-row">
+      <div><label class="field">WACC anual (%)</label><input type="number" id="fin-wacc" step="0.01" min="0" placeholder="Sin definir (ej. 12.5%)"></div>
+      <div><label class="field">Crecimiento anual (%)</label><input type="number" id="fin-crecimiento" step="0.01" placeholder="Sin definir (ej. 3%)"></div>
+      <div><label class="field">Participación trabajadores (%)</label><input type="number" id="fin-participacion" step="0.01" min="0" placeholder="Sin definir (ej. 15%)"></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Impuesto a la renta (%)</label><input type="number" id="fin-impuesto" step="0.01" min="0" placeholder="Sin definir (ej. 25%)"></div>
+      <div><label class="field">Inflación de costos (%)</label><input type="number" id="fin-inflacion" step="0.01" placeholder="Sin definir (ej. 4%)"></div>
+      <div><label class="field">DSCR mínimo del banco</label><input type="number" id="fin-dscr" step="0.01" min="0" placeholder="Sin definir (ej. 1.5)"></div>
+    </div>
+    <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarParametrosFinancieros()">Guardar parámetros</button>
+    <div id="fin-param-resultado"></div>
+
+    <div class="divider" style="margin:18px 0"></div>
+    <h3 style="margin-top:0">Levantamiento físico de silos / bodega</h3>
+    <p class="small muted" style="margin-top:0">Registra el stock real contado. Al confirmar se sella <code>ultimo_levantamiento_at</code>.</p>
+    <div id="conteo-materiales" class="table-wrap"></div>
+    <label class="row small" style="margin-top:10px"><input type="checkbox" id="conteo-confirmar" style="width:auto"> Confirmo que estos valores son el conteo físico real</label>
+    <button class="btn bank" style="margin-top:10px" data-mutacion="1" onclick="registrarConteo()">Registrar conteo</button>
+    <div id="conteo-resultado"></div>
+  </div>
+  <div class="dialog-foot"><button class="btn ghost" onclick="document.getElementById('dlg-super-tasas').close()">Cerrar</button></div>
+</dialog>
+
 <div class="toast-wrap" id="toasts"></div>
 
 <script src="/static/horminor-agenda.js"></script>
@@ -2891,7 +3000,7 @@ const state = {
   ordenes:[], detalle:{}, inventario:[], donutMode:0, catalogo:null,
   proveedores:[], inventarioOverview:null, agenda:[], agendaY:null, agendaM:null,
   reglasPago:{}, agendaParams:null, perfil:null, perfiles:[], operacionConfig:null,
-  usuariosACL:[], aclEditId:null, notifs:[], cargando:false
+  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], notifs:[], cargando:false
 };
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
@@ -2929,7 +3038,7 @@ const VIEW_META = {
   },
   superadmin: {
     title: 'Superadmin y WhatsApp',
-    subtitle: 'Configuración en caliente, flota, recetas y mensajes.'
+    subtitle: 'Centro de control, perfiles, recetas y mensajes.'
   }
 };
 
@@ -3097,6 +3206,7 @@ async function cargarPerfilesUI() {
     sel.innerHTML = '<option value="">Julio (base Superadmin)</option>' + perfiles.map(p =>
       `<option value="${esc(p.id)}">${esc(p.nombre)} · ${esc(p.rol_base)}${p.modo_acceso === 'SOLO_LECTURA' ? ' · lectura' : ''}</option>`
     ).join('');
+    sel.innerHTML += '<option value="__gestionar__">+ Crear / gestionar usuarios…</option>';
     const guardado = localStorage.getItem('horminor.panel.user') || '';
     if (guardado && perfiles.some(p => p.id === guardado)) sel.value = guardado;
     else if (guardado) localStorage.removeItem('horminor.panel.user');
@@ -3112,6 +3222,12 @@ async function cargarPerfilesUI() {
 }
 
 async function cambiarPerfilSimulado(id) {
+  if (id === '__gestionar__') {
+    const sel = $('#sim-user');
+    if (sel) sel.value = localStorage.getItem('horminor.panel.user') || '';
+    abrirSuperUsuarios(true);
+    return;
+  }
   if (id) localStorage.setItem('horminor.panel.user', id);
   else localStorage.removeItem('horminor.panel.user');
   try {
@@ -4711,89 +4827,36 @@ function renderSimulador() {
 }
 
 /* ----------------------------- SUPERADMIN ----------------------------- */
-const SECCIONES = [
-  ['formulas_y_precios','Fórmulas'],
-  ['whatsapp_evolution_y_cdn','WhatsApp y CDN'],
-  ['empresa_bot_publico','Empresa'],
-  ['flota_y_operacion','Flota'],
-  ['directorio_roles_whatsapp','Directorio'],
-  ['bodega_y_umbrales','Bodega'],
-  ['finanzas_y_ases_gerenciales','Finanzas']
-];
-
-const CAMPOS = {
-  empresa_bot_publico: [
-    {k:'company_name', l:'Razón social'},
-    {k:'trade_name', l:'Nombre comercial'},
-    {k:'ruc', l:'RUC'},
-    {k:'main_plant_address', l:'Dirección planta'},
-    {k:'business_hours', l:'Horario'},
-    {k:'mobile_plant_pitch', l:'Mensaje planta móvil'},
-    {k:'coverage_zones', l:'Zonas de cobertura', t:'lista'},
-    {k:'bank_accounts', l:'Cuentas bancarias', t:'lineas'}
-  ],
-  whatsapp_evolution_y_cdn: [
-    {k:'evolution_api_url', l:'Evolution API URL'},
-    {k:'evolution_instance_name', l:'Instancia'},
-    {k:'evolution_api_key', l:'API key Evolution'},
-    {k:'evolution_sandbox', l:'Evolution en SANDBOX', t:'bool'},
-    {k:'bunny_storage_zone', l:'Storage Zone Bunny'},
-    {k:'bunny_api_key', l:'API key Bunny'},
-    {k:'bunny_cdn_domain', l:'CDN Bunny'},
-    {k:'bunny_sandbox', l:'Bunny en SANDBOX', t:'bool'},
-    {k:'debounce_seconds', l:'Debounce (s)', t:'num'},
-    {k:'judge_model', l:'Modelo del Juez'}
-  ],
-  directorio_roles_whatsapp: [
-    {k:'staff', l:'Staff (teléfono → rol/mixer/PIN)', t:'json'},
-    {k:'codigos_operador', l:'Códigos de operador', t:'json'},
-    {k:'pin_operador', l:'PIN opcional', t:'json'}
-  ],
-  flota_y_operacion: [
-    {k:'mixers', l:'Flota (JSON)', t:'json'},
-    {k:'politica_ultimo_viaje', l:'Política último viaje', t:'opciones', o:['PARCIAL','COMPLETO','UNIFORME']},
-    {k:'reloj_termico', l:'Reloj térmico', t:'json'}
-  ],
-  bodega_y_umbrales: [
-    {k:'materiales', l:'Materiales (solo lectura)', t:'readonly'},
-    {k:'por_planta', l:'Umbrales por planta', t:'json'},
-    {k:'conteo', l:'Estado del conteo físico', t:'readonly'}
-  ],
-  finanzas_y_ases_gerenciales: [
-    {k:'tope_credito_auto', l:'Cupo de crédito automático', t:'json'},
-    {k:'simulador', l:'Simulador bancario', t:'json'},
-    {k:'parametros_contables', l:'Parámetros contables y valoración 10 años', t:'json'},
-    {k:'mercado_valorizacion', l:'Valorización de mercado', t:'json'},
-    {k:'benchmarks', l:'Benchmarks por provincia', t:'json'}
-  ],
-  formulas_y_precios: [
-    {k:'recetas', l:'Recetas (JSON, upsert por resistencia)', t:'json'}
-  ]
-};
+/* Los editores de recetas, flota y parámetros usan formularios humanos;
+   no se exponen textareas con JSON crudo en la UI. */
 
 async function cargarSuperadmin() {
   try {
-    const [config, remitentes, outbox, operacion, usuarios] = await Promise.all([
+    const [config, remitentes, outbox, operacion, usuarios, recetas, flota] = await Promise.all([
       api('/api/v1/superadmin/config'),
       api('/api/v1/superadmin/simulador/remitentes').catch(() => ({remitentes:[]})),
       api('/api/v1/superadmin/sandbox/outbox').catch(() => ({outbox:[]})),
       api('/api/v1/superadmin/operacion/config').catch(() => null),
-      api('/api/v1/superadmin/usuarios').catch(() => ({usuarios:[]}))
+      api('/api/v1/superadmin/usuarios').catch(() => ({usuarios:[]})),
+      api('/api/v1/superadmin/recetas').catch(() => ({recetas:[]})),
+      api('/api/v1/superadmin/flota').catch(() => ({mixers:[]}))
     ]);
     state.config = config;
     state.remitentes = remitentes.remitentes || [];
     state.outbox = outbox.outbox || [];
     state.operacionConfig = operacion;
     state.usuariosACL = usuarios.usuarios || [];
-    if (!state.seccionConfig) state.seccionConfig = SECCIONES[0][0];
+    state.recetasSuper = recetas.recetas || [];
+    state.flotaSuper = flota.mixers || [];
     renderRemitentes();
-    renderConfigTabs();
-    renderConfig();
     renderFinanzasForm();
     renderConteo();
     renderOutbox();
     renderOperacionConfig();
     renderUsuariosACL();
+    renderRecetasSuper();
+    renderFlotaSuper();
+    renderReglasResumen();
   } catch(e) { toast('Superadmin no disponible: ' + e.message, 'bad'); }
 }
 
@@ -4815,6 +4878,23 @@ function renderOperacionConfig() {
   });
   $('#cc-resultado').innerHTML = '';
   $('#ag-resultado').innerHTML = '';
+  renderReglasResumen();
+}
+
+function renderReglasResumen() {
+  const host = $('#reglas-resumen');
+  if (!host) return;
+  const op = state.operacionConfig || {};
+  const caja = op.caja_chica || {};
+  const agenda = op.agenda || {};
+  const mats = (((state.config || {}).bodega_y_umbrales || {}).materiales) || [];
+  const pendientes = mats.filter(m => !m.ultimo_levantamiento_at).length;
+  host.innerHTML = `
+    <div class="spread"><span>Tope gasto efectivo</span><strong>${money(caja.caja_chica_max_monto_usd)}</strong></div>
+    <div class="spread"><span>Tope compra efectivo</span><strong>${money(caja.compras_efectivo_max_monto_usd)}</strong></div>
+    <div class="spread"><span>Horario planta</span><strong>${esc(agenda.hora_apertura || '07:00')} a ${esc(agenda.hora_cierre || '18:00')} · ${num(agenda.duracion_entrega_default_min || 90)}m</strong></div>
+    <div class="spread"><span>Conteo de silos</span><strong class="${pendientes ? '' : 'muted'}">${pendientes ? pendientes + ' material(es) pendiente(s)' : 'Al día'}</strong></div>
+    <button class="btn small ghost" style="margin-top:4px" onclick="abrirSuperTasas()">Ver tasas y conteo →</button>`;
 }
 
 async function guardarConfigCaja() {
@@ -4872,19 +4952,235 @@ function renderUsuariosACL() {
   const usuarios = state.usuariosACL || [];
   if (!usuarios.length) {
     host.innerHTML = '<p class="muted small">Sin usuarios creados.</p>';
+    renderPerfilesResumen();
     return;
   }
   host.innerHTML = `<table><thead><tr><th>Usuario</th><th>Rol</th><th>Modo</th><th>Módulos</th><th></th></tr></thead><tbody>${
     usuarios.map(u => `<tr>
       <td><strong>${esc(u.nombre)}</strong>${u.activo ? '' : ' <span class="badge bad">INACTIVO</span>'}</td>
       <td>${esc(u.rol_base)}</td>
-      <td><span class="badge ${u.modo_acceso === 'SOLO_LECTURA' ? 'warn' : 'ok'}">${esc(u.modo_acceso)}</span></td>
-      <td class="small">${u.modulos_activos.length} activos</td>
+      <td><span class="badge ${u.modo_acceso === 'SOLO_LECTURA' ? 'warn' : 'ok'}">${esc(u.modo_acceso === 'SOLO_LECTURA' ? 'SOLO LECTURA' : 'EDICIÓN')}</span></td>
+      <td class="small">${u.modulos_activos.length} módulos</td>
       <td><div class="cartera-acciones">
-        <button class="btn small ghost" onclick="editarUsuarioACL('${esc(u.id)}')">Editar</button>
+        <button class="btn small ghost" onclick="editarPermisos('${esc(u.id)}')">Editar permisos</button>
         <button class="btn small ghost" onclick="eliminarUsuarioACL('${esc(u.id)}')">Eliminar</button>
       </div></td>
     </tr>`).join('')}</tbody></table>`;
+  renderPerfilesResumen();
+}
+
+function _iniciales(nombre) {
+  return String(nombre || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
+function renderPerfilesResumen() {
+  const host = $('#perfiles-lista');
+  if (!host) return;
+  const usuarios = state.usuariosACL || [];
+  if (!usuarios.length) {
+    host.innerHTML = '<p class="muted small">Sin usuarios creados. Usa «+ Crear usuario».</p>';
+    return;
+  }
+  const activo = localStorage.getItem('horminor.panel.user') || '';
+  host.innerHTML = usuarios.map(u => {
+    const modo = u.modo_acceso === 'SOLO_LECTURA' ? 'SOLO LECTURA' : 'EDICIÓN';
+    const badge = u.modo_acceso === 'SOLO_LECTURA' ? 'warn' : 'ok';
+    const actual = activo === u.id || (!activo && u.rol_base === 'SUPERADMIN');
+    return `<div class="perfil-row">
+      <div class="profile-avatar perfil-avatar">${esc(_iniciales(u.nombre))}</div>
+      <div class="perfil-detalle">
+        <strong>${esc(u.nombre)} ${actual ? '<span class="badge neutral">VIENDO</span>' : ''}</strong>
+        <span>${esc(u.rol_base)} · ${u.modulos_activos.length} módulos activos</span>
+      </div>
+      <div class="perfil-badges">
+        <span class="badge ${badge}">${modo}</span>
+        <button class="btn small ghost" onclick="probarPerfil('${esc(u.id)}')">Probar vista</button>
+        <button class="btn small ghost" onclick="editarPermisos('${esc(u.id)}')">Editar permisos</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function probarPerfil(id) {
+  const sel = $('#sim-user');
+  if (sel) sel.value = id;
+  cambiarPerfilSimulado(id);
+}
+
+function editarPermisos(id) {
+  abrirSuperUsuarios(false).then(() => editarUsuarioACL(id));
+}
+
+async function abrirSuperUsuarios(crear) {
+  if (!state.usuariosACL || !state.usuariosACL.length) {
+    try {
+      const r = await api('/api/v1/superadmin/usuarios');
+      state.usuariosACL = (r && r.usuarios) || [];
+    } catch(e) { state.usuariosACL = []; }
+  }
+  renderModulosACL();
+  renderUsuariosACL();
+  nuevoUsuarioACL();
+  const dlg = document.getElementById('dlg-super-usuarios');
+  if (!dlg.open) dlg.showModal();
+  if (crear) setTimeout(() => { const el = $('#acl-nombre'); if (el) el.focus(); }, 60);
+}
+
+async function abrirSuperCaja() {
+  if (!state.operacionConfig) {
+    try { state.operacionConfig = await api('/api/v1/superadmin/operacion/config'); }
+    catch(e) { state.operacionConfig = null; }
+  }
+  renderOperacionConfig();
+  const dlg = document.getElementById('dlg-super-caja');
+  if (!dlg.open) dlg.showModal();
+}
+
+async function abrirSuperRecetas() {
+  if (!(state.recetasSuper || []).length) {
+    try { const r = await api('/api/v1/superadmin/recetas'); state.recetasSuper = (r && r.recetas) || []; }
+    catch(e) { state.recetasSuper = []; }
+  }
+  if (!(state.flotaSuper || []).length) {
+    try { const r = await api('/api/v1/superadmin/flota'); state.flotaSuper = (r && r.mixers) || []; }
+    catch(e) { state.flotaSuper = []; }
+  }
+  renderRecetasSuper();
+  renderFlotaSuper();
+  const dlg = document.getElementById('dlg-super-recetas');
+  if (!dlg.open) dlg.showModal();
+}
+
+function abrirSuperTasas() {
+  renderFinanzasForm();
+  renderConteo();
+  const dlg = document.getElementById('dlg-super-tasas');
+  if (!dlg.open) dlg.showModal();
+}
+
+/* ----------------------------- RECETAS / FLOTA HUMANAS ----------------------------- */
+function _valor(v) { return v === null || v === undefined ? '' : v; }
+
+function renderRecetasSuper() {
+  const host = $('#recetas-tabla');
+  if (!host) return;
+  const filas = state.recetasSuper || [];
+  host.innerHTML = `<thead><tr>
+    <th>Resistencia</th><th>Cemento<br><span class="small muted">sacos/m³</span></th><th>Arena<br><span class="small muted">m³/m³</span></th><th>Ripio<br><span class="small muted">m³/m³</span></th><th>Agua<br><span class="small muted">L/m³</span></th><th>Retardante<br><span class="small muted">L/m³</span></th><th>Saco<br><span class="small muted">kg</span></th><th>Precio<br><span class="small muted">$/m³</span></th><th>IVA<br><span class="small muted">%</span></th><th>Confirmada</th><th>Uso comercial</th>
+  </tr></thead><tbody>${
+    filas.map((r, idx) => `<tr data-receta-idx="${idx}">
+      <td><input type="text" data-rec="resistencia" value="${esc(_valor(r.resistencia))}" placeholder="FC-210"></td>
+      <td><input type="number" step="0.0001" data-rec="cemento_sacos_m3" value="${esc(_valor(r.cemento_sacos_m3))}"></td>
+      <td><input type="number" step="0.0001" data-rec="arena_m3_m3" value="${esc(_valor(r.arena_m3_m3))}"></td>
+      <td><input type="number" step="0.0001" data-rec="ripio_m3_m3" value="${esc(_valor(r.ripio_m3_m3))}"></td>
+      <td><input type="number" step="0.0001" data-rec="agua_litros_m3" value="${esc(_valor(r.agua_litros_m3))}"></td>
+      <td><input type="number" step="0.0001" data-rec="retardante_litros_m3" value="${esc(_valor(r.retardante_litros_m3))}"></td>
+      <td><input type="number" step="0.0001" data-rec="saco_kg" value="${esc(_valor(r.saco_kg))}"></td>
+      <td><input type="number" step="0.01" data-rec="precio_m3" value="${esc(_valor(r.precio_m3))}" placeholder="Sin definir"></td>
+      <td><input type="number" step="0.01" data-rec="iva_pct" value="${esc(_valor(r.iva_pct))}" placeholder="15"></td>
+      <td><input type="checkbox" data-rec="confirmado" ${r.confirmado ? 'checked' : ''}></td>
+      <td><input type="text" data-rec="uso_comercial" value="${esc(_valor(r.uso_comercial))}" placeholder="Uso"></td>
+    </tr>`).join('')
+  }</tbody>`;
+  $('#recetas-resultado').innerHTML = '';
+}
+
+function agregarRecetaFila() {
+  state.recetasSuper = state.recetasSuper || [];
+  state.recetasSuper.push({confirmado: false});
+  renderRecetasSuper();
+}
+
+async function guardarRecetasSuper() {
+  const filas = $$('#recetas-tabla tbody tr[data-receta-idx]');
+  let guardadas = 0;
+  try {
+    for (const fila of filas) {
+      const campo = k => fila.querySelector('[data-rec="' + k + '"]');
+      const resistencia = (campo('resistencia').value || '').trim().toUpperCase();
+      if (!resistencia) continue;
+      const num = k => {
+        const v = campo(k).value;
+        return v === '' ? null : Number(v);
+      };
+      const body = {
+        resistencia,
+        cemento_sacos_m3: num('cemento_sacos_m3'),
+        arena_m3_m3: num('arena_m3_m3'),
+        ripio_m3_m3: num('ripio_m3_m3'),
+        agua_litros_m3: num('agua_litros_m3'),
+        retardante_litros_m3: num('retardante_litros_m3'),
+        saco_kg: num('saco_kg'),
+        precio_m3: num('precio_m3'),
+        iva_pct: num('iva_pct'),
+        confirmado: campo('confirmado').checked,
+        uso_comercial: (campo('uso_comercial').value || '').trim() || null
+      };
+      await api('/api/v1/superadmin/recetas', {method:'POST', body});
+      guardadas++;
+    }
+    const r = await api('/api/v1/superadmin/recetas');
+    state.recetasSuper = (r && r.recetas) || [];
+    renderRecetasSuper();
+    $('#recetas-resultado').innerHTML = `<div class="notice ok">${guardadas} receta(s) guardadas.</div>`;
+    toast('Recetas guardadas', 'ok');
+  } catch(e) {
+    $('#recetas-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+function renderFlotaSuper() {
+  const host = $('#flota-tabla');
+  if (!host) return;
+  const filas = state.flotaSuper || [];
+  host.innerHTML = `<thead><tr>
+    <th>Código</th><th>Placa</th><th>Capacidad<br><span class="small muted">m³</span></th><th>Chofer asignado</th><th>Activo</th>
+  </tr></thead><tbody>${
+    filas.map((m, idx) => `<tr data-mixer-idx="${idx}">
+      <td><input type="text" data-mix="codigo" value="${esc(_valor(m.codigo))}" placeholder="MIXER-01"></td>
+      <td><input type="text" data-mix="placa" value="${esc(_valor(m.placa))}" placeholder="OAA-0000"></td>
+      <td><input type="number" step="0.1" data-mix="capacidad_m3" value="${esc(_valor(m.capacidad_m3))}" placeholder="8"></td>
+      <td><input type="text" data-mix="chofer_asignado" value="${esc(_valor(m.chofer_asignado))}" placeholder="Nombre del chofer"></td>
+      <td><input type="checkbox" data-mix="activo" ${m.activo !== false ? 'checked' : ''}></td>
+    </tr>`).join('')
+  }</tbody>`;
+  $('#flota-resultado').innerHTML = '';
+}
+
+function agregarMixerFila() {
+  state.flotaSuper = state.flotaSuper || [];
+  state.flotaSuper.push({activo: true});
+  renderFlotaSuper();
+}
+
+async function guardarFlotaSuper() {
+  const filas = $$('#flota-tabla tbody tr[data-mixer-idx]');
+  let guardados = 0;
+  try {
+    for (const fila of filas) {
+      const campo = k => fila.querySelector('[data-mix="' + k + '"]');
+      const codigo = (campo('codigo').value || '').trim().toUpperCase();
+      if (!codigo) continue;
+      const capacidad = campo('capacidad_m3').value;
+      const body = {
+        codigo,
+        placa: (campo('placa').value || '').trim() || null,
+        capacidad_m3: capacidad === '' ? null : Number(capacidad),
+        chofer_asignado: (campo('chofer_asignado').value || '').trim() || null,
+        activo: campo('activo').checked
+      };
+      await api('/api/v1/superadmin/flota', {method:'POST', body});
+      guardados++;
+    }
+    const r = await api('/api/v1/superadmin/flota');
+    state.flotaSuper = (r && r.mixers) || [];
+    state.opciones = null;
+    renderFlotaSuper();
+    $('#flota-resultado').innerHTML = `<div class="notice ok">${guardados} mixer(s) guardados.</div>`;
+    toast('Flota guardada', 'ok');
+  } catch(e) {
+    $('#flota-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
 }
 
 function nuevoUsuarioACL() {
@@ -4966,72 +5262,7 @@ function renderRemitentes() {
   ).join('') || '<option value="+593990000999">Lead Nuevo</option>';
 }
 
-function renderConfigTabs() {
-  const el = $('#config-tabs');
-  if (!el) return;
-  el.innerHTML = `
-    <label class="field" for="config-seccion" style="margin:0 0 6px">Sección de configuración</label>
-    <select id="config-seccion" onchange="cambiarSeccion(this.value)" aria-label="Sección de configuración">
-      ${SECCIONES.map(([id,label]) =>
-        `<option value="${id}" ${state.seccionConfig === id ? 'selected' : ''}>${label}</option>`
-      ).join('')}
-    </select>`;
-}
-
-function cambiarSeccion(id) { state.seccionConfig = id; renderConfigTabs(); renderConfig(); }
-
-function renderConfig() {
-  const id = state.seccionConfig;
-  const datos = (state.config || {})[id] || {};
-  const campos = CAMPOS[id] || [];
-  const panel = $('#config-panel');
-  if (!panel) return;
-  panel.innerHTML = `
-    <p class="small muted">Los datos marcados como provisionales son semilla editable. Guardar aquí aplica el cambio en la siguiente petición, sin reiniciar.</p>
-    ${campos.map(c => {
-      if (c.t === 'bool') return `<label class="row small" style="margin:8px 0"><input type="checkbox" data-campo="${c.k}" ${datos[c.k] ? 'checked' : ''} style="width:auto"> ${c.l}</label>`;
-      if (c.t === 'json' || c.t === 'readonly') return `
-        <label class="field" style="margin-top:8px">${c.l}</label>
-        <textarea class="mono" data-campo="${c.k}" data-json="1" ${c.t === 'readonly' ? 'readonly' : ''}>${esc(JSON.stringify(datos[c.k] ?? (c.t === 'json' ? {} : []), null, 2))}</textarea>`;
-      if (c.t === 'opciones') return `<label class="field" style="margin-top:8px">${c.l}</label>
-        <select data-campo="${c.k}">${c.o.map(o => `<option ${datos[c.k] === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
-      const valor = c.t === 'lista' ? (datos[c.k] || []).join(', ') : c.t === 'lineas' ? (datos[c.k] || []).join('\n') : (datos[c.k] ?? '');
-      if (c.t === 'lineas') return `<label class="field" style="margin-top:8px">${c.l} (una por línea)</label><textarea data-campo="${c.k}" data-lineas="1">${esc(valor)}</textarea>`;
-      return `<label class="field" style="margin-top:8px">${c.l}</label><input type="text" data-campo="${c.k}" value="${esc(valor)}">`;
-    }).join('')}
-    <button class="btn" style="margin-top:12px" onclick="guardarSeccion()">Guardar ${SECCIONES.find(s => s[0] === id)[1]}</button>
-    <div id="config-resultado"></div>`;
-}
-
-function leerCampo(el) {
-  if (el.type === 'checkbox') return el.checked;
-  if (el.dataset.json) return JSON.parse(el.value || '{}');
-  if (el.dataset.lineas) return el.value.split('\n').map(s => s.trim()).filter(Boolean);
-  const campo = el.dataset.campo;
-  if (campo === 'coverage_zones') return el.value.split(',').map(s => s.trim()).filter(Boolean);
-  if (campo === 'debounce_seconds') return Number(el.value);
-  return el.value;
-}
-
-async function guardarSeccion() {
-  const id = state.seccionConfig;
-  const body = {};
-  try {
-    $$('#config-panel [data-campo]').forEach(el => {
-      if (el.hasAttribute('readonly')) return;
-      body[el.dataset.campo] = leerCampo(el);
-    });
-  } catch(e) { toast('JSON inválido: ' + e.message, 'bad'); return; }
-  try {
-    const r = await api('/api/v1/superadmin/config/' + id, {method:'PUT', body});
-    state.config[id] = r;
-    $('#config-resultado').innerHTML = '<div class="notice ok">Guardado y aplicado en caliente.</div>';
-    toast('Configuración guardada', 'ok');
-    cargarSalud();
-  } catch(e) {
-    $('#config-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
-  }
-}
+/* Editores humanos: no hay textareas de JSON en la UI de Superadmin. */
 
 function renderFinanzasForm() {
   const p = (((state.config || {}).finanzas_y_ases_gerenciales || {}).parametros_contables) || {};
@@ -5068,8 +5299,8 @@ async function guardarParametrosFinancieros() {
       body: {parametros_contables: parametros}
     });
     state.config.finanzas_y_ases_gerenciales = r;
-    renderConfig();
     renderFinanzasForm();
+    renderReglasResumen();
     $('#fin-param-resultado').innerHTML = '<div class="notice ok">Parámetros guardados. La valoración y el DSCR se activan si todas las tasas están completas.</div>';
     toast('Parámetros financieros guardados', 'ok');
   } catch(e) {
@@ -5114,7 +5345,7 @@ async function registrarConteo() {
     });
     state.config.bodega_y_umbrales = r;
     renderConteo();
-    renderConfig();
+    renderReglasResumen();
     $('#conteo-resultado').innerHTML = '<div class="notice ok">Conteo registrado. Los materiales quedaron con fecha de levantamiento y la proyección usa el stock real.</div>';
     toast('Conteo físico registrado', 'ok');
     cargarDashboard();
@@ -5139,7 +5370,7 @@ async function enviarSimulacion() {
         <strong>${esc(r.rol)}</strong> · compuerta ${esc(r.compuerta || '—')} · estado ${esc(r.estado_actual || '—')}
         ${r.respuesta ? '<div class="bubble in" style="margin-top:8px"><span class="who">respuesta al cliente</span>' + esc(r.respuesta) + '</div>' : ''}
       </div>
-      <details><summary>Ver JSON del pipeline</summary><pre>${esc(JSON.stringify(r, null, 2))}</pre></details>`;
+      ${(r.acciones && r.acciones.length) ? `<p class="small muted" style="margin-top:6px">Acciones registradas: ${r.acciones.length}. El detalle queda en el outbox y en la bitácora.</p>` : ''}`;
     toast('Mensaje procesado por el pipeline', 'ok');
     await cargarOutbox();
     if (state.carpeta && state.carpeta.cliente) seleccionarCliente(state.carpeta.cliente.cliente_id);

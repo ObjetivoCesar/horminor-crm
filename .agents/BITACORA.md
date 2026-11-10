@@ -1761,3 +1761,67 @@ Entrar a `http://localhost:8000/panel` > Superadmin > Usuarios y Permisos de Mod
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
 - `.agents/evidencias/`
+
+---
+
+## 2026-11-09 - v6.4: rediseño UX de Superadmin por Action Cards
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** Llevar a Superadmin la misma jerarquía visual de Secretaría: acciones visibles, formularios bajo demanda y acceso directo a usuarios, sin JSON crudo ni textos `null`.
+
+### Hecho
+
+1. **Banner `CENTRO DE CONTROL`** con el mismo componente visual de Secretaría (`sec-ventanilla`, `sec-acciones`, `sec-accion primary`). Cuatro Action Cards:
+   - `Usuarios y accesos` (destacada) -> modal de perfiles con checklist de 10 módulos.
+   - `Caja chica y horarios` -> modal de topes, fondo base, horario, duración, intervalo y días laborables.
+   - `Recetas, flota y precios` -> modal con tablas humanas: cada receta y cada mixer se edita con inputs; el precio por m³ y el IVA están en la misma fila.
+   - `Tasas y conteo de silos` -> modal de parámetros contables y levantamiento físico.
+2. **Dos tarjetas resumen debajo del banner**:
+   - `Perfiles y Accesos`: filas de los usuarios con avatar, módulos activos, badge `EDICIÓN`/`SOLO LECTURA`, botones `Probar vista` y `Editar permisos`, y `+ Crear usuario`.
+   - `Canal WhatsApp y reglas vigentes`: simulador, outbox y resumen compacto de tope de gasto, tope de compra, horario de planta y estado del conteo de silos.
+3. **Selector `Viendo como:`** convertido en pill clicable en la barra superior, con todos los perfiles y la opción directa `+ Crear / gestionar usuarios…`.
+4. **Cero JSON crudo y cero `null` visible**:
+   - Se retiró la tarjeta genérica de configuración en caliente y sus textareas JSON.
+   - Los parámetros contables vacíos muestran `placeholder="Sin definir (ej. 12.5%)"` y `value=""`.
+   - Recetas y flota usan inputs numéricos/texto por celda; no hay textarea de configuración.
+   - El simulador ya no muestra el bloque de JSON del pipeline.
+5. **Pruebas nuevas:** `test_v64_superadmin_ux.py` verifica las 4 Action Cards, los 4 modales, las tarjetas resumen, el selector con acceso directo y la ausencia de `data-json`, `placeholder="null"` y textos JSON de recetas/flota.
+
+### Evidencia
+
+| Verificacion | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **272 passed in 5.86s** (`.agents/evidencias/pytest_v64_2026-11-09.txt`) |
+| `GET /panel` real | HTTP 200; 4 action cards, 4 modales, perfiles y reglas presentes (`.agents/evidencias/panel_v64_2026-11-09.txt`) |
+| Consola del navegador | sin errores; cambio a Auditor aplica solo lectura y oculta la agenda del Dashboard |
+| Modal Usuarios | 5 perfiles, 10 checkboxes, boton `+ Crear nuevo usuario` |
+| Modal Caja | 100/300/200 y horario 07:00-18:00 con 6 dias marcados |
+| Modal Recetas | 5 recetas y 3 mixers editables, 0 textareas |
+| Modal Tasas | WACC vacio con placeholder humano, 0 inputs con `null`, 5 materiales para conteo |
+| Guardado real en clon | 5 recetas y 3 mixers guardados; caja 120/350 reflejada en reglas al instante |
+| Base real | `payments=0`, `purchases=0`, `dispatch=0`; sin datos de prueba |
+
+### Decisiones
+
+1. **La tarjeta genérica de configuración en caliente sale de la vista principal.** Las secciones tecnicas (WhatsApp/Evolution, empresa/bot, directorio y umbrales de bodega) siguen disponibles por sus endpoints de Superadmin, pero ya no se muestran como textareas JSON. Si Julio necesita editarlas desde el panel, el siguiente paso es un modal `Avanzado` con formularios humanos, no volver al JSON.
+2. **Las tablas de recetas y flota usan los endpoints existentes de upsert.** No se creo un endpoint nuevo ni se duplico la logica de `_normalizar_receta`/`_normalizar_mixer`.
+3. **El selector superior es la unica fuente de simulacion.** La opcion `+ Crear / gestionar usuarios…` abre el mismo modal que la Action Card 1; no hay rutas paralelas.
+4. **El resumen de reglas es de solo lectura.** Los cambios se hacen en los modales de caja/horarios o en la configuracion de conteo, no en la tarjeta resumen.
+
+### Bloqueos / preguntas al cliente
+
+1. Validar con Julio los textos y el orden de las 4 Action Cards.
+2. Confirmar si las secciones tecnicas (WhatsApp, empresa, directorio, umbrales de bodega) deben volver a la UI como un modal `Avanzado` humano o quedarse por API.
+3. Los topes y horarios siguen siendo parametros provisionales hasta la confirmacion del cliente.
+
+### Proximo paso exacto
+
+Abrir `http://localhost:8000/panel` > Superadmin, probar las 4 tarjetas y el selector `Viendo como`; luego crear un usuario desde la Action Card 1 y verificar que `Probar vista` aplica el checklist sin recargar la pagina.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v64_superadmin_ux.py`
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`
+- `.agents/evidencias/`
