@@ -1,11 +1,13 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-09** (v5.1: Custodio v4.4.0 con HTTP,
-> panel de cobros/abonos/gastos, Superadmin de tasas y conteo, y backup diario
-> listo. 13 migraciones, 28 tablas, 6 vistas, 26 cuentas; **247 tests** y los
-> 2 candados en verde. Quedan operativos: login de usuario, cargar tasas,
-> ejecutar el conteo real e instalar el cron de backups)
+> Última actualización: **2026-11-09** (Hito **Custodio + Panel de
+> Pagos/Gastos/Tasas/Conteo** cerrado: Custodio v4.4.0 con HTTP, panel de
+> cobros/abonos/gastos, Superadmin de tasas y conteo, y backup diario.
+> 13 migraciones, 28 tablas, 6 vistas, 26 cuentas; **247 tests** y los 2
+> candados en verde. Quedan operativos: cargar tasas, ejecutar el conteo real
+> e instalar el cron de backups. El login de usuario pasa al **backlog
+> exclusivo pre-VPS**.)
 
 ## Hitos
 
@@ -16,7 +18,8 @@
 | 2 | M2 — Motor determinístico | 🟡 Construido, verificado local | `evidencias/pytest_panel_v44_2026-11-09.txt`: **247 tests** + candado Hito 1 | Probar desde el CRM de la agencia en el VPS |
 | 2 | M5 — Nodo Centinela | 🟡 Construido, verificado local | `evidencias/hito3_4_live_2026-11-08.txt`: 12 checks, `modo=SANDBOX`, `judge_mode=DETERMINISTIC_FALLBACK`; Evolution/Bunny en OK | Webhook real del CRM; umbral de merma que defina Julio |
 | 3 | M1 — WhatsApp (Evolution + Jeb + Bunny) | 🟢 **Cerrado en SANDBOX** | `evidencias/hito3_lock_2026-11-08.txt`: `[CANDADO CERRADO EN SANDBOX]`; 4 compuertas, JSONB y outbox | Producción real: cargar credenciales, apagar SANDBOX y repetir el candado |
-| 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 Construido y verificado local | `/panel` (tab Secretaría) con formularios de cobro/abono y gasto; carpeta forense; `POST /api/v1/panel/pagos` probado; tests `test_m3_secretaria.py` | Login de usuario; validación con la secretaria real |
+| 4 | M3 — Ventanilla de Secretaría + Caja | 🟢 **Cerrado** y verificado local | `/panel` (tab Secretaría) con formularios de cobro/abono y gasto; carpeta forense; `POST /api/v1/panel/pagos` probado; tests `test_m3_secretaria.py` | Validación con la secretaria real (afinamiento, no bloqueante) |
+| 4b | Custodio v4.4 + Panel de Pagos/Gastos/Tasas/Conteo | 🟢 **Cerrado** (2026-11-09) | `evidencias/pytest_panel_v44_2026-11-09.txt` (**247 tests**); `evidencias/http_gate_v44_check_2026-11-09.txt` (`HTTP GATE V4.4: OK`, 12 pasos, `ROLLBACK` 17 tablas); `/panel` con `dlg-pago`, `dlg-gasto`, `conteo-materiales`, `fin-wacc`; `GET /api/v1/panel/catalog` → 26 cuentas | Nada bloqueante. Cargar tasas, ejecutar conteo real e instalar cron quedan como operación del cliente/VPS |
 | 5 | M4 — Dashboard de Julio + Ases | 🟢 Construido y verificado local | *Dashboard Julio* con 3 tarjetas iguales: mercado El Coca **0.31% (372/120,000 m³)**, ventas **404 m³ / $55,043.60 / 51 viajes** (la captura aprobada 2026-11-08 mostraba $47,864 sin IVA), y provincias **Orellana 372 + Sucumbíos 16 + sin provincia 16**; Banca **215,000 / 404 / 0.19% / 214,596 m³**; 2 escenarios; tests `test_m4_dashboard.py` | Validar con Julio el ángulo de mercado; auth para exponer |
 | — | Despliegue en VPS | ⚪ No iniciado | — | VPS, dominio, TLS, proxy, backups |
 
@@ -138,9 +141,11 @@ scripts de candado.
    sigue faltando para un KPI de capacidad operativa. Dueño del dato: Julio.
 5. **Formulario de pagos implementado.** `/panel` ya registra cobros, abonos y
    gastos contra `/api/v1/panel/pagos`; falta validarlo con la secretaria real.
-6. **Sin login de usuario final.** El router del Custodio usa tokens de
-   servicio `CUSTODIO_TOKEN_*`; `/panel`, `/api/v1/secretaria/*` y
-   `/api/v1/superadmin/*` siguen abiertos. No exponerlos a Internet.
+6. **Login de usuario final — backlog exclusivo pre-VPS (decisión 2026-11-09).**
+   El panel sigue afinándose en local con el puente `X-Panel-Role`; el login
+   (`panel_users`, hash, cookie `HttpOnly`) se implementa **solo antes de
+   publicar en el VPS**. Mientras tanto, `/panel`, `/api/v1/panel/*` y
+   `/api/v1/secretaria/*` no se exponen a Internet.
 7. **Backup diario listo, cron pendiente.** `scripts/backup_db.sh` genera,
    verifica y retiene 14 días/6 meses; falta instalarlo en el VPS y copiar los
    dumps fuera de la máquina.
@@ -160,14 +165,15 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **Cargar las tasas financieras** en Superadmin >
+1. **Probar el panel en local con la secretaria** (cobro/abono, gasto, tasas y
+   conteo) y ajustar pantallas/flujos según lo que pida Julio. El login no
+   bloquea esta etapa.
+2. **Cargar las tasas financieras** en Superadmin >
    `finanzas.parametros_contables` (`wacc_anual_pct`,
    `crecimiento_anual_pct`, `participacion_trabajadores_pct`,
    `impuesto_renta_pct`, `dscr_minimo_banco`) para activar valoración/DSCR.
-2. **Ejecutar el conteo físico** de los 5 materiales desde Superadmin; hoy
+3. **Ejecutar el conteo físico** de los 5 materiales desde Superadmin; hoy
    siguen `SIN_FECHA_CONTEO`.
-3. **Implementar el login de usuario** y proteger todas las rutas del panel
-   antes de exponerlo a Internet.
 4. **Instalar el cron de backup** (`backup_db.sh`) y copiar los dumps fuera del
    VPS; probar una restauración mensual.
 5. **Dashboard V2 aprobado por Julio (2026-11-08).** La captura de referencia es
@@ -178,8 +184,10 @@ scripts de candado.
    `PUT /api/v1/superadmin/config/whatsapp_evolution_y_cdn`, poner
    `evolution_sandbox=false` y `bunny_sandbox=false`, y repetir
    `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py`.
-7. **Despliegue:** cuando exista el VPS, copiar el repo, levantar el stack,
-   configurar TLS, proxy inverso, login de usuario y el cron de backups.
+7. **Backlog pre-VPS (no antes):** implementar el login de usuario
+   (`panel_users`, hash `scrypt`, cookie `HttpOnly`) y proteger `/panel` y las
+   rutas de Secretaría/Superadmin. Después: VPS, TLS, proxy inverso y cron de
+   backups.
 
 ## Decisiones de arquitectura vigentes
 
@@ -230,6 +238,7 @@ scripts de candado.
 | 43 | **El navegador no recibe tokens del Custodio** | El panel llama a `/api/v1/panel/pagos` y `/api/v1/panel/catalog`; el servidor resuelve el actor (`X-Panel-Role` mientras no haya login). Los `CUSTODIO_TOKEN_*` quedan solo en el backend |
 | 44 | **Superadmin edita tasas y conteo, no valores inventados** | `finanzas.parametros_contables` se edita con inputs; el conteo físico se registra con stock real y sella `ultimo_levantamiento_at`. Los valores siguen siendo de Julio/Bodega |
 | 45 | **Backup diario verificable, no solo un dump** | `backup_db.sh` valida con `pg_restore --list`, retiene 14 días y 6 meses, y se complementa con copia externa y restauración mensual |
+| 46 | **Login desacoplado al backlog pre-VPS** | Se sigue afinando `/panel` con el puente `X-Panel-Role` (sin credenciales ni bloqueo de rutas) para no perder agilidad en pantallas y flujos. El login (`panel_users`, hash, cookie `HttpOnly`) se implementa únicamente antes de exponer el panel a Internet. Alternativa descartada: bloquear rutas ahora, que obliga a crear usuarios y frena las pruebas locales |
 
 ## Riesgos abiertos
 

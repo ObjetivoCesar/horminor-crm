@@ -1536,3 +1536,56 @@ Implementar el login de usuario final: tabla `panel_users` con hash `scrypt`, CL
 - `README.md`
 - `AGENTS.md`
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - Cierre del Hito Custodio + Panel (login pasa a backlog pre-VPS)
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Duración:** continuación de la sesión v5.1
+**Objetivo:** Cerrar formalmente el Hito **Custodio + Panel de Pagos/Gastos/Tasas/Conteo** y reubicar el login de usuario al backlog exclusivo pre-VPS, sin implementarlo todavía.
+
+### Hecho
+
+1. Se marca el hito **Custodio v4.4 + Panel de Pagos/Gastos/Tasas/Conteo** como **COMPLETADO** (fila 4b de `.agents/ESTADO.md`), con su evidencia: 247 tests y `HTTP GATE V4.4: OK` con 12 pasos y `ROLLBACK` en 17 tablas.
+2. Se actualiza la fila M3 (Ventanilla de Secretaría + Caja) a **🟢 Cerrado**, dejando la validación con la secretaria real como afinamiento no bloqueante.
+3. **Decisión 46:** el login de usuario final (`panel_users`, hash `scrypt`, cookie `HttpOnly`) se implementa **solo antes de publicar el panel en el VPS**. Mientras siga el afinamiento local de pantallas y flujos se mantiene el puente `X-Panel-Role` de `app/http_gate/panel.py`.
+4. Se actualizan bloqueos y "Próximo paso exacto": primero probar el panel en local, cargar tasas, ejecutar conteo real e instalar cron; el login y TLS quedan al final (pre-VPS).
+
+### Evidencia (real, ya ejecutada en esta sesión)
+
+| Comando | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **247 passed in 5.76s** (evidencia `.agents/evidencias/pytest_panel_v44_2026-11-09.txt`) |
+| `scripts/http_gate_v44_check.py` contra `orminorth_v43` | `HTTP GATE V4.4: OK` — catalog, mutations, queries, pagos, anticipo, gasto, idempotencia, roles, parámetros contables y conteo; `ROLLBACK` en 17 tablas (evidencia `.agents/evidencias/http_gate_v44_check_2026-11-09.txt`) |
+| `GET /panel` | 200; contiene `dlg-pago`, `dlg-gasto`, `registrarPago`, `registrarGasto`, `conteo-materiales`, `fin-wacc` |
+| `GET /api/v1/panel/catalog` | 26 cuentas activas |
+
+### Decisiones tomadas
+
+1. **El login no bloquea la etapa de afinamiento.** Se descarta implementar `panel_users` y bloquear rutas ahora: obligaría a crear usuarios reales y frenaría las pruebas locales de pantallas y flujos. El puente `X-Panel-Role` es suficiente mientras el panel no se exponga a Internet. Alternativa descartada: login inmediato con credenciales de prueba, que fija usuarios ficticios en una base que luego se audita.
+
+### Bloqueos / preguntas al cliente
+
+1. **Primera prueba del panel:** requiere que Julio/Secretaría validen los formularios de cobro/abono, gasto, tasas y conteo en `http://localhost:8000/panel`.
+2. **Tasas financieras:** Julio/Contadora deben cargar los 5 valores para activar DCF/DSCR.
+3. **Conteo físico:** Bodega debe ejecutar el levantamiento real de los 5 materiales.
+4. **Cron de backup:** instalar `backup_db.sh` en el VPS a las 23:55 America/Guayaquil y copiar los dumps fuera del servidor.
+
+### Próximo paso exacto
+
+Ejecutar la prueba guiada del panel en local: Secretaría > registrar un cobro parcial y un anticipo; registrar un gasto de caja chica; Superadmin > guardar tasas y registrar conteo. Verificar cartera, cierre y `v_cliente_saldo` después de cada acción. Si algo no cuadra, ajustar pantalla/flujo. El login se retoma únicamente en el bloque pre-VPS.
+
+### Addendum: entorno seguro de prueba del panel
+
+Se preparó una instancia espejo para probar la UI sin tocar la base real:
+
+- Base `orminorth_panel_test`, copia exacta de `orminorth` (`pg_dump`/`pg_restore` dentro del contenedor, 28 tablas, 6 clientes, 2 con saldo, 4 órdenes).
+- Contenedor `orminorth-core-api-clone` en `http://localhost:8001/panel`, apuntando a `orminorth_panel_test` con `AUTO_MIGRATE=false` y Redis DB 3.
+- Prueba real ejecutada: `POST /api/v1/panel/pagos` con cobro `$1.00` sobre el clon → `ACCEPT`, saldo bajó de `2171.20` a `2170.20`; la base real siguió con `payments=0`. Luego se recreó el clon desde la base real y quedó limpio (`CLONE_PAYMENTS=0`, `REAL_PAYMENTS=0`, `GET /panel` 200).
+- La instancia de producción local en `http://localhost:8000/panel` sigue apuntando a la base real y **no debe usarse para pruebas de escritura**.
+
+### Archivos tocados
+
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`
