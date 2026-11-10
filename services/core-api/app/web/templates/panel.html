@@ -635,6 +635,27 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
 }
 .cliente-item strong { display: block; font-size: 13.5px; color: var(--text-pure); }
 .cliente-item span { font-size: 12px; color: var(--text-muted); }
+.cliente-item .match-hint { color: var(--accent-cat-amber); font-size: 10.5px; margin-top: 3px; }
+.cliente-item .cli-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.filtros-clientes { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 8px; }
+.filtros-clientes .field { margin-bottom: 2px; }
+.sabueso-sugerencias {
+  position: absolute; left: 0; right: 0; top: 100%; z-index: 80;
+  background: var(--bg-obsidian); border: var(--border-subtle); border-radius: 12px;
+  box-shadow: 0 24px 50px -20px rgba(0,0,0,.7); overflow: auto; max-height: 320px;
+}
+.sabueso-item { display: block; width: 100%; text-align: left; padding: 9px 12px; border: 0; border-bottom: 1px solid rgba(148,163,184,.12); background: transparent; color: var(--text-pure); cursor: pointer; }
+.sabueso-item:hover { background: var(--surface-row-pill-hover); }
+.sabueso-item strong { display: block; font-size: 12.5px; }
+.sabueso-item span { display: block; font-size: 10.5px; color: var(--text-muted); }
+.sabueso-item em { display: block; font-style: normal; font-size: 10.5px; color: var(--accent-cat-amber); margin-top: 2px; }
+.paginacion { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: var(--border-subtle); }
+.paginacion .btn { font-size: 11px; }
+.tabs-cliente { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.tabs-cliente button { border: var(--border-subtle); border-radius: 999px; padding: 7px 11px; background: transparent; color: var(--text-muted); font-size: 11.5px; cursor: pointer; }
+.tabs-cliente button.active { background: rgba(245,158,11,.16); border-color: rgba(245,158,11,.5); color: var(--accent-cat-amber); font-weight: 700; }
+.tabla-viajes { margin-top: 8px; background: rgba(15,23,42,.35); border-radius: 10px; padding: 6px; }
+.sec-accion.active-filtro { box-shadow: 0 0 0 2px rgba(245,158,11,.55) inset; }
 
 /* ---------------------------------------------------------------- Ventanilla Secretaría */
 .sec-ventanilla {
@@ -2407,21 +2428,84 @@ tbody tr:last-child td { border-bottom: 0; }
 
   <!-- ===================== CARPETAS DE CLIENTES ===================== -->
   <section class="view" data-view="clientes">
-    <div class="grid two">
-      <div class="stack">
-        <div class="card">
-          <div class="spread">
-            <h2>Clientes</h2>
-            <button class="btn small ghost" data-mutacion="1" onclick="abrirCliente()">+ Nuevo</button>
-          </div>
-          <input type="search" id="buscar-cliente" placeholder="Buscar por nombre o constructora…" oninput="filtrarClientes()">
-          <div id="lista-clientes" style="margin-top:10px"></div>
+    <div class="card sec-ventanilla" data-modulo="clientes_cartera">
+      <div>
+        <span class="sec-eyebrow">CARTERA Y EXPEDIENTES</span>
+        <h2>¿Qué clientes necesitas encontrar hoy?</h2>
+        <p class="small muted" style="margin:0">Filtra por deuda, obra activa o pagos. El buscador también cruza órdenes, viajes, obras y transferencias.</p>
+      </div>
+      <div class="sec-acciones">
+        <button class="sec-accion primary" data-grupo-cliente="DEUDA" onclick="setGrupoClientes('DEUDA')">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg>
+          <span class="sec-accion-txt"><strong>Con deuda / Fiado</strong><small id="cli-res-deuda">—</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button class="sec-accion" data-grupo-cliente="OBRA" onclick="setGrupoClientes('OBRA')">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17V7h11v10"/><path d="M14 10h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+          <span class="sec-accion-txt"><strong>En obra / Entregas activas</strong><small id="cli-res-obra">—</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button class="sec-accion" data-grupo-cliente="PAGOS" onclick="setGrupoClientes('PAGOS')">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/></svg>
+          <span class="sec-accion-txt"><strong>Pagos y Transferencias</strong><small id="cli-res-pagos">—</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button class="sec-accion" data-grupo-cliente="TODOS" onclick="cardTodosClientes()">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 11h5M18.5 8.5v5"/></svg>
+          <span class="sec-accion-txt"><strong>Todos y Prospectos</strong><small id="cli-res-todos">—</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px" data-modulo="clientes_cartera">
+      <div class="spread" style="align-items:flex-end;gap:10px">
+        <div style="flex:1;min-width:220px;position:relative">
+          <label class="field">Buscar por nombre, apellido, “7m3”, “FC-210”, obra, ciudad o #orden</label>
+          <input type="search" id="buscar-cliente" autocomplete="off"
+                 placeholder="Ej: baca reyes, 7m3, FC-210, Loreto, #56…"
+                 oninput="onBuscarClientes(this.value)">
+          <div id="sabueso-sugerencias" class="search-results sabueso-sugerencias" hidden></div>
         </div>
+        <button class="btn small ghost" onclick="limpiarFiltrosClientes()">Limpiar filtros</button>
+      </div>
+      <div class="filtros-clientes" style="margin-top:10px">
+        <div><label class="field">Ciudad / Sector</label><select id="filtro-ciudad" onchange="aplicarFiltrosClientes()"><option value="">Todas</option></select></div>
+        <div><label class="field">Forma de pago</label><select id="filtro-pago" onchange="aplicarFiltrosClientes()">
+          <option value="">Todos</option><option value="TRANSFERENCIA">Transferencia</option><option value="EFECTIVO">Efectivo</option><option value="FIADO">Fiado / Crédito</option><option value="ANTICIPO">Con anticipo</option>
+        </select></div>
+        <div><label class="field">Fecha</label><select id="filtro-fecha" onchange="onFechaClientesChange()">
+          <option value="">Cualquier fecha</option><option value="HOY">Hoy</option><option value="SEMANA">Esta semana</option><option value="MES">Este mes</option><option value="CUSTOM">Rango personalizado</option>
+        </select></div>
+        <div><label class="field">Resistencia</label><select id="filtro-resistencia" onchange="aplicarFiltrosClientes()"><option value="">Todas</option></select></div>
+        <div><label class="field">m³ desde</label><input type="number" id="filtro-m3-min" min="0" step="0.5" oninput="aplicarFiltrosClientes()"></div>
+        <div><label class="field">m³ hasta</label><input type="number" id="filtro-m3-max" min="0" step="0.5" oninput="aplicarFiltrosClientes()"></div>
+        <div><label class="field">Ordenar por</label><select id="filtro-orden" onchange="aplicarFiltrosClientes()">
+          <option value="DEUDA">Mayor deuda</option><option value="ACTIVIDAD">Actividad más reciente</option><option value="VOLUMEN">Mayor volumen m³</option><option value="NOMBRE">Nombre A-Z</option>
+        </select></div>
+      </div>
+      <div id="filtro-fechas-custom" hidden class="field-row" style="margin-top:8px">
+        <div><label class="field">Desde</label><input type="date" id="filtro-desde" onchange="aplicarFiltrosClientes()"></div>
+        <div><label class="field">Hasta</label><input type="date" id="filtro-hasta" onchange="aplicarFiltrosClientes()"></div>
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:16px;align-items:start">
+      <div class="card">
+        <div class="spread">
+          <div>
+            <h2 style="margin-bottom:2px">Clientes</h2>
+            <p class="small muted" id="cli-contador" style="margin:0">Leyendo cartera…</p>
+          </div>
+          <button class="btn small" data-mutacion="1" onclick="abrirCliente()">+ Nuevo cliente</button>
+        </div>
+        <div id="lista-clientes" style="margin-top:12px"><p class="muted small">Cargando clientes…</p></div>
+        <div id="cli-paginacion" class="paginacion"></div>
       </div>
       <div class="stack">
         <div class="card" id="carpeta-card">
-          <h2>Carpeta Forense del Cliente</h2>
-          <p class="muted small">Selecciona un cliente para ver su línea de tiempo, el estado del Juez Binario “Jeb” y las evidencias Bunny.net.</p>
+          <h2>Carpeta del Cliente</h2>
+          <p class="muted small">Selecciona un cliente para ver sus órdenes, pagos y ficha editable.</p>
         </div>
       </div>
     </div>
@@ -2627,6 +2711,11 @@ tbody tr:last-child td { border-bottom: 0; }
     <label class="field">WhatsApp</label><input type="text" id="cli-telefono" placeholder="+593...">
     <label class="field">Provincia de la obra</label>
     <select id="cli-provincia"><option value="">Sin asignar</option><option>Orellana</option><option>Sucumbíos</option></select>
+    <div class="field-row" style="margin-top:8px">
+      <div><label class="field">Ciudad / Sector</label><input type="text" id="cli-ciudad" placeholder="El Coca, Lago Agrio, Loreto…"></div>
+      <div><label class="field">Obra frecuente</label><input type="text" id="cli-direccion" placeholder="Sector, vía o referencia"></div>
+      <div><label class="field">Cupo de crédito (USD)</label><input type="number" id="cli-credito" step="0.01" min="0" placeholder="Sin definir"></div>
+    </div>
     <div id="cli-error"></div>
   </div>
   <div class="dialog-foot">
@@ -3000,7 +3089,10 @@ const state = {
   ordenes:[], detalle:{}, inventario:[], donutMode:0, catalogo:null,
   proveedores:[], inventarioOverview:null, agenda:[], agendaY:null, agendaM:null,
   reglasPago:{}, agendaParams:null, perfil:null, perfiles:[], operacionConfig:null,
-  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], notifs:[], cargando:false
+  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], notifs:[], cargando:false,
+  clientesBusqueda:[], cliGrupo:'TODOS', cliPagina:1, cliPaginas:1, cliTotal:0,
+  cliResumen:null, cliFiltrosMeta:{ciudades:[],resistencias:[]}, cliTimer:null, cliSeq:0,
+  carpetaTab:'ordenes', ordenExpandida:null
 };
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
@@ -3624,7 +3716,7 @@ function renderKpis() {
     </div>`;
 }
 
-/* ----------------------------- CLIENTES / SECRETARÍA ----------------------------- */
+/* ----------------------------- CLIENTES / SABUESO v6.6 ----------------------------- */
 async function cargarClientes(preferId) {
   try {
     const [clientes, opciones] = await Promise.all([
@@ -3633,13 +3725,195 @@ async function cargarClientes(preferId) {
     ]);
     state.clientes = clientes.clientes || [];
     state.opciones = opciones;
-    renderClientes();
     llenarOpcionesOrden();
     renderCartera();
+    await buscarClientes();
     const id = preferId || (state.carpeta && state.carpeta.cliente.cliente_id) || clienteAutoseleccion();
     if (id) await seleccionarCliente(id);
     renderNotificaciones();
   } catch(e) { toast('No se pudo cargar clientes: ' + e.message, 'bad'); }
+}
+
+function _valorFiltro(id) { return (($(id) || {}).value || '').trim(); }
+
+async function buscarClientes() {
+  const seq = ++state.cliSeq;
+  const params = new URLSearchParams();
+  const q = _valorFiltro('#buscar-cliente');
+  if (q) params.set('q', q);
+  params.set('grupo', state.cliGrupo || 'TODOS');
+  const ciudad = _valorFiltro('#filtro-ciudad');
+  if (ciudad) params.set('ciudad', ciudad);
+  const pago = _valorFiltro('#filtro-pago');
+  if (pago) params.set('pago', pago);
+  const resistencia = _valorFiltro('#filtro-resistencia');
+  if (resistencia) params.set('resistencia', resistencia);
+  const m3min = _valorFiltro('#filtro-m3-min');
+  if (m3min !== '') params.set('m3_min', m3min);
+  const m3max = _valorFiltro('#filtro-m3-max');
+  if (m3max !== '') params.set('m3_max', m3max);
+  const fecha = _valorFiltro('#filtro-fecha');
+  if (fecha === 'CUSTOM') {
+    const desde = _valorFiltro('#filtro-desde');
+    const hasta = _valorFiltro('#filtro-hasta');
+    if (desde) params.set('desde', desde);
+    if (hasta) params.set('hasta', hasta);
+  } else if (fecha) {
+    params.set('periodo', fecha);
+  }
+  const orden = _valorFiltro('#filtro-orden') || 'DEUDA';
+  params.set('orden', orden);
+  params.set('pagina', state.cliPagina || 1);
+  params.set('por_pagina', '12');
+  try {
+    const r = await api('/api/v1/clients/search?' + params.toString());
+    if (seq !== state.cliSeq) return;
+    state.clientesBusqueda = (r && r.clientes) || [];
+    state.cliResumen = (r && r.resumen) || null;
+    state.cliFiltrosMeta = (r && r.filtros) || {ciudades:[],resistencias:[]};
+    state.cliPaginas = (r && r.paginacion && r.paginacion.paginas) || 1;
+    state.cliTotal = (r && r.paginacion && r.paginacion.total) || 0;
+    _actualizarOpcionesFiltros();
+    renderResumenClientes();
+    renderClientes();
+    renderPaginacionClientes();
+    renderSugerenciasClientes();
+  } catch(e) {
+    if (seq !== state.cliSeq) return;
+    toast('No se pudo buscar clientes: ' + e.message, 'bad');
+  }
+}
+
+function _actualizarOpcionesFiltros() {
+  const ciudad = $('#filtro-ciudad');
+  if (ciudad) {
+    const actual = ciudad.value;
+    ciudad.innerHTML = '<option value="">Todas</option>' + (state.cliFiltrosMeta.ciudades || []).map(c =>
+      `<option value="${esc(c)}" ${actual === c ? 'selected' : ''}>${esc(c)}</option>`
+    ).join('');
+  }
+  const res = $('#filtro-resistencia');
+  if (res) {
+    const actual = res.value;
+    res.innerHTML = '<option value="">Todas</option>' + (state.cliFiltrosMeta.resistencias || []).map(r =>
+      `<option value="${esc(r)}" ${actual === r ? 'selected' : ''}>${esc(r)}</option>`
+    ).join('');
+  }
+}
+
+function renderResumenClientes() {
+  const r = state.cliResumen || {};
+  const set = (id, texto) => { const el = $(id); if (el) el.textContent = texto; };
+  set('#cli-res-deuda', `${r.deuda_clientes || 0} clientes · ${money(r.deuda_monto || 0)}`);
+  set('#cli-res-obra', `${r.obra_clientes || 0} clientes activos`);
+  set('#cli-res-pagos', `${r.pagos_clientes || 0} clientes con pagos`);
+  set('#cli-res-todos', `${r.todos_clientes || 0} en padrón · ${r.prospectos || 0} prospectos`);
+  $$('[data-grupo-cliente]').forEach(el => {
+    el.classList.toggle('active-filtro', el.dataset.grupoCliente === state.cliGrupo);
+  });
+}
+
+function renderClientes() {
+  const host = $('#lista-clientes');
+  if (!host) return;
+  const lista = state.clientesBusqueda || [];
+  const contador = $('#cli-contador');
+  if (contador) contador.textContent = `Mostrando ${lista.length} de ${state.cliTotal} clientes · página ${state.cliPagina} de ${state.cliPaginas}`;
+  host.innerHTML = lista.length ? lista.map(c => {
+    const saldo = Number(c.saldo_pendiente || 0);
+    const ciudad = c.ciudad || c.provincia || 'Sin ciudad';
+    return `<button class="cliente-item ${state.carpeta && state.carpeta.cliente.cliente_id === c.cliente_id ? 'active' : ''}"
+            onclick="seleccionarCliente('${esc(c.cliente_id)}')">
+      <div class="spread">
+        <strong>${esc(c.nombre)}</strong>
+        <span class="badge ${saldo > 0 ? 'warn' : c.es_prospecto ? 'neutral' : 'ok'}">${c.es_prospecto ? 'PROSPECTO' : saldo > 0 ? 'DEBE' : 'AL DÍA'}</span>
+      </div>
+      <div class="cli-meta"><span>${esc(c.constructora || 'Sin constructora')}</span><span>📍 ${esc(ciudad)}</span><span>${money(saldo)}</span></div>
+      ${c.match_hint ? `<div class="match-hint">Coincide con: ${esc(c.match_hint)}</div>` : ''}
+    </button>`;
+  }).join('') : '<p class="muted small">Sin clientes para estos filtros. Prueba con “Limpiar filtros”.</p>';
+}
+
+function renderPaginacionClientes() {
+  const host = $('#cli-paginacion');
+  if (!host) return;
+  host.innerHTML = `<button class="btn small ghost" ${state.cliPagina <= 1 ? 'disabled' : ''} onclick="paginaClientes(-1)">« Anterior</button>
+    <span class="small muted">Pág ${state.cliPagina} de ${state.cliPaginas} · ${state.cliTotal} clientes</span>
+    <button class="btn small ghost" ${state.cliPagina >= state.cliPaginas ? 'disabled' : ''} onclick="paginaClientes(1)">Siguiente »</button>`;
+}
+
+function paginaClientes(delta) {
+  state.cliPagina = Math.max(1, Math.min(state.cliPaginas, state.cliPagina + delta));
+  buscarClientes();
+}
+
+function onBuscarClientes(valor) {
+  clearTimeout(state.cliTimer);
+  state.cliTimer = setTimeout(() => {
+    state.cliPagina = 1;
+    buscarClientes();
+  }, 250);
+  if ((valor || '').trim().length < 2) ocultarSugerenciasClientes();
+}
+
+function setGrupoClientes(grupo) {
+  state.cliGrupo = grupo || 'TODOS';
+  state.cliPagina = 1;
+  buscarClientes();
+}
+
+function cardTodosClientes() {
+  if (state.cliGrupo === 'TODOS') abrirCliente();
+  else setGrupoClientes('TODOS');
+}
+
+function aplicarFiltrosClientes() {
+  state.cliPagina = 1;
+  buscarClientes();
+}
+
+function onFechaClientesChange() {
+  const custom = _valorFiltro('#filtro-fecha') === 'CUSTOM';
+  const box = $('#filtro-fechas-custom');
+  if (box) box.hidden = !custom;
+  aplicarFiltrosClientes();
+}
+
+function limpiarFiltrosClientes() {
+  ['#buscar-cliente','#filtro-ciudad','#filtro-pago','#filtro-fecha','#filtro-resistencia','#filtro-m3-min','#filtro-m3-max','#filtro-desde','#filtro-hasta'].forEach(id => {
+    const el = $(id); if (el) el.value = '';
+  });
+  const orden = $('#filtro-orden'); if (orden) orden.value = 'DEUDA';
+  const custom = $('#filtro-fechas-custom'); if (custom) custom.hidden = true;
+  state.cliGrupo = 'TODOS';
+  state.cliPagina = 1;
+  ocultarSugerenciasClientes();
+  buscarClientes();
+}
+
+function renderSugerenciasClientes() {
+  const host = $('#sabueso-sugerencias');
+  if (!host) return;
+  const q = _valorFiltro('#buscar-cliente');
+  if (q.length < 2) { host.hidden = true; host.innerHTML = ''; return; }
+  const lista = (state.clientesBusqueda || []).slice(0, 6);
+  if (!lista.length) { host.hidden = true; host.innerHTML = ''; return; }
+  host.innerHTML = lista.map(c => `<button type="button" class="sabueso-item" onclick="elegirSugerenciaCliente('${esc(c.cliente_id)}')">
+    <strong>${esc(c.nombre)}</strong>
+    <span>${esc(c.constructora || 'Sin constructora')} · ${esc(c.ciudad || c.provincia || 'sin ciudad')} · ${money(c.saldo_pendiente)}</span>
+    ${c.match_hint ? `<em>${esc(c.match_hint)}</em>` : ''}
+  </button>`).join('');
+  host.hidden = false;
+}
+
+function ocultarSugerenciasClientes() {
+  const host = $('#sabueso-sugerencias');
+  if (host) { host.hidden = true; host.innerHTML = ''; }
+}
+
+function elegirSugerenciaCliente(id) {
+  ocultarSugerenciasClientes();
+  seleccionarCliente(id);
 }
 
 async function cargarSecretaria() {
@@ -3661,22 +3935,6 @@ async function cargarReglasPago() {
     state.reglasPago = (r && r.reglas) || {};
   } catch(e) { state.reglasPago = {}; }
 }
-
-function renderClientes() {
-  const host = $('#lista-clientes');
-  if (!host) return;
-  const q = (($('#buscar-cliente') || {}).value || '').toLowerCase();
-  const lista = state.clientes.filter(c =>
-    !q || String(c.nombre).toLowerCase().includes(q) || String(c.constructora || '').toLowerCase().includes(q));
-  host.innerHTML = lista.length ? lista.map(c => `
-    <button class="cliente-item ${state.carpeta && state.carpeta.cliente.cliente_id === c.cliente_id ? 'active' : ''}"
-            onclick="seleccionarCliente('${esc(c.cliente_id)}')">
-      <strong>${esc(c.nombre)}</strong>
-      <span>${esc(c.constructora || 'Sin constructora')} · Saldo ${money(c.saldo_pendiente)}</span>
-    </button>`).join('') : '<p class="muted small">Sin resultados.</p>';
-}
-
-function filtrarClientes() { renderClientes(); }
 
 function renderCartera() {
   const el = $('#sec-cartera');
@@ -3929,9 +4187,15 @@ async function registrarGasto() {
 async function seleccionarCliente(id) {
   try {
     state.carpeta = await api('/api/v1/secretaria/clientes/' + id + '/carpeta');
+    state.carpetaTab = 'ordenes';
+    state.ordenExpandida = null;
     renderCarpeta();
     renderClientes();
   } catch(e) { toast('No se pudo abrir la carpeta: ' + e.message, 'bad'); }
+}
+
+function _viajesDeOrden(c, numero) {
+  return (c.viajes || []).filter(v => String(v.orden_numero) === String(numero));
 }
 
 function renderCarpeta() {
@@ -3943,75 +4207,149 @@ function renderCarpeta() {
   const textoJuez = semaforoJuez === 'bad' ? 'Incidencia detectada' : semaforoJuez === 'ok' ? 'Despachos validados' : 'Sin veredicto';
   const host = $('#carpeta-card');
   if (!host) return;
+  const tab = state.carpetaTab || 'ordenes';
   host.innerHTML = `
     <div class="spread">
       <div>
         <h2 style="margin:0">${esc(cliente.nombre)}</h2>
         <p class="muted small" style="margin:4px 0 0">${esc(cliente.constructora || 'Sin constructora')} · RUC ${esc(cliente.ruc || '—')} · ${esc(cliente.telefono || 'sin WhatsApp')}</p>
+        <p class="muted small" style="margin:2px 0 0">📍 ${esc(cliente.ciudad || cliente.provincia || 'sin ciudad')} ${cliente.direccion_obra ? '· Obra: ' + esc(cliente.direccion_obra) : ''}</p>
       </div>
       <div class="right">
         <span class="badge ${cliente.estado === 'ACTIVO' ? 'ok' : 'neutral'}">${esc(cliente.estado)}</span>
         <span class="badge ${semaforoJuez}">Jeb: ${textoJuez}</span>
       </div>
     </div>
-    <div class="grid kpis" style="margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+    <div class="grid kpis" style="margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
       <div><div class="kpi-label">Saldo pendiente</div><div class="big">${money(saldo.saldo_pendiente)}</div><div class="kpi-sub">Cupo ${money(cliente.credit_limit_usd)}</div></div>
       <div><div class="kpi-label">Facturado</div><div class="big">${money(saldo.total_facturado)}</div><div class="kpi-sub">${num(saldo.total_m3)} m³ acumulados</div></div>
       <div><div class="kpi-label">Cobrado</div><div class="big">${money(saldo.total_cobrado)}</div><div class="kpi-sub">Fiado ${money(saldo.total_fiado)}</div></div>
     </div>
-    <div class="divider"></div>
-    <div class="row" style="justify-content:space-between">
-      <h3 style="margin:0">Órdenes</h3>
-      <button class="btn small" onclick="abrirOrden()">+ Nueva orden</button>
+    <div class="tabs-cliente">
+      <button class="${tab === 'ordenes' ? 'active' : ''}" onclick="cambiarTabCarpeta('ordenes')">📦 Órdenes y Viajes</button>
+      <button class="${tab === 'pagos' ? 'active' : ''}" onclick="cambiarTabCarpeta('pagos')">💵 Pagos y Estado de Cuenta</button>
+      <button class="${tab === 'ficha' ? 'active' : ''}" onclick="cambiarTabCarpeta('ficha')">📋 Ficha y Datos</button>
     </div>
-    <div class="table-wrap" style="margin-top:8px">
-      <table>
-        <thead><tr><th>#</th><th>Resistencia</th><th>m³</th><th>Pago</th><th>Total</th><th>Estado</th></tr></thead>
-        <tbody>
-        ${(c.ordenes || []).map(o => `<tr>
-          <td>${o.numero}</td><td>${esc(o.resistencia)}</td><td>${num(o.volumen_m3)}</td>
-          <td>${esc(o.forma_pago)}${o.excede_cupo_credito ? ' <span class="badge bad">cupo</span>' : ''}</td>
-          <td>${money(o.total)}</td><td><span class="badge neutral">${esc(o.estado)}</span></td>
-        </tr>`).join('') || '<tr><td colspan="6" class="muted">Sin órdenes.</td></tr>'}
-        </tbody>
-      </table>
+    <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap">
+      <button class="btn small" data-modulo="secretaria_ventanilla" data-mutacion="1" onclick="abrirOrden()">+ Nueva orden</button>
+      <button class="btn small bank" data-modulo="secretaria_cobros_gastos" data-mutacion="1" onclick="abrirPago('${esc(cliente.cliente_id)}')">+ Cobrar / abonar</button>
+      <button class="btn small ghost" data-modulo="agenda_despachos" data-mutacion="1" onclick="abrirAgenda(null, hoy(), 'PROGRAMADO')">+ Agendar entrega</button>
     </div>
-    <div class="divider"></div>
-    <div class="row" style="justify-content:space-between">
-      <h3 style="margin:0">Viajes de mixer</h3>
-      <span class="badge neutral">${(c.viajes || []).length} viajes</span>
+    <div id="carpeta-tab" style="margin-top:10px">${renderCarpetaTab(c, tab)}</div>`;
+}
+
+function renderCarpetaTab(c, tab) {
+  if (tab === 'pagos') return renderTabPagos(c);
+  if (tab === 'ficha') return renderTabFicha(c);
+  return renderTabOrdenes(c);
+}
+
+function renderTabOrdenes(c) {
+  const ordenes = c.ordenes || [];
+  if (!ordenes.length) return '<p class="muted small">Sin órdenes registradas.</p>';
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Resistencia</th><th>m³</th><th>Pago</th><th>Total</th><th>Estado</th><th>Viajes</th></tr></thead>
+    <tbody>${ordenes.map(o => {
+      const viajes = _viajesDeOrden(c, o.numero);
+      const abierta = String(state.ordenExpandida) === String(o.numero);
+      return `<tr>
+        <td><strong>#${o.numero}</strong></td><td>${esc(o.resistencia)}</td><td>${num(o.volumen_m3)}</td>
+        <td>${esc(o.forma_pago)}${o.excede_cupo_credito ? ' <span class="badge bad">cupo</span>' : ''}</td>
+        <td>${money(o.total)}</td><td><span class="badge neutral">${esc(o.estado)}</span></td>
+        <td><button class="btn small ghost" onclick="toggleViajesOrden('${esc(o.numero)}')">${abierta ? 'Ocultar' : 'Ver'} ${viajes.length} viaje(s) ${abierta ? '▴' : '▾'}</button></td>
+      </tr>${abierta ? `<tr><td colspan="7">${renderTablaViajes(viajes)}</td></tr>` : ''}`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function renderTablaViajes(viajes) {
+  if (!viajes.length) return '<p class="muted small" style="margin:6px">Esta orden todavía no tiene viajes de mixer.</p>';
+  return `<div class="tabla-viajes table-wrap"><table>
+    <thead><tr><th>Viaje</th><th>Mixer</th><th>Chofer</th><th>m³</th><th>Estado</th><th>Jeb</th></tr></thead>
+    <tbody>${viajes.map(v => `<tr>
+      <td>${v.viaje_numero}/${v.total_viajes ?? '—'}</td>
+      <td>${esc(v.mixer_codigo || '—')}</td><td>${esc(v.chofer_nombre || '—')}</td>
+      <td>${num(v.volumen_m3)}</td><td><span class="badge neutral">${esc(v.estado_actual)}</span></td>
+      <td>${v.juez && v.juez.incidencia_detectada ? '<span class="badge bad">Incidencia</span>' : v.juez && v.juez.recepcion_validada ? '<span class="badge ok">Validado</span>' : v.juez && v.juez.despacho_validado ? '<span class="badge warn">Despachado</span>' : '<span class="badge neutral">Pendiente</span>'}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderTabPagos(c) {
+  const pagos = c.pagos || [];
+  if (!pagos.length) return '<p class="muted small">Sin cobros ni abonos registrados. Usa “+ Cobrar / abonar”.</p>';
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Método</th><th>Monto</th><th>Referencia</th><th>Orden</th></tr></thead>
+    <tbody>${pagos.map(p => `<tr>
+      <td>${esc(p.fecha || '—')}</td><td>${esc(p.tipo_movimiento)}${p.es_anticipo ? ' <span class="badge neutral">anticipo</span>' : ''}</td>
+      <td>${esc(p.metodo)}</td><td><strong>${money(p.monto)}</strong></td>
+      <td>${esc(p.referencia || '—')}</td><td>${p.orden_numero ? '#' + esc(p.orden_numero) : '—'}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderTabFicha(c) {
+  const cliente = c.cliente || {};
+  return `<div class="grid two" style="grid-template-columns:1fr 1fr">
+    <div>
+      <label class="field">Nombre</label><input type="text" id="ficha-nombre" value="${esc(cliente.nombre || '')}">
+      <label class="field" style="margin-top:8px">Constructora</label><input type="text" id="ficha-constructora" value="${esc(cliente.constructora || '')}">
+      <label class="field" style="margin-top:8px">RUC</label><input type="text" id="ficha-ruc" value="${esc(cliente.ruc || '')}">
+      <label class="field" style="margin-top:8px">WhatsApp</label><input type="text" id="ficha-telefono" value="${esc(cliente.telefono || '')}">
     </div>
-    <div class="table-wrap" style="margin-top:8px">
-      <table>
-        <thead><tr><th>Orden</th><th>Viaje</th><th>Mixer</th><th>Chofer</th><th>m³</th><th>Estado</th><th>Jeb</th></tr></thead>
-        <tbody>
-        ${(c.viajes || []).slice(0, 10).map(v => `<tr>
-          <td>#${v.orden_numero}</td><td>${v.viaje_numero}/${v.total_viajes ?? '—'}</td>
-          <td>${esc(v.mixer_codigo || '—')}</td><td>${esc(v.chofer_nombre || '—')}</td>
-          <td>${num(v.volumen_m3)}</td><td><span class="badge neutral">${esc(v.estado_actual)}</span></td>
-          <td>${v.juez && v.juez.incidencia_detectada ? '<span class="badge bad">Incidencia</span>' : v.juez && v.juez.recepcion_validada ? '<span class="badge ok">Validado</span>' : v.juez && v.juez.despacho_validado ? '<span class="badge warn">Despachado</span>' : '<span class="badge neutral">Pendiente</span>'}</td>
-        </tr>`).join('') || '<tr><td colspan="7" class="muted">Sin viajes de mixer.</td></tr>'}
-        </tbody>
-      </table>
+    <div>
+      <label class="field">Ciudad / Sector</label><input type="text" id="ficha-ciudad" value="${esc(cliente.ciudad || cliente.provincia || '')}">
+      <label class="field" style="margin-top:8px">Obra frecuente</label><input type="text" id="ficha-direccion" value="${esc(cliente.direccion_obra || '')}">
+      <label class="field" style="margin-top:8px">Cupo de crédito (USD)</label><input type="number" id="ficha-credito" step="0.01" min="0" value="${cliente.credit_limit_usd == null ? '' : esc(cliente.credit_limit_usd)}" placeholder="Sin definir">
+      <label class="field" style="margin-top:8px">Notas</label><input type="text" id="ficha-notas" value="${esc(cliente.notas || '')}">
     </div>
-    <div class="divider"></div>
-    <div class="grid two" style="grid-template-columns:1fr 1fr">
-      <div>
-        <h3>Línea de tiempo forense</h3>
-        <ul class="timeline">
-          ${(c.timeline || []).map(t => `<li><time>${new Date(t.fecha).toLocaleString('es-EC')}</time>${esc(t.tipo)} <span class="muted">· ${esc(t.detalle)}</span></li>`).join('') || '<li class="muted">Sin eventos registrados.</li>'}
-        </ul>
-      </div>
-      <div>
-        <h3>Galería Bunny.net</h3>
-        <div class="gallery">
-          ${(c.evidencias || []).map(ev => `<a class="shot" href="${esc(ev.url)}" target="_blank" rel="noopener">
-            <div class="ph">evidencia sandbox</div>
-            <div class="meta">Orden #${ev.orden_numero} · viaje ${ev.viaje_numero} · ${esc(ev.vehiculo || '')}</div>
-          </a>`).join('') || '<p class="muted small">Sin evidencias todavía.</p>'}
-        </div>
-      </div>
-    </div>`;
+  </div>
+  <button class="btn" style="margin-top:10px" data-mutacion="1" onclick="guardarFichaCliente()">Guardar ficha</button>
+  <div id="ficha-resultado"></div>
+  <div class="divider"></div>
+  <details><summary>Historial forense y evidencias</summary>
+    <ul class="timeline">${(c.timeline || []).map(t => `<li><time>${new Date(t.fecha).toLocaleString('es-EC')}</time>${esc(t.tipo)} <span class="muted">· ${esc(t.detalle)}</span></li>`).join('') || '<li class="muted">Sin eventos registrados.</li>'}</ul>
+    <div class="gallery">${(c.evidencias || []).map(ev => `<a class="shot" href="${esc(ev.url)}" target="_blank" rel="noopener"><div class="ph">evidencia</div><div class="meta">Orden #${ev.orden_numero} · viaje ${ev.viaje_numero}</div></a>`).join('') || '<p class="muted small">Sin evidencias.</p>'}</div>
+  </details>`;
+}
+
+function cambiarTabCarpeta(tab) {
+  state.carpetaTab = tab;
+  renderCarpeta();
+}
+
+function toggleViajesOrden(numero) {
+  state.ordenExpandida = String(state.ordenExpandida) === String(numero) ? null : numero;
+  renderCarpeta();
+}
+
+async function guardarFichaCliente() {
+  const c = state.carpeta;
+  if (!c || !c.cliente) return;
+  const body = {
+    nombre: $('#ficha-nombre').value.trim(),
+    constructora: $('#ficha-constructora').value.trim() || null,
+    ruc: $('#ficha-ruc').value.trim() || null,
+    telefono_whatsapp: $('#ficha-telefono').value.trim() || null,
+    ciudad: $('#ficha-ciudad').value.trim() || null,
+    direccion_obra: $('#ficha-direccion').value.trim() || null,
+    credit_limit_usd: $('#ficha-credito').value === '' ? null : Number($('#ficha-credito').value),
+    notas: $('#ficha-notas').value.trim() || null
+  };
+  if (!body.nombre) { $('#ficha-resultado').innerHTML = '<div class="notice bad">El nombre es obligatorio.</div>'; return; }
+  try {
+    const r = await api('/api/v1/clients/' + c.cliente.cliente_id, {method:'PUT', body});
+    Object.assign(c.cliente, {
+      nombre: r.nombre, constructora: r.constructora, ruc: r.ruc, telefono: r.telefono_whatsapp,
+      ciudad: r.ciudad, direccion_obra: r.direccion_obra, credit_limit_usd: r.credit_limit_usd, notas: r.notas
+    });
+    const full = (state.clientes || []).find(x => x.cliente_id === c.cliente.cliente_id);
+    if (full) Object.assign(full, body);
+    toast('Ficha del cliente actualizada', 'ok');
+    renderCarpeta();
+    const res = $('#ficha-resultado');
+    if (res) res.innerHTML = '<div class="notice ok">Ficha guardada.</div>';
+    await buscarClientes();
+  } catch(e) {
+    $('#ficha-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
 }
 
 function llenarOpcionesOrden() {
@@ -4109,10 +4447,11 @@ async function crearOrden() {
 }
 
 function abrirCliente() {
-  ['cli-nombre','cli-constructora','cli-ruc','cli-telefono'].forEach(id => {
+  ['cli-nombre','cli-constructora','cli-ruc','cli-telefono','cli-ciudad','cli-direccion','cli-credito'].forEach(id => {
     const el = $('#' + id);
     if (el) el.value = '';
   });
+  const prov = $('#cli-provincia'); if (prov) prov.value = '';
   const err = $('#cli-error'); if (err) err.innerHTML = '';
   const dlg = $('#dlg-cliente'); if (dlg && dlg.showModal) dlg.showModal();
 }
@@ -4123,14 +4462,19 @@ async function crearCliente() {
     constructora: $('#cli-constructora').value.trim() || null,
     ruc: $('#cli-ruc').value.trim() || null,
     telefono_whatsapp: $('#cli-telefono').value.trim() || null,
-    provincia: $('#cli-provincia').value || null
+    provincia: $('#cli-provincia').value || null,
+    ciudad: $('#cli-ciudad').value.trim() || null,
+    direccion_obra: $('#cli-direccion').value.trim() || null,
+    credit_limit_usd: $('#cli-credito').value === '' ? null : Number($('#cli-credito').value)
   };
   if (!body.nombre) { $('#cli-error').innerHTML = '<div class="notice bad">El nombre es obligatorio.</div>'; return; }
   try {
-    await api('/api/v1/clients', {method:'POST', body});
+    const r = await api('/api/v1/clients', {method:'POST', body});
     $('#dlg-cliente').close();
     toast('Cliente creado', 'ok');
-    await cargarClientes();
+    state.cliGrupo = 'TODOS';
+    state.cliPagina = 1;
+    await cargarClientes(r && r.id);
     await cargarDashboard();
   } catch(e) { $('#cli-error').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`; }
 }
@@ -5415,6 +5759,9 @@ document.addEventListener('click', e => {
   const p = $('#notif-popover');
   const enWrap = e.target && e.target.closest ? e.target.closest('.notif-wrap') : null;
   if (p && !p.hidden && !enWrap) toggleNotif(false);
+  const sab = $('#sabueso-sugerencias');
+  const buscador = $('#buscar-cliente');
+  if (sab && !sab.hidden && buscador && !buscador.contains(e.target) && !sab.contains(e.target)) ocultarSugerenciasClientes();
 });
 
 document.addEventListener('keydown', e => {

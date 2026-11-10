@@ -20,7 +20,7 @@ from .m2_planta import ErrorPlanta
 from .m3_secretaria.router import router as secretaria_router
 from .m4_dashboard.router import router as dashboard_router
 from .m5_sentinel.router import router as sentinel_router
-from .routers import catalog, health, orders
+from .routers import catalog, clients_search, health, orders
 from .services.ordenes import OrdenInvalidaError
 from .settings import get_settings
 from .superadmin.operacion import router as operacion_router
@@ -102,6 +102,7 @@ async def orden_invalida_handler(request: Request, exc: OrdenInvalidaError):
 
 app.include_router(health.router)
 app.include_router(catalog.router)
+app.include_router(clients_search.router)
 app.include_router(orders.router)
 app.include_router(whatsapp_router)
 app.include_router(superadmin_router)

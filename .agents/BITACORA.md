@@ -1825,3 +1825,83 @@ Abrir `http://localhost:8000/panel` > Superadmin, probar las 4 tarjetas y el sel
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
 - `.agents/evidencias/`
+
+---
+
+## 2026-11-09 - v6.6: Carpetas de Clientes, buscador Sabueso y tutoriales
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** Rediseñar Carpetas de Clientes para cientos de clientes, con filtros rápidos, búsqueda multi-variable y expediente ordenado; dejar la base de tutoriales para el futuro bot.
+
+### Hecho
+
+1. **Banner `CARTERA Y EXPEDIENTES`** con 4 Action Cards y contadores en vivo:
+   - `Con deuda / Fiado`: clientes con saldo y monto total por cobrar.
+   - `En obra / Entregas activas`: órdenes recientes o agenda vigente.
+   - `Pagos y Transferencias`: cobros registrados o saldo a favor.
+   - `Todos y Prospectos`: padrón completo y leads; segundo clic abre `+ Nuevo cliente`.
+2. **Buscador Sabueso** (`GET /api/v1/clients/search`):
+   - Normalización de tildes y equivalencias b/v, z/s/c, ll/y.
+   - Tokens en cualquier orden (`reyes ing`, `ing reyes`).
+   - Patrones `7m3`, `7 m3`, `16m3`, `FC-210`, `FC 210`, `#56`.
+   - Cruce con nombre, constructora, ciudad, obra frecuente, notas, órdenes, agenda y pagos.
+   - `match_hint` con la orden/entrega/pago que explica la coincidencia.
+   - Autocompletado a partir de 2 caracteres.
+3. **Filtros combinables y paginación:** ciudad/sector, forma de pago, fecha (hoy/semana/mes/rango), resistencia, rango de m³ y orden (deuda/actividad/volumen/nombre). Lista paginada de 12 con `« Anterior | Pág X de Y | Siguiente »`.
+4. **Expediente derecho en 3 pestañas:** `Órdenes y Viajes` con viajes desplegables solo de la orden elegida, `Pagos y Estado de Cuenta` con cobros/abonos/anticipos, y `Ficha y Datos` editable (ciudad, obra frecuente, cupo, notas).
+5. **Migración 069** (`069_clientes_sabueso.sql`): columnas `ciudad` y `direccion_obra`, índices de ciudad/obra y prefijo normalizado para el buscador.
+6. **Backend de expediente:** `obtener_carpeta` ahora devuelve `pagos` y los campos de ciudad/obra; `GET /api/v1/secretaria/clientes` incorpora total cobrado, fiado, saldo a favor y ciudad.
+7. **Base de tutoriales:** `docs/tutoriales/` con los 7 Markdown (`00_INDICE_BOT_TUTOR` a `06_superadmin_y_permisos`), placeholders de capturas, preguntas frecuentes y auditoría en 60 segundos. Sin botones ni login nuevos.
+
+### Evidencia
+
+| Verificación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **277 passed in 6.24s** (`.agents/evidencias/pytest_v66_2026-11-09.txt`) |
+| Migración real | `069_clientes_sabueso.sql` aplicada; `schema_migrations` la reporta como última |
+| `GET /panel` real | HTTP 200; banner, buscador, filtros, paginación y pestañas presentes (`.agents/evidencias/panel_v66_2026-11-09.txt`) |
+| Resumen real | 6 clientes; deuda 2 / `$55,043.60`; obra 3; pagos 0; prospectos 3 |
+| Buscador real | `16m3` y `16 m3` -> 2 clientes con `match_hint` de Orden #57 y #9; `FC 210` -> 3; `#56` -> 1; `reyes` -> 1 |
+| Filtros reales | deuda 2; obra 3; ciudad Orellana 1; fiado 3; FC-350 1; rango 10-60 m³ 3 |
+| Navegador | sin errores; filtros y búsqueda actualizan la lista; ficha guarda ciudad/obra/cupo; pagos vacío se muestra correctamente |
+| Base real | `payments=0`, `purchases=0`, `dispatch_schedule=0`; sin datos de prueba |
+| Respaldo previo | `.agents/evidencias/orminorth_pre_069_2026-11-09.dump` |
+
+### Decisiones
+
+1. **Se creó un endpoint nuevo `/api/v1/clients/search`** en lugar de sobrecargar `/api/v1/secretaria/clientes`: el antiguo sigue sirviendo para selectores y cartera, y el nuevo concentra filtros, resumen y paginación.
+2. **La normalización fonética es deliberadamente simple** (b/v, z/s/c, ll/y). Evita dependencias externas y es predecible; si aparecen casos raros se ajusta en una función única.
+3. **El hint se calcula solo para la página actual** (12 clientes) con tres consultas agregadas, no una por cliente. La búsqueda principal sigue siendo SQL y paginada.
+4. **La ficha usa `PUT /api/v1/clients/{id}`** con checklist ACL y bloqueo de solo lectura; no se borra ningún cliente.
+5. **Los tutoriales son documentación pura.** No se agregaron botones de tutorial ni login al HTML, tal como pidió la fase.
+
+### Bloqueos / preguntas al cliente
+
+1. Validar con Julio los textos y el orden de las 4 tarjetas de cartera.
+2. Confirmar si los prospectos deben ser solo `estado='PROSPECTO'` o también leads sin orden con otro criterio.
+3. Confirmar si “En obra activa” debe mirar 90 días de órdenes y ±30 días de agenda, o una ventana distinta.
+4. Cargar ciudad/obra frecuente en los clientes reales para que los filtros por zona sean útiles.
+
+### Próximo paso exacto
+
+Abrir `http://localhost:8000/panel` > Carpetas de Clientes, buscar `16m3`, `FC-210` y `#56`, filtrar por ciudad/deuda y abrir la ficha de un cliente para completar ciudad, obra frecuente y cupo.
+
+### Archivos tocados
+
+- `db/migrations/069_clientes_sabueso.sql`
+- `services/core-api/app/routers/clients_search.py`
+- `services/core-api/app/routers/catalog.py`
+- `services/core-api/app/main.py`
+- `services/core-api/app/m3_secretaria/service.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v66_clientes_sabueso.py`
+- `docs/tutoriales/00_INDICE_BOT_TUTOR.md`
+- `docs/tutoriales/01_dashboard_julio.md`
+- `docs/tutoriales/02_secretaria_y_caja.md`
+- `docs/tutoriales/03_carpetas_clientes.md`
+- `docs/tutoriales/04_planta_flota_kardex.md`
+- `docs/tutoriales/05_banca_y_mercado.md`
+- `docs/tutoriales/06_superadmin_y_permisos.md`
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`
+- `.agents/evidencias/`

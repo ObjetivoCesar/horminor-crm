@@ -166,12 +166,17 @@ class PostgresSecretariaStore:
             """
             SELECT c.id::text, c.nombre, c.constructora, c.ruc,
                    c.telefono_whatsapp, c.estado, c.credit_limit_usd,
+                   c.provincia, c.ciudad, c.direccion_obra,
                    COALESCE(s.total_m3, 0)         AS total_m3,
                    COALESCE(s.total_facturado, 0)  AS total_facturado,
-                   COALESCE(s.saldo_pendiente, 0)  AS saldo_pendiente
+                   COALESCE(s.total_cobrado, 0)    AS total_cobrado,
+                   COALESCE(s.total_fiado, 0)      AS total_fiado,
+                   COALESCE(s.saldo_pendiente, 0)  AS saldo_pendiente,
+                   COALESCE(s.saldo_a_favor, 0)    AS saldo_a_favor
               FROM clients c
               LEFT JOIN v_cliente_saldo s ON s.id = c.id
-             WHERE ($1 = '%%' OR c.nombre ILIKE $1 OR COALESCE(c.constructora,'') ILIKE $1)
+             WHERE ($1 = '%%' OR c.nombre ILIKE $1 OR COALESCE(c.constructora,'') ILIKE $1
+                    OR COALESCE(c.ciudad,'') ILIKE $1 OR COALESCE(c.direccion_obra,'') ILIKE $1)
              ORDER BY c.nombre
              LIMIT 200
             """,
@@ -186,9 +191,15 @@ class PostgresSecretariaStore:
                 "telefono": fila["telefono_whatsapp"],
                 "estado": fila["estado"],
                 "credit_limit_usd": _f(fila["credit_limit_usd"]),
+                "provincia": fila["provincia"],
+                "ciudad": fila["ciudad"],
+                "direccion_obra": fila["direccion_obra"],
                 "total_m3": _f(fila["total_m3"]),
                 "total_facturado": _f(fila["total_facturado"]),
+                "total_cobrado": _f(fila["total_cobrado"]),
+                "total_fiado": _f(fila["total_fiado"]),
                 "saldo_pendiente": _f(fila["saldo_pendiente"]),
+                "saldo_a_favor": _f(fila["saldo_a_favor"]),
             }
             for fila in filas
         ]
@@ -198,6 +209,7 @@ class PostgresSecretariaStore:
             """
             SELECT c.id::text, c.nombre, c.constructora, c.ruc,
                    c.telefono_whatsapp, c.estado, c.notas, c.credit_limit_usd,
+                   c.provincia, c.ciudad, c.direccion_obra,
                    COALESCE(s.total_m3, 0)        AS total_m3,
                    COALESCE(s.total_facturado, 0) AS total_facturado,
                    COALESCE(s.total_cobrado, 0)   AS total_cobrado,
@@ -229,6 +241,19 @@ class PostgresSecretariaStore:
              )
              ORDER BY order_id DESC, viaje_numero
              LIMIT 60
+            """,
+            cliente_id,
+        )
+        pagos = await self._pool.fetch(
+            """
+            SELECT p.id::text, p.fecha, p.tipo_movimiento, p.metodo, p.monto,
+                   p.referencia, p.es_anticipo, p.created_at,
+                   o.numero AS orden_numero
+              FROM payments p
+              LEFT JOIN orders o ON o.id = p.order_id
+             WHERE p.cliente_id = $1 AND p.deleted_at IS NULL
+             ORDER BY p.fecha DESC, p.created_at DESC
+             LIMIT 100
             """,
             cliente_id,
         )
@@ -274,6 +299,9 @@ class PostgresSecretariaStore:
                 "estado": cliente["estado"],
                 "notas": cliente["notas"],
                 "credit_limit_usd": _f(cliente["credit_limit_usd"]),
+                "provincia": cliente["provincia"],
+                "ciudad": cliente["ciudad"],
+                "direccion_obra": cliente["direccion_obra"],
             },
             "saldo": {
                 "total_m3": _f(cliente["total_m3"]),
@@ -304,6 +332,19 @@ class PostgresSecretariaStore:
                     "limite_termico_fraguado": _iso(fila["limite_termico_fraguado"]),
                 }
                 for fila in viajes
+            ],
+            "pagos": [
+                {
+                    "pago_id": fila["id"],
+                    "fecha": _iso(fila["fecha"]),
+                    "tipo_movimiento": fila["tipo_movimiento"],
+                    "metodo": fila["metodo"],
+                    "monto": _f(fila["monto"]),
+                    "referencia": fila["referencia"],
+                    "es_anticipo": bool(fila["es_anticipo"]),
+                    "orden_numero": fila["orden_numero"],
+                }
+                for fila in pagos
             ],
             "evidencias": evidencias,
             "timeline": sorted(timeline, key=lambda item: item["fecha"], reverse=True),
