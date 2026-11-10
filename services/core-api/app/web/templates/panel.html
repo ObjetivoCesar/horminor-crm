@@ -636,6 +636,65 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
 .cliente-item strong { display: block; font-size: 13.5px; color: var(--text-pure); }
 .cliente-item span { font-size: 12px; color: var(--text-muted); }
 
+/* ---------------------------------------------------------------- Ventanilla Secretaría */
+.sec-ventanilla {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 2.1fr);
+  gap: 20px;
+  align-items: center;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.sec-eyebrow {
+  display: inline-block;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-cat-amber);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.sec-ventanilla h2 { margin: 0 0 4px; }
+.sec-acciones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.sec-accion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface-row-pill);
+  border: var(--border-subtle);
+  color: var(--text-pure);
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+.sec-accion:hover {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: var(--surface-row-pill-hover);
+  transform: translateY(-1px);
+}
+.sec-accion.primary {
+  background: linear-gradient(180deg, var(--accent-cat-amber-bright) 0%, var(--accent-cat-amber) 100%);
+  border-color: rgba(251, 191, 36, 0.75);
+  box-shadow: 0 8px 18px -12px rgba(245, 158, 11, 0.55);
+}
+.sec-accion.primary .sec-accion-txt strong,
+.sec-accion.primary .sec-accion-txt small,
+.sec-accion.primary .sec-accion-arrow { color: #1A1200; }
+.sec-accion-ico { width: 20px; height: 20px; flex: 0 0 20px; stroke: currentColor; }
+.sec-accion-txt { display: flex; flex-direction: column; min-width: 0; }
+.sec-accion-txt strong { font-size: 13px; font-weight: 600; }
+.sec-accion-txt small { font-size: 11px; color: var(--text-muted); }
+.sec-accion-arrow { margin-left: auto; opacity: 0.55; font-size: 15px; }
+.cartera-acciones { display: flex; gap: 6px; justify-content: flex-end; }
+.tabla-cartera tbody tr:hover td { background: var(--surface-row-pill-hover); }
+.cierre-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+@media (max-width: 1100px) {
+  .sec-ventanilla { grid-template-columns: 1fr; }
+  .sec-acciones { grid-template-columns: 1fr; }
+}
+
 /* ---------------------------------------------------------------- Badges */
 .badge {
   display: inline-block;
@@ -2196,54 +2255,83 @@ tbody tr:last-child td { border-bottom: 0; }
 
   <!-- ===================== SECRETARIA Y CAJA ===================== -->
   <section class="view" data-view="secretaria">
-    <div class="grid two">
-      <div class="stack">
-        <div class="card">
-          <div class="spread">
-            <h2>Alta rápida de orden</h2>
-            <button class="btn small" onclick="abrirOrden()">+ Nueva orden</button>
+    <div class="card sec-ventanilla">
+      <div>
+        <span class="sec-eyebrow">Ventanilla</span>
+        <h2>¿Qué vas a registrar hoy?</h2>
+        <p class="small muted" style="margin:0">Cobra a un cliente, registra un gasto o crea una orden. Todo pasa por el Custodio.</p>
+      </div>
+      <div class="sec-acciones">
+        <button class="sec-accion primary" onclick="abrirPago()">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg>
+          <span class="sec-accion-txt"><strong>Cobrar / abonar</strong><small>Pago de cliente u orden</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button class="sec-accion" onclick="abrirGasto()">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></svg>
+          <span class="sec-accion-txt"><strong>Registrar gasto</strong><small>Caja chica o banco</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button class="sec-accion" onclick="abrirOrden()">
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17V7h11v10"/><path d="M14 10h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+          <span class="sec-accion-txt"><strong>Nueva orden</strong><small>Venta de hormigón</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:16px">
+      <div class="card">
+        <div class="spread">
+          <div>
+            <h2 style="margin-bottom:2px">Resumen de hoy</h2>
+            <p class="small muted" style="margin:0">Lo que ya entró y salió de caja.</p>
           </div>
-          <p class="small muted" style="margin-top:0">Calcula viajes, cemento y retardante con la receta confirmada antes de guardar.</p>
-          <div id="sec-ordenes" class="table-wrap"><p class="muted small">Cargando órdenes…</p></div>
+          <button class="btn small ghost" onclick="cargarCierre()">Actualizar</button>
         </div>
-        <details class="card fold-card" id="cierre-card">
-          <summary>
-            <h2>Cierre de Caja</h2>
-            <span class="badge neutral" id="cierre-estado">—</span>
-          </summary>
-          <div class="fold-body">
-            <label class="field">Fecha</label>
-            <input type="date" id="cierre-fecha" onchange="cargarCierre()">
-            <div id="cierre-resumen" class="small" style="margin-top:10px"></div>
-            <label class="field" style="margin-top:10px">Efectivo contado (USD)</label>
-            <input type="number" id="cierre-contado" step="0.01" min="0" placeholder="0.00">
-            <label class="field" style="margin-top:10px">Cerrado por</label>
-            <input type="text" id="cierre-por" value="Secretaría">
-            <button class="btn bank" style="margin-top:10px;width:100%" onclick="cerrarCaja()">Cerrar caja del día</button>
-            <div id="cierre-resultado"></div>
-          </div>
-        </details>
+        <div id="sec-cobros" class="small" style="margin-top:12px"><p class="muted">Cargando movimientos…</p></div>
       </div>
 
-      <div class="stack">
-        <details class="card fold-card">
-          <summary>
-            <h2>Cobros y abonos del día</h2>
-            <span class="badge neutral">Ventanilla</span>
-          </summary>
-          <div class="fold-body">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-              <button class="btn small" onclick="abrirPago()">+ Registrar cobro / abono</button>
-              <button class="btn small ghost" onclick="abrirGasto()">+ Registrar gasto</button>
-            </div>
-            <div id="sec-cobros" class="small"><p class="muted">Cargando movimientos…</p></div>
+      <div class="card" id="cierre-card">
+        <div class="spread">
+          <div>
+            <h2 style="margin-bottom:2px">Cierre de caja</h2>
+            <p class="small muted" style="margin:0">Cuenta el efectivo y cierra el día.</p>
           </div>
-        </details>
-        <div class="card">
-          <h2>Cartera de clientes</h2>
-          <div id="sec-cartera" class="table-wrap"><p class="muted small">Cargando cartera…</p></div>
+          <span class="badge neutral" id="cierre-estado">—</span>
         </div>
+        <div class="cierre-grid" style="margin-top:10px">
+          <div><label class="field">Fecha</label><input type="date" id="cierre-fecha" onchange="cargarCierre()"></div>
+          <div><label class="field">Efectivo contado (USD)</label><input type="number" id="cierre-contado" step="0.01" min="0" placeholder="0.00"></div>
+        </div>
+        <div id="cierre-resumen" class="small" style="margin-top:10px"></div>
+        <label class="field" style="margin-top:10px">Cerrado por</label>
+        <input type="text" id="cierre-por" value="Secretaría">
+        <button class="btn bank" style="margin-top:10px;width:100%" onclick="cerrarCaja()">Cerrar caja del día</button>
+        <div id="cierre-resultado"></div>
       </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="spread">
+        <div>
+          <h2 style="margin-bottom:2px">Cartera de clientes</h2>
+          <p class="small muted" style="margin:0">Cobra directo desde la fila del cliente.</p>
+        </div>
+        <input type="search" id="buscar-cartera" placeholder="Buscar cliente…" oninput="renderCartera()" style="max-width:240px">
+      </div>
+      <div id="sec-cartera" class="table-wrap" style="margin-top:10px"><p class="muted small">Cargando cartera…</p></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="spread">
+        <div>
+          <h2 style="margin-bottom:2px">Órdenes recientes</h2>
+          <p class="small muted" style="margin:0">Últimas ventas registradas.</p>
+        </div>
+        <button class="btn small" onclick="abrirOrden()">+ Nueva orden</button>
+      </div>
+      <div id="sec-ordenes" class="table-wrap" style="margin-top:10px"><p class="muted small">Cargando órdenes…</p></div>
     </div>
   </section>
 
@@ -3135,12 +3223,29 @@ function filtrarClientes() { renderClientes(); }
 function renderCartera() {
   const el = $('#sec-cartera');
   if (!el) return;
-  el.innerHTML = `<table>
-    <thead><tr><th>Cliente</th><th>m³</th><th>Facturado</th><th>Saldo</th></tr></thead>
-    <tbody>${(state.clientes || []).map(c => `<tr>
-      <td>${esc(c.nombre)}</td><td>${num(c.total_m3)}</td>
-      <td>${money(c.total_facturado)}</td><td>${money(c.saldo_pendiente)}</td>
-    </tr>`).join('') || '<tr><td colspan="4" class="muted">Sin clientes.</td></tr>'}</tbody></table>`;
+  const q = (($('#buscar-cartera') || {}).value || '').toLowerCase().trim();
+  const lista = (state.clientes || []).filter(c =>
+    !q || String(c.nombre).toLowerCase().includes(q));
+  if (!lista.length) {
+    el.innerHTML = '<p class="muted small" style="margin:8px 0">Sin clientes para mostrar. Usa “Carpetas de clientes” para crear el primero.</p>';
+    return;
+  }
+  el.innerHTML = `<table class="tabla-cartera">
+    <thead><tr><th>Cliente</th><th>m³</th><th>Facturado</th><th>Saldo</th><th>A favor</th><th></th></tr></thead>
+    <tbody>${lista.map(c => `<tr>
+      <td><strong>${esc(c.nombre)}</strong></td>
+      <td>${num(c.total_m3)}</td>
+      <td>${money(c.total_facturado)}</td>
+      <td><strong style="${Number(c.saldo_pendiente || 0) > 0 ? 'color:var(--accent-cat-amber)' : ''}">${money(c.saldo_pendiente)}</strong></td>
+      <td>${Number(c.saldo_a_favor || 0) > 0 ? money(c.saldo_a_favor) : '—'}</td>
+      <td><div class="cartera-acciones">
+        <button class="btn small ${Number(c.saldo_pendiente || 0) > 0 ? '' : 'ghost'}"
+                onclick="abrirPago('${esc(c.cliente_id)}')"
+                title="${Number(c.saldo_pendiente || 0) > 0 ? 'Registrar cobro o abono' : 'Registrar anticipo a favor'}">
+          ${Number(c.saldo_pendiente || 0) > 0 ? 'Cobrar' : 'Anticipo'}
+        </button>
+      </div></td>
+    </tr>`).join('')}</tbody></table>`;
 }
 
 function renderSecretariaOrdenes() {
@@ -3202,12 +3307,13 @@ async function onPagoClienteChange() {
   } catch(e) { /* la orden es opcional */ }
 }
 
-function abrirPago() {
+function abrirPago(clienteId) {
   const sel = $('#pago-cliente');
   sel.innerHTML = (state.clientes || []).map(c =>
     `<option value="${esc(c.cliente_id)}">${esc(c.nombre)} · saldo ${money(c.saldo_pendiente)}</option>`
   ).join('');
   if (!sel.options.length) { toast('No hay clientes disponibles', 'bad'); return; }
+  if (clienteId) sel.value = clienteId;
   $('#pago-orden').innerHTML = '<option value="">Abono general a la cuenta</option>';
   $('#pago-monto').value = '';
   $('#pago-referencia').value = '';
@@ -3216,6 +3322,7 @@ function abrirPago() {
   $('#pago-resultado').innerHTML = '';
   onPagoClienteChange();
   document.getElementById('dlg-pago').showModal();
+  setTimeout(() => { try { $('#pago-monto').focus(); } catch(e) {} }, 60);
 }
 
 async function registrarPago() {
@@ -3537,12 +3644,8 @@ async function cargarCierre() {
     }
     const resumen = $('#cierre-resumen');
     if (resumen) resumen.innerHTML = `
-      <div class="spread"><span>Efectivo cobrado</span><strong>${money(r.cobros.efectivo)}</strong></div>
-      <div class="spread"><span>Transferencias</span><strong>${money(r.cobros.transferencia)}</strong></div>
-      <div class="spread"><span>Fiado otorgado</span><strong>${money(r.ventas.fiado)}</strong></div>
-      <div class="spread"><span>Caja chica</span><strong>− ${money(r.caja_chica)}</strong></div>
-      <div class="divider" style="margin:8px 0"></div>
-      <div class="spread"><span><strong>Efectivo esperado</strong></span><strong>${money(r.efectivo_sistema)}</strong></div>`;
+      <div class="spread"><span>Caja chica del día</span><strong>− ${money(r.caja_chica)}</strong></div>
+      <div class="spread"><span><strong>Efectivo esperado en caja</strong></span><strong>${money(r.efectivo_sistema)}</strong></div>`;
     renderCobros(r);
     if (r.cierre && r.cierre.efectivo_contado !== null && r.cierre.efectivo_contado !== undefined) {
       $('#cierre-contado').value = r.cierre.efectivo_contado;

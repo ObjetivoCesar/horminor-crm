@@ -41,6 +41,11 @@ scripts de candado.
 
 ## Evidencia de la última sesión
 
+- **UX de Secretaría ajustada el 2026-11-09.** La vista abre con acciones
+  visibles (cobrar/abonar, gasto, nueva orden) y el orden por tarea: acciones →
+  resumen + cierre → cartera → órdenes. Cartera con buscador y cobro por fila.
+  `pytest /app/tests` → **247 passed**, consola del navegador sin errores.
+  Evidencia: `.agents/evidencias/pytest_ux_secretaria_2026-11-09.txt`.
 - **v5.1: panel, Superadmin y backup el 2026-11-09.** El panel de Secretaría
   registra cobros/abonos y gastos contra `/api/v1/panel/pagos`; Superadmin
   edita `finanzas.parametros_contables` y registra el conteo físico; el backup

@@ -1589,3 +1589,37 @@ Se preparó una instancia espejo para probar la UI sin tocar la base real:
 
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
+
+---
+
+## 2026-11-09 - UX de Secretaría: acciones visibles y jerarquía por tarea
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** Corregir la causa de que la ventanilla no se entendiera: las acciones de cobro y gasto estaban dentro de un `<details>` colapsado y competían con tablas de solo lectura.
+
+### Hecho
+
+1. La vista **Secretaría y Caja** ahora abre con una tarjeta **“¿Qué vas a registrar hoy?”** y tres botones siempre visibles con iconos SVG del mismo estilo del sidebar: **Cobrar / abonar**, **Registrar gasto** y **Nueva orden**.
+2. Orden por tarea: acciones → **Resumen de hoy** + **Cierre de caja** → **Cartera de clientes** → **Órdenes recientes**. Las tablas dejaron de ocupar el primer plano.
+3. **Cartera** con buscador y botón por fila: `Cobrar` (ámbar) cuando hay saldo y `Anticipo` (ghost) cuando está al día; el saldo pendiente se resalta en ámbar. El botón abre el modal con el cliente ya seleccionado y el foco en el monto.
+4. Se eliminó la duplicación de cifras: “Resumen de hoy” muestra cobros/ventas del día; “Cierre de caja” solo caja chica y efectivo esperado.
+5. Se reemplazaron los emojis por SVG inline (los emojis se veían como cajas en algunos equipos).
+
+### Evidencia
+
+| Verificación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **247 passed in 4.94s**, exit 0 (`.agents/evidencias/pytest_ux_secretaria_2026-11-09.txt`) |
+| Navegador en `http://localhost:8001/panel` | consola sin errores; captura con jerarquía nueva |
+| `abrirPago(cliente_id)` desde la fila | modal abierto, cliente preseleccionado, 6 opciones y orden #57 disponible |
+| Buscador de cartera “reyes” | 1 fila de 6 |
+| `abrirGasto()` | modal abierto con 7 rubros (`CAJA_CHICA`, `GASTO_ADMIN_FIJO`, `CIF_PLANTA`) |
+
+### Decisión
+
+Se descarta instalar `UI UX Pro Max` por ahora: no faltaba una tipografía ni un sistema visual, faltaba **jerarquía de tareas y acciones visibles**. Se resolvió en el HTML/CSS existente, sin dependencias nuevas ni rediseño. Si más adelante se quiere una auditoría formal de accesibilidad/UX, se puede usar la skill de diseño ya disponible sin instalar un CLI global.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html`
+- `.agents/BITACORA.md`
