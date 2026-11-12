@@ -3456,6 +3456,9 @@ sin login.
 | Instancia Evolution | `horminor`, estado `connecting` |
 | Webhook | URL y 3 eventos configurados |
 
+Evidencia completa:
+`.agents/evidencias/vps_deploy_evolution_2026-11-12.txt`.
+
 ### Decisiones tomadas
 
 1. **Deploy key read-only.** El VPS solo necesita leer; el push se hace desde
