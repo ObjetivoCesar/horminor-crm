@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
 
   core-api:
-    ports:
+    ports: !override
       - "127.0.0.1:8012:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
