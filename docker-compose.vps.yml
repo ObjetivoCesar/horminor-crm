@@ -17,7 +17,7 @@ services:
 
   core-api:
     ports:
-      - "127.0.0.1:8010:8000"
+      - "127.0.0.1:8012:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
