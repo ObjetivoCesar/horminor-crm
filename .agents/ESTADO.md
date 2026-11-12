@@ -20,6 +20,7 @@
 | 3 | M1 â€” WhatsApp (Evolution + Jeb + Bunny) | ðŸŸ¢ **Cerrado en SANDBOX** | `evidencias/hito3_lock_2026-11-08.txt`: `[CANDADO CERRADO EN SANDBOX]`; 4 compuertas, JSONB y outbox | ProducciÃ³n real: cargar credenciales, apagar SANDBOX y repetir el candado |
 | 4 | M3 â€” Ventanilla de SecretarÃ­a + Caja | ðŸŸ¢ **Cerrado** y verificado local | `/panel` (tab SecretarÃ­a) con formularios de cobro/abono y gasto; carpeta forense; `POST /api/v1/panel/pagos` probado; tests `test_m3_secretaria.py` | ValidaciÃ³n con la secretaria real (afinamiento, no bloqueante) |
 | 4b | Custodio v4.4 + Panel de Pagos/Gastos/Tasas/Conteo | ðŸŸ¢ **Cerrado** (2026-11-09) | `evidencias/pytest_panel_v44_2026-11-09.txt` (**247 tests**); `evidencias/http_gate_v44_check_2026-11-09.txt` (`HTTP GATE V4.4: OK`, 12 pasos, `ROLLBACK` 17 tablas); `/panel` con `dlg-pago`, `dlg-gasto`, `conteo-materiales`, `fin-wacc`; `GET /api/v1/panel/catalog` â†’ 26 cuentas | Nada bloqueante. Cargar tasas, ejecutar conteo real e instalar cron quedan como operaciÃ³n del cliente/VPS |
+| 5b | VPS + GitHub + Evolution API | OK **Primera subida** (2026-11-12) | Repo `ObjetivoCesar/horminor-crm` (commit `a94a618`), deploy key read-only, VPS `/opt/horminor`, `core-api` en `127.0.0.1:8012`, Caddy `horminor.178.238.238.158.sslip.io` (solo `/health` y webhook), 21 migraciones, instancia Evolution `horminor` creada y webhook configurado; `docs/DESPLIEGUE_VPS_HORMINOR.md` | Escanear QR, probar texto con teléfono real, rotar API key y cargar backups |
 | 4n | v6.13.1 - Memoria de Gato + descarga de factura | OK **Cerrado** (2026-11-12) | Migración 074 (`gato_turnos`); `conversacion_id` en el endpoint y en el widget; historial de 8 turnos al LLM; búsqueda de clientes sin puntuación ("ing reyes" → "Ing. Reyes"); enlace `?download=1` en la factura; pytest (**342 tests**) | Validar el hilo con el uso real de Julio/Secretaría |
 | 4m | v6.13 - Facturas internas adjuntas al cliente | OK **Cerrado** (2026-11-12) | Migración 073 (`client_invoices`); factura ficticia `PRUEBA-0001` (orden #55, **$43.424,00**) con PDF; pestaña **Facturas** en el expediente; `GET/POST /api/v1/clients/{id}/facturas`; Gato `cliente_facturas` con marca **FICTICIA** y SRI fuera de alcance; `evidencias/facturas_v613_2026-11-12.txt` y `panel_v613_facturas_2026-11-12.jpeg`; pytest (**338 tests**) | Validar formato con Julio; definir numeración y datos fiscales reales |
 | 4l | v6.12 - Logos de bancos con color de marca | OK **Cerrado** (2026-11-12) | Tres placas SVG 96x96: Pichincha amarillo `#FFD100`, Guayaquil rosado `#C7007E`, Internacional naranja `#F39200`; isotipos oficiales, símbolo Pichincha a 56/96; `.banco-logo` de 46 px sin caja blanca; evidencias/panel_v612_bancos_dark_2026-11-12.png, _light_ y logos_zoom; pytest (**296 tests**) | Nada bloqueante. Aceptado por Dirección; si pide el lockup completo, placas 92x40 |
@@ -41,10 +42,10 @@ Leyenda: âšª no iniciado Â· ðŸŸ¡ en curso / candado abierto Â· ðŸŸ
 
 | Componente | Local | VPS |
 |---|---|---|
-| PostgreSQL 15 | `localhost:5433` (contenedor `orminorth-postgres`) | â€” |
-| Redis 7 | `localhost:6380` (contenedor `orminorth-redis`) | â€” |
-| Core API | `http://localhost:8000` (contenedor `orminorth-core-api`) | â€” |
-| Panel (M3 + M4 + Superadmin) | `http://localhost:8000/panel` Â· Horminor, top header 72 px, sidebar de 6 tabs, dashboard nÃºmero-primero (mercado, ventas y provincias), obras con SVG locales, agenda y actividad plegables, Poppins local, tema dÃ­a/noche | â€” |
+| PostgreSQL 15 | localhost:5433 (contenedor orminorth-postgres) | contenedor orminorth-postgres (sin puerto público) |
+| Redis 7 | localhost:6380 (contenedor orminorth-redis) | contenedor orminorth-redis (sin puerto público) |
+| Core API | http://localhost:8000 (contenedor orminorth-core-api) | 127.0.0.1:8012 en el VPS; público solo /health y webhook |
+| Panel (M3 + M4 + Superadmin) | http://localhost:8000/panel · Horminor, top header 72 px, sidebar de 6 tabs, dashboard número-primero (mercado, ventas y provincias), obras con SVG locales, agenda y actividad plegables, Poppins local, tema día/noche | http://localhost:8012/panel por túnel SSH; no público hasta tener login |
 
 Datos de demo en local: Ã³rdenes del Ing. Reyes (320 mÂ³ FC-210 y 52 mÂ³ FC-350),
 orden del candado del Hito 3 (16 mÂ³) y clientes de fixture con provincia
@@ -53,6 +54,7 @@ scripts de candado.
 
 ## Evidencia de la Ãºltima sesiÃ³n
 
+- **VPS + Evolution (2026-11-12).** El CRM quedó desplegado en Contabo (`/opt/horminor`), clonado con deploy key read-only desde `ObjetivoCesar/horminor-crm`. `core-api` escucha en `127.0.0.1:8012`; Caddy publica solo `https://horminor.178.238.238.158.sslip.io/health` y el webhook de Evolution. El panel se usa por túnel SSH hasta que exista login. Instancia Evolution `horminor` creada con webhook; estado `connecting`, pendiente escanear QR. Ver `docs/DESPLIEGUE_VPS_HORMINOR.md`.
 - **v6.13.1 cerrada el 2026-11-12.** Gato ya no pierde el hilo: `gato_turnos` (migración 074) guarda cada turno y el endpoint devuelve `conversacion_id`; el widget lo persiste por usuario. El backend pasa los últimos 8 turnos al LLM, así **"descárgala"** devuelve el PDF de la factura anterior. La búsqueda de clientes ahora normaliza puntuación ("ing reyes" encuentra "Ing. Reyes"). La factura incluye un enlace `?download=1` y el widget lo pinta como **Descargar archivo**. Evidencia: `.agents/evidencias/gato_memoria_v6131_2026-11-12.txt`; `pytest` -> **342 passed**.
 - **v6.13 cerrada el 2026-11-12.** El expediente del cliente estrena la pestaña **Facturas**: se adjunta un PDF o foto (`client_invoices`, migración 073) y, si se elige una orden, los montos salen de ella; nunca se inventan. La factura de prueba `PRUEBA-0001` quedó en Ing. Reyes (orden #55, **$43.424,00** con IVA) y está marcada **FICTICIA**. Gato la consulta con `cliente_facturas` y advierte que no es comprobante electrónico del SRI (fuera de alcance). `pytest` -> **338 passed**; `auditar_skills.py` -> **177 verificaciones**. Evidencia: `.agents/evidencias/facturas_v613_2026-11-12.txt`, `factura_prueba_2026-11-12.pdf`, `panel_v613_facturas_2026-11-12.jpeg`.
 - **v6.9 cerrada el 2026-11-11.** El chat del expediente es **espejo de WhatsApp** (canal `WHATSAPP`, aviso de conexion, salientes `PENDIENTE` hasta que Evolution este configurado) y tiene estetica WhatsApp: burbujas con cola, ticks, separadores de dia y menu del clip (Galeria, Camara, Documento, Audio, Ubicacion, Contacto). La multimedia se comprime en el backend (imagenes a WebP, videos a H.264 <=720p/180 s, audio intacto), se guarda en Bunny bajo `clientes/<nombre>_<cedula>/` o en el sandbox local, y se indexa en `media_assets` (migracion 071). `scripts/media_v69_check.py` -> **MEDIA V6.9: OK**; `pytest` -> **291 passed**. Evidencia: `.agents/evidencias/media_v69_check_2026-11-11.txt`, `pytest_v69_2026-11-11.txt`, `panel_v69_chat_2026-11-11.jpeg`, `panel_v69_adjunto_2026-11-11.jpeg`. Decisiones en `docs/WHATSAPP_Y_MEDIA.md`.
@@ -196,6 +198,9 @@ scripts de candado.
 
 ## PrÃ³ximo paso exacto
 
+0. **Escanear el QR de Evolution `horminor`** (estado `connecting`), enviar un
+   texto a un teléfono de prueba y confirmar `notifier: evolution`. Luego
+   rotar la API key que se compartió por chat.
 1. **Probar el panel en local con la secretaria** (cobro/abono, gasto, tasas y
    conteo) y ajustar pantallas/flujos segÃºn lo que pida Julio. El login no
    bloquea esta etapa.

@@ -3401,3 +3401,94 @@ una conversación limpia.
 - `docs/GATO_PROMPT.md`, `docs/GATO_CORPUS.md`, `docs/BASE_DE_DATOS.md`
 - `.agents/evidencias/gato_memoria_v6131_2026-11-12.txt`
 - `.agents/ESTADO.md` y `.agents/BITACORA.md`
+
+---
+
+## 2026-11-12 - Primera subida al VPS, deploy key y Evolution
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** subir Horminor al VPS de Contabo usando GitHub y una deploy key
+nueva; dejar Evolution API conectado; proteger secretos y no exponer el panel
+sin login.
+
+### Hecho
+
+1. **`.gitignore` y `.dockerignore` endurecidos:** `.env*`, `vps-entrada/`,
+   `secrets/`, `backups/`, `*.pem`, `*.key`, `*_vps`, `*_deploy`, `*.dump` y
+   `*.sql.gz` quedan fuera del repo y del contexto de build.
+2. **Llaves nuevas:** `vps-entrada/horminor_vps` (acceso SSH al VPS) y
+   `vps-entrada/horminor_github_deploy` (deploy key). La pública del VPS se
+   agregó a `authorized_keys`; la de GitHub se registró como deploy key
+   **read-only** (id `169704454`).
+3. **GitHub:** remoto cambiado a `ObjetivoCesar/horminor-crm`; commit
+   `a94a618` en `main`. El repo estaba vacío (`size=0`) y es público.
+4. **VPS:** clon en `/opt/horminor` con deploy key; `.env` en `600` con
+   secretos nuevos (`POSTGRES_PASSWORD`, `AGENCY_MASTER_KEY`,
+   `SENTINEL_MASTER_KEY`, tokens del Custodio y `GATE_API_KEY`).
+5. **Compose VPS:** `docker-compose.vps.yml` deja PostgreSQL y Redis sin
+   puertos publicados y publica `core-api` solo en `127.0.0.1:8012`. El primer
+   intento usó 8010 y quedó público; se corrigió con `!override`.
+6. **Caddy:** bloque `horminor.178.238.238.158.sslip.io`; solo `/health` y
+   `/api/v1/whatsapp/webhook` son públicos. El panel responde `403` desde
+   Internet y `200` por túnel SSH. Respaldo del Caddyfile en
+   `Caddyfile.bak.2026-11-12-horminor`.
+7. **Evolution:** instancia `horminor` creada (`connecting`), webhook
+   `https://horminor.178.238.238.158.sslip.io/api/v1/whatsapp/webhook` con
+   `MESSAGES_UPSERT`, `CONNECTION_UPDATE` y `QRCODE_UPDATED`. La instancia se
+   activó en `system_settings` (`sandbox=false`), `whatsapp/health` ya reporta
+   `notifier: evolution`.
+8. **QR:** guardado en `vps-entrada/horminor_qr.png` (privado) y mostrado para
+   escanear. Si expira, se regenera con `GET /instance/connect/horminor`.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `git push` a `ObjetivoCesar/horminor-crm` | `85bc97b..a94a618 main -> main` |
+| Deploy key | `Hi ObjetivoCesar/horminor-crm! You've successfully authenticated` |
+| VPS `/opt/horminor` | clone OK, 21 migraciones aplicadas |
+| `docker compose ps` | postgres/redis healthy, core-api healthy |
+| `curl http://127.0.0.1:8012/health` | `200 {"status":"ok","db":"ok"}` |
+| `https://horminor.../health` | `200` |
+| `https://horminor.../panel` | `403` (privado) |
+| `http://127.0.0.1:8012/panel` | `200` (túnel) |
+| `whatsapp/health` | `notifier: evolution` |
+| Instancia Evolution | `horminor`, estado `connecting` |
+| Webhook | URL y 3 eventos configurados |
+
+### Decisiones tomadas
+
+1. **Deploy key read-only.** El VPS solo necesita leer; el push se hace desde
+   local con la credencial de GitHub. Menos privilegio en el servidor.
+2. **Panel por túnel SSH.** Sin login no se publica el panel ni las rutas de
+   Secretaría/Superadmin. Caddy solo abre `/health` y el webhook.
+3. **SSH key separada por proyecto.** No se reutiliza la llave de Agenda
+   Turística; se generó una para Horminor.
+4. **Secretos nuevos en el VPS.** No se copiaron las claves de desarrollo;
+   solo se reutilizaron las de Evolution y DeepSeek.
+5. **`sslip.io` como host temporal.** Da TLS sin comprar dominio; cuando
+   exista dominio propio solo se cambia el bloque de Caddy.
+
+### Bloqueos / preguntas al cliente
+
+1. **Escanear el QR** de Evolution `horminor` desde WhatsApp > Dispositivos
+   vinculados.
+2. Entregar un **teléfono de prueba** para enviar el primer texto real.
+3. **Rotar la API key de Evolution** que se compartió por chat.
+4. Definir el dominio propio (opcional) y el correo para TLS.
+
+### Próximo paso exacto
+
+Escanear el QR, confirmar que la instancia pasa a `open`, enviar un texto desde
+el panel (por túnel SSH) a un teléfono de prueba y revisar el webhook. Después,
+rotar la API key y cargar el backup diario.
+
+### Archivos tocados
+
+- `.gitignore`, `.dockerignore`
+- `docker-compose.vps.yml`
+- `scripts/activar_evolution.py`
+- `docs/DESPLIEGUE_VPS_HORMINOR.md`, `docs/EVOLUTION_API_PRUEBA.md`
+- `.agents/ESTADO.md` y `.agents/BITACORA.md`
+- Fuera del repo: `vps-entrada/horminor_vps`, `horminor_github_deploy`,
+  `horminor.env`, `horminor_qr.png`, `horminor.caddy`

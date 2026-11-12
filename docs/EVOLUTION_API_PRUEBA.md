@@ -114,7 +114,23 @@ ambos.
 
 ---
 
-## 8. Formato en que conviene recibir los datos
+## 8. Estado del despliegue (2026-11-12)
+
+| Pieza | Estado |
+|---|---|
+| VPS | Contabo `178.238.238.158`, proyecto en `/opt/horminor` |
+| Host público | `https://horminor.178.238.238.158.sslip.io` (Caddy + TLS) |
+| API | `127.0.0.1:8012` (solo loopback; panel por túnel SSH) |
+| Instancia | `horminor` creada en Evolution (`connecting`, pendiente QR) |
+| Webhook | `https://horminor.178.238.238.158.sslip.io/api/v1/whatsapp/webhook` |
+| Eventos | `MESSAGES_UPSERT`, `CONNECTION_UPDATE`, `QRCODE_UPDATED` |
+| Notifier | `evolution` en `/api/v1/whatsapp/health` |
+| Siguiente | escanear el QR y enviar un texto a un teléfono de prueba |
+
+La API key se cargó en `.env` y `system_settings`; **no** está en git. Si se
+compartió por chat, rotarla después de la prueba.
+
+## 9. Formato en que conviene recibir los datos
 
 Para no filtrar secretos en el chat, entregar así:
 
