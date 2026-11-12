@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Banco Internacional">
+  <title>Banco Internacional</title>
+  <rect width="96" height="96" rx="22" fill="#F39200"/>
+  <g transform="translate(16 16) scale(0.7356) translate(-16 -35)" fill="#FFFFFF">
+    <rect x="16" y="65" width="24" height="5"/>
+    <rect x="16" y="76" width="24" height="5"/>
+    <rect x="16" y="87" width="24" height="5"/>
+    <rect x="46" y="46" width="5" height="65"/>
+    <rect x="57" y="35" width="5" height="87"/>
+    <rect x="68" y="46" width="5" height="65"/>
+    <rect x="79" y="65" width="24" height="5"/>
+    <rect x="79" y="76" width="24" height="5"/>
+    <rect x="79" y="87" width="24" height="5"/>
+  </g>
+</svg>

@@ -207,7 +207,7 @@ class PostgresSecretariaStore:
     async def obtener_carpeta(self, cliente_id: str) -> dict[str, Any] | None:
         cliente = await self._pool.fetchrow(
             """
-            SELECT c.id::text, c.nombre, c.constructora, c.ruc,
+            SELECT c.id::text, c.nombre, c.constructora, c.ruc, c.cedula,
                    c.telefono_whatsapp, c.estado, c.notas, c.credit_limit_usd,
                    c.provincia, c.ciudad, c.direccion_obra,
                    COALESCE(s.total_m3, 0)        AS total_m3,
@@ -257,6 +257,20 @@ class PostgresSecretariaStore:
             """,
             cliente_id,
         )
+        facturas = await self._pool.fetch(
+            """
+            SELECT f.id::text, f.numero, f.fecha, f.subtotal, f.iva_pct,
+                   f.iva_monto, f.total, f.estado, f.es_ficticia, f.nota,
+                   f.media_id::text, o.numero AS orden_numero,
+                   m.nombre_original, m.mime_final
+              FROM client_invoices f
+              LEFT JOIN orders o ON o.id = f.orden_id
+              LEFT JOIN media_assets m ON m.id = f.media_id
+             WHERE f.cliente_id = $1
+             ORDER BY f.fecha DESC, f.created_at DESC
+            """,
+            cliente_id,
+        )
         evidencias: list[dict[str, Any]] = []
         timeline: list[dict[str, Any]] = []
         for fila in viajes:
@@ -294,6 +308,7 @@ class PostgresSecretariaStore:
                 "cliente_id": cliente["id"],
                 "nombre": cliente["nombre"],
                 "constructora": cliente["constructora"],
+                "cedula": cliente["cedula"],
                 "ruc": cliente["ruc"],
                 "telefono": cliente["telefono_whatsapp"],
                 "estado": cliente["estado"],
@@ -345,6 +360,29 @@ class PostgresSecretariaStore:
                     "orden_numero": fila["orden_numero"],
                 }
                 for fila in pagos
+            ],
+            "facturas": [
+                {
+                    "factura_id": fila["id"],
+                    "numero": fila["numero"],
+                    "fecha": _iso(fila["fecha"]),
+                    "subtotal": _f(fila["subtotal"]),
+                    "iva_pct": _f(fila["iva_pct"]),
+                    "iva_monto": _f(fila["iva_monto"]),
+                    "total": _f(fila["total"]),
+                    "estado": fila["estado"],
+                    "es_ficticia": bool(fila["es_ficticia"]),
+                    "nota": fila["nota"],
+                    "orden_numero": fila["orden_numero"],
+                    "archivo": fila["nombre_original"],
+                    "mime": fila["mime_final"],
+                    "url": (
+                        f"/api/v1/media/{fila['media_id']}/archivo"
+                        if fila["media_id"]
+                        else None
+                    ),
+                }
+                for fila in facturas
             ],
             "evidencias": evidencias,
             "timeline": sorted(timeline, key=lambda item: item["fecha"], reverse=True),

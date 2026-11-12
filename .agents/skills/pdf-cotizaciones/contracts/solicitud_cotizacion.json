@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_name": "solicitud_cotizacion",
+  "version": "1.2.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "plantilla",
+    "cliente",
+    "lineas",
+    "iva_pct",
+    "validez_dias",
+    "creado_por"
+  ],
+  "properties": {
+    "plantilla": {
+      "type": "string",
+      "enum": [
+        "cotizacion_v1"
+      ]
+    },
+    "cliente": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nombre"
+      ],
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "ruc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{10,13}$"
+        },
+        "telefono": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\+?\\d{7,15}$"
+        },
+        "obra": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        }
+      }
+    },
+    "lineas": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "descripcion",
+          "cantidad_m3",
+          "precio_m3",
+          "precio_ref"
+        ],
+        "properties": {
+          "descripcion": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "cantidad_m3": {
+            "type": "string",
+            "pattern": "^(?!0+(\\.0{1,4})?$)\\d+(\\.\\d{1,4})?$"
+          },
+          "precio_m3": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,2})?$"
+          },
+          "precio_ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ficha_id",
+              "vigencia_hash"
+            ],
+            "properties": {
+              "ficha_id": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F-]{36}$"
+              },
+              "vigencia_hash": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "total_esperado": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d+(\\.\\d{1,2})?$"
+    },
+    "iva_pct": {
+      "type": "string",
+      "pattern": "^\\d{1,2}(\\.\\d{1,2})?$"
+    },
+    "validez_dias": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 90
+    },
+    "condiciones": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 500
+    },
+    "solicitud_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "creado_por": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_id",
+        "rol",
+        "canal"
+      ],
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "rol": {
+          "type": "string",
+          "enum": [
+            "SUPERADMIN",
+            "CONTADORA",
+            "SECRETARIA",
+            "BOT_PUBLICO"
+          ]
+        },
+        "canal": {
+          "type": "string",
+          "enum": [
+            "WEB_PANEL",
+            "WHATSAPP",
+            "BOT"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -55,6 +55,21 @@ class Settings(BaseSettings):
     bunny_storage_zone: str | None = None
     bunny_storage_api_key: str | None = None
     bunny_storage_endpoint: str = "https://storage.bunnycdn.com"
+    # v6.9 - Token authentication del Pull Zone. Si esta vacio, la API
+    # devuelve la URL publica del CDN (solo recomendable en local).
+    bunny_token_key: str | None = None
+
+    # v6.9 - Multimedia del cliente. Los topes se aplican antes de leer el
+    # archivo completo; lo que excede se rechaza con 413.
+    media_dir: str = "/app/media_sandbox"
+    media_max_imagen_mb: int = 25
+    media_max_video_mb: int = 250
+    media_max_audio_mb: int = 40
+    media_max_documento_mb: int = 25
+    media_max_pixeles: int = 50_000_000
+    media_video_max_seg: int = 180
+    media_video_alto: int = 720
+    media_video_crf: int = 28
 
     # Modulo 1 - Juez Binario "Jeb" (Gemini Flash con salida JSON forzada)
     gemini_api_key: str | None = None

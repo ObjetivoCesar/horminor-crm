@@ -4,6 +4,37 @@ Motor: PostgreSQL 15. Esquema base en `db/migrations/001_init.sql`.
 Migraciones aplicadas automáticamente al arrancar la API (idempotentes, con
 `pg_advisory_lock` y registro en `schema_migrations`).
 
+> **Actualización 2026-11-12 — v6.13 (facturas internas).** Se suma
+> `client_invoices` (`073_facturas_internas.sql`): factura interna adjunta al
+> cliente como PDF o foto, con montos tomados de la orden o cargados por el
+> usuario. `es_ficticia` marca los documentos de prueba. No es facturación
+> electrónica del SRI.
+>
+> **Actualización 2026-11-12 — v6.13.1 (memoria de Gato).** Se suma
+> `gato_turnos` (`074_gato_memoria.sql`): cada pregunta/respuesta de Gato con
+> su `conversacion_id` y actor. El backend reconstruye los últimos 8 turnos
+> para resolver "esa factura" o "descárgala".
+
+> **Actualización 2026-11-12 — v6.11 (bancos).** Se suma `bank_accounts`
+> (`072_bancos_detalle.sql`): catálogo de las cuentas de Pichincha, Guayaquil e
+> Internacional, con `saldo_informado` y una cuenta contable hija por banco
+> (`1102.01`–`1102.03`). El saldo contable sale del libro mayor; los préstamos
+> de `financial_liabilities` y los movimientos de `payments`. Detalle en
+> `docs/BASE_DE_DATOS.md` §10.
+>
+> **Actualización 2026-11-11 — v6.9 (multimedia).** Se suma `media_assets`
+> (`071_media_clientes.sql`), el índice de fotos, videos, audios y documentos
+> que viven en Bunny.net, y `clients.cedula`. La carpeta del cliente en Bunny
+> es `clientes/<nombre>_<cedula>/`; el resto son etiquetas en la base. Reglas
+> en `docs/WHATSAPP_Y_MEDIA.md`.
+>
+> **Actualización 2026-11-11 — v6.8 (CHAT por cliente).** Se suman
+> `chat_conversaciones`, `chat_mensajes` y la vista `v_chat_conversacion`
+> (`070_chat_clientes.sql`). El historial de conversaciones vive en PostgreSQL,
+> es append-only y queda disponible para el bot. Detalle completo en
+> `docs/BASE_DE_DATOS.md` §9. También entran `dispatch_schedule` (067) y
+> `panel_users_acl` (068).
+>
 > **Actualización 2026-11-09 — Custodio v4.4.0.** Al esquema base se suman 14
 > tablas contables/operativas y 3 vistas nuevas. El detalle de creación,
 > responsables y flujo de ingresos está en `docs/BASE_DE_DATOS.md`; las
@@ -48,6 +79,14 @@ Migraciones aplicadas automáticamente al arrancar la API (idempotentes, con
 | 24 | `ledger_entries` | Libro mayor | Partida doble inmutable: solo INSERT; correcciones por reversa |
 | 25 | `audit_witness_log` | Testigo forense | Inmutable; guarda valor anterior, nuevo y motivo |
 | 26 | `approval_requests` | Aprobaciones de Julio | Cola `PENDING` / `APPROVED` / `REJECTED` |
+| 27 | `dispatch_schedule` | Agenda de entregas | Fecha, cliente, orden y estado; borrado lógico (`067`) |
+| 28 | `panel_users_acl` | Usuarios simulados del panel | Rol base, módulos permitidos y modo `EDICION` / `SOLO_LECTURA` (`068`) |
+| 29 | `chat_conversaciones` | Hilo por cliente y canal | `UNIQUE (cliente_id, canal)`; la carpeta de conversación (`070`) |
+| 30 | `chat_mensajes` | Mensajes del historial | Append-only; `direccion`, `autor_tipo`, `whatsapp_msg_id` único y `busqueda` tsvector (`070`) |
+| 31 | `media_assets` | Índice de multimedia | Binario en Bunny; aquí ruta, mime, bytes, hash y etiquetas (`071`) |
+| 32 | `bank_accounts` | Cuentas bancarias | Pichincha, Guayaquil e Internacional; saldo informado y cuenta contable hija (`072`) |
+| 33 | `client_invoices` | Facturas internas | PDF o foto adjunta al cliente; montos desde la orden o carga manual; `es_ficticia` (`073`) |
+| 34 | `gato_turnos` | Memoria de Gato | Pregunta, respuesta, estado, actor y `conversacion_id`; historial de 8 turnos (`074`) |
 
 ## Vistas de contrato
 
@@ -80,6 +119,11 @@ ledger.
 ### `v_estado_resultados`
 Ingresos y gastos agrupados por mes y cuenta. El servicio filtra el rango de
 fechas y suma los períodos.
+
+### `v_chat_conversacion`
+Resumen por hilo: `total_mensajes`, `no_leidos` (entrantes sin
+`leido_panel_at`), `ultimo_mensaje_at` y `ultimo_mensaje_preview`. Alimenta el
+contador de la pestaña CHAT y las consultas del bot.
 
 ## Custodio: Gate, libro mayor y testigo
 

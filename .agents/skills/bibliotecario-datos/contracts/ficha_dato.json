@@ -1,0 +1,360 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_name": "ficha_dato",
+  "version": "1.3.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ficha_id",
+    "consulta_id",
+    "dato",
+    "valor",
+    "tipo_valor",
+    "unidad",
+    "fuente_vista_tabla",
+    "filtros_aplicados",
+    "consultado_en",
+    "vacio",
+    "nota",
+    "vigencia_hash",
+    "esquema_version"
+  ],
+  "properties": {
+    "ficha_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F-]{36}$"
+    },
+    "consulta_id": {
+      "type": "string",
+      "enum": [
+        "cliente_buscar",
+        "cliente_ficha",
+        "cartera_cliente",
+        "cartera_total",
+        "cierre_dia",
+        "movimientos_dia",
+        "orden_timeline",
+        "viaje_estado",
+        "stock_actual",
+        "stock_proyectado",
+        "compras_pendientes",
+        "por_pagar",
+        "balance",
+        "resultados",
+        "banco_detalle",
+        "banco_movimientos",
+        "cuota_mercado",
+        "agenda_obras",
+        "disponibilidad_agenda",
+        "recetas_precio_publico",
+        "empresa_info",
+        "salud_sistema"
+      ]
+    },
+    "dato": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{2,60}$"
+    },
+    "valor": {
+      "type": [
+        "number",
+        "string",
+        "boolean",
+        "null"
+      ]
+    },
+    "tipo_valor": {
+      "type": "string",
+      "enum": [
+        "DECIMAL",
+        "ENTERO",
+        "TEXTO",
+        "BOOLEANO",
+        "NULO"
+      ]
+    },
+    "unidad": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 20
+    },
+    "fuente_vista_tabla": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "clients",
+          "v_cliente_saldo",
+          "cash_closures",
+          "payments",
+          "v_dispatch_timeline",
+          "v_inventario",
+          "v_stock_proyectado",
+          "purchases",
+          "purchase_items",
+          "goods_receipts",
+          "suppliers",
+          "ledger_entries",
+          "v_balance_general",
+          "v_estado_resultados",
+          "bank_accounts",
+          "financial_liabilities",
+          "market_benchmarks",
+          "orders",
+          "dispatch_schedule",
+          "system_settings",
+          "concrete_recipes",
+          "error_logs",
+          "sandbox_outbox"
+        ]
+      }
+    },
+    "filtros_aplicados": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "texto": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cliente_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "orden_numero": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "dispatch_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "material": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "desde": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hasta": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fecha": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provincia": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "anio": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "banco": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limite": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    },
+    "consultado_en": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "vacio": {
+      "type": "boolean"
+    },
+    "nota": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 300
+    },
+    "vigencia_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "esquema_version": {
+      "type": "string",
+      "enum": [
+        "1.1.0"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "tipo_valor"
+        ],
+        "properties": {
+          "tipo_valor": {
+            "const": "DECIMAL"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valor": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d{1,4})?$"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "tipo_valor"
+        ],
+        "properties": {
+          "tipo_valor": {
+            "const": "ENTERO"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valor": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "tipo_valor"
+        ],
+        "properties": {
+          "tipo_valor": {
+            "const": "TEXTO"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valor": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "tipo_valor"
+        ],
+        "properties": {
+          "tipo_valor": {
+            "const": "BOOLEANO"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valor": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "tipo_valor"
+        ],
+        "properties": {
+          "tipo_valor": {
+            "const": "NULO"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "valor": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "vacio"
+        ],
+        "properties": {
+          "vacio": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "nota": {
+            "type": "string",
+            "minLength": 3
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta_id"
+        ],
+        "properties": {
+          "consulta_id": {
+            "const": "recetas_precio_publico"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "vigencia_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    }
+  ]
+}

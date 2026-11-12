@@ -116,10 +116,11 @@ docker compose stop
 | `services/core-api/app/sandbox.py` | Adaptadores SANDBOX (WhatsApp, Bunny, Juez) |
 | `services/core-api/app/web/` | Panel HTML en `/panel` (3 vistas, sin build) + `/static` (Poppins y logo Horminor) |
 | `services/core-api/app/services/ordenes.py` | Alta de orden: M0 + M2 |
+| `services/core-api/app/asistente/` | Gato: prompt interno, bibliotecario de solo lectura y router |
 | `services/core-api/app/custodio/` | Gate contable: 14 intents, 9 consultas, ledger, testigo y catálogo |
 | `services/core-api/app/http_gate/` | Router HTTP, tokens de servicio y ventanilla de pagos |
 | `services/core-api/app/routers/` | HTTP: health, catálogo, órdenes |
-| `services/core-api/tests/` | pytest (247 tests) |
+| `services/core-api/tests/` | pytest (342 tests) |
 | `scripts/hito1_lock_test.py` | Test de Candado del Hito 1 |
 | `scripts/hito3_lock_test.py` | Test de Candado del Hito 3 |
 | `scripts/custodio_v43_check.py` | Check de integración del Custodio en el clon, con `ROLLBACK` |
@@ -137,6 +138,7 @@ docker compose stop
 | `orminorth-candado` | Hay que ejecutar o interpretar un Test de Candado |
 | `orminorth-diag-centinela` | El Centinela reporta WARN/CRÍTICO o hay que leer su JSON |
 | `orminorth-bitacora` | Hay que registrar una sesión o actualizar el estado |
+| `bibliotecario-datos` | Hay que consultar datos de negocio, crear una consulta nombrada, auditar una cifra o diseñar una migración |
 
 ## 8. Lo que este proyecto NO tiene todavía
 

@@ -56,7 +56,9 @@ services:
       - ./db:/app/db:ro
       - ./scripts:/app/scripts:ro
       - ./services/core-api/tests:/app/tests:ro
+      - orminorth-media:/app/media_sandbox
 
 volumes:
   orminorth-pgdata:
   orminorth-redisdata:
+  orminorth-media:

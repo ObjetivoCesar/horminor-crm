@@ -182,7 +182,7 @@ producción sin tocar el pipeline.
 | C1 | Cierre de caja | Un cierre por día con snapshot inmutable del resumen; se guarda `efectivo_contado` y `diferencia`. Reabrir un cierre requiere una decisión explícita que todavía no se implementa | `cash_closures` + `/api/v1/secretaria/cierre-caja` |
 | C2 | Cuota de mercado | Selector `12_MESES_MOVILES` / `ANIO_CALENDARIO`; benchmarks Orellana 120.000 m³ y Sucumbíos 95.000 m³ para 2025/2026; valorización a $118.00/m³ (FC-210); las ventas sin provincia se informan en `sin_provincia_m3` y no se reparten | `/api/v1/dashboard/mercado`, migración 060 |
 | C3 | Simulador bancario | Amortización francesa, 11,2 % nominal anual capitalizable mensual, 36 meses/$100.000 y 48 meses/$240.000, margen $42.50/m³, 180 y 450 m³ extra; DSCR activo e histórico | `m4_dashboard/calculos.py`, `/api/v1/dashboard/simulador` |
-| C4 | Facturación electrónica SRI | **Fuera de alcance del PDR v4.0 (ratificado 2026-11-08).** No se implementa en este proyecto | Ninguna tabla de facturación existe a propósito |
+| C4 | Facturación electrónica SRI | **Fuera de alcance del PDR v4.0 (ratificado 2026-11-08).** No se emite comprobante electrónico ni clave de acceso. | Factura interna adjunta (client_invoices, migración 073) para PDF/foto; no sustituye al SRI |
 | C5 | Panel web | HTML/CSS/JS propio servido por FastAPI en `/panel`, sin build ni CDN; selector Secretaría/Gerencial/Superadmin; usuarios/roles y TLS quedan para la etapa de autenticación | `services/core-api/app/web/` |
 | C6 | Webhook del CRM | **ABIERTA:** URL real (el PDR trae `crm-tu-empresa.com` como marcador) | Módulo 5 push |
 | C7 | Respaldos | **ABIERTA:** política de backup de PostgreSQL y retención de `error_logs` | Operación del VPS |
@@ -216,6 +216,8 @@ producción sin tocar el pipeline.
 | P4 | Login de usuario | Pendiente: login de Secretaría/Superadmin y protección de todas las rutas del panel antes de exponerlo a Internet | Desarrollo |
 | P5 | Backups y VPS | `scripts/backup_db.sh` listo con retención 14/6 y verificación `pg_restore --list`; falta instalar el cron y copiar los backups fuera del VPS | César / Nohan |
 | P6 | Nota de crédito Fase 2 | El intent dedicado `REGISTER_PURCHASE_CREDIT_NOTE` queda agendado si Dirección lo requiere; Fase 1 ya rechaza con `PURCHASE_REQUIRES_CREDIT_NOTE` | Julio / Dirección |
+| P7 | Cédula del cliente | `clients.cedula` se agregó en `071` como `NULL`. Falta que Julio la cargue para que la carpeta de Bunny sea `nombre_cedula` sin homónimos. Mientras tanto la API usa RUC o el id | Julio |
+| P8 | Credenciales Evolution + Bunny | Cargar URL/instancia/API key de Evolution, Storage Zone/API key/CDN y `BUNNY_TOKEN_KEY` en Superadmin o `.env`; luego apagar `sandbox` en `integraciones.*` | César / Julio |
 
 ### D3. Decisiones de implementación del Custodio (2026-11-09)
 

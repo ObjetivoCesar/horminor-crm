@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from .asistente.router import router as asistente_router
 from .db import create_pool, run_migrations
 from .http_gate import custodio_router, payments_router
 from .http_gate.panel import router as panel_api_router
@@ -20,7 +21,7 @@ from .m2_planta import ErrorPlanta
 from .m3_secretaria.router import router as secretaria_router
 from .m4_dashboard.router import router as dashboard_router
 from .m5_sentinel.router import router as sentinel_router
-from .routers import catalog, clients_search, health, orders
+from .routers import catalog, chat_clientes, clients_search, facturas, health, orders
 from .services.ordenes import OrdenInvalidaError
 from .settings import get_settings
 from .superadmin.operacion import router as operacion_router
@@ -42,6 +43,12 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     app.state.whatsapp = None
     app.state.config_store = None
+
+    # v6.9: el sandbox local de multimedia existe aunque Bunny no este configurado.
+    try:
+        Path(settings.media_dir).mkdir(parents=True, exist_ok=True)
+    except OSError:
+        log.warning("no se pudo crear el directorio de multimedia %s", settings.media_dir)
 
     pool = await create_pool(settings.database_url)
     app.state.pool = pool
@@ -103,6 +110,8 @@ async def orden_invalida_handler(request: Request, exc: OrdenInvalidaError):
 app.include_router(health.router)
 app.include_router(catalog.router)
 app.include_router(clients_search.router)
+app.include_router(chat_clientes.router)
+app.include_router(facturas.router)
 app.include_router(orders.router)
 app.include_router(whatsapp_router)
 app.include_router(superadmin_router)
@@ -115,3 +124,4 @@ app.include_router(panel_api_router)
 app.include_router(dashboard_router)
 app.include_router(sentinel_router)
 app.include_router(panel_router)
+app.include_router(asistente_router)

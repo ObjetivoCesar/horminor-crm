@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -9,3 +11,17 @@ node_modules/
 .DS_Store
 .agents/evidencias/*
 !.agents/evidencias/README.md
+
+# Despliegue y secretos: NUNCA al repositorio
+vps-entrada/
+secrets/
+backups/
+*.pem
+*.key
+*.ppk
+id_rsa*
+id_ed25519*
+*_vps
+*_deploy
+*.dump
+*.sql.gz

@@ -1,0 +1,916 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_name": "consulta_bibliotecario",
+  "version": "1.4.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "consulta",
+    "actor_context"
+  ],
+  "properties": {
+    "consulta": {
+      "type": "string",
+      "enum": [
+        "cliente_buscar",
+        "cliente_ficha",
+        "cartera_cliente",
+        "cartera_total",
+        "cierre_dia",
+        "movimientos_dia",
+        "orden_timeline",
+        "viaje_estado",
+        "stock_actual",
+        "stock_proyectado",
+        "compras_pendientes",
+        "por_pagar",
+        "balance",
+        "resultados",
+        "banco_detalle",
+        "banco_movimientos",
+        "cuota_mercado",
+        "agenda_obras",
+        "disponibilidad_agenda",
+        "recetas_precio_publico",
+        "empresa_info",
+        "salud_sistema"
+      ]
+    },
+    "actor_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "persona",
+        "rol",
+        "actor_id"
+      ],
+      "properties": {
+        "persona": {
+          "type": "string",
+          "enum": [
+            "INTERNO",
+            "PUBLICO"
+          ]
+        },
+        "rol": {
+          "type": "string",
+          "enum": [
+            "SUPERADMIN",
+            "CONTADORA",
+            "SECRETARIA",
+            "BODEGA",
+            "BOT_PUBLICO"
+          ]
+        },
+        "actor_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "cliente_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-fA-F-]{36}$"
+        }
+      }
+    },
+    "parametros": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "texto": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "cliente_id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F-]{36}$"
+        },
+        "orden_numero": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "dispatch_id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F-]{36}$"
+        },
+        "material": {
+          "type": "string",
+          "enum": [
+            "CEMENTO",
+            "ARENA",
+            "RIPIO",
+            "AGUA",
+            "RETARDANTE"
+          ]
+        },
+        "desde": {
+          "type": "string",
+          "format": "date"
+        },
+        "hasta": {
+          "type": "string",
+          "format": "date"
+        },
+        "fecha": {
+          "type": "string",
+          "format": "date"
+        },
+        "provincia": {
+          "type": "string",
+          "enum": [
+            "TODAS",
+            "ORELLANA",
+            "SUCUMBIOS"
+          ]
+        },
+        "anio": {
+          "type": "integer",
+          "minimum": 2020,
+          "maximum": 2100
+        },
+        "banco": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]{3,40}$"
+        },
+        "limite": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "cliente_buscar"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "SECRETARIA",
+                  "BODEGA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "texto"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "cliente_ficha"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "SECRETARIA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "cliente_id"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "cartera_cliente"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "SECRETARIA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "cliente_id"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "cartera_total"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "cierre_dia"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "SECRETARIA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "desde",
+              "hasta"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "movimientos_dia"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "SECRETARIA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "desde",
+              "hasta"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "orden_timeline"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "SECRETARIA",
+                  "BODEGA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "orden_numero"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "viaje_estado"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "SECRETARIA",
+                  "BODEGA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "dispatch_id"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "stock_actual"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "BODEGA"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "stock_proyectado"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "BODEGA"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "compras_pendientes"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "por_pagar"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "balance"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "resultados"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "desde",
+              "hasta"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "banco_detalle"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "banco"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "banco_movimientos"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "banco"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "cuota_mercado"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "provincia"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "agenda_obras"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "SECRETARIA",
+                  "BODEGA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "desde",
+              "hasta"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "disponibilidad_agenda"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "SECRETARIA"
+                ]
+              }
+            }
+          },
+          "parametros": {
+            "required": [
+              "fecha"
+            ]
+          }
+        },
+        "required": [
+          "parametros"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "recetas_precio_publico"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "SECRETARIA",
+                  "BOT_PUBLICO"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "empresa_info"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "SECRETARIA",
+                  "BOT_PUBLICO"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "consulta"
+        ],
+        "properties": {
+          "consulta": {
+            "const": "salud_sistema"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "actor_context"
+        ],
+        "properties": {
+          "actor_context": {
+            "required": [
+              "persona"
+            ],
+            "properties": {
+              "persona": {
+                "const": "PUBLICO"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "const": "BOT_PUBLICO"
+              }
+            }
+          },
+          "consulta": {
+            "enum": [
+              "recetas_precio_publico",
+              "empresa_info"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "actor_context"
+        ],
+        "properties": {
+          "actor_context": {
+            "required": [
+              "persona"
+            ],
+            "properties": {
+              "persona": {
+                "const": "INTERNO"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor_context": {
+            "properties": {
+              "rol": {
+                "enum": [
+                  "SUPERADMIN",
+                  "CONTADORA",
+                  "SECRETARIA",
+                  "BODEGA"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

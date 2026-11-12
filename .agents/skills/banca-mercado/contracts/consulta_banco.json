@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_name": "consulta_banco",
+  "version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["banco"],
+  "properties": {
+    "banco": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]{3,40}$"
+    },
+    "incluir_movimientos": {"type": "boolean", "default": true},
+    "limite_movimientos": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}
+  }
+}

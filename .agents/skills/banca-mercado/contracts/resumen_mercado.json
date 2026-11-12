@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_name": "resumen_mercado",
+  "version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provincia", "periodo", "anio"],
+  "properties": {
+    "provincia": {"type": "string", "enum": ["TODAS", "ORELLANA", "SUCUMBIOS"]},
+    "periodo": {"type": "string", "enum": ["12_MESES_MOVILES", "ANIO_CALENDARIO"]},
+    "anio": {"type": "integer", "minimum": 2020, "maximum": 2100}
+  }
+}

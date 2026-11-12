@@ -1921,3 +1921,1483 @@ Abrir `http://localhost:8000/panel` > Carpetas de Clientes, buscar `16m3`, `FC-2
 4. Retomar login y despliegue VPS cuando el cliente confirme.
 
 **Próximo paso exacto:** abrir `http://localhost:8000/panel` > Carpetas de Clientes y probar `16m3`, `FC-210`, `#56`, filtro por deuda/ciudad y la ficha editable.
+
+---
+
+## 2026-11-11 - v6.7: filtros plegables en Carpetas y fotos reales en Obras
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** Reducir la barra de filtros de Carpetas de Clientes a un botón desplegable y sustituir las dos ilustraciones SVG de "Mixers en calle" por fotografías reales.
+
+### Hecho
+
+1. **Barra compacta en Carpetas de Clientes.** El buscador Sabueso queda visible; a su lado viven `Filtros` (con contador de filtros activos) y `Limpiar`. Los 7 filtros + el rango de fechas se abren bajo demanda en `#panel-filtros-clientes`, con `aria-expanded` y `aria-controls`.
+2. **Resumen de filtros activos.** Chips `Ciudad: Orellana ×` sobre la lista; cada chip quita su filtro y vuelve a buscar. `actualizarFiltrosClientes()` alimenta el contador y los chips después de cada búsqueda.
+3. **Corrección de `[hidden]`.** Varias clases fijaban `display:flex/grid` y pisaban el atributo `hidden`; por eso los campos `dd/mm/aaaa` se veían siempre. Se agregó `[hidden] { display: none !important; }` como regla global.
+4. **Fotos reales en Obras.** `renderObras()` usa `/static/brand/fotos/mixers-en-planta.jpg` y `/static/brand/fotos/mixer-en-descarga-sin-marca.jpg`. Se conserva `mixer-en-descarga.jpg` completo, con la marca de agua original.
+
+### Evidencia
+
+| Verificación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **277 passed**, exit 0 (`.agents/evidencias/pytest_v67_2026-11-11.txt`) |
+| Navegador 1296 px | Filtros cerrados por defecto, contador oculto, fechas ocultas; al elegir `FIADO` el badge muestra `1`, aparece el chip y la lista baja a 3 clientes; el chip `×` restaura 6 (`panel_v67_filtros_2026-11-11.jpeg`) |
+| Consola | 0 errores en las 6 vistas |
+| Imágenes | Ambas cargan con `naturalWidth > 0` (633×315 y 730×268); dashboard con fotos (`panel_v67_fotos_2026-11-11.jpeg`) |
+
+### Decisiones
+
+1. **Los IDs de los filtros no cambian.** El panel solo los envuelve; `buscarClientes()` y el backend siguen leyendo `#filtro-ciudad`, `#filtro-fecha`, etc. Alternativa descartada: renombrar campos y tocar el endpoint.
+2. **El panel de filtros arranca cerrado.** El caso normal es buscar por nombre; los filtros son secundarios. Alternativa descartada: dejarlo abierto y ocupar media pantalla.
+3. **La foto del mixer se recortó al 46 % superior para quitar la marca de agua "ISUZU VEHICLES".** El original completo queda en la misma carpeta por si Dirección prefiere usarlo.
+4. **Los recursos viven en `static/brand/fotos/`** (servidos como `/static/...`), no en `web/` ni en un CDN. Alternativa descartada: subirlos a Bunny antes de tener credenciales.
+
+### Bloqueos / preguntas al cliente
+
+1. Confirmar si se usa la foto recortada o la original con marca de agua; o si Julio entrega una foto propia de su flota.
+2. El buscador global del header sigue comprimido a 149 px en 1296 px de ancho; pendiente de arreglo de layout.
+3. El saludo "Buenos días" es estático y se muestra de noche; pendiente de hacerlo horario.
+
+### Próximo paso exacto
+
+Abrir `http://localhost:8000/panel` > Carpetas de Clientes, pulsar `Filtros`, combinar ciudad + pago y verificar que el contador y los chips reflejan los filtros; luego revisar el Dashboard con las fotos nuevas.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/app/web/static/brand/fotos/` (nuevo)
+- `.agents/evidencias/pytest_v67_2026-11-11.txt`
+- `.agents/evidencias/panel_v67_filtros_2026-11-11.jpeg`
+- `.agents/evidencias/panel_v67_fotos_2026-11-11.jpeg`
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-11 - v6.8: pestaña CHAT con historial en PostgreSQL
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** Agregar una cuarta pestaña `💬 Chat` al expediente del cliente que guarde el historial de conversaciones en la base de datos, no en el navegador, para que un bot pueda leerlo después.
+
+### Hecho
+
+1. **Migración `070_chat_clientes.sql`.** Crea `chat_conversaciones` (un hilo por `cliente_id` + `canal`, único), `chat_mensajes` (append-only: dirección, autor, cuerpo, adjuntos JSONB, `whatsapp_msg_id` único parcial, estado de entrega, `leido_panel_at`, `tsvector` en español) y la vista `v_chat_conversacion` (total, no leídos, último mensaje y preview). Índices para hilo, pendientes, búsqueda GIN y cliente. Trigger que actualiza el preview del hilo.
+2. **API `app/routers/chat_clientes.py`.** `GET /api/v1/clients/{id}/chat`, `POST .../chat/mensajes`, `POST .../chat/leido` y `GET /api/v1/chat/buscar`. Exige el módulo `clientes_cartera` (mutación para escribir). La ingesta de WhatsApp es idempotente por `whatsapp_msg_id`.
+3. **Pestaña `💬 Chat` en el panel.** Badge de no leídos, burbujas entrantes/salientes, `Enter` envía, `Shift+Enter` salta de línea, contador de mensajes, aviso de que el historial vive en la base. El hilo se precarga al abrir la carpeta y se marca leído al entrar.
+4. **Mapa de la base actualizado.** `docs/BASE_DE_DATOS.md` §9 documenta dónde está el chat, sus columnas, índices, vista, endpoints, cómo lo lee el bot y lo que todavía no hace. También se actualizaron las tablas/vistas y las migraciones 067-070; `docs/MODELO_DATOS.md` y el tutorial de Carpetas suman el chat.
+
+### Evidencia
+
+| Verificación | Resultado |
+|---|---|
+| `python scripts/chat_v68_check.py` | **CHAT V6.8: OK** (19 checks, 0 fallos; limpieza deja 0 mensajes) — `.agents/evidencias/chat_v68_check_2026-11-11.txt` |
+| `pytest /app/tests -q` | **283 passed**, exit 0 — `.agents/evidencias/pytest_v68_2026-11-11.txt` |
+| Persistencia real | Mensaje enviado desde el panel, entrante insertado por API, recarga completa y el hilo sigue; badge `1`, al abrir chat pasa a 0 y `no_leidos=0` |
+| Idempotencia | Reintento del mismo `whatsapp_msg_id` devuelve `duplicado=true` y no suma mensajes |
+| Búsqueda | `GET /chat/buscar?q=chatv68prueba` encuentra los 2 mensajes y resalta el término |
+| UI | Pestaña Chat + 4 mensajes, contador `4 mensaje(s)`, 0 errores de consola — `.agents/evidencias/panel_v68_chat_2026-11-11.jpeg` |
+| Base al cerrar | `chat_conversaciones=0`, `chat_mensajes=0`, `schema_migrations=17`, 32 tablas y 7 vistas |
+
+### Decisiones
+
+1. **PostgreSQL, no `localStorage`.** El historial es un documento del cliente; tiene que sobrevivir al navegador y ser consultable por el bot. Alternativa descartada: guardar en el navegador y sincronizar después.
+2. **Un hilo continuo por cliente y canal** (`UNIQUE (cliente_id, canal)`). Refleja “una carpeta con un documento que muestra la conversación”. Si se necesitan varios hilos, se abre una migración nueva; la API no depende de la restricción.
+3. **Sin contadores desnormalizados.** Los no leídos se calculan con un índice parcial sobre entrantes sin `leido_panel_at`; el trigger solo mantiene preview y fecha del último mensaje. Alternativa descartada: columnas contador que se desincronizan.
+4. **Append-only.** No hay endpoint de edición ni borrado; una corrección será un mensaje nuevo o una migración explícita. Es coherente con el ledger y el testigo del Custodio.
+5. **Adjuntos como JSONB de referencias**, no binarios en la base. El panel todavía no tiene selector de archivos; cuando se conecte Bunny se guardan URL/ID.
+6. **Los mensajes de la prueba manual se borraron** al terminar. La conversación funcional se verificó, pero la base real queda sin datos inventados; el script `chat_v68_check.py` crea y elimina los suyos.
+
+### Bloqueos / preguntas al cliente
+
+1. El envío real por WhatsApp sigue pendiente de Evolution API: hoy el chat solo guarda. Cuando se conecte, el mismo endpoint recibe el `whatsapp_msg_id` y el índice único evita duplicados.
+2. Falta definir si el bot responderá automáticamente o solo leerá el historial; el modelo soporta ambos (`autor_tipo = BOT`).
+3. Siguen abiertas las dos decisiones de v6.7: foto del mixer recortada u original, y si se commitea ya.
+
+### Próximo paso exacto
+
+Abrir `http://localhost:8000/panel` > Carpetas de Clientes > cualquier cliente > pestaña `💬 Chat`, escribir un mensaje, recargar la página y confirmar que el mensaje sigue ahí; luego consultar `GET /api/v1/clients/{id}/chat` para ver el mismo historial que leería el bot.
+
+### Archivos tocados
+
+- `db/migrations/070_chat_clientes.sql` (nuevo)
+- `services/core-api/app/routers/chat_clientes.py` (nuevo)
+- `services/core-api/app/main.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v68_chat_clientes.py` (nuevo)
+- `scripts/chat_v68_check.py` (nuevo)
+- `docs/BASE_DE_DATOS.md`
+- `docs/MODELO_DATOS.md`
+- `docs/tutoriales/03_carpetas_clientes.md`
+- `.agents/evidencias/chat_v68_check_2026-11-11.txt`
+- `.agents/evidencias/pytest_v68_2026-11-11.txt`
+- `.agents/evidencias/panel_v68_chat_2026-11-11.jpeg`
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-11 - v6.9: chat espejo de WhatsApp y multimedia en Bunny
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** Corregir el rumbo del chat: el canal oficial es WhatsApp (Evolution) y el panel pasa a ser un espejo. Sumar fotos, videos, audios y documentos con carpetas por cliente en Bunny, compresión y límites.
+
+### Hecho
+
+1. **Chat espejo de WhatsApp.** El canal por defecto es `WHATSAPP`; la cabecera muestra el estado de Evolution y un aviso cuando no está conectado. Los salientes quedan `PENDIENTE` y se marcan con reloj; si Evolution está conectado, el texto sale por `sendText` y queda `ENVIADO`/`FALLIDO`. Ya no se presenta como un chat interno del ERP.
+2. **Estética WhatsApp.** Burbujas con cola, separadores Hoy/Ayer, ticks ✓/✓✓/azul, avatar con iniciales, fondo punteado y compositor con emoji, clip, cámara y micrófono. El clip abre una hoja con Galería, Cámara, Documento, Audio, Ubicación y Contacto; el botón cambia entre micrófono y enviar según el texto.
+3. **Multimedia real.** `POST /api/v1/clients/{id}/chat/adjuntos` valida tipo y tamaño, comprime imágenes a WebP (máx. 1920 px, sin EXIF), recomprime videos a H.264/AAC (1280×720, CRF 28, ≤180 s), deja el audio tal cual y limita documentos. Los archivos van a Bunny (`clientes/<nombre>_<cédula>/`) o al sandbox local; `media_assets` guarda ruta, mime, tamaño, hash y etiquetas. `GET /api/v1/media/{id}` firma la URL con `BUNNY_TOKEN_KEY`; `/archivo` sirve el sandbox.
+4. **Igualdad de columnas.** La lista de clientes y la carpeta del cliente comparten altura (medido 712/712 px en 1296 px); el chat crece con el panel.
+5. **Defensas.** Lista blanca de extensiones, topes por tipo, límite de píxeles, rechazo de path traversal, límite en memoria de 30 subidas/h y 180 mensajes/h por IP.
+6. **Cédula en la ficha.** `clients.cedula` se agregó a la migración 071, al `PUT /api/v1/clients/{id}`, a la carpeta y al formulario **Ficha y Datos** (con placeholder para Bunny). Nace `NULL`; no se inventa.
+7. **Documentación.** `docs/WHATSAPP_Y_MEDIA.md` explica la decisión, la carpeta por cliente (cédula → RUC → id), las etiquetas en base, el token de Bunny y las fases. Se actualizaron `BASE_DE_DATOS.md` (§9.6), `MODELO_DATOS.md`, el tutorial de Carpetas y `00_DECISIONES_PENDIENTES.md` (P7 cédula, P8 credenciales).
+
+### Evidencia
+
+| Verificación | Resultado |
+|---|---|
+| `python scripts/media_v69_check.py` | **MEDIA V6.9: OK**: PNG 3200×1800 → WebP ≤1920, WAV passthrough, MP4 recomprimido ≤180 s, 3 filas en `media_assets`, rutas `clientes/...`, SHA-256; limpieza deja 0 archivos |
+| `python scripts/chat_v68_check.py` | **CHAT V6.8: OK**: GET/POST, idempotencia por `whatsapp_msg_id`, orden, búsqueda, leído y limpieza |
+| `pytest /app/tests -q` | **291 passed**, exit 0 (`.agents/evidencias/pytest_v69_2026-11-11.txt`) |
+| Navegador 1296 px | Cliente 712 px = carpeta 712 px; clip con 6 opciones; subida real de una imagen de prueba (900×600) y render en burbuja; 0 errores de consola (`panel_v69_chat_2026-11-11.jpeg`, `panel_v69_adjunto_2026-11-11.jpeg`) |
+| Base al cerrar | `media_assets=0`, `chat_mensajes=1` (el “Hola” de prueba del usuario, migrado de PANEL a WHATSAPP y marcado PENDIENTE), `chat_conversaciones=1`, `schema_migrations=18` |
+
+### Decisiones
+
+1. **WhatsApp manda; el panel es espejo.** Se descartó el chat interno como canal. El panel lee el mismo hilo y responde por Evolution cuando esté conectado. Alternativa descartada: mantener dos historiales separados.
+2. **Carpeta por cliente, no por obra.** `clientes/<nombre>_<cédula>/`; obra, orden y viaje son etiquetas JSONB. Evita carpetas que cambian de nombre y permite filtrar sin mover archivos. Si falta cédula se usa RUC y luego el id.
+3. **Token authentication en Bunny.** Se implementó la firma `?token=&expires=`; sin clave la URL sale pública (solo local). Alternativa descartada: URLs públicas permanentes para fotos de obras.
+4. **Compresión en el backend.** El navegador no es confiable para bajar peso; WebP y H.264 se hacen en el servidor. El video exige `ffmpeg` en la imagen (agregado al Dockerfile).
+5. **Sandbox local solo para desarrollo.** Volumen `orminorth-media`; producción usa Bunny y no deja binarios en el VPS, como exige el PDR.
+
+### Bloqueos / preguntas al cliente
+
+1. **Evolution:** falta conectar el número y persistir los mensajes entrantes del webhook en `chat_mensajes` (hoy el pipeline actualiza el viaje). El envío de texto desde el panel ya está listo; el de multimedia espera el endpoint de Evolution.
+2. **Cédula:** `clients.cedula` nace NULL; mientras no se cargue, la carpeta usa RUC o id.
+3. **Bunny:** cargar Storage Zone/API key/CDN y `BUNNY_TOKEN_KEY`, apagar `sandbox` en `integraciones.bunny` y activar Token Authentication en el Pull Zone.
+4. **Retención y cuota:** definir cuánto tiempo se guardan videos y si hay tope por cliente. Antivirus de documentos queda pendiente.
+
+### Próximo paso exacto
+
+Conectar Evolution en Superadmin, verificar `GET /api/v1/whatsapp/health` → `notifier: evolution`, enviar un mensaje desde el chat del panel y confirmar que llega al teléfono y queda `ENVIADO` en el hilo; después conectar Bunny con token y repetir con una foto.
+
+### Archivos tocados
+
+- `db/migrations/071_media_clientes.sql` (nuevo)
+- `services/core-api/app/services/media.py` (nuevo)
+- `services/core-api/app/routers/chat_clientes.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/app/settings.py`
+- `services/core-api/app/main.py`
+- `services/core-api/Dockerfile`
+- `services/core-api/requirements.txt`
+- `services/core-api/tests/test_v69_media_clientes.py` (nuevo)
+- `scripts/media_v69_check.py` (nuevo)
+- `scripts/chat_v68_check.py`
+- `docker-compose.yml`
+- `.env.example`
+- `docs/WHATSAPP_Y_MEDIA.md` (nuevo)
+- `docs/BASE_DE_DATOS.md`
+- `docs/MODELO_DATOS.md`
+- `docs/tutoriales/03_carpetas_clientes.md`
+- `docs/00_DECISIONES_PENDIENTES.md`
+- `.agents/evidencias/media_v69_check_2026-11-11.txt`
+- `.agents/evidencias/chat_v69_check_2026-11-11.txt`
+- `.agents/evidencias/pytest_v69_2026-11-11.txt`
+- `.agents/evidencias/panel_v69_chat_2026-11-11.jpeg`
+- `.agents/evidencias/panel_v69_adjunto_2026-11-11.jpeg`
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - v6.10: fondo de Planta, cabecera de Banca y tarea para Abel
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** Poner la fotografía de obra como fondo de la agenda de Planta, agregar la cabecera de cuentas bancarias en Banca y Mercado, y dejar por escrito la tarea de integración para Abel.
+
+### Hecho
+
+1. **Fondo en Planta, Flota y Kardex.** La tarjeta “Agenda de planta” usa `static/brand/fotos/planta-agenda.webp` con un degradado oscuro (y su variante clara) para que el calendario siga legible. La foto es la que entregó Dirección; conserva la marca de agua de Vecteezy y queda anotada para reemplazo.
+2. **Cabecera de Banca y Mercado.** Se agregó un bloque estilo *Carpetas de Clientes* con tres tarjetas de bancos: **Pichincha, Guayaquil e Internacional**, cada una con su logo en `static/brand/bancos/`, el detalle de la cuenta y un estado (`Provisional`, `Pendiente`). Pichincha se llena desde `empresa.bot_publico.bank_accounts`; Guayaquil e Internacional muestran “Cuenta por confirmar” porque todavía no están en la configuración. **No se inventó ningún número ni saldo.**
+3. **Endpoint `GET /api/v1/dashboard/bancos`.** Lee `empresa_bot_publico` y devuelve las cuentas declaradas y `dato_provisional`; la UI pinta el detalle sin hardcodear datos de negocio.
+4. **Tarea para Abel.** Se creó `.agents/tareas/2026-11-12_ABEL.md` con los bloques: Evolution API, Bunny.net + token, persistencia de entrantes, envío de multimedia, cédula/cuentas y límites. Incluye criterios de aceptación, comandos y checklist de cierre.
+5. **Formatos documentados.** `docs/WHATSAPP_Y_MEDIA.md` lista qué imágenes (JPG, PNG, WebP, GIF, BMP, TIFF, HEIC), videos, audios y documentos se aceptan; todas las imágenes se convierten a WebP sin importar el formato de origen.
+
+### Evidencia
+
+| Verificación | Resultado |
+|---|---|
+| Navegador, Planta | `background-image` contiene `planta-agenda.webp`; la tarjeta mide 256 px y el calendario queda legible; 0 errores (`panel_v610_planta_2026-11-12.jpeg`) |
+| Navegador, Banca | 3 tarjetas de 84 px; logos cargan (`naturalWidth > 0`); Pichincha → “Cuenta Corriente #2100XXXXXX / Provisional”; Guayaquil e Internacional → “Cuenta por confirmar / Pendiente”; 0 errores (`panel_v610_banca_2026-11-12.jpeg`) |
+| API | `GET /api/v1/dashboard/bancos` devuelve las 2 cuentas declaradas y `dato_provisional: true` |
+| `pytest /app/tests -q` | **295 passed**, exit 0 (`.agents/evidencias/pytest_v610_2026-11-12.txt`) |
+
+### Decisiones
+
+1. **Las cuentas salen de la configuración, no del código.** Pichincha se lee de `empresa.bot_publico`; si Dirección carga Guayaquil e Internacional, las tarjetas se llenan solas. Alternativa descartada: escribir números de cuenta en el HTML.
+2. **Estado visible en vez de saldo inventado.** Con `ledger_entries` vacío no hay saldo por banco; se muestra `Provisional` o `Pendiente` antes que un `$0.00` que parezca real.
+3. **Logos desde Wikimedia Commons.** Se guardaron en `static/brand/bancos/` con un `README.md` que cita el origen; son marcas de sus titulares y se usan solo para identificar. Si Dirección entrega los oficiales, se reemplazan sin tocar código.
+4. **La foto de fondo es la entregada por Dirección.** Tiene marca de agua de Vecteezy; se usa tal cual con overlay. Pendiente reemplazarla por una foto propia o licenciada.
+
+### Bloqueos / preguntas al cliente
+
+1. Confirmar si las cuentas de **Guayaquil** e **Internacional** existen y cargarlas en Superadmin > Empresa; hoy solo Pichincha y BanEcuador están en la configuración.
+2. Reemplazar `planta-agenda.webp` por una foto sin marca de agua cuando esté disponible.
+3. Abel debe ejecutar `.agents/tareas/2026-11-12_ABEL.md` (Evolution, Bunny + token, entrantes y multimedia).
+
+### Próximo paso exacto
+
+Abrir `http://localhost:8000/panel` > **Banca y Mercado** y confirmar la cabecera con los tres bancos; luego cargar las cuentas faltantes en Superadmin > Empresa. En paralelo, Abel sigue la tarea del 12/11.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/app/m4_dashboard/router.py`
+- `services/core-api/app/web/static/brand/fotos/planta-agenda.webp` (nuevo)
+- `services/core-api/app/web/static/brand/bancos/` (nuevo: 3 logos + README)
+- `services/core-api/tests/test_v70_banca_planta.py` (nuevo)
+- `.agents/tareas/2026-11-12_ABEL.md` (nuevo)
+- `docs/WHATSAPP_Y_MEDIA.md`
+- `.agents/evidencias/pytest_v610_2026-11-12.txt`
+- `.agents/evidencias/panel_v610_planta_2026-11-12.jpeg`
+- `.agents/evidencias/panel_v610_banca_2026-11-12.jpeg`
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - v6.11: banco activo y detalle de cuenta
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** Convertir la cabecera de Banca en una consola real: un banco activo en amarillo y, al hacer clic, ver saldo, préstamos y movimientos.
+
+### Hecho
+
+1. **Tarjetas seleccionables.** Pichincha, Guayaquil e Internacional son botones; el activo se pinta con el amarillo de las action cards (`#F59E0B`) y texto oscuro. Al entrar a Banca queda activo Pichincha y el detalle se abre debajo.
+2. **Migración `072_bancos_detalle.sql`.** Crea `bank_accounts` (tipo, número enmascarado, titular, moneda, estado, saldo informado) y siembra los tres bancos. Agrega las cuentas contables hijas `1102.01`, `1102.02` y `1102.03` y enlaza cada banco. Copia el número `2100XXXXXX` de `empresa.bot_publico` si existe. Añade `financial_liabilities.bank_account_id`.
+3. **API `m4_dashboard/bancos.py`.** `GET /bancos` y `GET /bancos/{slug}` devuelven saldo contable, saldo informado, entradas/salidas, préstamos y últimos movimientos. `PUT /bancos/{slug}` permite cargar número, tipo, estado, titular, notas y saldo informado (con ACL de Finanzas y mutación).
+4. **Panel de detalle.** KPIs de saldo contable, saldo informado, entradas y préstamos; tablas de préstamos y movimientos con estados vacíos honestos; botón **Editar datos** con diálogo para completar la cuenta y el saldo.
+5. **Tarea de Abel actualizada:** cargar cuentas/saldos desde Banca y, en desarrollo, asignar los pagos a la cuenta hija del banco (`1102.01/02/03`) para que los movimientos aparezcan.
+
+### Evidencia
+
+| Verificación | Resultado |
+|---|---|
+| Navegador, Banca | Pichincha activo con `background-color: rgb(245, 158, 11)`; detalle visible con “Cuenta corriente · #2100XXXXXX”, saldo contable `$0.00`, saldo informado `—`, 0 préstamos/movimientos; 0 errores (`panel_v611_banca_2026-11-12.jpeg`) |
+| Cambio de banco | Clic en Guayaquil cambia el activo y el detalle a “Banco Guayaquil / Cuenta por confirmar” |
+| Edición real | Se guardó `saldo informado = 1000` y titular `HORMINOR` desde el diálogo; el detalle mostró `$1,000.00` y “Actualizado 12/11/2026”; luego se limpió a `—` para no dejar datos inventados |
+| API | `GET /bancos` devuelve 3 bancos; `PUT /bancos/pichincha` actualiza y `saldo_informado: null` limpia |
+| Base | 34 tablas, 7 vistas, 19 migraciones, 30 cuentas contables, 3 bancos |
+| `pytest /app/tests -q` | **296 passed**, exit 0 (`.agents/evidencias/pytest_v611_2026-11-12.txt`) |
+
+### Decisiones
+
+1. **Saldo contable ≠ saldo informado.** El primero sale del libro mayor; el segundo es la foto que carga Gerencia. No se reemplaza el libro ni se inventa un saldo cuando no hay datos.
+2. **Una cuenta contable hija por banco.** `1102.01`, `1102.02` y `1102.03` permiten que los movimientos y el balance se separen sin mezclar bancos. Alternativa descartada: usar solo `1102` y repartir a ojo.
+3. **Préstamos por `bank_account_id` o por nombre de entidad.** Las filas históricas sin vínculo se muestran si `entidad_financiera` coincide con el banco; no se duplican.
+4. **Movimientos desde `payments`.** Para que un cobro/gasto aparezca en el banco, debe registrarse contra la cuenta hija. El formulario de pagos aún usa `1102`; queda como tarea de integración.
+5. **Edición con ACL de Finanzas.** El saldo informado es una decisión de Gerencia/Contadora, no de cualquier perfil.
+
+### Bloqueos / preguntas al cliente
+
+1. Confirmar las cuentas de **Guayaquil** e **Internacional** y cargarlas en Banca > Editar datos.
+2. Asignar los pagos a la cuenta hija del banco para poblar movimientos (desarrollo).
+3. Cargar los préstamos reales en `financial_liabilities` para verlos en el detalle.
+
+### Próximo paso exacto
+
+Abrir `http://localhost:8000/panel` > **Banca y Mercado**, hacer clic en cada banco y usar **Editar datos** para cargar número, titular y saldo informado. Luego registrar un cobro contra `1102.01` y verlo aparecer en Movimientos.
+
+### Archivos tocados
+
+- `db/migrations/072_bancos_detalle.sql` (nuevo)
+- `services/core-api/app/m4_dashboard/bancos.py` (nuevo)
+- `services/core-api/app/m4_dashboard/router.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v70_banca_planta.py`
+- `.agents/tareas/2026-11-12_ABEL.md`
+- `docs/BASE_DE_DATOS.md`
+- `docs/MODELO_DATOS.md`
+- `.agents/evidencias/pytest_v611_2026-11-12.txt`
+- `.agents/evidencias/panel_v611_banca_2026-11-12.jpeg`
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - Traspaso de bancos: qué hay, qué falta y qué decidir
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Motivo:** dejar el tema de bancos documentado para abrir una conversación nueva con menos contexto.
+
+**Documento de arranque:** `docs/BANCOS_PENDIENTES.md` (leerlo primero).
+
+### Respuestas cortas
+
+1. **¿Están previstas las columnas?** La tarjeta muestra logo, banco, tipo/número y estado. El detalle muestra saldo contable, saldo informado, entradas, salidas, préstamos y movimientos. La tabla `bank_accounts` tiene las columnas de §2.3 del documento. **No** están implementados: selector de banco en pagos, cierre por banco, transferencias internas, conciliación, historial de saldo informado ni sección de bancos en Superadmin.
+2. **¿El cierre de caja menciona el banco?** **No.** `cash_closures` no tiene banco. `calcular_resumen_caja()` agrupa por método (`EFECTIVO`/`TRANSFERENCIA`/`FIADO`) y bolsa (`CAJA_DIARIA`/`BANCO_GERENCIA`); `_movimientos()` ni siquiera selecciona `account_id`. Un cobro por transferencia al Pichincha y otro al Guayaquil se suman juntos.
+3. **¿Existe dónde configurar las cuentas?** Solo **Banca > Editar datos** (tabla `bank_accounts`, ACL de Finanzas). `empresa.bot_publico.bank_accounts` es una lista de texto para el bot, **desconectada**: la migración copió el número una vez y no se sincroniza. No hay pantalla Superadmin > Bancos.
+
+### Estado del código
+
+- `072_bancos_detalle.sql` aplicada; 3 bancos, cuentas hijas `1102.01/02/03`, `saldo_informado`, `financial_liabilities.bank_account_id`.
+- `GET/PUT /api/v1/dashboard/bancos[/{slug}]` funcionando.
+- UI con tarjeta activa amarilla, detalle y diálogo de edición.
+- Se probó guardar `$1,000` y limpiar; la base real queda **sin saldos ni préstamos inventados**.
+- `pytest` 296; evidencia en `pytest_v611_2026-11-12.txt` y `panel_v611_banca_2026-11-12.jpeg`.
+
+### Decisiones que faltan
+
+1. Saldo oficial: libro mayor vs. saldo informado.
+2. Elegir banco en cada cobro (mínimo para transferencias).
+3. Cierre diario con desglose por banco en el `snapshot`.
+4. Fuente única de cuentas: `bank_accounts` vs. `empresa.bot_publico` (recomendado: `bank_accounts` y generar el texto del bot desde ahí).
+5. Transferencias internas, conciliación y permisos de edición.
+6. Número completo vs. enmascarado para conciliación.
+
+### Próximo paso exacto
+
+Agregar el selector de banco en `dlg-pago`, guardar `bank_account_id`/`account_id` en `payments`, extender `_movimientos()` y `calcular_resumen_caja()` con `cobros_por_banco`, y probar en el clon con un cobro de transferencia al Pichincha y otro al Guayaquil.
+
+### Archivos de referencia
+
+- `docs/BANCOS_PENDIENTES.md`
+- `db/migrations/072_bancos_detalle.sql`
+- `services/core-api/app/m4_dashboard/bancos.py`
+- `services/core-api/app/m3_secretaria/service.py` (`calcular_resumen_caja`, `_movimientos`, `cerrar_caja`)
+- `services/core-api/app/web/templates/panel.html` (`dlg-pago`, `dlg-banco`, `banco-detalle`)
+- `.agents/tareas/2026-11-12_ABEL.md`
+
+---
+
+## 2026-11-12 - v6.12: logos de bancos con color de marca
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** que las tarjetas de Banca muestren el logo de cada banco con su color de marca (amarillo Pichincha, rosado Guayaquil, naranja Internacional) y no un cuadrito blanco con un logo ilegible.
+
+### Hecho
+
+1. **Tres placas de 96x96 nuevas** en `static/brand/bancos/`:
+   - `pichincha.svg`: fondo amarillo `#FFD100` con el símbolo oficial en azul `#1B2D54` y la flecha calada en amarillo.
+   - `guayaquil.svg`: fondo rosado `#C7007E` con el isotipo oficial (anillo) en blanco. El isotipo se tomó del PNG oficial transparente y se recoloreó a blanco conservando el alfa; va embebido como `data:image/png;base64` para que sea un archivo autocontenido.
+   - `internacional.svg`: fondo naranja `#F39200` con las barras oficiales en blanco. La geometría (3 barras verticales y 3 dashes horizontales por lado) se midió pixel a pixel del `internacional.png` original.
+2. **Panel:** `.banco-logo` pasa de caja blanca de 44 px con `padding` a placa de 46 px sin fondo propio, `object-fit: cover` y sombra; la tarjeta activa ya no fuerza fondo blanco. `internacional.png` se cambia por `internacional.svg`.
+3. **README de logos** actualizado con el color y el origen de cada isotipo.
+4. **Test actualizado:** `test_v70_banca_planta.py` ahora espera `internacional.svg` y verifica que cada SVG contenga su color de marca (`#FFD100`, `#C7007E`, `#F39200`).
+
+### Evidencia (real, ejecutada)
+
+| Comando / verificación | Resultado |
+|---|---|
+| `docker compose up -d --build core-api` | Imagen reconstruida y contenedor recreado (el codigo va horneado, no montado) |
+| `GET /static/brand/bancos/pichincha.svg` / `guayaquil.svg` / `internacional.svg` | 200 `image/svg+xml` (447 / 13,283 / 727 bytes) |
+| Chrome headless 1460x800 sobre `/panel` (Banca, tema noche) | Tres placas con su color; Pichincha amarillo activo, Guayaquil rosado, Internacional naranja (`panel_v612_bancos_dark_2026-11-12.png`) |
+| Chrome headless (Banca, tema dia) | Placas legibles sobre fondo claro (`panel_v612_bancos_light_2026-11-12.png`) |
+| Cambio de banco activo | Clic en Guayaquil pinta la tarjeta en ambar y el detalle muestra "Banco Guayaquil" |
+| `pytest /app/tests -q` | **296 passed** en 8.51 s (`pytest_v612_2026-11-12.txt`) |
+
+### Decisiones tomadas
+
+1. **El logo es una placa con el color de marca, no una caja blanca.** A 46 px el lockup completo (isotipo + palabra) era ilegible; el isotipo sobre el color del banco identifica mejor y da el "cache" que pidio Direccion. Alternativa descartada: dejar el lockup completo en la caja blanca (estado anterior).
+2. **Isotipos, no marcas recreadas a mano.** Pichincha usa los paths vectoriales oficiales que ya estaban en el repo; Guayaquil usa el isotipo oficial raster recoloreado a blanco; Internacional replica la geometria medida del PNG oficial. Alternativa descartada: dibujar un aproximado "de memoria".
+3. **Placas autocontenidas de 96x96.** El color viaja dentro del SVG, asi el mismo archivo se ve igual en cualquier fondo y tema. Alternativa descartada: color por CSS en cada tarjeta, que acopla el logo al layout.
+
+### Bloqueos / preguntas al cliente
+
+1. Si Direccion quiere el **lockup completo con la palabra** ("BANCO PICHINCHA", etc.) en vez del isotipo, se hacen placas anchas (por ejemplo 92x40) y se ajusta la tarjeta.
+2. `internacional.png` se conserva como fuente original; se puede borrar cuando Direccion confirme los SVG.
+
+### Proximo paso exacto
+
+Abrir `http://localhost:8000/panel` > **Banca y Mercado** y confirmar los tres logos con Direccion; si pide el lockup completo, reemplazar las placas por versiones 92x40 y ajustar `.banco-logo` en `panel.html`.
+
+### Archivos tocados
+
+- `services/core-api/app/web/static/brand/bancos/pichincha.svg` (rehecho)
+- `services/core-api/app/web/static/brand/bancos/guayaquil.svg` (rehecho)
+- `services/core-api/app/web/static/brand/bancos/internacional.svg` (nuevo)
+- `services/core-api/app/web/static/brand/bancos/internacional.png` (se conserva como fuente)
+- `services/core-api/app/web/static/brand/bancos/README.md`
+- `services/core-api/app/web/templates/panel.html` (`.banco-logo`, estado activo, `src` de Internacional)
+- `services/core-api/tests/test_v70_banca_planta.py`
+- `.agents/evidencias/pytest_v612_2026-11-12.txt`
+- `.agents/evidencias/panel_v612_bancos_dark_2026-11-12.png`
+- `.agents/evidencias/panel_v612_bancos_light_2026-11-12.png`
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - v6.12 aceptada: logos de bancos cerrados
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** registrar la aprobaciÃ³n de DirecciÃ³n y el Ãºltimo ajuste de tamaÃ±o del sÃ­mbolo de Pichincha.
+
+### Hecho
+
+1. **SÃ­mbolo de Pichincha a 56/96 px** dentro de su placa amarilla (antes 44/96): pesa visualmente igual que el anillo de Guayaquil y las barras de Internacional. Se conservan los trazos vectoriales oficiales.
+2. **Capturas regeneradas** con el tamaÃ±o final: panel en tema noche, tema dÃ­a y zoom de las tres placas.
+3. **DirecciÃ³n aprobÃ³** las tres placas con isotipo (sin palabra). No se abre la variante de lockup completo.
+
+### Evidencia (real, ejecutada)
+
+| Comando / verificaciÃ³n | Resultado |
+|---|---|
+| `docker compose up -d --build core-api` | Imagen reconstruida y contenedor recreado |
+| Chrome headless 1460x800 sobre `/panel` (Banca, noche y dÃ­a) | Tres placas balanceadas; Pichincha amarillo, Guayaquil rosado, Internacional naranja |
+| Zoom 150 px de los tres SVG | SÃ­mbolo Pichincha 56/96 centrado; anillo y barras sin cambios (`panel_v612_logos_zoom_2026-11-12.png`) |
+| `pytest /app/tests -q` | **296 passed** en 10.06 s (`pytest_v612_2026-11-12.txt`) |
+
+### Decisiones tomadas
+
+1. **Isotipo sobre placa de color, aprobado por DirecciÃ³n.** No se agrega la palabra al logo; el nombre ya estÃ¡ en la tarjeta y a 46 px el lockup no se lee. Alternativa descartada: placas 92x40 con "BANCO PICHINCHA".
+2. **TamaÃ±o Ã³ptico igualado a mano.** El cuadrado de Pichincha necesitaba 56/96 para no verse mÃ¡s chico que el anillo y las barras. Alternativa descartada: escalar todo por bounding box, que dejaba a Pichincha pequeÃ±o.
+
+### Bloqueos / preguntas al cliente
+
+Ninguno. Si mÃ¡s adelante DirecciÃ³n pide el lockup completo, se hacen placas 92x40 y se ajusta `.banco-logo`.
+
+### PrÃ³ximo paso exacto
+
+Volver al traspaso de bancos: `docs/BANCOS_PENDIENTES.md` Â§6 â€” agregar el selector de banco en `dlg-pago`, guardar `bank_account_id` en `payments` y desglosar el cierre por banco.
+
+### Archivos tocados
+
+- `services/core-api/app/web/static/brand/bancos/pichincha.svg` (tamaÃ±o del sÃ­mbolo 56/96)
+- `.agents/evidencias/panel_v612_bancos_dark_2026-11-12.png`
+- `.agents/evidencias/panel_v612_bancos_light_2026-11-12.png`
+- `.agents/evidencias/panel_v612_logos_zoom_2026-11-12.png`
+- `.agents/evidencias/pytest_v612_2026-11-12.txt`
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - v6.12 hotfix: cache del logo de Pichincha
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Motivo:** DirecciÃ³n seguÃ­a viendo el logo viejo de Pichincha en el navegador aunque el server ya servÃ­a el nuevo; `pichincha.svg` conservaba el mismo nombre y el navegador reusaba la copia en cachÃ©.
+
+### Hecho
+
+1. **Cache-busting** en las tres imÃ¡genes de la cabecera de Banca: `/static/brand/bancos/<banco>.svg?v=612`. El archivo servido no cambia; la URL sÃ­, asÃ­ que el navegador descarga la versiÃ³n nueva sin exigir recarga forzada.
+2. Rebuild de `core-api` y verificaciÃ³n del HTML servido: las tres etiquetas `<img>` llevan `?v=612`.
+3. Captura nueva del panel con un navegador sin cachÃ©: Pichincha muestra la placa amarilla con el sÃ­mbolo azul.
+
+### Evidencia (real, ejecutada)
+
+| Comando / verificaciÃ³n | Resultado |
+|---|---|
+| `GET /panel` | Las tres `<img>` con `?v=612` |
+| `GET /static/brand/bancos/pichincha.svg` | 200, 461 bytes, `viewBox="0 0 96 96"` (archivo nuevo) |
+| Chrome headless sobre `/panel` (Banca, noche) | Placa amarilla nueva visible (`panel_v612_bancos_dark_2026-11-12.png`) |
+| `pytest /app/tests -q` | **296 passed** en 6.36 s (`pytest_v612_cache_2026-11-12.txt`) |
+
+### Decisiones tomadas
+
+1. **VersiÃ³n en la URL del logo en vez de cabeceras de cachÃ©.** Es un panel HTML sin build; `?v=NN` es explÃ­cito, barato y se sube con cada cambio de arte. Alternativa descartada: tocar el middleware de estÃ¡ticos para `no-store`, que castiga todos los assets.
+
+### PrÃ³ximo paso exacto
+
+Recargar `http://localhost:8000/panel` (Ctrl+R normal) y confirmar que Pichincha ya muestra la placa amarilla. Cuando cambie cualquier logo, subir el nÃºmero de `?v=`.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html` (`?v=612` en los tres logos)
+- `.agents/evidencias/panel_v612_bancos_dark_2026-11-12.png`
+- `.agents/evidencias/pytest_v612_cache_2026-11-12.txt`
+- `.agents/BITACORA.md`
+
+---
+
+## 2026-11-12 - Asistente IA conversacional: revisiÃ³n del PDR y propuesta
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** revisar el PDR y los comentarios sobre IA/bot antes de diseÃ±ar un asistente que converse y consulte la base; dejar una propuesta para iterar con DirecciÃ³n. **No se escribiÃ³ cÃ³digo.**
+
+### RevisiÃ³n
+
+1. **El PDR prohÃ­be un chatbot abierto** (`PDR_v4.0.txt` Â§3.2): la IA solo actÃºa como juez binario SÃ/NO. La decisiÃ³n 14 de `ESTADO.md` y la entrada del 2026-11-08 lo ratifican: el bot arma la respuesta con datos de BD y el LLM solo decide.
+2. **Lo que ya existe:** 9 consultas del Custodio con permisos por rol, Sabueso, detalle de bancos, `componer_respuesta_lead()`, identidad de WhatsApp, historial `chat_*`, tutoriales como base de conocimiento y Gemini 2.5 Flash con fallback determinÃ­stico.
+3. **Lo que no existe:** catÃ¡logo de herramientas, orquestador, auditorÃ­a del asistente, widget global y permisos por rol para el agente.
+
+### Propuesta
+
+`docs/ASISTENTE_IA_PROPUESTA.md` (v0.1): agente con **function calling** sobre un catÃ¡logo fijo de herramientas, sin SQL libre; verificador determinÃ­stico de cifras contra las salidas de las herramientas; permisos por rol; escrituras solo con confirmaciÃ³n y por el Custodio; auditorÃ­a append-only; modo determinÃ­stico sin `GEMINI_API_KEY`; 5 fases (panel interno â†’ WhatsApp staff â†’ cliente/lead â†’ acciones â†’ RAG).
+
+### Evidencia (real, ejecutada)
+
+| VerificaciÃ³n | Resultado |
+|---|---|
+| Lectura de `docs/PDR_v4.0.txt` | Â§3.1/Â§3.2: matemÃ¡tica determinÃ­stica + juez binario, sin chatbot abierto |
+| Lectura de `docs/00_DECISIONES_PENDIENTES.md` | 7 secciones Superadmin; Gemini sin key degrada al juez determinÃ­stico |
+| CÃ³digo revisado | `m1_whatsapp/pipeline.py` (`_gate_lead`, `componer_respuesta_lead`), `m1_whatsapp/judges.py`, `custodio/contracts.py` (9 `QUERY_INTENTS`), `custodio/gate.py` (permisos) |
+| Tutoriales | 7 archivos en `docs/tutoriales/` pensados como base del bot |
+| Base | 34 tablas, 7 vistas, `chat_conversaciones`/`chat_mensajes` (070) |
+
+### Decisiones tomadas
+
+1. **El asistente pedirÃ¡ los nÃºmeros a herramientas; no los redactarÃ¡ de contexto.** Es la Ãºnica forma de cumplir "cero datos inventados" con un bot conversacional. Alternativa descartada: text-to-SQL de solo lectura, que expone el esquema y permite inyecciÃ³n.
+2. **La propuesta queda como documento para iterar**, no como cÃ³digo, hasta que DirecciÃ³n responda las 6 decisiones de Â§10.
+
+### Bloqueos / preguntas al cliente
+
+1. Audiencia inicial (panel / WhatsApp staff / clientes).
+2. Â¿La v1 solo consulta o tambiÃ©n acciones con confirmaciÃ³n?
+3. Proveedor y presupuesto (Gemini ya integrado).
+4. AprobaciÃ³n formal del cambio de alcance frente al PDR.
+5. Precios y saldos para clientes.
+6. Â¿Texto solo o tambiÃ©n audio?
+
+### PrÃ³ximo paso exacto
+
+Iterar con DirecciÃ³n sobre `docs/ASISTENTE_IA_PROPUESTA.md` Â§10; con las seis respuestas, escribir el plan tÃ©cnico de la Fase 1 y empezar `app/asistente/`.
+
+### Archivos tocados
+
+- `docs/ASISTENTE_IA_PROPUESTA.md` (nuevo)
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - Asistente IA: bibliotecario, skills y manos
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** inventariar los datos reales para diseÃ±ar skills de los dos bots (interno CRM y pÃºblico), definir al bibliotecario y el estado de cada "mano" del bot pÃºblico. **No se escribiÃ³ cÃ³digo.**
+
+### Hecho
+
+1. **Dos personas:** `HORMINOR_INTERNO` (solo CRM/panel, nunca WhatsApp, todo lo que su rol permita) y `HORMINOR_PUBLICO` (WhatsApp/web, solo datos pÃºblicos y propios).
+2. **Bibliotecario:** no hay DBA/custodio designado como persona (`BASE_DE_DATOS.md` Â§5); se propone el `bibliotecario` de software con catÃ¡logo de consultas y contrato de "ficha de dato" (valor, fuente, filtro, fecha, vacÃ­o).
+3. **CatÃ¡logo de 14 dominios** que el bibliotecario puede responder hoy con las 9 consultas del Custodio, 7 vistas y los endpoints del panel; y 6 cosas que todavÃ­a no puede responder.
+4. **17 skills internas propuestas** (13 de lectura para la Fase 1 y 3 borradores con confirmaciÃ³n para la Fase 4).
+5. **Inventario de manos pÃºblicas:** 4 existen, 3 parciales y 7 no existen (PDF, agendar, confirmaciÃ³n de SecretarÃ­a, estado de pedido, ubicaciÃ³n, multimedia pÃºblica, recordatorios), con la pieza mÃ­nima de cada una.
+6. **DeepSeek** como Ãºnico modelo de atenciÃ³n, con proveedor compatible OpenAI y function calling; Gemini queda solo para el juez binario.
+
+### Evidencia (real, ejecutada)
+
+| VerificaciÃ³n | Resultado |
+|---|---|
+| `docs/BASE_DE_DATOS.md` Â§3 | 34 tablas, 7 vistas, 19 migraciones, 30 cuentas contables |
+| `custodio/contracts.py` | 9 `QUERY_INTENTS` con permisos por rol en `gate.py` |
+| Rutas del panel | 60+ endpoints inventariados (cartera, cierre, compras, agenda, bancos, chat, Superadmin) |
+| PDF | `requirements.txt` sin WeasyPrint/reportlab; solo dossier HTML imprimible en `/api/v1/dashboard/dossier` |
+| Agenda | `dispatch_schedule` (067) es logÃ­stica de entregas con mixers; no hay citas comerciales |
+| ConfirmaciÃ³n | `approval_requests` es del Custodio; no hay bandeja de solicitudes pÃºblicas |
+| DeepSeek | No hay integraciÃ³n previa en el repo; el patrÃ³n de proveedor ya existe en `judges.py` |
+
+### Decisiones tomadas
+
+1. **El bibliotecario es software, no una persona.** El bot le pide fichas de dato; no lee tablas ni escribe SQL. La designaciÃ³n de un custodio humano de la BD sigue pendiente.
+2. **Interno solo por el CRM.** Sin canal WhatsApp para Julio/secretarÃ­a; la identidad es el rol del panel.
+3. **Las manos pÃºblicas que no existen se construyen como piezas explÃ­citas** (`solicitudes_publicas`, `citas_comerciales`, motor PDF, biblioteca pÃºblica), no como improvisaciones del prompt.
+
+### Bloqueos / preguntas al cliente
+
+1. Â¿QuÃ© documentos genera el bot pÃºblico y con quÃ© motor PDF?
+2. Â¿Citas de visita, llamadas o ambas?
+3. Â¿La lista de precios sigue pÃºblica?
+4. Modelo y endpoint exactos de DeepSeek; Â¿clave en Superadmin o `.env`?
+5. Â¿Se designa custodio humano de la BD en producciÃ³n?
+
+### PrÃ³ximo paso exacto
+
+Iterar `docs/ASISTENTE_IA_SKILLS.md` Â§6 con DirecciÃ³n; con esas respuestas, escribir los manifiestos de skills de la Fase 1 y el plan tÃ©cnico de `app/asistente/`.
+
+### Archivos tocados
+
+- `docs/ASISTENTE_IA_SKILLS.md` (nuevo)
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - Asistente IA: PDF independiente, agendas, precios/costos y bibliotecario
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** integrar las definiciones de Dirección (PDF independiente, dos agendas, precios, DeepSeek en `.env`, bibliotecario como skill) y auditar si el precio está atado al costo. **No se escribió código de producto.**
+
+### Hecho
+
+1. **Componente PDF independiente** (`docs/ASISTENTE_IA_SKILLS.md` §8): recibe datos y devuelve PDF; no calcula precios ni lee tablas de negocio. Contrato `POST /api/v1/pdf/cotizaciones`, tablas `cotizaciones`/`cotizacion_items`, folio, validez, snapshot de precio, estado `PRELIMINAR` para el bot público. Motor recomendado: WeasyPrint.
+2. **Dos agendas** (§9): `dispatch_schedule` queda para obras/entregas; se propone `citas_comerciales` para visitas (`tipo PLANTA/OBRA/VIRTUAL`, `motivo COTIZACION/MEDICION/SEGUIMIENTO`). "Visitar la obra" es un subtipo, no el default.
+3. **Auditoría de precios y costos** (§10): existe editor de precio manual (`concrete_recipes.precio_m3`, Superadmin > Recetas) y costos de materiales (`materials.costo_unitario`), pero **no existe cálculo de costo por receta ni margen**. Con la semilla, el margen bruto de materiales va de 25,4% a 29,5% y no hay alerta si el precio cae bajo el costo. Hallazgo confirmado.
+4. **DeepSeek** siempre, con `DEEPSEEK_API_KEY` en `.env` y parámetros en `system_settings['asistente']`.
+5. **Skill `bibliotecario-bd-horminor`** creada en el patrón de front matter + sub-niveles + SOPs + checklist, con 5 sub-niveles y 5 contratos de operación.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `concrete_recipes.precio_m3` | Columna manual, editable en Superadmin > Recetas (`050_seed_oficial_superadmin.sql:23-33`, `panel.html:3426`) |
+| Costo de materiales | `materials.costo_unitario`; 4 de 5 con costo; `AGUA` queda `NULL` (`020_seed_recipes.sql:26-32`) |
+| Cálculo de costo por receta | **No existe**: `dosificador.py` solo multiplica cantidades; no hay `costo_m3` en el código |
+| Margen | `finanzas.simulador_bancario.margen_neto_m3 = 42.50` es un parámetro plano del simulador (`060:191`, `calculos.py:139`) |
+| Cálculo manual con la semilla | FC-180 76,16 / FC-210 84,56 / FC-240 92,91 / FC-280 101,43 / FC-350 114,33 por m³ (solo materiales) |
+| PDF | `requirements.txt` sin motor PDF; solo dossier HTML imprimible |
+| Agenda | `dispatch_schedule` (067) es logística de entregas; no hay citas comerciales |
+| Skill | `.agents/skills/bibliotecario-bd-horminor/SKILL.md` creada |
+
+### Decisiones tomadas
+
+1. **El PDF es un componente, no una función del bot.** Bot, secretaría y Julio llaman al mismo endpoint; el contenido lo arma el llamador y el componente solo valida aritmética y renderiza. Alternativa descartada: generar el PDF dentro del asistente.
+2. **Una cotización no es una factura.** Lleva folio, validez y snapshot de precio; no toca SRI (fuera de alcance).
+3. **El precio publicado sigue siendo decisión de Julio**, pero el sistema debe mostrar costo y margen y avisar si el precio queda bajo el costo. No se autoajusta.
+4. **El bibliotecario es software con skill de operación**, no un DBA humano: la designación del custodio de producción sigue pendiente.
+
+### Bloqueos / preguntas al cliente
+
+1. Confirmar el contenido exacto de la cotización (ítems, condiciones, validez) y quién puede emitirla.
+2. Definir si el bot público puede emitir `PRELIMINAR` sin secretaría.
+3. Cargar el costo del agua y los componentes de costo (mano de obra, energía, CIF, transporte, merma).
+4. Confirmar el margen objetivo por resistencia o global.
+5. Designar al custodio humano de la BD en producción.
+
+### Próximo paso exacto
+
+Con la guía de skills de Dirección, convertir `bibliotecario-bd-horminor` al formato final y escribir los manifiestos de skills de la Fase 1 (interno) antes de tocar código.
+
+### Archivos tocados
+
+- `docs/ASISTENTE_IA_SKILLS.md` (§8 a §12)
+- `.agents/skills/bibliotecario-bd-horminor/SKILL.md` (nuevo)
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - Skills v7.0: pilares, herramientas y handoff a Carbon
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** adoptar el estándar de skills v7.0 de GuIAloja, convertir los pilares (PDF, banca-mercado, bibliotecario) en skills gobernadoras con herramientas debajo, y dejar el documento listo para llevarlo a Carbon. **No se escribió código de producto.**
+
+### Hecho
+
+1. **Estándar v7.0 adaptado:** 5 componentes obligatorios (`SKILL.md`, `router.md`, `errores.md`, `roles/`, `contracts/`), frontmatter con `name/version/parent_skill/queue/description/inviolable_rules`, router por capas y contratos JSON Schema 2020-12 con `additionalProperties: false`.
+2. **Mapa de 14 pilares en 5 colas** (`q_gobierno`, `q_datos`, `q_finanzas`, `q_operacion`, `q_documentos`, `q_publico`), con misiones, herramientas, contratos y fronteras.
+3. **Tres skills completas en el repo:**
+   - `pdf-cotizaciones` (3 roles, 2 contratos).
+   - `banca-mercado` (3 roles, 2 contratos).
+   - `bibliotecario-bd-horminor` actualizado al patrón (4 roles, 2 contratos propios).
+4. **Handoff a Carbon:** `docs/SKILLS_PILARES_HORMINOR.md` con el encargo, el orden de construcción, la definición de terminado y los 10 vectores del árbitro adversarial (5 del estándar + 5 de Horminor).
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| Estructura de las 3 skills | Los 5 componentes existen en las tres |
+| Contratos JSON | 6 archivos parsean; `contract_name` correcto |
+| Límite de roles | Máximo 53 líneas (tope 70) |
+| Límite de SKILL.md | 3.110 / 3.802 / 4.455 caracteres (tope 12.000) |
+| Palabras prohibidas | Sin `TODO` ni placeholders |
+| Documento de handoff | `docs/SKILLS_PILARES_HORMINOR.md` (13 secciones) |
+
+### Decisiones tomadas
+
+1. **Cada pilar es una skill que gobierna herramientas determinísticas.** La skill decide qué pedir; la herramienta toca los datos; el contrato impide basura. Alternativa descartada: un prompt único con todas las capacidades.
+2. **PDF y Banca y Mercado son pilares con skill propia**, no funciones del asistente.
+3. **El bibliotecario es la única skill que lee la base**; las demás piden fichas. Ninguna escribe SQL libre.
+4. **Límite de 12.000 caracteres** para `SKILL.md`, más estricto que los 15.000 de GuIAloja, para dejar contexto a las herramientas.
+5. **Carbon construye un pilar a la vez**, empezando por el bibliotecario, y no se acepta la primera versión (árbitro adversarial obligatorio).
+
+### Bloqueos / preguntas al cliente
+
+1. Contenido exacto de la cotización y quién puede emitirla.
+2. ¿El bot público emite `PRELIMINAR` sin Secretaría?
+3. Costos que faltan (agua, mano de obra, energía, CIF, transporte, merma) y margen objetivo.
+4. Custodio humano de la BD en producción.
+5. Nombre definitivo de las colas y de la skill raíz.
+
+### Próximo paso exacto
+
+Llevar `docs/SKILLS_PILARES_HORMINOR.md` + el estándar v7.0 al chat de Carbon y pedir el primer pilar (`bibliotecario-datos`) con su checklist; revisar la salida y guardarla en `.agents/skills/`.
+
+### Archivos tocados
+
+- `docs/SKILLS_PILARES_HORMINOR.md` (nuevo)
+- `docs/ASISTENTE_IA_SKILLS.md` (§13)
+- `.agents/skills/pdf-cotizaciones/` (8 archivos)
+- `.agents/skills/banca-mercado/` (8 archivos)
+- `.agents/skills/bibliotecario-bd-horminor/` (SKILL, router, errores, 4 roles, 2 contratos)
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+- `AGENTS.md` (skill indexada)
+
+---
+
+## 2026-11-12 - Skills v7.0: auditoría v1.1, catálogo cerrado y arranque de Carbon
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** corregir los 7 hallazgos de la auditoría adversarial y los 2 insumos faltantes antes de construir `bibliotecario-datos` con Carbon.
+
+### Hecho
+
+1. **6 colas congeladas** (`q_gobierno`, `q_datos`, `q_finanzas`, `q_operacion`, `q_documentos`, `q_publico`).
+2. **`parent_skill` resuelto:** `null` en raíces, string en skills de una persona, array en compartidas; se agrega `audience`.
+3. **Rutas y nombres unificados:** `.agents/skills/bibliotecario-datos/` (renombrada desde `bibliotecario-bd-horminor`).
+4. **Contrato de PDF corregido:** montos como texto decimal con `pattern`, `precio_ref` con `vigencia_hash`, `total_esperado`, y `pattern`/`maxLength` en RUC, teléfono, folio y condiciones.
+5. **Router corregido:** condiciones por defecto vuelven a Capa 0; un rol, una capa.
+6. **Catálogo cerrado nuevo:** `docs/CATALOGO_CONSULTAS.json` con 22 consultas `IMPLEMENTADA` y 6 `PROPUESTA`.
+7. **`consulta.json` v1.1:** enum cerrado de 22 ids, `actor_context` obligatorio y whitelist para `persona: PUBLICO` (`recetas_precio_publico`, `empresa_info`).
+8. **`ficha_dato.json` v1.1:** exige `fuente_vista_tabla`, `filtros_aplicados`, `consultado_en`, `vacio`, `vigencia_hash` y `esquema_version`.
+9. **Paquete de arranque:** `docs/CARBON_ARRANQUE.md` con el orden de pegado y el encargo.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| Contratos JSON | 11 archivos parsean (3 skills + Custodio + catálogo) |
+| Enum vs catálogo | 22 implementadas = 22 en el enum (coinciden exactamente) |
+| Límite de roles | máximo 57 líneas |
+| Límite de `SKILL.md` | 3.432 / 3.802 / 5.123 caracteres |
+| Floats en contratos PDF | 0 ocurrencias de `"number"` |
+| Documento | `docs/SKILLS_PILARES_HORMINOR.md` v1.1 con tabla de cambios |
+
+### Decisiones tomadas
+
+1. **El catálogo es la fuente del enum.** Ninguna consulta `PROPUESTA` se puede invocar; el contrato no la conoce.
+2. **Montos como texto decimal.** Evita el float binario y permite validar aritmética exacta con `Decimal`.
+3. **La vigencia del precio viaja con la línea.** Sin `vigencia_hash` no hay cotización: se cierra el vector de precio viejo.
+4. **Carbon construye; el agente local actúa como árbitro adversarial.** Identidad separada, como exige el estándar.
+5. **El público solo ve dos consultas.** `empresa_info` y `recetas_precio_publico`; cualquier otra se rechaza antes de ejecutar.
+
+### Bloqueos / preguntas al cliente
+
+1. Contenido exacto de la cotización y quién puede emitirla.
+2. ¿El bot público emite `PRELIMINAR` sin Secretaría?
+3. Costos faltantes y margen objetivo.
+4. Custodio humano de la BD en producción.
+
+### Próximo paso exacto
+
+Pegar en Carbon el paquete de `docs/CARBON_ARRANQUE.md` (estándar v7.0 + `docs/SKILLS_PILARES_HORMINOR.md` v1.1 + `docs/CATALOGO_CONSULTAS.json`) y construir `bibliotecario-datos`; luego auditar la salida con el checklist de §10 y los 10 vectores de §9.
+
+### Archivos tocados
+
+- `docs/SKILLS_PILARES_HORMINOR.md` (v1.1)
+- `docs/CATALOGO_CONSULTAS.json` (nuevo)
+- `docs/CARBON_ARRANQUE.md` (nuevo)
+- `docs/ASISTENTE_IA_SKILLS.md` (§13)
+- `.agents/skills/bibliotecario-datos/` (renombrada y actualizada)
+- `.agents/skills/pdf-cotizaciones/` (contratos, roles, router y errores)
+- `.agents/skills/banca-mercado/SKILL.md` (`audience`)
+- `AGENTS.md`, `.agents/ESTADO.md`, `.agents/BITACORA.md`
+
+---
+
+## 2026-11-12 - Arbitraje de bibliotecario-datos: contratos v1.2
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** auditar la propuesta de Carbon para `router.md`, `consulta.json` y `ficha_dato.json` del pilar #1, aceptar lo correcto y corregir lo que abría huecos.
+
+### Veredicto
+
+**Aprobado con 2 correcciones obligatorias.**
+
+Aceptado: 12 parámetros (sin `folio`, con `fecha`), `requeridos` por consulta, `persona=PUBLICO` exige `rol=BOT_PUBLICO`, `ficha_id`, `consulta_id`, `nota` obligatoria en vacío, `vigencia_hash` obligatorio en precios y Capa 2 N/A en el bibliotecario.
+
+Rechazado:
+
+1. **`tipo_valor` con `OBJETO|LISTA`**: `valor` volvería a admitir objetos y no se puede garantizar por JSON Schema que los montos anidados sean texto. Regla: `valor` escalar; una tabla son varias fichas.
+2. **`fuente_vista_tabla` con 25 fuentes**: `sabueso` y `sentinel` son servicios, no relaciones. Enum reducido a 23 relaciones reales; el servicio se identifica con `consulta_id`.
+
+### Hecho
+
+1. **Catálogo v1.1:** campo `requeridos` en las 22 implementadas y en las 6 propuestas.
+2. **`consulta.json` v1.2:** enum de 22, 12 parámetros, 13 condicionales de requeridos + whitelist pública con rol.
+3. **`ficha_dato.json` v1.2:** `ficha_id`, `consulta_id`, 23 fuentes, `nota`, condicionales de tipo, vacío y vigencia.
+4. **`router.md`:** Capa 2 N/A; la explicación queda en el pilar consumidor.
+5. **`docs/CARBON_ARRANQUE.md` v1.2** actualizado para que Carbon reconstruya sin adivinar.
+6. **`docs/SKILLS_PILARES_HORMINOR.md` §16** con el arbitraje y la evidencia.
+
+### Evidencia (real, ejecutada)
+
+| Caso | Resultado |
+|---|---|
+| Interno `cliente_ficha` con `cliente_id` | VÁLIDO |
+| Interno `cliente_ficha` sin `cliente_id` | INVÁLIDO (`cliente_id` required) |
+| Público `empresa_info` con `BOT_PUBLICO` | VÁLIDO |
+| Público `cartera_cliente` | INVÁLIDO (fuera de whitelist) |
+| Público con rol `SECRETARIA` | INVÁLIDO (exige `BOT_PUBLICO`) |
+| Parámetro `folio` en implementada | INVÁLIDO (no existe) |
+| Ficha DECIMAL como número | INVÁLIDO (exige texto) |
+| Ficha vacía sin nota | INVÁLIDO (`nota` requerida) |
+| Precio sin `vigencia_hash` | INVÁLIDO |
+| Fuente `sabueso` | INVÁLIDO (no es relación) |
+| Conteos | 22 consultas, 12 parámetros, 23 fuentes, 14 `allOf` |
+
+### Decisiones tomadas
+
+1. **El catálogo declara los requeridos.** El contrato los copia; Carbon no adivina.
+2. **La ficha es escalar.** Las tablas se devuelven como varias fichas; así se puede exigir texto decimal sin excepciones.
+3. **Solo relaciones reales como fuente.** Los servicios se referencian por `consulta_id`.
+4. **El bibliotecario no redacta.** Capa 2 vive en el consumidor.
+
+### Bloqueos / preguntas al cliente
+
+Siguen las 4 decisiones de negocio: contenido de la cotización, `PRELIMINAR` sin Secretaría, costos faltantes/margen y custodio humano de la BD.
+
+### Próximo paso exacto
+
+Pegar en Carbon `docs/CARBON_ARRANQUE.md` v1.2 + catálogo v1.1 y reconstruir `bibliotecario-datos`; auditar la salida con los 10 vectores.
+
+### Archivos tocados
+
+- `docs/CATALOGO_CONSULTAS.json` (v1.1, `requeridos`)
+- `docs/CARBON_ARRANQUE.md` (v1.2)
+- `docs/SKILLS_PILARES_HORMINOR.md` (v1.2, §16)
+- `.agents/skills/bibliotecario-datos/contracts/consulta.json` (v1.2)
+- `.agents/skills/bibliotecario-datos/contracts/ficha_dato.json` (v1.2)
+- `.agents/skills/bibliotecario-datos/router.md`
+- `.agents/skills/bibliotecario-datos/SKILL.md`
+- `.agents/skills/bibliotecario-datos/roles/02_guardian.md`
+- `.agents/skills/bibliotecario-datos/roles/03_privacidad.md`
+- `.agents/skills/bibliotecario-datos/errores.md`
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - Ajuste v1.3: ACL por consulta, DECIMAL negativo y PDF 1:1
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** cerrar los cuatro frentes de auditoría anticipados por Dirección antes de disparar Carbon.
+
+### Hecho
+
+1. **ACL por consulta en `consulta.json` v1.3:** 22 condicionales `if/then` que restringen `actor_context.rol` a los roles del catálogo. `balance`, `resultados`, `banco_detalle` y `salud_sistema` quedan fuera de `BODEGA` y `SECRETARIA`.
+2. **DECIMAL negativo:** el `pattern` de `ficha_dato.json` acepta `-1234.56` como texto y rechaza el número `-1234.56`.
+3. **PDF 1:1:** `precio_ref.ficha_precio_id` se renombró a `precio_ref.ficha_id`; es exactamente el `ficha_id` de la ficha de precio. Contrato `solicitud_cotizacion` v1.2.0.
+4. **Referencias de versión:** `docs/CARBON_ARRANQUE.md` apunta a `SKILLS_PILARES_HORMINOR.md` v1.2 y al catálogo v1.1.
+5. **Checklist de §11** ampliado con ACL, negativos y calce con PDF.
+
+### Evidencia (real, ejecutada)
+
+| Caso | Resultado |
+|---|---|
+| `SECRETARIA` + `balance` | INVÁLIDO (solo SUPERADMIN/CONTADORA) |
+| `BODEGA` + `resultados` | INVÁLIDO |
+| `SECRETARIA` + `banco_detalle` | INVÁLIDO |
+| `BODEGA` + `salud_sistema` | INVÁLIDO (solo SUPERADMIN) |
+| `BODEGA` + `stock_actual` | VÁLIDO |
+| `SECRETARIA` + `cartera_cliente` | VÁLIDO |
+| `BOT_PUBLICO` + `empresa_info` | VÁLIDO |
+| `BOT_PUBLICO` + `banco_detalle` | INVÁLIDO (whitelist) |
+| Ficha DECIMAL `"-1234.56"` | VÁLIDO |
+| Ficha DECIMAL `-1234.56` (number) | INVÁLIDO |
+| Solicitud PDF con `ficha_id` + hash | VÁLIDO |
+| Solicitud PDF sin `ficha_id` | INVÁLIDO |
+
+### Decisiones tomadas
+
+1. **La ACL vive en el contrato, no solo en el rol.** Así un pilar no puede pedir una consulta que su rol no tiene aunque el modelo se equivoque.
+2. **Los negativos son texto decimal.** No se abre la puerta a floats para "facilitar" resultados y ajustes.
+3. **Un solo identificador de ficha.** `ficha_id` es la llave entre bibliotecario y PDF; no hay dos nombres para lo mismo.
+
+### Próximo paso exacto
+
+Pegar en Carbon `docs/SKILLS_PILARES_HORMINOR.md` v1.2 + `docs/CATALOGO_CONSULTAS.json` v1.1 + `docs/CARBON_ARRANQUE.md` v1.2 y reconstruir `bibliotecario-datos`; luego auditar los 9 archivos con los 10 vectores.
+
+### Archivos tocados
+
+- `.agents/skills/bibliotecario-datos/contracts/consulta.json` (v1.3)
+- `.agents/skills/pdf-cotizaciones/contracts/solicitud_cotizacion.json` (v1.2.0)
+- `docs/CARBON_ARRANQUE.md`
+- `docs/SKILLS_PILARES_HORMINOR.md` (§16)
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - Protocolo único de auditoría de skills y limpieza
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** centralizar las auditorías con Carbon, cerrar los 3 micro-detalles del pre-vuelo y borrar el contenido histórico que ya no hace falta en el handoff.
+
+### Hecho
+
+1. **3 micro-detalles cerrados:**
+   - `CARBON_ARRANQUE.md` §7.4: cada condicional restringe `actor_context.rol` al array `roles`; `persona=INTERNO` no admite `BOT_PUBLICO`.
+   - `ficha_dato.json` v1.3: `fuente_vista_tabla` es **array no vacío y único** de las 23 relaciones (soporta consultas multi-tabla).
+   - Documento §5.3: `solicitud_cotizacion` 1.2.0 y `ficha_id` con patrón UUID, igual que el contrato PDF.
+2. **Protocolo único:** `docs/AUDITORIA_SKILLS_CARBON.md` con flujo, pre-vuelo, 10 vectores, matriz por pilar, formato de veredicto, registro histórico y puntos congelados.
+3. **Auditor determinista:** `scripts/auditar_skills.py` (175 verificaciones) con salida a `.agents/evidencias/`.
+4. **Limpieza:** se quitaron §15 y §16 del handoff (historia movida al registro del protocolo) y se borraron 30 scripts temporales de auditoría.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `python scripts/auditar_skills.py` | **APROBADO (175 verificaciones)** |
+| `consulta.json` | v1.3.0, 22 consultas, 12 parámetros, 23 `allOf` |
+| `ficha_dato.json` | v1.3.0, `fuente_vista_tabla` array de 23 |
+| `solicitud_cotizacion.json` | v1.2.0, `ficha_id` UUID |
+| Documentos | 0 caracteres corruptos; §15/§16 eliminadas |
+| ACL | `balance`, `resultados`, `banco_detalle`, `salud_sistema` rechazan `BODEGA`/`SECRETARIA` |
+| PDF | solicitud con `ficha_id` + `vigencia_hash` válida |
+
+### Decisiones tomadas
+
+1. **Un solo protocolo de auditoría.** El handoff queda para Carbon; el historial y los criterios viven en `AUDITORIA_SKILLS_CARBON.md`.
+2. **Lo congelado no se re-audita.** 22 consultas, 12 parámetros, 23 fuentes, ACL y calce PDF quedan cubiertos por el script.
+3. **`fuente_vista_tabla` como array.** Una ficha puede citar varias relaciones sin romper las consultas multi-tabla.
+4. **La verificación es reproducible.** El script reemplaza los chequeos manuales temporales.
+
+### Próximo paso exacto
+
+Pegar en Carbon el paquete v1.3 (estándar + `SKILLS_PILARES_HORMINOR.md` v1.3 + `CATALOGO_CONSULTAS.json` v1.1 + `CARBON_ARRANQUE.md` v1.3), recibir los 9 archivos y correr `scripts/auditar_skills.py` + los 10 vectores.
+
+### Archivos tocados
+
+- `docs/AUDITORIA_SKILLS_CARBON.md` (nuevo)
+- `scripts/auditar_skills.py` (nuevo)
+- `docs/SKILLS_PILARES_HORMINOR.md` (v1.3, sin §15/§16)
+- `docs/CARBON_ARRANQUE.md` (v1.3)
+- `docs/CATALOGO_CONSULTAS.json` (v1.1, ya con `requeridos`)
+- `.agents/skills/bibliotecario-datos/contracts/consulta.json` (v1.3)
+- `.agents/skills/bibliotecario-datos/contracts/ficha_dato.json` (v1.3)
+- `.agents/skills/pdf-cotizaciones/contracts/solicitud_cotizacion.json` (v1.2.0)
+- `.agents/skills/bibliotecario-datos/roles/02_guardian.md`
+- `.agents/skills/bibliotecario-datos/SKILL.md`
+- `.agents/evidencias/auditoria_skills_2026-11-12.txt`
+- `.agents/ESTADO.md` y `.agents/BITACORA.md`
+
+---
+
+## 2026-11-12 - Corrección del pre-vuelo v1.3: bloqueo cruzado y roles de 40 líneas
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** verificar la afirmación de "23 reglas y roles de 40–70" antes de dar el visto bueno; se encontraron dos huecos reales en el repo.
+
+### Hallazgos
+
+1. **El bloqueo cruzado INTERNO/BOT_PUBLICO estaba en el prompt, no en el contrato.** `consulta.json` permitía `persona=INTERNO` con `rol=BOT_PUBLICO` en las dos consultas públicas. Se agregó el condicional 24: `persona=INTERNO` exige rol `SUPERADMIN|CONTADORA|SECRETARIA|BODEGA`.
+2. **Dos roles estaban por debajo de 40 líneas:** `01_catalogo.md` (38) y `04_migraciones.md` (30), y `pdf/02_emisor.md` (37). El estándar pide 40–70. Se expandieron con contenido real (defaults, evidencia, checklist), no relleno.
+
+### Hecho
+
+- `consulta.json` → v1.4.0 con **24 `allOf`** (22 consultas + whitelist + bloqueo cruzado).
+- Roles: `01_catalogo` 53, `02_guardian` 52, `03_privacidad` 41, `04_migraciones` 47, `pdf/02_emisor` 45.
+- `scripts/auditar_skills.py`: exige 24 `allOf`, verifica el bloqueo cruzado, exige 40–70 líneas y agrega el caso `INTERNO + BOT_PUBLICO`.
+- `docs/CARBON_ARRANQUE.md` §7.4 y §11: la cifra correcta son **24 reglas**.
+- Registro de auditoría con la fila "Pre-vuelo v1.3".
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `python scripts/auditar_skills.py` | **APROBADO (177 verificaciones)** |
+| `INTERNO + BOT_PUBLICO + empresa_info` | RECHAZADO |
+| `PUBLICO + BOT_PUBLICO + empresa_info` | VÁLIDO |
+| Roles | 41–53 líneas (dentro de 40–70) |
+| `consulta.json` | v1.4.0, 24 `allOf` |
+
+### Decisión
+
+**No se aprobó la afirmación "23 reglas" hasta corregirla.** El mensaje de pre-vuelo era correcto en todo lo demás, pero daba por cerrado un bloqueo que solo existía en el prompt. La regla queda: un criterio no está implementado hasta que el contrato lo rechaza y el auditor lo prueba.
+
+### Próximo paso exacto
+
+Pegar en Carbon el paquete con `CARBON_ARRANQUE.md` actualizado (24 reglas) y auditar los 9 archivos con el script de 177 verificaciones.
+
+### Archivos tocados
+
+- `.agents/skills/bibliotecario-datos/contracts/consulta.json` (v1.4.0)
+- `.agents/skills/bibliotecario-datos/roles/01_catalogo.md` y `04_migraciones.md`
+- `.agents/skills/pdf-cotizaciones/roles/02_emisor.md`
+- `scripts/auditar_skills.py`
+- `docs/AUDITORIA_SKILLS_CARBON.md`
+- `docs/CARBON_ARRANQUE.md`
+- `docs/SKILLS_PILARES_HORMINOR.md`
+- `.agents/evidencias/auditoria_skills_2026-11-12.txt`
+- `.agents/ESTADO.md` y `.agents/BITACORA.md`
+
+---
+
+## 2026-11-12 - Continuación autónoma: pilar #1 aprobado y documento de retorno
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** seguir sin Dirección presente, dejar el pilar #1 auditado y un punto de retorno claro.
+
+### Hecho
+
+1. **Veredicto del pilar #1 de referencia:** 10/10 vectores OK, checklist completo y 177 verificaciones en verde. Queda como vara para la entrega de Carbon.
+2. **Registro de auditoría actualizado:** fila "Pilar #1 (referencia) APROBADO" y "entrega Carbon PENDIENTE".
+3. **PDF:** `SKILL.md` alineado a la versión 1.2.0 del contrato.
+4. **Documento de retorno:** `docs/CONTINUACION_2026-11-12.md` con estado, pendientes, comandos y decisiones abiertas.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `python scripts/auditar_skills.py` | **APROBADO (177 verificaciones)** |
+| Vectores del pilar #1 | 10/10 OK |
+| Roles | 41–57 líneas (40–70) |
+| `consulta.json` | v1.4.0, 24 `allOf` |
+| `ficha_dato.json` | v1.3.0 |
+| `solicitud_cotizacion.json` | v1.2.0 |
+
+### Decisión
+
+**La referencia no reemplaza la entrega de Carbon.** Se aprueba como vara y como implementación local, pero la ronda adversarial con Carbon sigue pendiente.
+
+### Próximo paso exacto
+
+Al volver: pegar los 9 archivos de Carbon, correr `python scripts/auditar_skills.py`, pasar §9/§10 y registrar el veredicto. Después: pilar #2 `pdf-cotizaciones`.
+
+### Archivos tocados
+
+- `docs/AUDITORIA_SKILLS_CARBON.md` (§11 y registro)
+- `docs/CONTINUACION_2026-11-12.md` (nuevo)
+- `.agents/skills/pdf-cotizaciones/SKILL.md` (versión 1.2.0)
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - Gato: bot interno para Julio y secretaría (loop con datos ficticios)
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** construir el asistente interno `HORMINOR_INTERNO` ("Gato"), probarlo en loop con preguntas reales de Julio y la secretaria, y usar una base ficticia separada.
+
+### Hecho
+
+1. **Persona "Gato"** en `services/core-api/app/asistente/persona.py` y `docs/GATO_PROMPT.md`: gato operativo, "jefe"/"seño", regla de no inventar cifras, permisos y tono.
+2. **Bibliotecario de solo lectura** (`app/asistente/bibliotecario.py`): cartera, cliente, cierre, stock, bancos, agenda, órdenes y precios.
+3. **Gato determinista** (`app/asistente/gato.py`): 9 intenciones por palabras clave, permisos por rol, formato ecuatoriano (`$5.043,60`), fuente y fecha en cada respuesta.
+4. **Base ficticia aislada:** `orminorth_gato_test` (copia de `orminorth_panel_test`) + `db/seeds/gato_ficticio.sql`, todo marcado `[FICTICIO]`/`FICT-`.
+5. **Loop de 25 preguntas** (`scripts/gato_loop.py`): Julio y secretaría; incluye rechazo de bancos para secretaría.
+6. **Tests:** 15 pruebas puras en `tests/test_gato.py`; suite total **311 passed**.
+7. **Documentación:** `docs/GATO_CORPUS.md` con preguntas, datos sembrados, permisos y comandos.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `python scripts/gato_loop.py` | **25 preguntas · 0 errores · RESULTADO: OK** (`.agents/evidencias/gato_loop_2026-11-12.txt`) |
+| `pytest /app/tests -q` | **311 passed** en 7.92 s (`pytest_gato_2026-11-12.txt`) |
+| Base ficticia | 3 clientes, 3 órdenes, 3 pagos, 1 cierre, 2 entregas, 3 bancos, 1 préstamo |
+| Permiso secretaría | "¿Cuánto hay en el Pichincha?" → rechazo con alternativa |
+| Permiso Julio | Pichincha muestra contable, informado y préstamo |
+| Formato | `$63.619,60`, `-$20,00`, `m³`, `sacos` |
+
+### Decisiones tomadas
+
+1. **Base de prueba separada.** `orminorth_gato_test` evita mezclar ficción con datos reales; la semilla es idempotente y todo lleva marca.
+2. **Determinista primero.** El loop funciona sin `DEEPSEEK_API_KEY`; el prompt queda listo para el modelo cuando se configure.
+3. **Permisos en código, no en el prompt.** La secretaría no ve bancos aunque el modelo se equivoque.
+4. **Gato no ejecuta.** Solo consulta; los borradores de cobro/gasto/orden quedan para la fase con Custodio.
+5. **Fuente legible + técnica.** "cartera (v_cliente_saldo)" para trazabilidad sin perder lenguaje simple.
+
+### Bloqueos / preguntas al cliente
+
+1. ¿Confirmás el tono de Gato ("jefe"/"seño", "miau" una vez)?
+2. ¿Qué preguntas faltan del día a día de la secretaria?
+3. ¿La secretaría puede ver precios de venta? Hoy sí; costos no.
+
+### Próximo paso exacto
+
+Conectar `DEEPSEEK_API_KEY` y usar `PROMPT_GATO` como system; exponer `POST /api/v1/asistente/chat` con el rol del panel y auditar cada turno. Después, reemplazar el router por palabras clave con function calling sobre las 22 consultas del bibliotecario.
+
+### Archivos tocados
+
+- `services/core-api/app/asistente/` (nuevo: `persona.py`, `bibliotecario.py`, `gato.py`, `__init__.py`)
+- `services/core-api/tests/test_gato.py` (nuevo)
+- `scripts/gato_loop.py` (nuevo)
+- `db/seeds/gato_ficticio.sql` (nuevo)
+- `docs/GATO_PROMPT.md` y `docs/GATO_CORPUS.md` (nuevos)
+- `.agents/evidencias/gato_loop_2026-11-12.txt` y `pytest_gato_2026-11-12.txt`
+- `.agents/BITACORA.md`
+- `.agents/ESTADO.md`
+
+---
+
+## 2026-11-12 - Gato v2.0: pilares, ACL desde catálogo y guarda de cifras
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** corregir los 6 fallos de arquitectura de Gato v1.0 (router rígido, bypass de pilares, ACL en el prompt, fuentes inventadas, voseo y estados mezclados).
+
+### Hecho
+
+1. **Pilares reales:** `app/asistente/pilares.py` define cartera-cobros, caja-cierre, banca-mercado, planta-inventario, agenda-obras-visitas y configuracion-precios. Gato ya no llama al bibliotecario directo: pilar → acción → consulta nombrada.
+2. **ACL desde el catálogo:** `catalogo.py` espeja las 22 consultas y sus roles. El orquestador rechaza con estado `ACL` antes de ejecutar. Secretaría no ve cartera total, stock ni bancos; Contadora sí ve bancos; Bodega ve stock.
+3. **Prompt v2.0 en español de Ecuador:** tuteo, `actor_context` inyectado, herramientas filtradas por rol, tres estados distintos, trazabilidad desde la ficha y "miau" prohibido en errores.
+4. **Fichas y guarda:** `fichas.py` + `herramientas.py` generan fichas con fuente, filtros, fecha y valores; `guardas.py` rechaza cualquier cifra del texto que no exista en las fichas.
+5. **Multi-paso y repregunta:** cliente por nombre → `cartera_cliente`; si falta número de orden, banco, fecha o cliente, Gato pregunta una sola vez.
+6. **Tool calling DeepSeek:** `proveedores.py` arma `tools=[...]` desde los pilares filtrados por rol, con loop de hasta 3 pasos y la misma guarda. Sin `DEEPSEEK_API_KEY`, el modo determinista usa los mismos pilares.
+7. **Base ficticia:** `orminorth_gato_test` + `db/seeds/gato_ficticio.sql`; el loop cubre 25 preguntas y 4 roles.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `python scripts/gato_loop.py` | **25 preguntas · 0 errores · RESULTADO: OK** |
+| `pytest /app/tests -q` | **318 passed** en 11.66 s |
+| ACL Secretaría | `cartera_total`, `stock_actual` y `banco_detalle` → **ACL** |
+| ACL Contadora | `banco_detalle` → **OK** |
+| ACL Bodega | `stock_actual` → **OK**; `cartera_total` → **ACL** |
+| Falta parámetro | "orden de Los Andes" → pide número; "préstamo" → pide banco |
+| Multi-paso | "¿Cuánto debe Los Andes y hay cemento?" → dos bloques |
+| Guarda de cifras | una cifra sin ficha bloquea la respuesta |
+| PROPUESTA | costo/margen → "aún no habilitada" |
+
+### Decisiones tomadas
+
+1. **El prompt no lleva permisos.** Los permisos salen del catálogo y de `pilares.py`; el prompt solo describe el rol y el tono.
+2. **Gato pide a los pilares, no al bibliotecario.** Así conserva las reglas de negocio de cada pilar.
+3. **Tres estados separados.** Falta parámetro ≠ vacío ≠ ACL/PROPUESTA.
+4. **Trazabilidad literal de la ficha.** `fuente_vista_tabla`, `filtros_aplicados` y `consultado_en`; no etiquetas inventadas.
+5. **Español de Ecuador.** Se eliminó el voseo rioplatense; "miau" solo en respuestas normales.
+6. **DeepSeek opcional pero cableado.** El modo determinista corre sin clave y usa los mismos pilares.
+
+### Bloqueos / preguntas al cliente
+
+1. ¿Confirmas que Secretaría no debe ver el total agregado de cartera? Hoy el catálogo lo restringe.
+2. ¿La Contadora debe ver stock? El catálogo dice que sí; el prompt no lo restringe.
+3. ¿Qué otras preguntas del día a día faltan en el corpus?
+
+### Próximo paso exacto
+
+Exponer `POST /api/v1/asistente/chat` con `actor_context` del panel y registrar cada turno; después implementar los handlers de las consultas aún no conectadas (balance, resultados, compras, por pagar, disponibilidad, viaje).
+
+### Archivos tocados
+
+- `services/core-api/app/asistente/` (`pilares.py`, `catalogo.py`, `fichas.py`, `herramientas.py`, `orquestador.py`, `redactor.py`, `guardas.py`, `proveedores.py`, `texto.py`, `persona.py`, `gato.py`)
+- `services/core-api/tests/test_gato.py`
+- `scripts/gato_loop.py`
+- `docs/GATO_PROMPT.md` y `docs/GATO_CORPUS.md` (v2.0)
+- `.agents/evidencias/gato_loop_2026-11-12.txt` y `pytest_gato_2026-11-12.txt`
+- `.agents/ESTADO.md` y `.agents/BITACORA.md`
+
+---
+
+## 2026-11-12 - Gato v2.1: 22 consultas conectadas, guarda blindada y endpoint seguro
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** cerrar los 5 huecos de la auditoría de Gato v2.0 antes de prender DeepSeek y exponer el endpoint.
+
+### Hecho
+
+1. **13 handlers nuevos** hasta completar las 22 consultas del catálogo: `cliente_ficha`, `movimientos_dia`, `stock_proyectado`, `viaje_estado`, `balance`, `resultados`, `compras_pendientes`, `por_pagar`, `disponibilidad_agenda`, `banco_movimientos`, `cuota_mercado`, `empresa_info` y `salud_sistema`. **0 consultas `NO_CONECTADA`**.
+2. **Guarda de cifras v2:** acepta `$63.619,60` y `$63,619.60`, negativos `-$20.00`, ignora códigos `FC-210/FC-280`, bloquea cantidades inventadas (`999 sacos`) y exige ficha para "4 clientes".
+3. **Orden por cliente:** "¿Cómo va la orden de Los Andes?" busca al cliente y lista sus órdenes; si hay una, la responde. Ya no rebota pidiendo número.
+4. **Endpoint `POST /api/v1/asistente/chat`:** el body solo acepta `mensaje` y `conversacion_id`; `actor_context` en el body devuelve 422. El rol sale de `X-Panel-Role` (puente temporal hasta el login); sin rol, 401.
+5. **DeepSeek en `.env`:** `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL` y `GATO_LLM=1`; la `DEEPSEEK_API_KEY` quedó vacía porque la clave del mensaje estaba truncada. Al pegarla, `proveedores.py` se activa sin tocar código.
+6. **Loop ampliado a 39 preguntas**, con cobertura de los handlers nuevos y 5 trampas (inyección, ambigüedad, banco sin nombre, multi-pilar, orden por cliente).
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `python scripts/gato_loop.py` | **39 preguntas · 0 errores · OK** |
+| `pytest /app/tests -q` | **332 passed** en 7.72 s |
+| `scripts/auditar_skills.py` | **177 verificaciones** |
+| Guarda US/EU | `$63,619.60` y `$63.619,60` válidos; `999 sacos` rechazado |
+| Sin rol en el endpoint | **401** |
+| `actor_context` en el body | **422** |
+| Orden por cliente | lista la #58 de Los Andes |
+| Balance | "todas las cuentas en cero" (sin cifras inventadas) |
+| Cuota Orellana | 120.000 m³, 372 m³, 0,31% |
+| Mixers mañana | MIXER-01/02 ocupados, MIXER-03 libre |
+
+### Decisiones tomadas
+
+1. **Los permisos no viajan en el body.** El backend resuelve el actor; el request no puede escalar rol.
+2. **La guarda es tolerante al formato, no a la invención.** Acepta los dos formatos monetarios y sigue bloqueando cifras sin ficha.
+3. **Cartera total sigue cerrada para Secretaría.** Ve saldo por cliente, no el acumulado.
+4. **`pilares.py` es provisional.** Cuando cada pilar pase por Carbon y el árbitro, se ajusta a los contratos de las skills; nunca al revés.
+5. **Balance sin movimientos se dice en cero**, no se inventa un saldo.
+
+### Bloqueos / preguntas al cliente
+
+1. Pegar la `DEEPSEEK_API_KEY` completa en `.env` para correr el loop con LLM real.
+2. Confirmar si Secretaría debe ver el acumulado de cartera (hoy bloqueado por catálogo).
+
+### Próximo paso exacto
+
+Pegar la clave completa en `.env`, reiniciar `core-api` y correr `GATO_LLM=1 python scripts/gato_loop.py`; revisar las 39 respuestas con DeepSeek real y las 5 trampas.
+
+### Archivos tocados
+
+- `services/core-api/app/asistente/` (`bibliotecario.py`, `herramientas.py`, `pilares.py`, `orquestador.py`, `redactor.py`, `guardas.py`, `proveedores.py`, `router.py`)
+- `services/core-api/app/main.py` (router)
+- `services/core-api/tests/test_gato.py` y `test_asistente_router.py`
+- `scripts/gato_loop.py`
+- `.env` y `.env.example` (DeepSeek)
+- `docs/GATO_PROMPT.md` y `docs/GATO_CORPUS.md`
+- `.agents/evidencias/gato_loop_2026-11-12.txt` y `pytest_gato_2026-11-12.txt`
+- `.agents/ESTADO.md` y `.agents/BITACORA.md`
+
+---
+
+## 2026-11-12 - Gato visible en el panel y DeepSeek en vivo (39/0)
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** hacer visible a Gato en el panel y probarlo con DeepSeek real, no solo en modo determinista.
+
+### Hecho
+
+1. **Widget de Gato en `/panel`:** botón flotante "Gato" abajo a la derecha, panel de chat con historial, estados y render de tablas Markdown. Usa `api()` y el perfil de "Viendo como".
+2. **Actor desde la sesión:** el endpoint resuelve el rol desde `X-Panel-User` contra `panel_users_acl`; el body sigue prohibiendo `actor_context`.
+3. **DeepSeek en vivo:** `DEEPSEEK_API_KEY` configurada (35 chars), `GATO_LLM=1`; el loop de 39 preguntas corrió con el modelo real y **0 errores**.
+4. **Fichas derivadas:** `faltante_para_minimo`, `total_m3`, `entregas`, `cupo_disponible` para que la guarda acepte cálculos legítimos del LLM (380 sacos, 72 m³, 2.640 USD).
+5. **Regla FC:** el prompt aclara que FC-180/210/240/280/350 son resistencias, no órdenes; el tool de precios ya no se confunde.
+6. **Payload de tools con `datos`:** el LLM recibe la ficha y el dato crudo para estados (orden, agenda), sin perder la guarda de cifras.
+7. **`gato_loop.py` con UTF-8:** ya no revienta al imprimir `→` en consola Windows.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `python scripts/gato_loop.py` con DeepSeek | **39 preguntas · 0 errores · 0 `ERROR` de guarda** (`.agents/evidencias/gato_loop_llm_2026-11-12.txt`) |
+| `pytest /app/tests -q` | **332 passed** en 13.11 s |
+| `scripts/auditar_skills.py` | **177 verificaciones** |
+| Endpoint con `X-Panel-User` | 200 y respuesta con fuente |
+| Endpoint sin sesión | 401 |
+| `actor_context` en body | 422 |
+| Panel | widget visible y respuesta en vivo (`panel_gato_v21_2026-11-12.png`) |
+| Precio FC-210 | 118.00 USD/m³ (ya no lo confunde con orden) |
+| Stock proyectado | 120 sacos, mínimo 500, faltan 380 (ficha) |
+| Agenda | 2 entregas, 72.00 m³ (ficha) |
+
+### Decisiones tomadas
+
+1. **El widget usa el perfil del panel, no un rol escrito en el body.** El backend resuelve el rol; no hay escalación desde DevTools.
+2. **El LLM puede calcular diferencias, pero solo si la ficha las respalda.** Se agregaron fichas derivadas; la guarda sigue bloqueando lo inventado.
+3. **El LLM recibe `datos` además de fichas.** Sin eso no podía decir el estado de una orden; la guarda de cifras sigue siendo la última puerta.
+4. **Las resistencias FC no son órdenes.** Se corrigió en prompt y descripción de tools.
+
+### Próximo paso exacto
+
+Probar el widget con el perfil de Secretaría ("Viendo como") para ver el rechazo de bancos/stock en vivo, y luego cargar preguntas reales de la operación.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html` (widget Gato)
+- `services/core-api/app/asistente/router.py` (actor desde `panel_users_acl`)
+- `services/core-api/app/asistente/` (`persona.py`, `pilares.py`, `herramientas.py`, `guardas.py`, `proveedores.py`, `redactor.py`)
+- `scripts/gato_loop.py` (UTF-8)
+- `.env` (DeepSeek ya configurado)
+- `.agents/evidencias/gato_loop_llm_2026-11-12.txt`, `gato_loop_deterministico_2026-11-12.txt`, `panel_gato_v21_2026-11-12.png`
+- `.agents/ESTADO.md` y `.agents/BITACORA.md`
+
+---
+
+## 2026-11-12 - Gato con estilo WhatsApp, fondo opaco y sesión por defecto
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** corregir el fondo transparente del widget y el error "Sesión no autenticada" cuando el panel no tiene perfil seleccionado.
+
+### Hecho
+
+1. **Estilo WhatsApp:** el widget reutiliza las clases `.chat-*` del chat de clientes: fondo sólido, cabecera, burbujas con cola, hora, separador "Hoy" y compositor.
+2. **Fondo opaco:** `#0F172A` en noche y `#FFFFFF` en día; se acabó el efecto transparente sobre las fotos.
+3. **Tablas legibles:** cabeceras con salto de línea, celdas numéricas alineadas a la derecha y scroll horizontal si hace falta.
+4. **Sesión por defecto:** si no hay perfil en "Viendo como", el widget envía `X-Panel-Role: julio` (la misma opción base del selector) en vez de fallar con 401. Si hay perfil, usa su UUID.
+5. **Cierre:** botón × en la cabecera y `aria-expanded` en el botón flotante.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| Panel con perfil Julio | Widget opaco, burbujas WhatsApp y tabla (`panel_gato_v21_2026-11-12.png`) |
+| Panel sin perfil | Responde como Julio base, sin 401 |
+| Respuesta en vivo | "Jefe, hay 2 clientes con saldo… USD 55.043,60" + tabla |
+| `pytest /app/tests -q` | **332 passed** |
+| `scripts/auditar_skills.py` | **177 verificaciones** |
+
+### Decisiones tomadas
+
+1. **Se reutiliza el chat existente, no se inventa otro estilo.** Menos CSS y la misma sensación que el chat de clientes.
+2. **Sin perfil se usa Julio base, no se bloquea la demo.** El selector ya ofrece "Julio (base Superadmin)" como opción vacía; el widget la respeta.
+3. **La tabla se adapta al ancho del panel.** Cabeceras en dos líneas y números a la derecha.
+
+### Próximo paso exacto
+
+Probar el widget con "Viendo como" en Secretaría, Bodega y Contadora para ver los rechazos y permisos en vivo.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html` (widget)
+- `.agents/evidencias/panel_gato_v21_2026-11-12.png`
+- `.agents/ESTADO.md` y `.agents/BITACORA.md`
+
+---
+
+## 2026-11-12 - Facturas internas v6.13 y prueba con Gato
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** comprobar si Gato puede acceder a facturas. Dirección pidió que la
+factura se pueda adjuntar como PDF o foto y que exista una factura ficticia
+para probar, sin abrir la facturación electrónica del SRI.
+
+### Hecho
+
+1. **Migración 073** (`client_invoices`): factura interna por cliente, ligada
+   opcionalmente a una orden, con subtotal/IVA/total, estado, `es_ficticia`,
+   nota y `media_id`. Restricción `total = subtotal + iva_monto`.
+2. **PDF interno** (`app/services/factura_pdf.py`): documento imprimible con
+   banner **FICTICIA** y la leyenda "NO ES UN COMPROBANTE ELECTRÓNICO DEL SRI".
+   Usa DejaVu y Pillow; no agrega dependencias.
+3. **Factura de prueba** (`scripts/factura_prueba.py`): crea `PRUEBA-0001` para
+   Ing. Reyes con los montos reales de la orden #55 ($37.760 + IVA $5.664 =
+   **$43.424**). Es idempotente y guarda el PDF en el volumen de media.
+4. **API** (`routers/facturas.py`): `GET/POST /api/v1/clients/{id}/facturas`.
+   Acepta PDF, JPG, PNG y WEBP; con orden toma los montos, sin orden exige el
+   total. Duplicados responden 409. La subida usa el mismo almacenamiento de
+   Bunny/sandbox que el chat.
+5. **Panel**: pestaña **Facturas** en el expediente, listado con badge
+   FICTICIA y formulario para adjuntar PDF/foto.
+6. **Gato**: nueva consulta `cliente_facturas` y acción
+   `cartera-cobros/facturas_cliente` (SUPERADMIN, CONTADORA, SECRETARÍA).
+   Gato marca la ficticia, muestra el enlace y aclara que el SRI está fuera de
+   alcance. En modo determinista y con DeepSeek real.
+7. **Documento para Evolution API** (`docs/EVOLUTION_API_PRUEBA.md`): lista
+   cerrada de lo que falta para probar WhatsApp real (URL, instancia, API key,
+   número corporativo, teléfono de prueba y webhook público).
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `python scripts/db_migrate.py` | `+ 073_facturas_internas.sql` |
+| `python scripts/factura_prueba.py` | Factura `PRUEBA-0001` creada; total **$43.424,00** |
+| Segunda ejecución | `[OK] ya existe...` (idempotente) |
+| `GET /api/v1/media/{id}/archivo` | `200 application/pdf 132932` |
+| `GET /api/v1/clients/{id}/facturas` | 1 factura con `es_ficticia=true` y URL |
+| Gato determinista | `OK` con PRUEBA-0001 + FICTICIA; SRI -> `PROPUESTA` |
+| Gato DeepSeek | `OK`, tabla con subtotal/IVA/total y advertencia de ficticia |
+| Gato con Bodega | Rechazo por rol (sin datos) |
+| Panel | Pestaña Facturas visible, 0 errores de consola |
+| `pytest /app/tests -q` | **338 passed** en 15.21 s |
+| `python scripts/auditar_skills.py` | **APROBADO (177 verificaciones)** |
+
+Evidencia completa: `.agents/evidencias/facturas_v613_2026-11-12.txt`,
+`.agents/evidencias/factura_prueba_2026-11-12.pdf`,
+`.agents/evidencias/panel_v613_facturas_2026-11-12.jpeg`.
+
+### Decisiones tomadas
+
+1. **Factura interna, no SRI.** Se guarda el documento y sus montos, pero no se
+   emite comprobante electrónico: el SRI sigue fuera de alcance (decisión C4).
+2. **Los montos salen de la orden.** Si se elige una orden, el backend copia
+   subtotal, IVA y total; si no, el usuario debe escribir el total. Cero
+   valores inventados.
+3. **`es_ficticia` es explícito.** La factura de prueba se marca en base, en el
+   PDF, en el panel y en la respuesta de Gato.
+4. **Se reutiliza `media_assets`.** El binario vive en Bunny/sandbox; PostgreSQL
+   solo guarda el índice y la relación con la factura.
+
+### Bloqueos / preguntas al cliente
+
+1. Validar con Julio el **formato real** de la factura (logo, datos fiscales,
+   numeración, autorización) antes de usarla con clientes.
+2. Confirmar si la numeración será por cliente o global; hoy es única por
+   cliente para la prueba.
+3. Para Evolution API faltan las credenciales y el webhook público descritos en
+   `docs/EVOLUTION_API_PRUEBA.md`.
+
+### Próximo paso exacto
+
+Revisar con Julio el PDF de prueba y definir los datos fiscales/numeración de la
+factura interna. Después, cargar las credenciales de Evolution API y correr la
+prueba de texto con un teléfono real.
+
+### Archivos tocados
+
+- `db/migrations/073_facturas_internas.sql`
+- `services/core-api/app/services/factura_pdf.py`
+- `services/core-api/app/routers/facturas.py`
+- `services/core-api/app/main.py`
+- `services/core-api/app/m3_secretaria/service.py`
+- `services/core-api/app/asistente/` (`catalogo.py`, `pilares.py`, `herramientas.py`, `bibliotecario.py`, `redactor.py`, `orquestador.py`, `proveedores.py`, `persona.py`)
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_gato.py`, `tests/test_factura_pdf.py`
+- `scripts/factura_prueba.py`
+- `docs/GATO_CORPUS.md`, `docs/GATO_PROMPT.md`, `docs/BASE_DE_DATOS.md`, `docs/MODELO_DATOS.md`, `docs/EVOLUTION_API_PRUEBA.md`
+- `.agents/evidencias/facturas_v613_2026-11-12.txt`, `factura_prueba_2026-11-12.pdf`, `panel_v613_facturas_2026-11-12.jpeg`
+- `.agents/ESTADO.md` y `.agents/BITACORA.md`
+
+---
+
+## 2026-11-12 - Gato v6.13.1: memoria, búsqueda y descarga
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** que Gato siga el hilo de la conversación ("descárgala"), encuentre
+"ing reyes" aunque el nombre real tenga punto, y entregue la factura como
+descarga desde el chat.
+
+### Hecho
+
+1. **Búsqueda normalizada.** `bibliotecario._norm_busqueda()` quita tildes y
+   puntuación, y la consulta normaliza nombre, constructora, ciudad, obra, RUC,
+   cédula y teléfono. "ing reyes" ahora encuentra "Ing. Reyes (prueba Hito 1)".
+2. **Memoria en PostgreSQL.** Migración `074_gato_memoria.sql` crea
+   `gato_turnos`; el endpoint devuelve `conversacion_id`, el widget lo guarda
+   por usuario en `localStorage` y el backend pasa los últimos 8 turnos al LLM.
+   Si el ID es de otro actor, responde 403.
+3. **Conversación fluida.** Con el mismo `conversacion_id`, "descárgala"
+   devuelve el PDF de la factura anterior sin repetir el cliente. El prompt
+   agrega reglas de historial, ambigüedad ("¿a cuál?") y enlaces de descarga.
+4. **Descarga desde el chat.** El backend garantiza
+   `Descargar: /api/v1/media/{id}/archivo?download=1`; el widget lo convierte
+   en enlace con atributo `download`. Se agregó el botón "↺" para iniciar una
+   conversación nueva.
+5. **Límite de memoria.** 8 turnos por conversación; se guardan pregunta,
+   respuesta, estado, actor y rol. No se guardan secretos.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `db_migrate.py` | `+ 074_gato_memoria.sql` |
+| "Pásame la factura del ing reyes" | `OK`, encuentra al cliente y la factura |
+| "descárgala" con el mismo `conversacion_id` | `OK`, devuelve el PDF anterior |
+| `gato_turnos` | 2 turnos con el mismo `conversacion_id` |
+| Enlace de descarga | `/api/v1/media/.../archivo?download=1` |
+| `pytest /app/tests -q` | **342 passed** en 9.27 s |
+
+Evidencia completa:
+`.agents/evidencias/gato_memoria_v6131_2026-11-12.txt`.
+
+### Decisiones tomadas
+
+1. **Memoria en PostgreSQL, no en el navegador.** El historial queda auditables
+   y el widget solo guarda el `conversacion_id`.
+2. **Ocho turnos, no toda la conversación.** Mantiene el prompt corto y
+   suficiente para referencias inmediatas; una conversación larga se puede
+   resumir después.
+3. **La búsqueda normaliza, no adivina.** "ing reyes" encuentra "Ing. Reyes";
+   si hay varios, Gato muestra los nombres y pregunta. No elige por su cuenta.
+4. **La descarga se garantiza en el backend.** Aunque el LLM omita el enlace,
+   el post-proceso agrega la URL exacta de la ficha; no se inventan enlaces.
+
+### Bloqueos / preguntas al cliente
+
+1. Probar el hilo con Julio y Secretaría durante una conversación real.
+2. Definir si la memoria debe durar días o solo la sesión; hoy queda en base.
+3. La factura real sigue pendiente de formato, numeración y datos fiscales.
+
+### Próximo paso exacto
+
+Probar en el panel: "Pásame la factura del ing reyes" y luego "descárgala" con
+el mismo usuario; verificar que el PDF se descarga y que el botón "↺" inicia
+una conversación limpia.
+
+### Archivos tocados
+
+- `db/migrations/074_gato_memoria.sql`
+- `services/core-api/app/asistente/memoria.py`
+- `services/core-api/app/asistente/router.py`
+- `services/core-api/app/asistente/gato.py`
+- `services/core-api/app/asistente/orquestador.py`
+- `services/core-api/app/asistente/proveedores.py`
+- `services/core-api/app/asistente/bibliotecario.py`
+- `services/core-api/app/asistente/redactor.py`
+- `services/core-api/app/asistente/persona.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_gato.py`, `tests/test_asistente_router.py`
+- `docs/GATO_PROMPT.md`, `docs/GATO_CORPUS.md`, `docs/BASE_DE_DATOS.md`
+- `.agents/evidencias/gato_memoria_v6131_2026-11-12.txt`
+- `.agents/ESTADO.md` y `.agents/BITACORA.md`

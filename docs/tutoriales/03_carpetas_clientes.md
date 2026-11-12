@@ -40,6 +40,13 @@ La lista se pagina de 12 en 12.
 2. **Pagos y Estado de Cuenta:** cobros, abonos y anticipos.
 3. **Ficha y Datos:** nombre, constructora, RUC, WhatsApp, ciudad, obra
    frecuente y cupo de crédito.
+4. **💬 Chat:** espejo de la conversación de WhatsApp con ese cliente. Se
+   escribe en el cuadro de abajo; `Enter` envía y `Shift+Enter` salta de línea.
+   El clip 📎 abre Galería, Cámara, Documento, Audio, Ubicación y Contacto.
+   Las fotos se convierten a WebP y los videos se comprimen antes de subirse a
+   Bunny; el audio se envía tal cual. Mientras Evolution no esté conectado, los
+   mensajes quedan en cola (`PENDIENTE`) y se avisa en la cabecera. El número
+   sobre la pestaña indica mensajes entrantes sin leer.
 
 ## Preguntas frecuentes
 

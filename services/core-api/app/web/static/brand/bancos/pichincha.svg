@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Banco Pichincha">
+  <title>Banco Pichincha</title>
+  <rect width="96" height="96" rx="22" fill="#FFD100"/>
+  <g transform="translate(20 20) scale(1.2727)">
+    <path d="M43.69.27V44H14.63A14.63,14.63,0,0,1,0,29.33V.27H43.69Z" fill="#1B2D54"/>
+    <polygon points="36.42 22.08 36.42 7.54 21.84 7.54 21.84 14.11 29.84 14.11 29.84 22.08 36.42 22.08" fill="#FFD100"/>
+  </g>
+</svg>

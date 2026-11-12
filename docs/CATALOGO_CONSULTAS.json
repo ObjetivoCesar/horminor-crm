@@ -1,0 +1,611 @@
+{
+  "version": "1.1.0",
+  "contrato": "catalogo_consultas",
+  "actualizado": "2026-11-12",
+  "regla": "Solo las consultas con estado IMPLEMENTADA entran al enum cerrado de contracts/consulta.json. Las PROPUESTA no se pueden invocar hasta que exista su fuente y su prueba en el clon.",
+  "consultas": [
+    {
+      "id": "cliente_buscar",
+      "descripcion": "Busca clientes por nombre, RUC, telefono, orden u obra.",
+      "fuente": [
+        "clients",
+        "sabueso"
+      ],
+      "parametros": [
+        "texto",
+        "limite"
+      ],
+      "requeridos": [
+        "texto"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "BODEGA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "cliente_ficha",
+      "descripcion": "Ficha de un cliente con saldo y datos comerciales.",
+      "fuente": [
+        "clients",
+        "v_cliente_saldo"
+      ],
+      "parametros": [
+        "cliente_id"
+      ],
+      "requeridos": [
+        "cliente_id"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "cartera_cliente",
+      "descripcion": "Saldo pendiente, cobrado y cupo de un cliente.",
+      "fuente": [
+        "v_cliente_saldo"
+      ],
+      "parametros": [
+        "cliente_id"
+      ],
+      "requeridos": [
+        "cliente_id"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "cartera_total",
+      "descripcion": "Cartera agregada por rango de fechas.",
+      "fuente": [
+        "v_cliente_saldo"
+      ],
+      "parametros": [
+        "desde",
+        "hasta"
+      ],
+      "requeridos": [],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "cierre_dia",
+      "descripcion": "Cierre de caja de un dia o rango.",
+      "fuente": [
+        "cash_closures",
+        "payments"
+      ],
+      "parametros": [
+        "desde",
+        "hasta"
+      ],
+      "requeridos": [
+        "desde",
+        "hasta"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "movimientos_dia",
+      "descripcion": "Cobros y gastos con metodo, bolsa y cuenta.",
+      "fuente": [
+        "payments"
+      ],
+      "parametros": [
+        "desde",
+        "hasta",
+        "limite"
+      ],
+      "requeridos": [
+        "desde",
+        "hasta"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "orden_timeline",
+      "descripcion": "Viajes de una orden con sellos de tiempo y estado.",
+      "fuente": [
+        "v_dispatch_timeline"
+      ],
+      "parametros": [
+        "orden_numero"
+      ],
+      "requeridos": [
+        "orden_numero"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "BODEGA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "viaje_estado",
+      "descripcion": "Estado de un viaje de mixer.",
+      "fuente": [
+        "v_dispatch_timeline"
+      ],
+      "parametros": [
+        "dispatch_id"
+      ],
+      "requeridos": [
+        "dispatch_id"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "BODEGA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "stock_actual",
+      "descripcion": "Stock fisico y estado por material.",
+      "fuente": [
+        "v_inventario"
+      ],
+      "parametros": [
+        "material"
+      ],
+      "requeridos": [],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "BODEGA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "stock_proyectado",
+      "descripcion": "Stock fisico mas consumos teoricos y fecha de conteo.",
+      "fuente": [
+        "v_stock_proyectado"
+      ],
+      "parametros": [
+        "material"
+      ],
+      "requeridos": [],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "BODEGA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "compras_pendientes",
+      "descripcion": "Compras registradas, en transito y recepciones.",
+      "fuente": [
+        "purchases",
+        "purchase_items",
+        "goods_receipts"
+      ],
+      "parametros": [
+        "limite"
+      ],
+      "requeridos": [],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "por_pagar",
+      "descripcion": "Cuentas por pagar a proveedores.",
+      "fuente": [
+        "purchase_items",
+        "suppliers",
+        "ledger_entries"
+      ],
+      "parametros": [
+        "limite"
+      ],
+      "requeridos": [],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "balance",
+      "descripcion": "Balance general por cuenta contable.",
+      "fuente": [
+        "v_balance_general"
+      ],
+      "parametros": [],
+      "requeridos": [],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "resultados",
+      "descripcion": "Estado de resultados por mes y cuenta.",
+      "fuente": [
+        "v_estado_resultados"
+      ],
+      "parametros": [
+        "desde",
+        "hasta"
+      ],
+      "requeridos": [
+        "desde",
+        "hasta"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "banco_detalle",
+      "descripcion": "Cuenta, saldo contable, saldo informado y prestamos.",
+      "fuente": [
+        "bank_accounts",
+        "v_balance_general",
+        "financial_liabilities"
+      ],
+      "parametros": [
+        "banco"
+      ],
+      "requeridos": [
+        "banco"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "banco_movimientos",
+      "descripcion": "Movimientos de un banco por su cuenta hija.",
+      "fuente": [
+        "payments",
+        "bank_accounts"
+      ],
+      "parametros": [
+        "banco",
+        "limite"
+      ],
+      "requeridos": [
+        "banco"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "cuota_mercado",
+      "descripcion": "Cuota y brecha por provincia con su benchmark.",
+      "fuente": [
+        "market_benchmarks",
+        "orders"
+      ],
+      "parametros": [
+        "provincia",
+        "anio"
+      ],
+      "requeridos": [
+        "provincia"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "agenda_obras",
+      "descripcion": "Entregas programadas con mixer y estado.",
+      "fuente": [
+        "dispatch_schedule"
+      ],
+      "parametros": [
+        "desde",
+        "hasta"
+      ],
+      "requeridos": [
+        "desde",
+        "hasta"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "SECRETARIA",
+        "BODEGA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "disponibilidad_agenda",
+      "descripcion": "Ventanas libres de mixers para una fecha.",
+      "fuente": [
+        "dispatch_schedule",
+        "system_settings"
+      ],
+      "parametros": [
+        "fecha"
+      ],
+      "requeridos": [
+        "fecha"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "SECRETARIA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "recetas_precio_publico",
+      "descripcion": "Resistencias con precio por m3 sin IVA y uso comercial. Nunca costos.",
+      "fuente": [
+        "concrete_recipes"
+      ],
+      "parametros": [],
+      "requeridos": [],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "BOT_PUBLICO"
+      ],
+      "personas": [
+        "INTERNO",
+        "PUBLICO"
+      ],
+      "estado": "IMPLEMENTADA",
+      "nota": "Solo precio_m3, iva_pct y uso_comercial. Los costos se excluyen por contrato."
+    },
+    {
+      "id": "empresa_info",
+      "descripcion": "RUC, direccion, horario, cobertura, servicios y bancos publicados.",
+      "fuente": [
+        "system_settings"
+      ],
+      "parametros": [],
+      "requeridos": [],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "BOT_PUBLICO"
+      ],
+      "personas": [
+        "INTERNO",
+        "PUBLICO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "salud_sistema",
+      "descripcion": "Centinela, errores y outbox.",
+      "fuente": [
+        "error_logs",
+        "sandbox_outbox",
+        "sentinel"
+      ],
+      "parametros": [],
+      "requeridos": [],
+      "roles": [
+        "SUPERADMIN"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "IMPLEMENTADA"
+    },
+    {
+      "id": "mi_resumen",
+      "descripcion": "Resumen propio del cliente: saldo, ordenes y ultimo viaje.",
+      "fuente": [
+        "v_cliente_saldo",
+        "orders",
+        "v_dispatch_timeline"
+      ],
+      "parametros": [
+        "cliente_id"
+      ],
+      "requeridos": [
+        "cliente_id"
+      ],
+      "roles": [
+        "BOT_PUBLICO"
+      ],
+      "personas": [
+        "PUBLICO"
+      ],
+      "estado": "PROPUESTA",
+      "nota": "Requiere identidad del titular y tenant_scope.cliente_id obligatorio."
+    },
+    {
+      "id": "agenda_visitas",
+      "descripcion": "Citas comerciales de visita o cotizacion.",
+      "fuente": [
+        "citas_comerciales"
+      ],
+      "parametros": [
+        "desde",
+        "hasta",
+        "cliente_id"
+      ],
+      "requeridos": [
+        "desde",
+        "hasta"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "SECRETARIA",
+        "BOT_PUBLICO"
+      ],
+      "personas": [
+        "INTERNO",
+        "PUBLICO"
+      ],
+      "estado": "PROPUESTA",
+      "nota": "La tabla citas_comerciales todavia no existe."
+    },
+    {
+      "id": "recetas_costo",
+      "descripcion": "Costo de materiales por receta. Solo roles financieros.",
+      "fuente": [
+        "concrete_recipes",
+        "materials"
+      ],
+      "parametros": [
+        "resistencia"
+      ],
+      "requeridos": [
+        "resistencia"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "PROPUESTA",
+      "nota": "El calculo de costo por receta no existe todavia."
+    },
+    {
+      "id": "margen_receta",
+      "descripcion": "Margen por resistencia contra el precio publicado.",
+      "fuente": [
+        "concrete_recipes",
+        "materials"
+      ],
+      "parametros": [
+        "resistencia"
+      ],
+      "requeridos": [
+        "resistencia"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA"
+      ],
+      "personas": [
+        "INTERNO"
+      ],
+      "estado": "PROPUESTA",
+      "nota": "Depende de recetas_costo y de los parametros de costo."
+    },
+    {
+      "id": "cotizacion_consultar",
+      "descripcion": "Estado y PDF de una cotizacion por folio.",
+      "fuente": [
+        "cotizaciones"
+      ],
+      "parametros": [
+        "folio"
+      ],
+      "requeridos": [
+        "folio"
+      ],
+      "roles": [
+        "SUPERADMIN",
+        "CONTADORA",
+        "SECRETARIA",
+        "BOT_PUBLICO"
+      ],
+      "personas": [
+        "INTERNO",
+        "PUBLICO"
+      ],
+      "estado": "PROPUESTA",
+      "nota": "Depende de la tabla cotizaciones del pilar pdf-cotizaciones."
+    }
+  ]
+}

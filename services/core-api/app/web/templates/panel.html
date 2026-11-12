@@ -639,6 +639,34 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
 .cliente-item .cli-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .filtros-clientes { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 8px; }
 .filtros-clientes .field { margin-bottom: 2px; }
+.clientes-toolbar-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn-filtros { display: inline-flex; align-items: center; gap: 6px; }
+.btn-filtros svg { width: 14px; height: 14px; flex: 0 0 14px; }
+.btn-filtros[aria-expanded="true"] { border-color: var(--accent-cat-amber); color: var(--text-pure); }
+.filtros-count {
+  display: inline-grid; place-items: center; min-width: 17px; height: 17px;
+  padding: 0 5px; border-radius: 999px;
+  background: var(--accent-cat-amber); color: #0b1220;
+  font-size: 10px; font-weight: 700; line-height: 1;
+}
+.filtros-panel {
+  margin-top: 12px; padding: 14px;
+  border: var(--border-subtle); border-radius: 14px;
+  background: var(--surface-row-pill);
+  animation: filtros-in 0.16s ease-out;
+}
+@keyframes filtros-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.filtros-resumen { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.filtro-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 8px; border-radius: 999px;
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--text-pure); font-size: 10.5px; font-weight: 500;
+}
+.filtro-chip button { border: 0; background: transparent; color: var(--accent-cat-amber); cursor: pointer; font-size: 12px; line-height: 1; padding: 0; }
+.filtro-chip button:hover { color: var(--text-pure); }
+@media (prefers-reduced-motion: reduce) { .filtros-panel { animation: none; } }
 .sabueso-sugerencias {
   position: absolute; left: 0; right: 0; top: 100%; z-index: 80;
   background: var(--bg-obsidian); border: var(--border-subtle); border-radius: 12px;
@@ -654,6 +682,208 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
 .tabs-cliente { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
 .tabs-cliente button { border: var(--border-subtle); border-radius: 999px; padding: 7px 11px; background: transparent; color: var(--text-muted); font-size: 11.5px; cursor: pointer; }
 .tabs-cliente button.active { background: rgba(245,158,11,.16); border-color: rgba(245,158,11,.5); color: var(--accent-cat-amber); font-weight: 700; }
+
+/* ----------------------------- CHAT ESPEJO DE WHATSAPP (v6.9) ----------------------------- */
+.clientes-col { display: flex; flex-direction: column; height: 100%; }
+.clientes-col #lista-clientes { flex: 1 1 auto; }
+.clientes-col .paginacion { margin-top: auto; }
+.stack { height: 100%; display: flex; flex-direction: column; }
+#carpeta-card { display: flex; flex-direction: column; flex: 1 1 auto; }
+#carpeta-tab.carpeta-tab-chat { flex: 1 1 auto; display: flex; flex-direction: column; }
+#carpeta-tab.carpeta-tab-chat .chat-panel { flex: 1 1 auto; min-height: 420px; }
+#carpeta-tab.carpeta-tab-chat .chat-hilo { flex: 1 1 auto; height: auto; max-height: none; }
+.chat-badge {
+  display: inline-grid; place-items: center; min-width: 16px; height: 16px;
+  padding: 0 5px; margin-left: 2px; border-radius: 999px;
+  background: var(--accent-cat-amber); color: #0b1220;
+  font-size: 9.5px; font-weight: 800; line-height: 1; vertical-align: middle;
+}
+.chat-panel {
+  display: flex; flex-direction: column;
+  border: var(--border-subtle); border-radius: 16px;
+  background: var(--surface-input); overflow: hidden;
+}
+.chat-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-bottom: var(--border-subtle);
+  background: var(--surface-row-pill);
+}
+.chat-avatar {
+  width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(245,158,11,.18); border: 1px solid rgba(245,158,11,.4);
+  color: var(--accent-cat-amber); font-size: 12px; font-weight: 800;
+}
+.chat-head-txt { flex: 1 1 auto; min-width: 0; }
+.chat-head-txt strong {
+  display: block; font-size: 13px; color: var(--text-pure);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chat-estado {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--text-muted); margin-top: 1px;
+}
+.chat-punto { width: 7px; height: 7px; border-radius: 50%; background: var(--status-warn); }
+.chat-punto.ok { background: var(--status-ok); }
+.chat-canal {
+  padding: 3px 9px; border-radius: 999px; font-size: 9px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+  border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.14);
+  color: var(--accent-cat-amber); white-space: nowrap;
+}
+.chat-aviso {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 12px; font-size: 10px;
+  background: rgba(245,158,11,.10); color: var(--accent-cat-amber);
+  border-bottom: var(--border-subtle);
+}
+.chat-hilo {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 16px 12px; min-height: 260px; height: clamp(280px, 44vh, 460px);
+  overflow-y: auto; scrollbar-width: thin;
+  background-color: rgba(8, 13, 22, 0.55);
+  background-image: radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+[data-theme="light"] .chat-hilo {
+  background-color: #EFE7DD;
+  background-image: radial-gradient(rgba(15,23,42,.05) 1px, transparent 1px);
+}
+.chat-vacio {
+  margin: auto; text-align: center; max-width: 320px;
+  font-size: 11.5px; color: var(--text-muted); line-height: 1.55;
+  padding: 10px 16px; border-radius: 12px;
+  background: rgba(2,6,23,.35);
+}
+[data-theme="light"] .chat-vacio { background: rgba(255,255,255,.75); }
+.chat-vacio strong { display: block; color: var(--text-pure); font-size: 12.5px; margin-bottom: 4px; }
+[data-theme="light"] .chat-vacio strong { color: #0F172A; }
+.chat-dia {
+  align-self: center; padding: 3px 10px; border-radius: 999px;
+  background: rgba(2,6,23,.55); color: #CBD5E1;
+  font-size: 9.5px; font-weight: 600; letter-spacing: .03em;
+}
+[data-theme="light"] .chat-dia { background: rgba(255,255,255,.85); color: #475569; }
+.chat-msg { display: flex; flex-direction: column; max-width: 78%; }
+.chat-msg.in { align-self: flex-start; align-items: flex-start; }
+.chat-msg.out { align-self: flex-end; align-items: flex-end; }
+.chat-burbuja {
+  position: relative; padding: 8px 11px 7px; border-radius: 12px;
+  font-size: 12.5px; line-height: 1.45; white-space: pre-wrap;
+  overflow-wrap: anywhere; color: var(--text-pure);
+}
+.chat-msg.in .chat-burbuja {
+  background: #1F2C38; border: 1px solid rgba(255,255,255,.05);
+  border-top-left-radius: 4px;
+}
+[data-theme="light"] .chat-msg.in .chat-burbuja {
+  background: #FFFFFF; border-color: #E2E8F0; color: #0F172A;
+}
+.chat-msg.out .chat-burbuja {
+  background: #7A4A0A;
+  border: 1px solid rgba(245,158,11,.35); border-top-right-radius: 4px;
+}
+[data-theme="light"] .chat-msg.out .chat-burbuja {
+  background: #FEF3C7; border-color: #FDE68A; color: #0F172A;
+}
+.chat-msg.in .chat-burbuja::after,
+.chat-msg.out .chat-burbuja::after {
+  content: ""; position: absolute; top: 0; width: 0; height: 0;
+  border-top: 7px solid transparent;
+}
+.chat-msg.in .chat-burbuja::after {
+  left: -6px; border-right: 7px solid #1F2C38;
+}
+[data-theme="light"] .chat-msg.in .chat-burbuja::after { border-right-color: #FFFFFF; }
+.chat-msg.out .chat-burbuja::after {
+  right: -6px; border-left: 7px solid #7A4A0A;
+}
+[data-theme="light"] .chat-msg.out .chat-burbuja::after { border-left-color: #FEF3C7; }
+.chat-meta {
+  margin-top: 2px; padding: 0 3px; font-size: 9.5px; color: var(--text-muted);
+  display: flex; align-items: center; gap: 4px;
+}
+.chat-meta .bad { color: #F87171; font-weight: 600; }
+.chat-ticks { font-size: 10px; letter-spacing: -2px; color: #94A3B8; }
+.chat-ticks.leido { color: #60A5FA; }
+.chat-img {
+  display: block; max-width: 280px; max-height: 240px; border-radius: 9px;
+  margin: 0 0 5px; cursor: zoom-in; object-fit: cover;
+}
+.chat-video { display: block; max-width: 290px; max-height: 240px; border-radius: 9px; margin-bottom: 5px; }
+.chat-audio { display: block; width: 250px; max-width: 100%; margin-bottom: 4px; }
+.chat-doc {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+  padding: 7px 9px; border-radius: 9px; background: rgba(2,6,23,.28);
+  color: var(--text-pure); text-decoration: none;
+}
+.chat-doc:hover { background: rgba(2,6,23,.45); }
+.chat-doc-ico { font-size: 18px; }
+.chat-doc-txt { min-width: 0; }
+.chat-doc-nombre { display: block; font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
+.chat-doc-peso { font-size: 9.5px; color: var(--text-muted); }
+.chat-composer {
+  display: flex; align-items: flex-end; gap: 4px;
+  padding: 7px 8px; border-top: var(--border-subtle);
+  background: var(--surface-row-pill); position: relative;
+}
+.chat-composer textarea {
+  flex: 1 1 auto; min-height: 40px; max-height: 120px; height: 40px;
+  margin: 0; resize: none; line-height: 1.4; border-radius: 20px;
+  padding: 10px 14px;
+}
+.chat-ico {
+  width: 38px; height: 38px; flex: 0 0 38px; border: 0; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  background: transparent; color: var(--text-muted); font-size: 17px;
+  transition: background .15s ease, color .15s ease;
+}
+.chat-ico:hover { background: rgba(255,255,255,.08); color: var(--text-pure); }
+.chat-ico svg { width: 20px; height: 20px; }
+.chat-ico.enviar { background: var(--accent-cat-amber); color: #0B1220; }
+.chat-ico.enviar:hover { background: var(--accent-cat-amber-bright); }
+.chat-ico.grabando { background: var(--status-danger); color: #fff; animation: chat-pulso 1.1s infinite; }
+@keyframes chat-pulso { 50% { opacity: .65; } }
+.chat-sheet {
+  position: absolute; right: 10px; bottom: 62px; z-index: 70;
+  display: grid; grid-template-columns: repeat(3, 76px); gap: 6px;
+  padding: 12px; border-radius: 18px;
+  background: #16202E; border: var(--border-subtle);
+  box-shadow: var(--shadow-bento);
+}
+[data-theme="light"] .chat-sheet { background: #FFFFFF; border-color: #E2E8F0; }
+.chat-sheet[hidden] { display: none !important; }
+.chat-sheet button {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  border: 0; background: transparent; color: var(--text-slate);
+  font-size: 9.5px; cursor: pointer; padding: 6px 2px; border-radius: 10px;
+}
+.chat-sheet button:hover { background: rgba(255,255,255,.07); color: var(--text-pure); }
+[data-theme="light"] .chat-sheet button { color: #475569; }
+[data-theme="light"] .chat-sheet button:hover { background: #F1F5F9; color: #0F172A; }
+.sheet-ico {
+  width: 44px; height: 44px; border-radius: 14px;
+  display: grid; place-items: center; font-size: 20px;
+}
+.sheet-ico.galeria { background: rgba(59,130,246,.18); color: #60A5FA; }
+.sheet-ico.camara { background: rgba(236,72,153,.18); color: #F472B6; }
+.sheet-ico.documento { background: rgba(139,92,246,.18); color: #A78BFA; }
+.sheet-ico.audio { background: rgba(245,158,11,.18); color: #FBBF24; }
+.sheet-ico.ubicacion { background: rgba(16,185,129,.18); color: #34D399; }
+.sheet-ico.contacto { background: rgba(14,165,233,.18); color: #38BDF8; }
+.chat-pie {
+  display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 0 12px 8px; font-size: 9.5px; color: var(--text-muted);
+}
+.chat-error { padding: 0 12px; }
+.chat-subiendo {
+  display: flex; align-items: center; gap: 7px; padding: 6px 10px;
+  font-size: 10.5px; color: var(--accent-cat-amber);
+}
+@media (max-width: 560px) {
+  .chat-msg { max-width: 92%; }
+  .chat-sheet { grid-template-columns: repeat(3, 66px); right: 6px; }
+}
 .tabla-viajes { margin-top: 8px; background: rgba(15,23,42,.35); border-radius: 10px; padding: 6px; }
 .sec-accion.active-filtro { box-shadow: 0 0 0 2px rgba(245,158,11,.55) inset; }
 
@@ -708,6 +938,70 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
 .sec-accion-txt strong { font-size: 13px; font-weight: 600; }
 .sec-accion-txt small { font-size: 11px; color: var(--text-muted); }
 .sec-accion-arrow { margin-left: auto; opacity: 0.55; font-size: 15px; }
+
+/* Banca y Mercado: cabecera de cuentas */
+.banca-hero { margin-bottom: 16px; border-color: rgba(65, 131, 251, 0.24); grid-template-columns: minmax(200px, 0.72fr) minmax(0, 2.28fr); }
+.banca-acciones { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.banco-cuenta {
+  cursor: pointer; align-items: flex-start;
+  transition: border-color 0.16s ease, transform 0.16s ease;
+}
+.banco-cuenta:hover { transform: none; border-color: rgba(65, 131, 251, 0.4); background: rgba(65, 131, 251, 0.07); }
+.banco-logo {
+  width: 46px; height: 46px; flex: 0 0 46px; border-radius: 12px;
+  display: grid; place-items: center; overflow: hidden;
+  background: transparent; padding: 0; margin-top: 1px;
+  box-shadow: 0 8px 16px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.banco-logo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.banco-cuenta .sec-accion-txt { min-width: 0; }
+.banco-cuenta .sec-accion-txt strong,
+.banco-cuenta .sec-accion-txt small {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.banco-cuenta .sec-accion-txt small { font-size: 10px; }
+.banco-estado {
+  margin-top: 4px; font-size: 8.5px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.banco-estado.warn { color: var(--accent-cat-amber); }
+.banco-estado.ok { color: var(--status-ok); }
+.banco-cuenta.activo {
+  background: var(--accent-cat-amber);
+  border-color: var(--accent-cat-amber);
+  color: #1A1200;
+  box-shadow: 0 14px 28px -16px rgba(245, 158, 11, 0.7);
+}
+.banco-cuenta.activo:hover {
+  background: var(--accent-cat-amber-bright);
+  border-color: var(--accent-cat-amber-bright);
+}
+.banco-cuenta.activo .sec-accion-txt strong,
+.banco-cuenta.activo .sec-accion-txt small,
+.banco-cuenta.activo .banco-estado { color: #1A1200; }
+.banco-cuenta.activo .banco-logo { box-shadow: 0 0 0 1px rgba(26, 18, 0, 0.2), 0 8px 16px -10px rgba(0, 0, 0, 0.45); }
+.banco-detalle { margin-bottom: 16px; border-color: rgba(245, 158, 11, 0.22); }
+.banco-detalle h3 { margin: 0 0 8px; font-size: 13px; }
+.banco-detalle .big { font-size: 21px; }
+.banco-detalle .kpi-sub { min-height: 14px; }
+@media (max-width: 980px) { .banca-acciones { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Agenda de planta con fotografía de fondo */
+.planta-agenda {
+  position: relative; overflow: hidden;
+  background-image:
+    linear-gradient(90deg, rgba(8, 13, 22, 0.95) 0%, rgba(8, 13, 22, 0.88) 42%, rgba(8, 13, 22, 0.55) 100%),
+    url('/static/brand/fotos/planta-agenda.webp');
+  background-size: cover;
+  background-position: center 58%;
+  border-color: rgba(245, 158, 11, 0.24);
+}
+.planta-agenda > * { position: relative; z-index: 1; }
+[data-theme="light"] .planta-agenda {
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.84) 48%, rgba(255, 255, 255, 0.42) 100%),
+    url('/static/brand/fotos/planta-agenda.webp');
+}
 .cartera-acciones { display: flex; gap: 6px; justify-content: flex-end; }
 .tabla-cartera tbody tr:hover td { background: var(--surface-row-pill-hover); }
 .cierre-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
@@ -1249,7 +1543,8 @@ details summary { cursor: pointer; color: var(--text-muted); font-size: 12.5px; 
   background: var(--bg-obsidian);
   box-shadow: var(--shadow-bento);
 }
-.search-results[hidden], .notif-popover[hidden] { display: none !important; }
+/* `hidden` debe ganar siempre: varias clases fijan display y lo pisaban */
+[hidden] { display: none !important; }
 .search-hit {
   display: flex;
   align-items: center;
@@ -2090,6 +2385,78 @@ tbody tr:last-child td { border-bottom: 0; }
   .dash2-section-head h2 { font-size: 16px; }
 }
 
+/* Gato — asistente interno flotante */
+.gato-fab {
+  position: fixed; right: 22px; bottom: 22px; z-index: 90;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-radius: 999px;
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  background: #F59E0B; color: #1A1200;
+  font: 600 13px/1 'Poppins', sans-serif; cursor: pointer;
+  box-shadow: 0 16px 30px -18px rgba(245, 158, 11, 0.9);
+}
+.gato-fab:hover { background: #FBBF24; }
+.gato-panel {
+  position: fixed; right: 22px; bottom: 86px; z-index: 90;
+  width: min(380px, calc(100vw - 32px)); max-height: min(70vh, 560px);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); border: var(--border-subtle);
+  border-radius: 18px; box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.7);
+}
+.gato-panel { background: #0F172A; }
+[data-theme="light"] .gato-panel { background: #FFFFFF; }
+.gato-panel .chat-head { background: #111B2E; }
+[data-theme="light"] .gato-panel .chat-head { background: #F1F5F9; }
+.gato-panel .chat-hilo { height: auto; min-height: 230px; max-height: 55vh; flex: 1 1 auto; }
+.gato-panel .chat-composer { background: #111B2E; }
+[data-theme="light"] .gato-panel .chat-composer { background: #F1F5F9; }
+.gato-cerrar {
+  margin-left: auto; background: none; border: 0; color: var(--text-muted);
+  font-size: 18px; cursor: pointer; line-height: 1;
+}
+.gato-panel .chat-burbuja.error {
+  border-color: rgba(239, 68, 68, 0.6); color: #FCA5A5;
+}
+.gato-cab {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+  border-bottom: var(--border-subtle); background: var(--surface-row-pill);
+}
+.gato-cab strong { font-size: 13px; }
+.gato-cab small { display: block; color: var(--text-muted); font-size: 10.5px; }
+.gato-cab button {
+  margin-left: auto; background: none; border: 0; color: var(--text-muted);
+  font-size: 18px; cursor: pointer; line-height: 1;
+}
+.gato-hilo {
+  padding: 12px; overflow: auto; display: flex; flex-direction: column; gap: 8px;
+  min-height: 180px; max-height: 420px;
+}
+.gato-msg {
+  max-width: 88%; padding: 9px 11px; border-radius: 12px;
+  font-size: 12.5px; line-height: 1.45; white-space: pre-wrap;
+}
+.gato-msg.bot { align-self: flex-start; background: var(--surface-row-pill); border: var(--border-subtle); }
+.gato-msg.user { align-self: flex-end; background: #F59E0B; color: #1A1200; }
+.gato-msg.error { border-color: rgba(239, 68, 68, 0.55); color: #FCA5A5; }
+.gato-panel .chat-msg { max-width: 88%; min-width: 0; }
+.gato-panel .chat-burbuja { max-width: 100%; min-width: 0; overflow: hidden; }
+.gato-tabla-wrap { width: 100%; max-width: 100%; overflow-x: auto; margin: 4px 0; }
+.gato-tabla { width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0; font-size: 10.5px; }
+.gato-tabla th, .gato-tabla td { padding: 3px 5px; text-align: left; overflow-wrap: anywhere; white-space: normal; }
+.gato-tabla th { font-size: 9px; line-height: 1.2; }
+.gato-tabla td.num { white-space: nowrap; text-align: right; }
+.gato-tabla th, .gato-tabla td { border-bottom: var(--border-subtle); padding: 4px 6px; text-align: left; }
+.gato-tabla th { color: var(--text-muted); font-weight: 600; }
+.gato-form { display: flex; gap: 8px; padding: 10px; border-top: var(--border-subtle); }
+.gato-form input {
+  flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px;
+  border: var(--border-subtle); background: var(--surface); color: var(--text);
+  font-size: 12.5px;
+}
+@media (max-width: 600px) {
+  .gato-panel { right: 12px; left: 12px; width: auto; bottom: 78px; }
+  .gato-fab { right: 12px; bottom: 12px; }
+}
 </style>
 </head>
 <body>
@@ -2459,7 +2826,7 @@ tbody tr:last-child td { border-bottom: 0; }
     </div>
 
     <div class="card" style="margin-top:16px" data-modulo="clientes_cartera">
-      <div class="spread" style="align-items:flex-end;gap:10px">
+      <div class="spread clientes-toolbar" style="align-items:flex-end;gap:10px">
         <div style="flex:1;min-width:220px;position:relative">
           <label class="field">Buscar por nombre, apellido, “7m3”, “FC-210”, obra, ciudad o #orden</label>
           <input type="search" id="buscar-cliente" autocomplete="off"
@@ -2467,31 +2834,42 @@ tbody tr:last-child td { border-bottom: 0; }
                  oninput="onBuscarClientes(this.value)">
           <div id="sabueso-sugerencias" class="search-results sabueso-sugerencias" hidden></div>
         </div>
-        <button class="btn small ghost" onclick="limpiarFiltrosClientes()">Limpiar filtros</button>
+        <div class="clientes-toolbar-acciones">
+          <button class="btn small ghost btn-filtros" type="button" id="btn-toggle-filtros"
+                  onclick="toggleFiltrosClientes()" aria-expanded="false" aria-controls="panel-filtros-clientes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5Z"/></svg>
+            Filtros
+            <span class="filtros-count" id="filtros-count" hidden>0</span>
+          </button>
+          <button class="btn small ghost" type="button" onclick="limpiarFiltrosClientes()">Limpiar</button>
+        </div>
       </div>
-      <div class="filtros-clientes" style="margin-top:10px">
-        <div><label class="field">Ciudad / Sector</label><select id="filtro-ciudad" onchange="aplicarFiltrosClientes()"><option value="">Todas</option></select></div>
-        <div><label class="field">Forma de pago</label><select id="filtro-pago" onchange="aplicarFiltrosClientes()">
-          <option value="">Todos</option><option value="TRANSFERENCIA">Transferencia</option><option value="EFECTIVO">Efectivo</option><option value="FIADO">Fiado / Crédito</option><option value="ANTICIPO">Con anticipo</option>
-        </select></div>
-        <div><label class="field">Fecha</label><select id="filtro-fecha" onchange="onFechaClientesChange()">
-          <option value="">Cualquier fecha</option><option value="HOY">Hoy</option><option value="SEMANA">Esta semana</option><option value="MES">Este mes</option><option value="CUSTOM">Rango personalizado</option>
-        </select></div>
-        <div><label class="field">Resistencia</label><select id="filtro-resistencia" onchange="aplicarFiltrosClientes()"><option value="">Todas</option></select></div>
-        <div><label class="field">m³ desde</label><input type="number" id="filtro-m3-min" min="0" step="0.5" oninput="aplicarFiltrosClientes()"></div>
-        <div><label class="field">m³ hasta</label><input type="number" id="filtro-m3-max" min="0" step="0.5" oninput="aplicarFiltrosClientes()"></div>
-        <div><label class="field">Ordenar por</label><select id="filtro-orden" onchange="aplicarFiltrosClientes()">
-          <option value="DEUDA">Mayor deuda</option><option value="ACTIVIDAD">Actividad más reciente</option><option value="VOLUMEN">Mayor volumen m³</option><option value="NOMBRE">Nombre A-Z</option>
-        </select></div>
-      </div>
-      <div id="filtro-fechas-custom" hidden class="field-row" style="margin-top:8px">
-        <div><label class="field">Desde</label><input type="date" id="filtro-desde" onchange="aplicarFiltrosClientes()"></div>
-        <div><label class="field">Hasta</label><input type="date" id="filtro-hasta" onchange="aplicarFiltrosClientes()"></div>
+      <div class="filtros-resumen" id="filtros-resumen" hidden></div>
+      <div class="filtros-panel" id="panel-filtros-clientes" hidden>
+        <div class="filtros-clientes">
+          <div><label class="field">Ciudad / Sector</label><select id="filtro-ciudad" onchange="aplicarFiltrosClientes()"><option value="">Todas</option></select></div>
+          <div><label class="field">Forma de pago</label><select id="filtro-pago" onchange="aplicarFiltrosClientes()">
+            <option value="">Todos</option><option value="TRANSFERENCIA">Transferencia</option><option value="EFECTIVO">Efectivo</option><option value="FIADO">Fiado / Crédito</option><option value="ANTICIPO">Con anticipo</option>
+          </select></div>
+          <div><label class="field">Fecha</label><select id="filtro-fecha" onchange="onFechaClientesChange()">
+            <option value="">Cualquier fecha</option><option value="HOY">Hoy</option><option value="SEMANA">Esta semana</option><option value="MES">Este mes</option><option value="CUSTOM">Rango personalizado</option>
+          </select></div>
+          <div><label class="field">Resistencia</label><select id="filtro-resistencia" onchange="aplicarFiltrosClientes()"><option value="">Todas</option></select></div>
+          <div><label class="field">m³ desde</label><input type="number" id="filtro-m3-min" min="0" step="0.5" oninput="aplicarFiltrosClientes()"></div>
+          <div><label class="field">m³ hasta</label><input type="number" id="filtro-m3-max" min="0" step="0.5" oninput="aplicarFiltrosClientes()"></div>
+          <div><label class="field">Ordenar por</label><select id="filtro-orden" onchange="aplicarFiltrosClientes()">
+            <option value="DEUDA">Mayor deuda</option><option value="ACTIVIDAD">Actividad más reciente</option><option value="VOLUMEN">Mayor volumen m³</option><option value="NOMBRE">Nombre A-Z</option>
+          </select></div>
+        </div>
+        <div id="filtro-fechas-custom" hidden class="field-row" style="margin-top:8px">
+          <div><label class="field">Desde</label><input type="date" id="filtro-desde" onchange="aplicarFiltrosClientes()"></div>
+          <div><label class="field">Hasta</label><input type="date" id="filtro-hasta" onchange="aplicarFiltrosClientes()"></div>
+        </div>
       </div>
     </div>
 
-    <div class="grid two" style="margin-top:16px;align-items:start">
-      <div class="card">
+    <div class="grid two" style="margin-top:16px">
+      <div class="card clientes-col">
         <div class="spread">
           <div>
             <h2 style="margin-bottom:2px">Clientes</h2>
@@ -2521,7 +2899,7 @@ tbody tr:last-child td { border-bottom: 0; }
       </div>
       <button class="btn small" data-modulo="compras_materiales" data-mutacion="1" onclick="abrirCompra()">+ Registrar compra de material</button>
     </div>
-    <div class="card" style="margin-bottom:16px" data-modulo="agenda_despachos">
+    <div class="card planta-agenda" style="margin-bottom:16px" data-modulo="agenda_despachos">
       <div class="spread" style="margin-bottom:8px">
         <div>
           <span class="sec-eyebrow">Agenda de planta</span>
@@ -2564,6 +2942,75 @@ tbody tr:last-child td { border-bottom: 0; }
 
   <!-- ===================== BANCA Y MERCADO ===================== -->
   <section class="view" data-view="banca">
+    <div class="card sec-ventanilla banca-hero" data-modulo="finanzas_balance_auditoria">
+      <div>
+        <span class="sec-eyebrow">BANCA Y MERCADO</span>
+        <h2>Caja, bancos y financiamiento</h2>
+        <p class="small muted" style="margin:0">Las cuentas registradas, la cuota de mercado y el simulador de la pluma, en una sola vista.</p>
+      </div>
+      <div class="sec-acciones banca-acciones">
+        <button type="button" class="sec-accion banco-cuenta" data-banco="pichincha" onclick="seleccionarBanco('pichincha')" aria-pressed="false">
+          <span class="banco-logo"><img src="/static/brand/bancos/pichincha.svg?v=612" alt="Banco Pichincha" loading="lazy"></span>
+          <span class="sec-accion-txt"><strong>Banco Pichincha</strong><small id="banco-pichincha-detalle">Cuenta por confirmar</small><span class="banco-estado" id="banco-pichincha-badge">Pendiente</span></span>
+        </button>
+        <button type="button" class="sec-accion banco-cuenta" data-banco="guayaquil" onclick="seleccionarBanco('guayaquil')" aria-pressed="false">
+          <span class="banco-logo"><img src="/static/brand/bancos/guayaquil.svg?v=612" alt="Banco Guayaquil" loading="lazy"></span>
+          <span class="sec-accion-txt"><strong>Banco Guayaquil</strong><small id="banco-guayaquil-detalle">Cuenta por confirmar</small><span class="banco-estado" id="banco-guayaquil-badge">Pendiente</span></span>
+        </button>
+        <button type="button" class="sec-accion banco-cuenta" data-banco="internacional" onclick="seleccionarBanco('internacional')" aria-pressed="false">
+          <span class="banco-logo"><img src="/static/brand/bancos/internacional.svg?v=612" alt="Banco Internacional" loading="lazy"></span>
+          <span class="sec-accion-txt"><strong>Banco Internacional</strong><small id="banco-internacional-detalle">Cuenta por confirmar</small><span class="banco-estado" id="banco-internacional-badge">Pendiente</span></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="card banco-detalle" id="banco-detalle" hidden>
+      <div class="spread">
+        <div>
+          <span class="sec-eyebrow">DETALLE DEL BANCO</span>
+          <h2 id="banco-detalle-nombre" style="margin:0">—</h2>
+          <p class="small muted" id="banco-detalle-cuenta" style="margin:2px 0 0">—</p>
+        </div>
+        <div class="right" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="badge neutral" id="banco-detalle-estado">—</span>
+          <button class="btn small ghost" type="button" onclick="editarBanco()" data-mutacion="1">Editar datos</button>
+        </div>
+      </div>
+      <div class="grid kpis" style="margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+        <div>
+          <div class="kpi-label">Saldo contable</div>
+          <div class="big" id="banco-saldo-contable">—</div>
+          <div class="kpi-sub">Según libro mayor</div>
+        </div>
+        <div>
+          <div class="kpi-label">Saldo informado</div>
+          <div class="big" id="banco-saldo-informado">—</div>
+          <div class="kpi-sub" id="banco-saldo-fecha">Sin cargar</div>
+        </div>
+        <div>
+          <div class="kpi-label">Entradas</div>
+          <div class="big" id="banco-entradas">—</div>
+          <div class="kpi-sub" id="banco-salidas">Salidas —</div>
+        </div>
+        <div>
+          <div class="kpi-label">Préstamos</div>
+          <div class="big" id="banco-prestamos-total">—</div>
+          <div class="kpi-sub" id="banco-prestamos-cuota">Sin préstamos</div>
+        </div>
+      </div>
+      <div class="grid two" style="margin-top:16px">
+        <div>
+          <div class="spread"><h3>Préstamos</h3><span class="badge neutral" id="banco-prestamos-count">0</span></div>
+          <div id="banco-prestamos-lista"></div>
+        </div>
+        <div>
+          <div class="spread"><h3>Movimientos recientes</h3><span class="badge neutral" id="banco-mov-count">0</span></div>
+          <div id="banco-movimientos" class="table-wrap"></div>
+        </div>
+      </div>
+      <div class="small muted" id="banco-notas" style="margin-top:10px"></div>
+    </div>
+
     <div class="grid two">
       <div class="stack">
         <div class="card">
@@ -2721,6 +3168,34 @@ tbody tr:last-child td { border-bottom: 0; }
   <div class="dialog-foot">
     <button class="btn ghost" onclick="document.getElementById('dlg-cliente').close()">Cancelar</button>
     <button class="btn" onclick="crearCliente()">Guardar cliente</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-banco">
+  <div class="dialog-head"><h2 id="dlg-banco-titulo">Editar banco</h2><button class="btn small ghost" onclick="document.getElementById('dlg-banco').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <label class="field">Número de cuenta (enmascarado)</label>
+    <input type="text" id="banco-numero" placeholder="2100XXXXXX">
+    <div class="field-row" style="margin-top:8px">
+      <div><label class="field">Tipo</label>
+        <select id="banco-tipo"><option value="CORRIENTE">Corriente</option><option value="AHORRO">Ahorro</option></select>
+      </div>
+      <div><label class="field">Estado</label>
+        <select id="banco-estado-sel"><option value="ACTIVA">Activa</option><option value="PENDIENTE">Pendiente</option><option value="CERRADA">Cerrada</option></select>
+      </div>
+      <div><label class="field">Saldo informado (USD)</label>
+        <input type="number" id="banco-saldo" step="0.01" min="0" placeholder="Sin cargar">
+      </div>
+    </div>
+    <label class="field" style="margin-top:8px">Titular</label>
+    <input type="text" id="banco-titular" placeholder="HORMINOR">
+    <label class="field" style="margin-top:8px">Notas</label>
+    <input type="text" id="banco-notas-input" placeholder="Observaciones de la cuenta">
+    <div id="banco-error"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-banco').close()">Cancelar</button>
+    <button class="btn" onclick="guardarBanco()">Guardar banco</button>
   </div>
 </dialog>
 
@@ -3092,7 +3567,10 @@ const state = {
   usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], notifs:[], cargando:false,
   clientesBusqueda:[], cliGrupo:'TODOS', cliPagina:1, cliPaginas:1, cliTotal:0,
   cliResumen:null, cliFiltrosMeta:{ciudades:[],resistencias:[]}, cliTimer:null, cliSeq:0,
-  carpetaTab:'ordenes', ordenExpandida:null
+  carpetaTab:'ordenes', ordenExpandida:null,
+  chat:{ clienteId:null, conversacionId:null, canal:'WHATSAPP', mensajes:[], resumen:null,
+         whatsapp:null, cargando:false, enviando:false, subiendo:false, error:null, seq:0 },
+  bancoActivo:null, bancoDetalle:null
 };
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
@@ -3612,7 +4090,10 @@ function renderActividad() {
 
 function renderObras() {
   const ordenes = ordenesFiltradas();
-  const arte = ['panel-obra-planta.svg', 'panel-obra-mixer.svg'];
+  const arte = [
+    '/static/brand/fotos/mixers-en-planta.jpg',
+    '/static/brand/fotos/mixer-en-descarga-sin-marca.jpg',
+  ];
   const cards = ordenes.slice(0, 2).map((o, idx) => {
     const d = state.detalle[o.id];
     const total = Number(o.viajes || 0);
@@ -3621,7 +4102,7 @@ function renderObras() {
     const badge = o.forma_pago === 'FIADO' ? ['amber', 'Crédito / Fiado'] : ['green', esc(o.forma_pago)];
     return `<article class="work-card">
       <div class="work-thumb2">
-        <img src="/static/brand/${arte[idx % arte.length]}" alt="" loading="lazy">
+        <img src="${arte[idx % arte.length]}" alt="Mixer de Horminor en operación" loading="lazy">
         <span class="thumb-tag">${esc(o.planta || 'Planta')}</span>
       </div>
       <div class="work-body">
@@ -3774,6 +4255,7 @@ async function buscarClientes() {
     state.cliPaginas = (r && r.paginacion && r.paginacion.paginas) || 1;
     state.cliTotal = (r && r.paginacion && r.paginacion.total) || 0;
     _actualizarOpcionesFiltros();
+    actualizarFiltrosClientes();
     renderResumenClientes();
     renderClientes();
     renderPaginacionClientes();
@@ -3867,8 +4349,67 @@ function cardTodosClientes() {
   else setGrupoClientes('TODOS');
 }
 
+function toggleFiltrosClientes(force) {
+  const panel = $('#panel-filtros-clientes');
+  const btn = $('#btn-toggle-filtros');
+  if (!panel) return;
+  const abrir = typeof force === 'boolean' ? force : panel.hidden;
+  panel.hidden = !abrir;
+  if (btn) btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+}
+
+const FILTROS_CLIENTES_DEF = [
+  { sel: '#filtro-ciudad', etiqueta: 'Ciudad' },
+  { sel: '#filtro-pago', etiqueta: 'Pago' },
+  { sel: '#filtro-fecha', etiqueta: 'Fecha' },
+  { sel: '#filtro-resistencia', etiqueta: 'Resistencia' },
+  { sel: '#filtro-m3-min', etiqueta: 'm³ desde' },
+  { sel: '#filtro-m3-max', etiqueta: 'm³ hasta' },
+  { sel: '#filtro-desde', etiqueta: 'Desde' },
+  { sel: '#filtro-hasta', etiqueta: 'Hasta' },
+  { sel: '#filtro-orden', etiqueta: 'Orden', defecto: 'DEUDA' },
+];
+
+function actualizarFiltrosClientes() {
+  const activos = [];
+  FILTROS_CLIENTES_DEF.forEach(def => {
+    const el = $(def.sel);
+    if (!el) return;
+    const valor = (el.value || '').trim();
+    if (!valor || (def.defecto && valor === def.defecto)) return;
+    let texto = valor;
+    if (el.tagName === 'SELECT' && el.selectedIndex >= 0) {
+      texto = (el.options[el.selectedIndex].textContent || valor).trim();
+    }
+    activos.push({ sel: def.sel, etiqueta: def.etiqueta, texto });
+  });
+  const count = $('#filtros-count');
+  if (count) {
+    count.textContent = String(activos.length);
+    count.hidden = activos.length === 0;
+  }
+  const resumen = $('#filtros-resumen');
+  if (resumen) {
+    resumen.hidden = activos.length === 0;
+    resumen.innerHTML = activos.map(a => `<span class="filtro-chip">${esc(a.etiqueta)}: ${esc(a.texto)}<button type="button" onclick="quitarFiltroCliente('${a.sel}')" aria-label="Quitar filtro ${esc(a.etiqueta)}">×</button></span>`).join('');
+  }
+  return activos.length;
+}
+
+function quitarFiltroCliente(sel) {
+  const el = $(sel);
+  if (!el) return;
+  el.value = (sel === '#filtro-orden') ? 'DEUDA' : '';
+  if (sel === '#filtro-fecha') {
+    const box = $('#filtro-fechas-custom');
+    if (box) box.hidden = true;
+  }
+  aplicarFiltrosClientes();
+}
+
 function aplicarFiltrosClientes() {
   state.cliPagina = 1;
+  actualizarFiltrosClientes();
   buscarClientes();
 }
 
@@ -3888,6 +4429,7 @@ function limpiarFiltrosClientes() {
   state.cliGrupo = 'TODOS';
   state.cliPagina = 1;
   ocultarSugerenciasClientes();
+  actualizarFiltrosClientes();
   buscarClientes();
 }
 
@@ -4189,8 +4731,10 @@ async function seleccionarCliente(id) {
     state.carpeta = await api('/api/v1/secretaria/clientes/' + id + '/carpeta');
     state.carpetaTab = 'ordenes';
     state.ordenExpandida = null;
+    chatReset(id);
     renderCarpeta();
     renderClientes();
+    chatCargar(id);  // precarga el hilo y el contador de no leidos
   } catch(e) { toast('No se pudo abrir la carpeta: ' + e.message, 'bad'); }
 }
 
@@ -4229,18 +4773,24 @@ function renderCarpeta() {
       <button class="${tab === 'ordenes' ? 'active' : ''}" onclick="cambiarTabCarpeta('ordenes')">📦 Órdenes y Viajes</button>
       <button class="${tab === 'pagos' ? 'active' : ''}" onclick="cambiarTabCarpeta('pagos')">💵 Pagos y Estado de Cuenta</button>
       <button class="${tab === 'ficha' ? 'active' : ''}" onclick="cambiarTabCarpeta('ficha')">📋 Ficha y Datos</button>
+      <button class="${tab === 'facturas' ? 'active' : ''}" onclick="cambiarTabCarpeta('facturas')">🧾 Facturas</button>
+      <button class="${tab === 'chat' ? 'active' : ''}" onclick="cambiarTabCarpeta('chat')">💬 Chat<span class="chat-badge" id="chat-badge" hidden></span></button>
     </div>
     <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap">
       <button class="btn small" data-modulo="secretaria_ventanilla" data-mutacion="1" onclick="abrirOrden()">+ Nueva orden</button>
       <button class="btn small bank" data-modulo="secretaria_cobros_gastos" data-mutacion="1" onclick="abrirPago('${esc(cliente.cliente_id)}')">+ Cobrar / abonar</button>
       <button class="btn small ghost" data-modulo="agenda_despachos" data-mutacion="1" onclick="abrirAgenda(null, hoy(), 'PROGRAMADO')">+ Agendar entrega</button>
     </div>
-    <div id="carpeta-tab" style="margin-top:10px">${renderCarpetaTab(c, tab)}</div>`;
+    <div id="carpeta-tab" class="${tab === 'chat' ? 'carpeta-tab-chat' : ''}" style="margin-top:10px">${renderCarpetaTab(c, tab)}</div>`;
+  renderChatBadge();
+  if (tab === 'chat') { chatScrollAbajo(); actualizarBotonChat(); }
 }
 
 function renderCarpetaTab(c, tab) {
   if (tab === 'pagos') return renderTabPagos(c);
   if (tab === 'ficha') return renderTabFicha(c);
+  if (tab === 'facturas') return renderTabFacturas(c);
+  if (tab === 'chat') return renderTabChat(c);
   return renderTabOrdenes(c);
 }
 
@@ -4285,12 +4835,90 @@ function renderTabPagos(c) {
     </tr>`).join('')}</tbody></table></div>`;
 }
 
+function renderTabFacturas(c) {
+  const facturas = c.facturas || [];
+  const clienteId = (c.cliente && c.cliente.cliente_id) || '';
+  const ordenes = c.ordenes || [];
+  const filas = facturas.length ? facturas.map(f => {
+    const badge = f.es_ficticia ? '<span class="badge bad">FICTICIA</span>' : '<span class="badge ok">INTERNA</span>';
+    const archivo = f.url
+      ? `<a class="btn small ghost" href="${esc(f.url)}" target="_blank" rel="noopener">Ver archivo</a>`
+      : '<span class="muted small">sin archivo</span>';
+    return `<tr>
+      <td><strong>${esc(f.numero)}</strong> ${badge}</td>
+      <td>${esc(f.fecha || '')}</td>
+      <td>${f.orden_numero ? '#' + esc(f.orden_numero) : '—'}</td>
+      <td>${money(f.total)}</td>
+      <td>${esc(f.estado)}</td>
+      <td>${archivo}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="muted small">Sin facturas adjuntas.</td></tr>';
+  const opciones = ordenes.map(o => `<option value="${esc(o.numero)}">#${esc(o.numero)} · ${esc(o.resistencia)} · ${num(o.volumen_m3)} m³</option>`).join('');
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Factura</th><th>Fecha</th><th>Orden</th><th>Total</th><th>Estado</th><th>Archivo</th></tr></thead>
+    <tbody>${filas}</tbody></table></div>
+  <p class="muted small" style="margin:8px 0 0">Documento interno. No es comprobante electrónico del SRI; las marcadas FICTICIA son de prueba.</p>
+  <div class="divider"></div>
+  <p class="card-kicker" style="margin:0 0 8px">ADJUNTAR FACTURA (PDF O FOTO)</p>
+  <div class="grid two" style="grid-template-columns:1fr 1fr">
+    <div><label class="field">Número de factura</label><input type="text" id="factura-numero" maxlength="60" placeholder="Ej. 001-001-000000123"></div>
+    <div><label class="field">Orden (opcional, toma los montos)</label><select id="factura-orden"><option value="">Sin orden</option>${opciones}</select></div>
+    <div><label class="field">Total (si no eliges orden)</label><input type="number" id="factura-total" step="0.01" min="0" placeholder="0.00"></div>
+    <div><label class="field">Archivo PDF o foto</label><input type="file" id="factura-archivo" accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
+  </div>
+  <label class="small" style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="factura-ficticia"> Marcar como FICTICIA (solo prueba)</label>
+  <button class="btn small" data-mutacion="1" onclick="subirFacturaCliente('${esc(clienteId)}')">Adjuntar factura</button>
+  <div id="factura-resultado"></div>`;
+}
+
+async function subirFacturaCliente(clienteId) {
+  const numero = (($('#factura-numero') || {}).value || '').trim();
+  const archivoEl = $('#factura-archivo');
+  const archivo = archivoEl && archivoEl.files ? archivoEl.files[0] : null;
+  const orden = (($('#factura-orden') || {}).value || '').trim();
+  const total = (($('#factura-total') || {}).value || '').trim();
+  const ficticia = !!($('#factura-ficticia') || {}).checked;
+  const resultado = $('#factura-resultado');
+  if (!numero) { toast('Escribe el número de la factura', 'bad'); return; }
+  if (!archivo) { toast('Adjunta un PDF o una foto', 'bad'); return; }
+  if (!orden && !total) { toast('Elige una orden o escribe el total', 'bad'); return; }
+  const datos = new FormData();
+  datos.append('archivo', archivo);
+  datos.append('numero', numero);
+  if (orden) datos.append('orden_numero', orden);
+  if (!orden && total) datos.append('total', total);
+  datos.append('es_ficticia', ficticia ? 'true' : 'false');
+  const headers = {};
+  const simUser = localStorage.getItem('horminor.panel.user');
+  if (simUser) headers['X-Panel-User'] = simUser;
+  if (resultado) resultado.innerHTML = '<div class="notice">Subiendo factura...</div>';
+  try {
+    const res = await fetch(`/api/v1/clients/${encodeURIComponent(clienteId)}/facturas`, {
+      method: 'POST', body: datos, headers
+    });
+    const cuerpo = await res.json().catch(() => null);
+    if (!res.ok) {
+      const detalle = cuerpo && cuerpo.detail
+        ? (typeof cuerpo.detail === 'string' ? cuerpo.detail : JSON.stringify(cuerpo.detail))
+        : `HTTP ${res.status}`;
+      throw new Error(detalle);
+    }
+    toast('Factura adjuntada', 'ok');
+    await seleccionarCliente(clienteId);
+    state.carpetaTab = 'facturas';
+    renderCarpeta();
+  } catch(e) {
+    if (resultado) resultado.innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
 function renderTabFicha(c) {
   const cliente = c.cliente || {};
   return `<div class="grid two" style="grid-template-columns:1fr 1fr">
     <div>
       <label class="field">Nombre</label><input type="text" id="ficha-nombre" value="${esc(cliente.nombre || '')}">
       <label class="field" style="margin-top:8px">Constructora</label><input type="text" id="ficha-constructora" value="${esc(cliente.constructora || '')}">
+      <label class="field" style="margin-top:8px">Cédula</label><input type="text" id="ficha-cedula" value="${esc(cliente.cedula || '')}" placeholder="Para la carpeta del cliente en Bunny">
       <label class="field" style="margin-top:8px">RUC</label><input type="text" id="ficha-ruc" value="${esc(cliente.ruc || '')}">
       <label class="field" style="margin-top:8px">WhatsApp</label><input type="text" id="ficha-telefono" value="${esc(cliente.telefono || '')}">
     </div>
@@ -4310,9 +4938,477 @@ function renderTabFicha(c) {
   </details>`;
 }
 
+/* ----------------------------- CHAT ESPEJO DE WHATSAPP (v6.9) ----------------------------- */
+let chatRecorder = null;
+let chatChunks = [];
+let chatRecordTimer = null;
+let chatRecordSeg = 0;
+
+function chatReset(clienteId) {
+  state.chat = {
+    clienteId: clienteId || null, conversacionId: null, canal: 'WHATSAPP',
+    mensajes: [], resumen: null, whatsapp: null, cargando: false, enviando: false,
+    subiendo: false, error: null, seq: 0
+  };
+}
+
+function _chatIniciales(nombre) {
+  const partes = String(nombre || '?').trim().split(/\s+/).slice(0, 2);
+  return partes.map(p => (p[0] || '')).join('').toUpperCase() || '?';
+}
+
+function _chatHora(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleTimeString('es-EC', {hour: '2-digit', minute: '2-digit'}); }
+  catch(e) { return ''; }
+}
+
+function _chatDia(iso) {
+  if (!iso) return '';
+  const fecha = new Date(iso);
+  const hoy = new Date();
+  const ayer = new Date(); ayer.setDate(hoy.getDate() - 1);
+  const mismo = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  if (mismo(fecha, hoy)) return 'Hoy';
+  if (mismo(fecha, ayer)) return 'Ayer';
+  return fecha.toLocaleDateString('es-EC', {day: '2-digit', month: 'long', year: 'numeric'});
+}
+
+function _chatPeso(bytes) {
+  const n = Number(bytes || 0);
+  if (n >= 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + ' MB';
+  if (n >= 1024) return Math.round(n / 1024) + ' KB';
+  return n + ' B';
+}
+
+function _chatTicks(estado) {
+  if (estado === 'PENDIENTE') return ' <span class="chat-ticks" title="Pendiente de envío">🕘</span>';
+  if (estado === 'FALLIDO') return ' <span class="chat-ticks" style="color:#F87171" title="No enviado">⚠</span>';
+  if (estado === 'LEIDO') return ' <span class="chat-ticks leido" title="Leído">✓✓</span>';
+  if (estado === 'ENTREGADO') return ' <span class="chat-ticks" title="Entregado">✓✓</span>';
+  return ' <span class="chat-ticks" title="Enviado">✓</span>';
+}
+
+async function chatCargar(clienteId) {
+  if (!clienteId) return;
+  if (state.chat.clienteId !== clienteId) chatReset(clienteId);
+  const chat = state.chat;
+  const seq = ++chat.seq;
+  chat.cargando = true;
+  chat.error = null;
+  if (state.carpetaTab === 'chat') renderChatHilo();
+  try {
+    const r = await api(`/api/v1/clients/${encodeURIComponent(clienteId)}/chat?canal=WHATSAPP&limite=100`);
+    if (seq !== chat.seq) return;
+    chat.conversacionId = r.conversacion_id;
+    chat.mensajes = r.mensajes || [];
+    chat.resumen = r.resumen || null;
+    chat.whatsapp = r.whatsapp || null;
+  } catch(e) {
+    if (seq !== chat.seq) return;
+    chat.error = e.message;
+  } finally {
+    if (seq === chat.seq) chat.cargando = false;
+  }
+  renderChatBadge();
+  if (state.carpetaTab === 'chat') {
+    renderCarpeta();  // refresca cabecera y aviso de conexion
+    chatScrollAbajo();
+  }
+}
+
+function renderChatBadge() {
+  const badge = $('#chat-badge');
+  if (!badge) return;
+  const n = Number((state.chat.resumen && state.chat.resumen.no_leidos) || 0);
+  badge.textContent = n > 99 ? '99+' : String(n);
+  badge.hidden = n <= 0;
+  badge.setAttribute('aria-label', n > 0 ? `${n} mensaje(s) sin leer` : 'sin mensajes sin leer');
+}
+
+function renderTabChat(c) {
+  const nombre = (c && c.cliente && c.cliente.nombre) || 'este cliente';
+  const wa = state.chat.whatsapp || {};
+  const conectado = !!wa.conectado;
+  return `<div class="chat-panel">
+    <div class="chat-head">
+      <div class="chat-avatar">${esc(_chatIniciales(nombre))}</div>
+      <div class="chat-head-txt">
+        <strong>${esc(nombre)}</strong>
+        <div class="chat-estado"><span class="chat-punto ${conectado ? 'ok' : ''}"></span>${conectado ? 'En línea · WhatsApp' : 'WhatsApp no conectado'}</div>
+      </div>
+      <span class="chat-canal">WhatsApp</span>
+    </div>
+    ${conectado ? '' : '<div class="chat-aviso">⚠ Los mensajes quedan en cola hasta que conectes Evolution API.</div>'}
+    <div class="chat-hilo" id="chat-hilo" role="log" aria-live="polite" aria-label="Conversación con ${esc(nombre)}">${renderChatCuerpo()}</div>
+    <div class="chat-subiendo" id="chat-subiendo" ${state.chat.subiendo ? '' : 'hidden'}>⏳ Subiendo archivo…</div>
+    <div class="chat-error" id="chat-error">${state.chat.error ? `<div class="notice bad">${esc(state.chat.error)}</div>` : ''}</div>
+    <div class="chat-composer">
+      <button class="chat-ico" type="button" onclick="chatEmoji()" aria-label="Insertar emoji">🙂</button>
+      <textarea id="chat-input" rows="1" placeholder="Mensaje" aria-label="Mensaje para ${esc(nombre)}"
+                onkeydown="chatTecla(event)" oninput="chatAjustarAltura(this);actualizarBotonChat()"></textarea>
+      <button class="chat-ico" type="button" id="chat-clip" onclick="chatToggleSheet()" aria-label="Adjuntar archivo" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.6 12.3 20.7a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg>
+      </button>
+      <button class="chat-ico" type="button" id="chat-camara" onclick="chatCamara()" aria-label="Tomar foto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      </button>
+      <button class="chat-ico" type="button" id="chat-accion" onclick="chatAccion()" aria-label="Grabar audio"></button>
+      <div class="chat-sheet" id="chat-sheet" hidden>
+        <button type="button" onclick="chatElegir('galeria')"><span class="sheet-ico galeria">🖼️</span>Galería</button>
+        <button type="button" onclick="chatElegir('camara')"><span class="sheet-ico camara">📸</span>Cámara</button>
+        <button type="button" onclick="chatElegir('documento')"><span class="sheet-ico documento">📄</span>Documento</button>
+        <button type="button" onclick="chatElegir('audio')"><span class="sheet-ico audio">🎤</span>Audio</button>
+        <button type="button" onclick="chatElegir('ubicacion')"><span class="sheet-ico ubicacion">📍</span>Ubicación</button>
+        <button type="button" onclick="chatElegir('contacto')"><span class="sheet-ico contacto">👤</span>Contacto</button>
+      </div>
+      <input type="file" id="chat-file-galeria" accept="image/*,video/*" multiple hidden onchange="chatSubirSeleccion(this)">
+      <input type="file" id="chat-file-camara" accept="image/*" capture="environment" hidden onchange="chatSubirSeleccion(this)">
+      <input type="file" id="chat-file-documento" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.pptx" hidden onchange="chatSubirSeleccion(this)">
+    </div>
+    <div class="chat-pie"><span>Espejo de la conversación de WhatsApp.</span><span id="chat-contador">${Number((state.chat.resumen && state.chat.resumen.total_mensajes) || 0) ? `${state.chat.resumen.total_mensajes} mensaje(s)` : ''}</span></div>
+  </div>`;
+}
+
+function renderAdjuntoChat(a) {
+  if (!a || !a.url) return '';
+  if (a.tipo === 'IMAGEN') {
+    return `<img class="chat-img" src="${esc(a.url)}" alt="${esc(a.nombre || 'foto')}" loading="lazy" onclick="window.open(this.src,'_blank')">`;
+  }
+  if (a.tipo === 'VIDEO') {
+    return `<video class="chat-video" src="${esc(a.url)}" controls preload="metadata"></video>`;
+  }
+  if (a.tipo === 'AUDIO') {
+    return `<audio class="chat-audio" src="${esc(a.url)}" controls preload="metadata"></audio>`;
+  }
+  return `<a class="chat-doc" href="${esc(a.url)}" target="_blank" rel="noopener">
+    <span class="chat-doc-ico">📄</span>
+    <span class="chat-doc-txt"><span class="chat-doc-nombre">${esc(a.nombre || 'documento')}</span><span class="chat-doc-peso">${_chatPeso(a.bytes)}</span></span>
+  </a>`;
+}
+
+function renderMensajeChat(m) {
+  const saliente = m.direccion === 'SALIENTE';
+  const autor = m.autor_nombre || (saliente ? 'Tú' : 'Cliente');
+  const adjuntos = (m.adjuntos || []).map(renderAdjuntoChat).join('');
+  // El backend usa "[imagen] archivo.png" cuando no hay pie; no repetirlo.
+  const automatico = /^\[(imagen|video|audio|documento)\]/i.test(m.cuerpo || '');
+  const cuerpo = m.cuerpo && !(automatico && adjuntos) ? `<div>${esc(m.cuerpo)}</div>` : '';
+  return `<div class="chat-msg ${saliente ? 'out' : 'in'}">
+    <div class="chat-burbuja">${adjuntos}${cuerpo}</div>
+    <div class="chat-meta">${esc(autor)} · ${esc(_chatHora(m.created_at))}${saliente ? _chatTicks(m.estado_entrega) : ''}</div>
+  </div>`;
+}
+
+function renderChatCuerpo() {
+  const chat = state.chat;
+  if (chat.cargando && !chat.mensajes.length) return '<p class="chat-vacio">Cargando conversación…</p>';
+  if (!chat.mensajes.length) return `<div class="chat-vacio"><strong>Aún no hay mensajes</strong>Cuando conectes WhatsApp, aquí aparecerá el mismo hilo del cliente.</div>`;
+  const partes = [];
+  let diaAnterior = null;
+  chat.mensajes.forEach(m => {
+    const dia = _chatDia(m.created_at);
+    if (dia && dia !== diaAnterior) {
+      partes.push(`<div class="chat-dia">${esc(dia)}</div>`);
+      diaAnterior = dia;
+    }
+    partes.push(renderMensajeChat(m));
+  });
+  return partes.join('');
+}
+
+function renderChatHilo() {
+  const hilo = $('#chat-hilo');
+  if (!hilo) return;
+  hilo.innerHTML = renderChatCuerpo();
+  const err = $('#chat-error');
+  if (err) err.innerHTML = state.chat.error ? `<div class="notice bad">${esc(state.chat.error)}</div>` : '';
+  const cont = $('#chat-contador');
+  if (cont) {
+    const total = Number((state.chat.resumen && state.chat.resumen.total_mensajes) || 0);
+    cont.textContent = total ? `${total} mensaje(s)` : '';
+  }
+  chatScrollAbajo();
+  actualizarBotonChat();
+}
+
+function chatScrollAbajo() {
+  const hilo = $('#chat-hilo');
+  if (hilo) hilo.scrollTop = hilo.scrollHeight;
+}
+
+function chatAjustarAltura(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(120, Math.max(40, el.scrollHeight)) + 'px';
+}
+
+function actualizarBotonChat() {
+  const boton = $('#chat-accion');
+  if (!boton) return;
+  const input = $('#chat-input');
+  const texto = (input && input.value || '').trim();
+  const grabando = !!(chatRecorder && chatRecorder.state === 'recording');
+  boton.classList.toggle('enviar', !!texto && !grabando);
+  boton.classList.toggle('grabando', grabando);
+  if (grabando) {
+    boton.innerHTML = `<span style="font-size:12px;font-weight:700">${Math.floor(chatRecordSeg / 60)}:${String(chatRecordSeg % 60).padStart(2,'0')}</span>`;
+    boton.setAttribute('aria-label', 'Detener y enviar audio');
+  } else if (texto) {
+    boton.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 20.5 21 12 3 3.5 3 10l12 2-12 2z"/></svg>';
+    boton.setAttribute('aria-label', 'Enviar mensaje');
+  } else {
+    boton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>';
+    boton.setAttribute('aria-label', 'Grabar audio');
+  }
+}
+
+function chatTecla(e) {
+  if (e.key === 'Escape') { chatCerrarSheet(); return; }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    chatEnviar();
+  }
+}
+
+function chatAccion() {
+  const input = $('#chat-input');
+  if ((input && input.value || '').trim()) chatEnviar();
+  else chatGrabarAudio();
+}
+
+function chatEmoji() {
+  const input = $('#chat-input');
+  if (!input) return;
+  const pos = input.selectionStart == null ? input.value.length : input.selectionStart;
+  const fin = input.selectionEnd == null ? pos : input.selectionEnd;
+  input.value = input.value.slice(0, pos) + '🙂' + input.value.slice(fin);
+  input.focus();
+  input.selectionStart = input.selectionEnd = pos + 2;
+  actualizarBotonChat();
+}
+
+function chatToggleSheet(force) {
+  const sheet = $('#chat-sheet');
+  const boton = $('#chat-clip');
+  if (!sheet) return;
+  const abrir = typeof force === 'boolean' ? force : sheet.hidden;
+  sheet.hidden = !abrir;
+  if (boton) boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+}
+
+function chatCerrarSheet() { chatToggleSheet(false); }
+
+function chatElegir(opcion) {
+  chatCerrarSheet();
+  if (opcion === 'galeria') { const el = $('#chat-file-galeria'); if (el) el.click(); }
+  else if (opcion === 'camara') { const el = $('#chat-file-camara'); if (el) el.click(); }
+  else if (opcion === 'documento') { const el = $('#chat-file-documento'); if (el) el.click(); }
+  else if (opcion === 'audio') chatGrabarAudio();
+  else if (opcion === 'ubicacion') chatUbicacion();
+  else if (opcion === 'contacto') chatContacto();
+}
+
+function chatCamara() {
+  const el = $('#chat-file-camara');
+  if (el) el.click();
+}
+
+async function chatEnviar(textoForzado) {
+  const c = state.carpeta;
+  const clienteId = c && c.cliente ? c.cliente.cliente_id : null;
+  const input = $('#chat-input');
+  const boton = $('#chat-accion');
+  const texto = (typeof textoForzado === 'string' ? textoForzado : (input ? input.value : '')).trim();
+  if (!clienteId) return;
+  if (!texto) { if (input) input.focus(); return; }
+  if (state.chat.enviando) return;
+  const chat = state.chat;
+  state.chat.enviando = true;
+  if (input) input.disabled = true;
+  if (boton) boton.disabled = true;
+  try {
+    const r = await api(`/api/v1/clients/${encodeURIComponent(clienteId)}/chat/mensajes`, {
+      method: 'POST',
+      body: { cuerpo: texto, canal: 'WHATSAPP' }
+    });
+    if (state.chat !== chat) return;
+    if (r.conversacion_id) state.chat.conversacionId = r.conversacion_id;
+    state.chat.mensajes.push(r.mensaje);
+    state.chat.resumen = r.resumen || state.chat.resumen;
+    state.chat.error = null;
+    if (input && typeof textoForzado !== 'string') { input.value = ''; chatAjustarAltura(input); }
+    if (r.mensaje && r.mensaje.estado_entrega === 'PENDIENTE') {
+      toast('Guardado. Se enviará cuando WhatsApp esté conectado.', 'ok');
+    }
+  } catch(e) {
+    state.chat.error = e.message;
+    toast('No se pudo enviar: ' + e.message, 'bad');
+  } finally {
+    state.chat.enviando = false;
+    if (input) input.disabled = false;
+    if (boton) boton.disabled = false;
+  }
+  renderChatHilo();
+  renderChatBadge();
+  if (input) input.focus();
+}
+
+async function chatSubirSeleccion(input) {
+  const archivos = Array.from(input.files || []);
+  input.value = '';
+  if (!archivos.length) return;
+  for (const archivo of archivos) {
+    const ok = await chatSubirArchivo(archivo);
+    if (!ok) break;
+  }
+}
+
+async function chatSubirArchivo(archivo, tipoDeclarado) {
+  const c = state.carpeta;
+  const clienteId = c && c.cliente ? c.cliente.cliente_id : null;
+  if (!clienteId || !archivo) return false;
+  if (state.chat.subiendo) { toast('Espera a que termine la subida anterior.', 'bad'); return false; }
+  const chat = state.chat;
+  state.chat.subiendo = true;
+  const aviso = $('#chat-subiendo');
+  if (aviso) aviso.hidden = false;
+  const datos = new FormData();
+  datos.append('archivo', archivo, archivo.name || 'archivo');
+  datos.append('canal', 'WHATSAPP');
+  if (tipoDeclarado) datos.append('tipo', tipoDeclarado);
+  const headers = {};
+  const simUser = localStorage.getItem('horminor.panel.user');
+  if (simUser) headers['X-Panel-User'] = simUser;
+  try {
+    const res = await fetch(`/api/v1/clients/${encodeURIComponent(clienteId)}/chat/adjuntos`, {
+      method: 'POST', body: datos, headers
+    });
+    const cuerpo = await res.json().catch(() => null);
+    if (!res.ok) {
+      const detalle = cuerpo && cuerpo.detail
+        ? (typeof cuerpo.detail === 'string' ? cuerpo.detail : JSON.stringify(cuerpo.detail))
+        : `HTTP ${res.status}`;
+      throw new Error(detalle);
+    }
+    if (state.chat !== chat) return false;
+    if (cuerpo.conversacion_id) state.chat.conversacionId = cuerpo.conversacion_id;
+    state.chat.mensajes.push(cuerpo.mensaje);
+    state.chat.resumen = cuerpo.resumen || state.chat.resumen;
+    state.chat.error = null;
+    renderChatHilo();
+    renderChatBadge();
+    toast('Archivo guardado en la carpeta del cliente.', 'ok');
+    return true;
+  } catch(e) {
+    state.chat.error = e.message;
+    toast('No se pudo subir: ' + e.message, 'bad');
+    renderChatHilo();
+    return false;
+  } finally {
+    state.chat.subiendo = false;
+    if (aviso) aviso.hidden = true;
+  }
+}
+
+async function chatGrabarAudio() {
+  if (chatRecorder && chatRecorder.state === 'recording') {
+    chatRecorder.stop();
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+    toast('Este navegador no permite grabar audio.', 'bad');
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chatChunks = [];
+    const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+    chatRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    chatRecorder.ondataavailable = e => { if (e.data && e.data.size) chatChunks.push(e.data); };
+    chatRecorder.onstop = async () => {
+      clearInterval(chatRecordTimer);
+      chatRecordTimer = null;
+      stream.getTracks().forEach(t => t.stop());
+      const tipo = chatRecorder && chatRecorder.mimeType ? chatRecorder.mimeType : 'audio/webm';
+      const blob = new Blob(chatChunks, { type: tipo });
+      chatRecorder = null;
+      chatRecordSeg = 0;
+      actualizarBotonChat();
+      if (blob.size > 1200) {
+        await chatSubirArchivo(new File([blob], 'audio.webm', { type: tipo }), 'AUDIO');
+      }
+    };
+    chatRecorder.start();
+    chatRecordSeg = 0;
+    actualizarBotonChat();
+    chatRecordTimer = setInterval(() => {
+      chatRecordSeg += 1;
+      actualizarBotonChat();
+      if (chatRecordSeg >= 120 && chatRecorder) chatRecorder.stop();
+    }, 1000);
+  } catch(e) {
+    chatRecorder = null;
+    actualizarBotonChat();
+    toast('No se pudo acceder al micrófono: ' + e.message, 'bad');
+  }
+}
+
+function chatUbicacion() {
+  if (!navigator.geolocation) { toast('El navegador no permite compartir ubicación.', 'bad'); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lon = pos.coords.longitude.toFixed(6);
+      chatEnviar(`📍 Mi ubicación: https://maps.google.com/?q=${lat},${lon}`);
+    },
+    err => toast('No se pudo obtener la ubicación: ' + err.message, 'bad'),
+    { timeout: 9000 }
+  );
+}
+
+function chatContacto() {
+  const c = state.carpeta && state.carpeta.cliente;
+  if (!c) return;
+  const partes = [c.nombre];
+  if (c.telefono) partes.push('WhatsApp ' + c.telefono);
+  if (c.constructora) partes.push(c.constructora);
+  chatEnviar('👤 Contacto: ' + partes.filter(Boolean).join(' · '));
+}
+
+document.addEventListener('click', e => {
+  const sheet = document.querySelector('#chat-sheet');
+  if (!sheet || sheet.hidden) return;
+  if (!e.target.closest('#chat-sheet') && !e.target.closest('#chat-clip')) chatCerrarSheet();
+});
+
+async function chatMarcarLeido() {
+  const chat = state.chat;
+  const clienteId = chat.clienteId;
+  if (!clienteId || !chat.resumen) return;
+  if (Number(chat.resumen.no_leidos || 0) <= 0) return;
+  try {
+    const r = await api(`/api/v1/clients/${encodeURIComponent(clienteId)}/chat/leido?canal=WHATSAPP`, { method: 'POST' });
+    if (state.chat.clienteId !== clienteId) return;
+    state.chat.resumen = r.resumen || state.chat.resumen;
+    renderChatBadge();
+  } catch(e) { /* marcar leido nunca bloquea la lectura */ }
+}
+
 function cambiarTabCarpeta(tab) {
   state.carpetaTab = tab;
   renderCarpeta();
+  if (tab === 'chat') {
+    const clienteId = state.carpeta && state.carpeta.cliente ? state.carpeta.cliente.cliente_id : null;
+    if (clienteId && state.chat.clienteId !== clienteId) {
+      chatCargar(clienteId);
+    } else if (clienteId && !state.chat.cargando && !state.chat.resumen && !state.chat.mensajes.length) {
+      chatCargar(clienteId);
+    }
+    chatScrollAbajo();
+    actualizarBotonChat();
+    chatMarcarLeido();
+  }
 }
 
 function toggleViajesOrden(numero) {
@@ -4326,6 +5422,7 @@ async function guardarFichaCliente() {
   const body = {
     nombre: $('#ficha-nombre').value.trim(),
     constructora: $('#ficha-constructora').value.trim() || null,
+    cedula: $('#ficha-cedula').value.trim() || null,
     ruc: $('#ficha-ruc').value.trim() || null,
     telefono_whatsapp: $('#ficha-telefono').value.trim() || null,
     ciudad: $('#ficha-ciudad').value.trim() || null,
@@ -4337,7 +5434,7 @@ async function guardarFichaCliente() {
   try {
     const r = await api('/api/v1/clients/' + c.cliente.cliente_id, {method:'PUT', body});
     Object.assign(c.cliente, {
-      nombre: r.nombre, constructora: r.constructora, ruc: r.ruc, telefono: r.telefono_whatsapp,
+      nombre: r.nombre, constructora: r.constructora, cedula: r.cedula, ruc: r.ruc, telefono: r.telefono_whatsapp,
       ciudad: r.ciudad, direccion_obra: r.direccion_obra, credit_limit_usd: r.credit_limit_usd, notas: r.notas
     });
     const full = (state.clientes || []).find(x => x.cliente_id === c.cliente.cliente_id);
@@ -5103,17 +6200,181 @@ async function cargarMercado() {
 
 async function cargarBanca() {
   try {
-    const [mercado, simulador, ordenes] = await Promise.all([
+    const [mercado, simulador, ordenes, bancos] = await Promise.all([
       api('/api/v1/dashboard/mercado?periodo=' + (($('#mercado-modo') || {}).value || '12_MESES_MOVILES') + '&anio=' + (($('#mercado-anio') || {}).value || new Date().getFullYear())),
       api('/api/v1/dashboard/simulador'),
-      api('/api/v1/orders?limit=50').catch(() => state.ordenes || [])
+      api('/api/v1/orders?limit=50').catch(() => state.ordenes || []),
+      api('/api/v1/dashboard/bancos').catch(() => ({cuentas: []}))
     ]);
     state.mercado = mercado;
     state.simulador = simulador;
     state.ordenes = Array.isArray(ordenes) ? ordenes : state.ordenes;
     renderMercado();
     renderSimulador();
+    const lista = (bancos && bancos.bancos) || [];
+    renderBancos(lista);
+    const slugActivo = state.bancoActivo || (lista[0] && lista[0].slug) || 'pichincha';
+    await seleccionarBanco(slugActivo, true);
   } catch(e) { toast('Banca no disponible: ' + e.message, 'bad'); }
+}
+
+function renderBancos(bancos) {
+  (bancos || []).forEach(banco => {
+    const card = document.querySelector(`.banco-cuenta[data-banco="${banco.slug}"]`);
+    if (!card) return;
+    const detalle = card.querySelector('small');
+    const badge = card.querySelector('.banco-estado');
+    const numero = banco.numero_cuenta ? String(banco.numero_cuenta).replace(/^#/, '') : '';
+    if (detalle) {
+      detalle.textContent = numero
+        ? (banco.tipo_cuenta === 'AHORRO' ? 'Cuenta de ahorro' : 'Cuenta corriente') + ' · #' + numero
+        : 'Cuenta por confirmar';
+    }
+    if (badge) {
+      const provisional = /X/i.test(numero);
+      const estado = provisional ? 'Provisional'
+        : banco.estado === 'ACTIVA' ? 'Activa'
+        : banco.estado === 'CERRADA' ? 'Cerrada' : 'Pendiente';
+      badge.textContent = estado;
+      badge.className = 'banco-estado ' + (provisional ? 'warn' : banco.estado === 'ACTIVA' ? 'ok' : '');
+    }
+  });
+}
+
+function _fechaBanco(iso) {
+  if (!iso) return '—';
+  const texto = String(iso).slice(0, 10);
+  const partes = texto.split('-');
+  return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : texto;
+}
+
+async function seleccionarBanco(slug, silencioso) {
+  if (!slug) return;
+  state.bancoActivo = slug;
+  document.querySelectorAll('.banco-cuenta').forEach(card => {
+    const activo = card.dataset.banco === slug;
+    card.classList.toggle('activo', activo);
+    card.setAttribute('aria-pressed', activo ? 'true' : 'false');
+  });
+  const panel = $('#banco-detalle');
+  if (!panel) return;
+  panel.hidden = false;
+  panel.dataset.banco = slug;
+  if (!silencioso) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const seq = (seleccionarBanco.seq = (seleccionarBanco.seq || 0) + 1);
+  try {
+    const datos = await api('/api/v1/dashboard/bancos/' + encodeURIComponent(slug));
+    if (seq !== seleccionarBanco.seq) return;
+    state.bancoDetalle = datos;
+    renderBancoDetalle(datos);
+  } catch(e) {
+    toast('No se pudo cargar el banco: ' + e.message, 'bad');
+  }
+}
+
+function renderBancoDetalle(datos) {
+  const b = datos.banco || {};
+  const r = datos.resumen || {};
+  const set = (sel, valor) => { const el = $(sel); if (el) el.textContent = valor; };
+  set('#banco-detalle-nombre', b.nombre || '—');
+  const tipo = b.tipo_cuenta === 'AHORRO' ? 'Cuenta de ahorro' : 'Cuenta corriente';
+  const numero = b.numero_cuenta ? ' · #' + String(b.numero_cuenta).replace(/^#/, '') : '';
+  const titular = b.titular ? ' · ' + b.titular : '';
+  set('#banco-detalle-cuenta', tipo + numero + titular);
+  const estado = $('#banco-detalle-estado');
+  if (estado) {
+    const provisional = /X/i.test(b.numero_cuenta || '');
+    const texto = provisional ? 'Provisional'
+      : b.estado === 'ACTIVA' ? 'Activa'
+      : b.estado === 'CERRADA' ? 'Cerrada' : 'Pendiente';
+    estado.textContent = texto;
+    estado.className = 'badge ' + (provisional ? 'warn' : b.estado === 'ACTIVA' ? 'ok' : 'neutral');
+  }
+  set('#banco-saldo-contable', money(r.saldo_contable));
+  set('#banco-saldo-informado', r.saldo_informado == null ? '—' : money(r.saldo_informado));
+  set('#banco-saldo-fecha', r.saldo_informado == null ? 'Sin cargar' : 'Actualizado ' + _fechaBanco(b.saldo_informado_at));
+  set('#banco-entradas', money(r.entradas));
+  set('#banco-salidas', 'Salidas ' + money(r.salidas));
+  set('#banco-prestamos-total', money(r.prestamos_saldo));
+  set('#banco-prestamos-cuota', r.prestamos_count ? `${r.prestamos_count} préstamo(s) · cuota ${money(r.prestamos_cuota)}` : 'Sin préstamos');
+  set('#banco-prestamos-count', String(r.prestamos_count || 0));
+  set('#banco-mov-count', String(r.movimientos_count || 0));
+  const notas = $('#banco-notas');
+  if (notas) notas.textContent = b.notas || '';
+  const listaPrestamos = $('#banco-prestamos-lista');
+  if (listaPrestamos) {
+    if (!(datos.prestamos || []).length) {
+      listaPrestamos.innerHTML = '<p class="muted small">Sin préstamos registrados para este banco.</p>';
+    } else {
+      listaPrestamos.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Operación</th><th>Saldo</th><th>Cuota</th><th>Plazo</th></tr></thead>
+        <tbody>${datos.prestamos.map(p => `<tr>
+          <td><strong>${esc(p.numero_operacion)}</strong><div class="small muted">${esc(p.entidad)}</div></td>
+          <td>${money(p.saldo_capital)}<div class="small muted">Tasa ${p.tasa_pct}%</div></td>
+          <td>${money(p.cuota)}</td>
+          <td>${p.plazo_meses} mes(es)</td>
+        </tr>`).join('')}</tbody></table></div>`;
+    }
+  }
+  const listaMov = $('#banco-movimientos');
+  if (listaMov) {
+    if (!(datos.movimientos || []).length) {
+      listaMov.innerHTML = '<p class="muted small">Sin movimientos registrados en este banco.</p>';
+    } else {
+      listaMov.innerHTML = `<table>
+        <thead><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th>Referencia</th></tr></thead>
+        <tbody>${datos.movimientos.map(m => `<tr>
+          <td>${_fechaBanco(m.fecha)}</td>
+          <td>${esc(m.tipo)}${m.es_anticipo ? ' <span class="badge neutral">anticipo</span>' : ''}<div class="small muted">${esc(m.metodo)}</div></td>
+          <td><strong>${money(m.monto)}</strong></td>
+          <td>${esc(m.referencia || m.cliente || '—')}${m.orden ? ' · #' + esc(m.orden) : ''}</td>
+        </tr>`).join('')}</tbody></table>`;
+    }
+  }
+}
+
+function editarBanco() {
+  const datos = state.bancoDetalle;
+  if (!datos) return;
+  const b = datos.banco || {};
+  const titulo = $('#dlg-banco-titulo');
+  if (titulo) titulo.textContent = 'Editar ' + (b.nombre || 'banco');
+  $('#banco-numero').value = b.numero_cuenta || '';
+  $('#banco-tipo').value = b.tipo_cuenta || 'CORRIENTE';
+  $('#banco-estado-sel').value = b.estado || 'PENDIENTE';
+  $('#banco-saldo').value = b.saldo_informado == null ? '' : b.saldo_informado;
+  $('#banco-titular').value = b.titular || '';
+  $('#banco-notas-input').value = b.notas || '';
+  $('#banco-error').innerHTML = '';
+  const dlg = $('#dlg-banco');
+  if (dlg && dlg.showModal) dlg.showModal();
+}
+
+async function guardarBanco() {
+  const slug = state.bancoActivo;
+  if (!slug) return;
+  const saldoTexto = $('#banco-saldo').value;
+  const saldo = saldoTexto === '' ? null : Number(saldoTexto);
+  if (saldo != null && (!Number.isFinite(saldo) || saldo < 0)) {
+    $('#banco-error').innerHTML = '<div class="notice bad">El saldo informado debe ser un número mayor o igual a cero.</div>';
+    return;
+  }
+  const body = {
+    numero_cuenta: $('#banco-numero').value.trim() || null,
+    tipo_cuenta: $('#banco-tipo').value,
+    estado: $('#banco-estado-sel').value,
+    saldo_informado: saldo,
+    titular: $('#banco-titular').value.trim() || null,
+    notas: $('#banco-notas-input').value.trim() || null
+  };
+  try {
+    await api('/api/v1/dashboard/bancos/' + encodeURIComponent(slug), { method: 'PUT', body });
+    $('#dlg-banco').close();
+    toast('Datos del banco actualizados', 'ok');
+    await cargarBanca();
+  } catch(e) {
+    $('#banco-error').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
 }
 
 function renderMercado() {
@@ -5785,5 +7046,145 @@ cargarSalud();
 setInterval(cargarSalud, 60000);
 </script>
 
+<button class="gato-fab" id="gato-fab" type="button" onclick="gatoToggle()" aria-expanded="false" aria-controls="gato-panel">
+  <span aria-hidden="true">🐱</span> Gato
+</button>
+<aside class="gato-panel" id="gato-panel" hidden aria-label="Asistente Gato">
+  <div class="chat-head">
+    <div class="chat-avatar" aria-hidden="true">🐱</div>
+    <div class="chat-head-txt">
+      <strong>Gato</strong>
+      <div class="chat-estado"><span class="chat-punto ok"></span> En línea · datos con fuente</div>
+    </div>
+    <button type="button" class="gato-cerrar" onclick="gatoNuevaConversacion()" aria-label="Nueva conversación" title="Nueva conversación">↺</button>
+    <button type="button" class="gato-cerrar" onclick="gatoToggle(false)" aria-label="Cerrar">×</button>
+  </div>
+  <div class="chat-hilo gato-hilo" id="gato-hilo">
+    <div class="chat-dia">Hoy</div>
+    <div class="chat-msg in">
+      <div class="chat-burbuja">Miau. Soy Gato. Pregúntame por cartera, caja, bodega, bancos, agenda, órdenes, facturas o precios.</div>
+      <div class="chat-meta">Gato · ahora</div>
+    </div>
+  </div>
+  <form class="chat-composer gato-form" onsubmit="gatoEnviar(event)">
+    <input id="gato-input" placeholder="¿Quién me debe?" autocomplete="off" aria-label="Mensaje para Gato">
+    <button class="btn small" type="submit">Enviar</button>
+  </form>
+</aside>
+<script>
+function gatoToggle(force) {
+  const panel = document.getElementById('gato-panel');
+  const fab = document.getElementById('gato-fab');
+  if (!panel || !fab) return;
+  const abrir = typeof force === 'boolean' ? force : panel.hidden;
+  panel.hidden = !abrir;
+  fab.setAttribute('aria-expanded', String(abrir));
+  if (abrir) setTimeout(() => { const i = document.getElementById('gato-input'); if (i) i.focus(); }, 60);
+}
+function gatoEsc(texto) {
+  return String(texto).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function gatoLink(texto) {
+  return texto.replace(
+    /(\/api\/v1\/media\/[0-9a-fA-F-]{36}\/archivo(?:\?[^\s<]*)?)/g,
+    (url) => {
+      const href = url.includes('download=1')
+        ? url
+        : url + (url.includes('?') ? '&' : '?') + 'download=1';
+      return `<a href="${href}" target="_blank" rel="noopener" download>Descargar archivo</a>`;
+    }
+  );
+}
+function gatoTabla(filas) {
+  const fmt = c => gatoLink(c.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'));
+  const celdas = f => f.replace(/^\||\|$/g, '').split('|').map(c => fmt(c.trim()));
+  const head = celdas(filas[0]);
+  const body = filas.slice(2).map(celdas);
+  return '<div class="gato-tabla-wrap"><table class="gato-tabla"><thead><tr>' + head.map((c, i) => '<th class="' + (i > 0 ? 'num' : '') + '">' + c + '</th>').join('') +
+    '</tr></thead><tbody>' + body.map(r => '<tr>' + r.map((c, i) => '<td class="' + (i > 0 ? 'num' : '') + '">' + c + '</td>').join('') + '</tr>').join('') +
+    '</tbody></table></div>';
+}
+function gatoMarkdown(texto) {
+  const lineas = gatoEsc(texto).split('\n');
+  const salida = [];
+  let tabla = null;
+  for (const linea of lineas) {
+    if (linea.trim().startsWith('|')) {
+      tabla = tabla || [];
+      tabla.push(linea.trim());
+      continue;
+    }
+    if (tabla) { salida.push(gatoTabla(tabla)); tabla = null; }
+    salida.push(gatoLink(linea.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')));
+  }
+  if (tabla) salida.push(gatoTabla(tabla));
+  return salida.join('<br>');
+}
+function gatoAgregar(clase, texto) {
+  const hilo = document.getElementById('gato-hilo');
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-msg ' + (clase === 'user' ? 'out' : 'in');
+  const burbuja = document.createElement('div');
+  burbuja.className = 'chat-burbuja' + (clase === 'error' ? ' error' : '');
+  if (clase === 'user') burbuja.textContent = texto;
+  else burbuja.innerHTML = gatoMarkdown(texto);
+  const meta = document.createElement('div');
+  meta.className = 'chat-meta';
+  meta.textContent = clase === 'user' ? 'Tú · ahora' : 'Gato · ahora';
+  wrap.appendChild(burbuja);
+  wrap.appendChild(meta);
+  hilo.appendChild(wrap);
+  hilo.scrollTop = hilo.scrollHeight;
+  return burbuja;
+}
+function gatoNuevaConversacion() {
+  const sel = document.getElementById('sim-user');
+  const uid = localStorage.getItem('horminor.panel.user') || (sel && sel.value) || 'julio';
+  localStorage.removeItem('horminor.gato.conv.' + uid);
+  const hilo = document.getElementById('gato-hilo');
+  if (hilo) hilo.innerHTML = '<div class="chat-dia">Hoy</div>';
+  gatoAgregar('bot', 'Listo, empezamos de cero. ¿Qué necesitas?');
+}
+
+async function gatoEnviar(ev) {
+  ev.preventDefault();
+  const input = document.getElementById('gato-input');
+  const texto = input.value.trim();
+  if (!texto) return;
+  gatoAgregar('user', texto);
+  input.value = '';
+  const esperando = gatoAgregar('bot', 'Consultando…');
+  const headers = {};
+  const sel = document.getElementById('sim-user');
+  let uid = localStorage.getItem('horminor.panel.user') || (sel && sel.value) || '';
+  if (!uid && sel) {
+    const julio = Array.from(sel.options).find(o => /julio/i.test(o.textContent || ''));
+    uid = julio ? julio.value : '';
+  }
+  if (uid) headers['X-Panel-User'] = uid;
+  else {
+    headers['X-Panel-Role'] = 'julio';
+    headers['X-Panel-Name'] = 'Julio';
+  }
+  const convKey = 'horminor.gato.conv.' + (uid || 'julio');
+  const conv = localStorage.getItem(convKey) || '';
+  try {
+    const r = await api('/api/v1/asistente/chat', {
+      method: 'POST',
+      body: {mensaje: texto, conversacion_id: conv || null},
+      headers
+    });
+    if (r.conversacion_id) localStorage.setItem(convKey, r.conversacion_id);
+    esperando.innerHTML = gatoMarkdown(r.respuesta);
+    if (r.estado && r.estado !== 'OK') esperando.classList.add('error');
+  } catch (e) {
+    if (String(e.message).includes('403')) localStorage.removeItem(convKey);
+    esperando.classList.add('error');
+    esperando.textContent = e.message.includes('401')
+      ? 'Elegí un perfil en «Viendo como» para usar a Gato.'
+      : ('No pude responder: ' + e.message);
+  }
+}
+</script>
 </body>
 </html>

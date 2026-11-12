@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
+from typing import Any, Literal
 
 import asyncpg
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Body, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, ConfigDict, Field
 
+from ..panel_acl import exigir_modulo
 from ..superadmin.secciones import SECCION_EMPRESA, SECCION_FINANZAS
 from ..superadmin.store import ConfigStore, PostgresConfigStore
+from . import bancos as bancos_svc
 from .calculos import simular_bancario
 from .dossier import construir_dossier_html
 from .service import DashboardStore, MemoryDashboardStore, PostgresDashboardStore
@@ -28,6 +31,13 @@ def _store(request: Request) -> DashboardStore:
     store = PostgresDashboardStore(pool)
     request.app.state.dashboard_store = store
     return store
+
+
+def _pool(request: Request) -> asyncpg.Pool:
+    pool = getattr(request.app.state, "pool", None)
+    if not isinstance(pool, asyncpg.Pool):
+        raise HTTPException(status_code=503, detail="base de datos no disponible")
+    return pool
 
 
 def _config(request: Request) -> ConfigStore:
@@ -49,6 +59,43 @@ async def hero_kpis(
     planta: str | None = Query(default=None),
 ) -> dict[str, Any]:
     return await _store(request).hero_kpis(fecha, planta)
+
+
+class BancoUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    numero_cuenta: str | None = Field(default=None, max_length=40)
+    tipo_cuenta: Literal["CORRIENTE", "AHORRO"] | None = None
+    saldo_informado: float | None = Field(default=None, ge=0)
+    titular: str | None = Field(default=None, max_length=160)
+    notas: str | None = Field(default=None, max_length=500)
+    estado: Literal["ACTIVA", "PENDIENTE", "CERRADA"] | None = None
+
+
+@router.get("/bancos")
+async def cuentas_bancarias(request: Request) -> dict[str, Any]:
+    """Catalogo de bancos con saldo contable y resumen de prestamos."""
+    return {"bancos": await bancos_svc.listar(_pool(request))}
+
+
+@router.get("/bancos/{slug}")
+async def detalle_banco(request: Request, slug: str) -> dict[str, Any]:
+    datos = await bancos_svc.detalle(_pool(request), slug)
+    if datos is None:
+        raise HTTPException(status_code=404, detail="banco no encontrado")
+    return datos
+
+
+@router.put("/bancos/{slug}")
+async def actualizar_banco(
+    request: Request, slug: str, body: BancoUpdate = Body(...)
+) -> dict[str, Any]:
+    await exigir_modulo(request, "finanzas_balance_auditoria", mutacion=True)
+    datos = body.model_dump(exclude_unset=True)
+    actualizado = await bancos_svc.actualizar(_pool(request), slug, datos)
+    if actualizado is None:
+        raise HTTPException(status_code=404, detail="banco no encontrado")
+    return actualizado
 
 
 @router.get("/mercado")

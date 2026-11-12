@@ -1,0 +1,23 @@
+# Override SOLO para el VPS (Horminor).
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d --build
+#
+# - PostgreSQL y Redis NO publican puertos al host.
+# - La API queda en 127.0.0.1:8010; Caddy es el unico que la expone.
+# - host.docker.internal permite llegar a Evolution API (8080 del host).
+
+services:
+  postgres:
+    ports: !reset []
+    restart: unless-stopped
+
+  redis:
+    ports: !reset []
+    restart: unless-stopped
+
+  core-api:
+    ports:
+      - "127.0.0.1:8010:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_name": "cotizacion_emitida",
+  "version": "1.1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["folio", "estado", "cliente_nombre", "lineas", "subtotal", "iva", "total", "validez_dias", "emitido_at", "pdf_url"],
+  "properties": {
+    "folio": {"type": "string", "pattern": "^COT-[0-9]{4}-[0-9]{6}$"},
+    "estado": {"type": "string", "enum": ["PRELIMINAR", "EMITIDA", "ACEPTADA", "ANULADA"]},
+    "cliente_nombre": {"type": "string", "minLength": 2, "maxLength": 160},
+    "lineas": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["descripcion", "cantidad_m3", "precio_m3", "subtotal", "vigencia_hash"],
+        "properties": {
+          "descripcion": {"type": "string", "minLength": 3, "maxLength": 200},
+          "cantidad_m3": {"type": "string", "pattern": "^\\d+(\\.\\d{1,4})?$"},
+          "precio_m3": {"type": "string", "pattern": "^\\d+(\\.\\d{1,2})?$"},
+          "subtotal": {"type": "string", "pattern": "^\\d+(\\.\\d{1,2})?$"},
+          "vigencia_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    },
+    "subtotal": {"type": "string", "pattern": "^\\d+(\\.\\d{1,2})?$"},
+    "iva": {"type": "string", "pattern": "^\\d+(\\.\\d{1,2})?$"},
+    "total": {"type": "string", "pattern": "^\\d+(\\.\\d{1,2})?$"},
+    "validez_dias": {"type": "integer", "minimum": 1, "maximum": 90},
+    "emitido_at": {"type": "string", "format": "date-time"},
+    "pdf_url": {"type": ["string", "null"], "format": "uri"},
+    "pdf_local": {"type": ["string", "null"], "maxLength": 400},
+    "bytes": {"type": ["integer", "null"], "minimum": 0}
+  }
+}

@@ -404,6 +404,7 @@ class ClienteUpdate(BaseModel):
 
     nombre: str | None = Field(default=None, min_length=1, max_length=160)
     constructora: str | None = Field(default=None, max_length=160)
+    cedula: str | None = Field(default=None, max_length=40)
     ruc: str | None = Field(default=None, max_length=40)
     telefono_whatsapp: str | None = Field(default=None, max_length=40)
     provincia: str | None = Field(default=None, max_length=80)
@@ -514,6 +515,7 @@ async def actualizar_cliente(
     columnas = {
         "nombre": "nombre",
         "constructora": "constructora",
+        "cedula": "cedula",
         "ruc": "ruc",
         "telefono_whatsapp": "telefono_whatsapp",
         "provincia": "provincia",
@@ -534,7 +536,7 @@ async def actualizar_cliente(
         f"""
         UPDATE clients SET {', '.join(asignaciones)}
          WHERE id = ${len(valores)}
-        RETURNING id::text, nombre, constructora, ruc, telefono_whatsapp,
+        RETURNING id::text, nombre, constructora, cedula, ruc, telefono_whatsapp,
                   provincia, ciudad, direccion_obra, credit_limit_usd, notas
         """,
         *valores,
