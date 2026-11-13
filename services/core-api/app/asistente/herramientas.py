@@ -23,7 +23,22 @@ def _cant(valor: Any, decimales: int = 3) -> str | None:
     return texto or "0"
 
 
-async def ejecutar(nombre: str, params: dict[str, Any], biblio: Bibliotecario) -> Resultado:
+async def ejecutar(
+    nombre: str,
+    params: dict[str, Any],
+    biblio: Bibliotecario,
+    actor: Any = None,
+) -> Resultado:
+    if nombre in (
+        "recordatorio_crear",
+        "recordatorio_confirmar",
+        "recordatorio_descartar",
+        "recordatorio_listar",
+        "recordatorio_cancelar",
+    ):
+        from . import recordatorios
+
+        return await recordatorios.ejecutar(nombre, params, biblio, actor)
     if nombre == "cliente_buscar":
         return await _cliente_buscar(params, biblio)
     if nombre == "cartera_cliente":

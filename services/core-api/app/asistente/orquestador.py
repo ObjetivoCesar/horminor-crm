@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Any
 
-from . import catalogo, pilares, proveedores
+from . import catalogo, pilares, proveedores, recordatorios
 from .bibliotecario import Bibliotecario
 from .fichas import Resultado
 from .guardas import CifraNoVerificada, verificar
 from .herramientas import ejecutar as ejecutar_herramienta
 from .redactor import redactar
 from .texto import extraer_cliente, fecha_de, normalizar
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -22,6 +25,8 @@ class Actor:
     rol: str
     actor_id: str = "panel"
     ahora: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    conversacion_id: str | None = None
+    modo_envio: str = ""
 
 
 @dataclass
@@ -43,6 +48,12 @@ def _quiere(t: str, palabras: tuple[str, ...]) -> bool:
     return any(p in t for p in palabras)
 
 
+_RE_RECORDATORIO = re.compile(
+    r"\b(recuerda|recordar|recordatorio|recordarle|recordale|recuerdale|"
+    r"escrib\w*|avis\w*|mand\w*|enviale|enviarle|programa)\b"
+)
+
+
 def planear(pregunta: str) -> Plan:
     t = normalizar(pregunta)
     plan = Plan()
@@ -53,9 +64,34 @@ def planear(pregunta: str) -> Plan:
         ("debe", "cartera", "cierre", "caja", "stock", "bodega", "banco",
          "pichincha", "guayaquil", "internacional", "prestamo", "entrega",
          "agenda", "orden", "precio", "fc-", "cupo", "cliente", "material",
-         "factura"),
+         "factura", "record", "escrib", "avis", "mand"),
     ):
         plan.saludo = True
+        return plan
+
+    if _RE_RECORDATORIO.search(t):
+        info = recordatorios.interpretar(pregunta)
+        if info["destinatario"] is None:
+            plan.faltante = "¿A quién le escribo? Necesito el nombre del cliente."
+            return plan
+        if info["mensaje"] is None:
+            plan.faltante = "¿Qué le digo? Necesito el texto exacto del mensaje."
+            return plan
+        if info["cuando"] is None:
+            plan.faltante = "¿A qué hora lo envío? Ejemplo 18:40, «en 5 minutos» o «ahora mismo»."
+            return plan
+        plan.pasos.append(
+            (
+                "recordatorios",
+                "recordatorio_crear",
+                {
+                    "destinatario": info["destinatario"],
+                    "mensaje": info["mensaje"],
+                    "cuando": pregunta,
+                    "adjuntar_factura": info["adjuntar_factura"],
+                },
+            )
+        )
         return plan
 
     if _quiere(t, ("costo", "margen", "rentabilidad")):
@@ -204,11 +240,18 @@ def planear(pregunta: str) -> Plan:
 
 
 async def _ejecutar_accion(
-    pilar: str, nombre: str, params: dict[str, Any], biblio: Bibliotecario
+    pilar: str,
+    nombre: str,
+    params: dict[str, Any],
+    biblio: Bibliotecario,
+    actor: Any = None,
 ) -> list[Resultado]:
     accion = pilares.accion(pilar, nombre)
     pasos = accion.get("pasos") or (accion["consulta"],)
     resultados: list[Resultado] = []
+
+    if pilar == "recordatorios":
+        return [await ejecutar_herramienta(nombre, params, biblio, actor)]
 
     if pasos == ("cliente_buscar", "cartera_cliente"):
         r = await ejecutar_herramienta("cliente_buscar", params, biblio)
@@ -286,7 +329,7 @@ async def responder(
             if r is not None:
                 return _con_descargas(r)
         except Exception:  # noqa: BLE001
-            pass
+            log.exception("Gato: el proveedor LLM fallo; se usa el modo determinista")
 
     plan = planear(pregunta)
 
@@ -311,9 +354,9 @@ async def responder(
 
     if plan.saludo:
         opciones = {
-            "SUPERADMIN": "cartera, cierre, bodega, bancos, agenda, órdenes, facturas o precios",
+            "SUPERADMIN": "cartera, cierre, bodega, bancos, agenda, órdenes, facturas, precios o recordatorios",
             "CONTADORA": "cartera, cierre, bancos, bodega, agenda, órdenes, facturas o precios",
-            "SECRETARIA": "cartera por cliente, cierre, agenda, órdenes, facturas o precios",
+            "SECRETARIA": "cartera por cliente, cierre, agenda, órdenes, facturas, precios o recordatorios",
             "BODEGA": "bodega, agenda u órdenes",
         }.get(actor.rol, "las consultas de tu perfil")
         saludo = "Jefe" if actor.rol == "SUPERADMIN" else actor.nombre or "Señor(a)"
@@ -347,7 +390,7 @@ async def responder(
                 )
             )
             continue
-        resultados.extend(await _ejecutar_accion(pilar, nombre, params, biblio))
+        resultados.extend(await _ejecutar_accion(pilar, nombre, params, biblio, actor))
 
     rechazos = [r for r in resultados if r.estado == "ACL"]
     no_conectadas = [r for r in resultados if r.estado == "NO_CONECTADA"]

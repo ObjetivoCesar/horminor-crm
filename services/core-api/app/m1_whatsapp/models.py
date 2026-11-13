@@ -76,6 +76,27 @@ def normalizar_telefono(valor: Any) -> str:
     return digitos
 
 
+def formato_whatsapp(valor: Any) -> str:
+    """Devuelve el telefono como lo espera Evolution: digitos con codigo de pais.
+
+    Ecuador: ``0991234567``, ``991234567``, ``+593 99 123 4567`` y
+    ``00593991234567`` producen todos ``593991234567``. Si el formato no es
+    reconocible, devuelve los digitos tal cual: no inventa un pais.
+    """
+    digitos = re.sub(r"\D", "", str(valor or ""))
+    if not digitos:
+        return ""
+    while digitos.startswith("00"):
+        digitos = digitos[2:]
+    if digitos.startswith("593"):
+        return digitos
+    if digitos.startswith("0") and len(digitos) in (9, 10):
+        return "593" + digitos[1:]
+    if len(digitos) == 9:
+        return "593" + digitos
+    return digitos
+
+
 def normalizar_codigo_mixer(valor: Any) -> str:
     """Normaliza el codigo de un mixer a la forma ``MIXER-01``.
 

@@ -19,6 +19,7 @@ from typing import Any, Protocol
 import httpx
 
 from ..settings import CLAVE_INSEGURA
+from .models import formato_whatsapp
 from .repositorio import RepositorioWhatsApp
 
 log = logging.getLogger(__name__)
@@ -33,6 +34,15 @@ class Notifier(Protocol):
 
     async def enviar_texto(self, telefono: str, texto: str) -> bool: ...
 
+    async def enviar_documento(
+        self,
+        telefono: str,
+        nombre: str,
+        mimetype: str,
+        contenido: bytes,
+        texto: str | None = None,
+    ) -> bool: ...
+
 
 @dataclass
 class RecordingNotifier:
@@ -40,9 +50,29 @@ class RecordingNotifier:
 
     nombre: str = "memoria"
     enviados: list[dict[str, str]] = field(default_factory=list)
+    documentos: list[dict[str, Any]] = field(default_factory=list)
 
     async def enviar_texto(self, telefono: str, texto: str) -> bool:
         self.enviados.append({"telefono": telefono, "texto": texto})
+        return True
+
+    async def enviar_documento(
+        self,
+        telefono: str,
+        nombre: str,
+        mimetype: str,
+        contenido: bytes,
+        texto: str | None = None,
+    ) -> bool:
+        self.documentos.append(
+            {
+                "telefono": telefono,
+                "nombre": nombre,
+                "mimetype": mimetype,
+                "bytes": len(contenido),
+                "texto": texto or "",
+            }
+        )
         return True
 
 
@@ -74,7 +104,7 @@ class EvolutionNotifier:
             log.warning("Evolution API sin configurar: no se envia el WhatsApp")
             return False
         endpoint = f"{self._url}/message/sendText/{self._instancia}"
-        cuerpo = {"number": telefono, "text": texto}
+        cuerpo = {"number": formato_whatsapp(telefono), "text": texto}
         try:
             if self._http is not None:
                 respuesta = await self._http.post(
@@ -95,6 +125,47 @@ class EvolutionNotifier:
             return False
         return 200 <= respuesta.status_code < 300
 
+    async def enviar_documento(
+        self,
+        telefono: str,
+        nombre: str,
+        mimetype: str,
+        contenido: bytes,
+        texto: str | None = None,
+    ) -> bool:
+        """Envia un archivo (PDF/foto) como documento por Evolution."""
+        if not self.configurado():
+            log.warning("Evolution API sin configurar: no se envia el documento")
+            return False
+        endpoint = f"{self._url}/message/sendMedia/{self._instancia}"
+        cuerpo = {
+            "number": formato_whatsapp(telefono),
+            "mediatype": "document",
+            "mimetype": mimetype or "application/octet-stream",
+            "fileName": nombre or "documento",
+            "caption": texto or "",
+            "media": base64.b64encode(contenido).decode("ascii"),
+        }
+        try:
+            if self._http is not None:
+                respuesta = await self._http.post(
+                    endpoint,
+                    json=cuerpo,
+                    headers={"apikey": self._api_key},
+                    timeout=max(self._timeout, 30.0),
+                )
+            else:
+                async with httpx.AsyncClient(timeout=max(self._timeout, 30.0)) as cliente:
+                    respuesta = await cliente.post(
+                        endpoint,
+                        json=cuerpo,
+                        headers={"apikey": self._api_key},
+                    )
+        except httpx.HTTPError as exc:
+            log.warning("fallo enviando documento a %s: %s", telefono, exc)
+            return False
+        return 200 <= respuesta.status_code < 300
+
 
 class NullNotifier:
     """Sin Evolution configurado: no finge envios."""
@@ -102,6 +173,16 @@ class NullNotifier:
     nombre = "no_configurado"
 
     async def enviar_texto(self, telefono: str, texto: str) -> bool:
+        return False
+
+    async def enviar_documento(
+        self,
+        telefono: str,
+        nombre: str,
+        mimetype: str,
+        contenido: bytes,
+        texto: str | None = None,
+    ) -> bool:
         return False
 
 

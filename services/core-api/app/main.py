@@ -7,10 +7,12 @@ import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import asyncpg
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from .asistente.despachador import DespachadorRecordatorios
 from .asistente.router import router as asistente_router
 from .db import create_pool, run_migrations
 from .http_gate import custodio_router, payments_router
@@ -69,10 +71,26 @@ async def lifespan(app: FastAPI):
         except Exception:  # el bot no puede tumbar la API ni el Centinela
             log.exception("Modulo 1 no pudo inicializarse; la API sigue operativa")
 
+    # El "cron" de Gato: envia los recordatorios vencidos con el notificador
+    # del Modulo 1 (SANDBOX -> sandbox_outbox, produccion -> Evolution).
+    despachador: DespachadorRecordatorios | None = None
+    if isinstance(pool, asyncpg.Pool):
+        despachador = DespachadorRecordatorios(
+            pool=pool,
+            proveedor_notifier=lambda: getattr(
+                getattr(app.state, "whatsapp", None), "notifier", None
+            ),
+            media_dir=str(settings.media_dir),
+        )
+        despachador.iniciar()
+    app.state.recordatorios = despachador
+
     log.info("core-api lista (entorno=%s)", settings.environment)
     try:
         yield
     finally:
+        if despachador is not None:
+            await despachador.detener()
         if runtime is not None:
             await runtime.cerrar()
         await pool.close()

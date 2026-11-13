@@ -3495,3 +3495,263 @@ rotar la API key y cargar el backup diario.
 - `.agents/ESTADO.md` y `.agents/BITACORA.md`
 - Fuera del repo: `vps-entrada/horminor_vps`, `horminor_github_deploy`,
   `horminor.env`, `horminor_qr.png`, `horminor.caddy`
+
+---
+
+## 2026-11-12 - Gato secretaria: recordatorios programados por WhatsApp
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** confirmar si Gato puede actuar como secretaria y agregar la
+creación de tareas con hora para que envíe un recordatorio por WhatsApp, en
+local y verificable.
+
+### Hecho
+
+1. **Migración 075 (`gato_recordatorios`).** Una fila es una tarea: creador,
+   cliente, teléfono, mensaje, `programado_at` (UTC), zona, estado, intentos y
+   error. Índice parcial para los pendientes.
+2. **`asistente/recordatorios.py`.** Interpreta la frase ("a las 18:40",
+   "mañana a las 9", "en 30 minutos", ISO del LLM), resuelve el destino en
+   `clients` y expone `crear`, `listar`, `cancelar` y `ejecutar`.
+3. **`asistente/despachador.py`.** El "cron" es una tarea `asyncio` dentro de la
+   API (cada 20 s), que reclama con `FOR UPDATE SKIP LOCKED` y envía por el
+   notificador del Módulo 1. Se arranca en el `lifespan` de `main.py`.
+4. **Herramientas de Gato.** Nuevo pilar `recordatorios` con
+   `recordatorio_crear`, `recordatorio_listar` y `recordatorio_cancelar`,
+   disponibles para SUPERADMIN y SECRETARIA; declaradas en `proveedores.py`
+   para el tool calling de DeepSeek y en `orquestador.py` para el modo
+   determinista.
+5. **HTTP.** `GET/POST /api/v1/asistente/recordatorios` y
+   `POST /api/v1/asistente/recordatorios/{id}/cancelar`, con el rol resuelto en
+   el backend.
+6. **Prompt.** Reglas nuevas: no inventar teléfono, copiar el mensaje literal,
+   decir "programado" y no "enviado".
+7. **Doc.** `docs/GATO_RECORDATORIOS.md` con el mapa de piezas y los pendientes.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **357 passed** (342 + 15 nuevos) |
+| Log de arranque | `despachador de recordatorios activo (cada 20s)` |
+| Ing. Reyes (sin teléfono) | Gato **no crea** la tarea y pide el número |
+| Cliente con teléfono | fila `PENDIENTE` a las 18:42 |
+| Tick del despachador | `ENVIADO`, `intentos=1`, `enviado_at 18:42:20` |
+| `sandbox_outbox` | id 19, destino `0990000013`, mensaje exacto |
+| `GET /recordatorios` | devuelve la fila con `programado_local 12/11/2026 18:42` |
+
+Evidencia completa: `.agents/evidencias/gato_recordatorios_2026-11-12.txt`.
+
+### Decisiones tomadas
+
+1. **Tarea de fondo, no cron del sistema.** El PDR no trae Celery y el
+   despliegue es un contenedor; `FOR UPDATE SKIP LOCKED` evita duplicados si
+   algún día hay dos réplicas. Alternativa descartada: cron del host con
+   `docker exec`, que rompe la portabilidad y no conoce el estado de la API.
+2. **El teléfono sale del CRM, nunca del modelo.** Si el cliente no tiene
+   número, no se crea la tarea. Alternativa descartada: aceptar cualquier número
+   dictado sin registro, que abre la puerta a enviar datos a terceros.
+3. **Una sola vez, no recurrente.** La repetición ("todos los lunes") queda
+   como propuesta para no inventar semántica de recurrencia.
+4. **Estados con reintento acotado.** Tres intentos y `FALLIDO` con el error;
+   sin canal, la fila vuelve a `PENDIENTE` sin gastar intento.
+
+### Bloqueos / preguntas al cliente
+
+1. **Código de país.** `clients.telefono_whatsapp` guarda números locales
+   (`0990000013`) y Evolution espera `593990000013`. Hoy el recordatorio usa el
+   número tal cual, igual que el aviso de salida de mixer. Decidir si se
+   normaliza en el CRM o al enviar.
+2. **UI.** Falta la lista de recordatorios en el panel (la API ya existe).
+3. **Alcance.** ¿Gato puede escribir a un cliente sin que Julio/Secretaría
+   confirme, o el recordatorio debe quedar en revisión antes de enviarse?
+
+### Próximo paso exacto
+
+Probar en `/panel` la frase "Gato escríbele al Cliente Prueba Hito 3 a las
+18:45 y recuérdale que tiene una cita en las oficinas de Horminor", ver el
+mensaje en el outbox del Superadmin y luego decidir el punto 1 (código de país).
+
+### Archivos tocados
+
+- `db/migrations/075_gato_recordatorios.sql`
+- `services/core-api/app/asistente/recordatorios.py`
+- `services/core-api/app/asistente/despachador.py`
+- `services/core-api/app/asistente/herramientas.py`
+- `services/core-api/app/asistente/orquestador.py`
+- `services/core-api/app/asistente/pilares.py`
+- `services/core-api/app/asistente/proveedores.py`
+- `services/core-api/app/asistente/redactor.py`
+- `services/core-api/app/asistente/persona.py`
+- `services/core-api/app/asistente/router.py`
+- `services/core-api/app/main.py`
+- `services/core-api/tests/test_recordatorios.py`
+- `docs/GATO_RECORDATORIOS.md`
+- `.agents/evidencias/gato_recordatorios_2026-11-12.txt`
+
+### Addendum (misma sesión) — normalización de teléfonos y documento del sistema
+
+**Hecho.**
+
+1. **`formato_whatsapp()` en `m1_whatsapp/models.py`.** Deja el número como lo
+   espera Evolution: `0990000013`, `990000013`, `593990000013`,
+   `+593 99 000 0013` y `00593990000013` producen `593990000013`; un formato
+   desconocido se devuelve tal cual (no inventa país). No se tocó
+   `normalizar_telefono()`, que sigue sirviendo para comparar identidad.
+2. **Tres capas de normalización:** al crear el recordatorio, al despachar
+   (cubre filas viejas) y en `EvolutionNotifier.enviar_texto` (cubre también los
+   avisos de salida de mixer).
+3. **`docs/GATO_SECRETARIA.md`** v1.0.0: arquitectura, flujo de 12 pasos,
+   modelo de datos, máquina de estados, reglas de hora, permisos, despachador,
+   teléfonos, canales, API, prompt, observabilidad, pruebas, operación,
+   pendientes P0/P1/P2, decisiones descartadas, riesgos y **paquete de trabajo
+   para Carbon**. `docs/GATO_RECORDATORIOS.md` queda como puntero.
+
+**Evidencia.**
+
+| Verificación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **365 passed** (357 + 8 de `formato_whatsapp`) |
+| Recordatorio con `0990000013` | fila guardada como `593990000013` |
+| `sandbox_outbox` | id 20, destino `593990000013`, 19:00:10 |
+
+**Decisión.** Se normaliza en el notificador además de en el alta: el número
+local en el CRM es un dato de entrada, no un error, y así cualquier llamador
+(trips incluidos) queda cubierto. Alternativa descartada: normalizar solo al
+crear, que dejaba los avisos de mixer con el mismo defecto.
+
+**Próximo paso exacto.** Revisar `docs/GATO_SECRETARIA.md` §15 y decidir P0-2
+(¿aprobación previa obligatoria?) antes de desplegar al VPS.
+
+### Addendum 2 (misma sesión) — auditoría adversarial y documento v1.1
+
+**Objetivo.** Atacar la implementación antes de llamarla terminada. El
+documento 1.0 afirmaba cosas que el código no cumplía.
+
+**Fallos demostrados (salida real, no teoría).**
+
+| # | Fallo | Salida |
+|---|---|---|
+| B1 | "a las 7 de la mañana" | programa **mañana 19:00** |
+| B1b | Dos horas en una frase | toma la primera (18:40) y no la del recordatorio (17:00) |
+| B2 | Cancelar en `ENVIANDO` | devuelve 404 y el mensaje sale |
+| B3 | Caída tras enviar | la recuperación de 5 min reenvía |
+| B4 | `conversacion_id` / `creado_por` | NULL y `"panel"` en 2/2 filas |
+| B5 | Doble clic | no hay idempotencia: 2 filas |
+| B6 | "programa de mantenimiento" | pide destinatario (falso positivo) |
+| B7 | `021234567` | `593021234567` (fijo mal normalizado) |
+| B8 | `ENVIADO` | 2xx de Evolution, no entrega |
+
+**Hecho.**
+
+1. `docs/GATO_SECRETARIA.md` **v1.1**: separa garantías de promesas, documenta
+   B1–B8 con salida, redefine el tope diario como valor configurable
+   (`gato.limite_envios_dia`, default NULL = PENDIENTE, no se inventa la cifra),
+   decide el parser determinista (solo formatos inequívocos), mantiene el número
+   dictado **marcado** como `origen_destino=DICTADO` y reescribe el paquete de
+   Carbon como C1–C7.
+2. Estado real declarado: **prototipo verificado en local**, no desplegado; la
+   tabla no existe en el VPS (verificado: `count = 0`).
+
+**Decisión.** El número dictado se conserva: es un caso operativo real ("el
+dueño pidió que llamen al maestro"). Se resuelve con trazabilidad, no
+prohibiéndolo. Alternativa descartada: exigir siempre cliente registrado, que
+frena la operación.
+
+**Próximo paso exacto.** Ejecutar C1 (confirmación) y C2 (tope diario) con el
+paquete de Carbon; no desplegar antes.
+
+### Addendum 3 (misma sesión) — v6.15: ratificación implementada
+
+**Decisiones de Dirección (2026-11-12).**
+
+1. **Ratificación obligatoria:** sí, Gato debe pedir confirmación.
+2. **El chat es interno:** solo Julio y Secretaría lo usan; el cliente solo
+   recibe notificaciones. Por eso **se descarta el tope diario** como control
+   anti-abuso (queda anotado para si algún día el acceso se abre).
+3. **Hora con IA:** el modelo interpreta el lenguaje natural; el backend calcula
+   la hora en Ecuador.
+4. **Trazabilidad:** guardar siempre quién y en qué conversación.
+
+**Hecho.**
+
+1. **Migración 076:** estado `BORRADOR`, `origen_destino` (`CRM`/`DICTADO`),
+   `confirmado_por`, `confirmado_at`, `clave_idempotencia` única.
+2. **`recordatorios.py`:** crear nace en BORRADOR y devuelve la lectura de
+   vuelta; `confirmar`, `descartar`, `pendiente_de`; el "sí"/"no" se resuelve
+   en el router, sin depender del LLM.
+3. **Parser corregido:** "a las 7 de la mañana" → 07:00; dos horas → la última;
+   fijos `021234567` → `59321234567`.
+4. **Hora sin ambigüedad:** el LLM pasa la frase, no un ISO; `render_prompt`
+   muestra hora local. Se corrigió un envío 5 h corrido detectado en la prueba.
+5. **Trazabilidad real:** `conversacion_id`, `creado_por` y `confirmado_por`
+   poblados; `gato._actor` ya no descarta el actor de la sesión.
+6. **Carrera de cancelación:** el despachador relee `estado` antes de enviar.
+7. **Bug de SQL:** `ON CONFLICT` contra índice parcial necesita el predicado
+   `WHERE clave_idempotencia IS NOT NULL`; sin eso toda creación fallaba y caía
+   al modo determinista.
+8. **Doc v1.2** con el flujo nuevo y el paquete de Carbon renumerado (C8–C12).
+
+**Evidencia.**
+
+| Verificación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **372 passed** |
+| Crear con "en 3 minutos" (19:37) | BORRADOR a las **19:40**, hora correcta |
+| "sí" | `PENDIENTE`, `confirmado_por=julio` |
+| Tick | `ENVIADO` 19:40:37, outbox 22 |
+| "no" | `CANCELADO`, sin outbox |
+| Número dictado | `origen_destino=DICTADO`, `593990000014`, aviso |
+| Doble intención de hora | la última (17:00, no 18:40) |
+
+Evidencia completa: `.agents/evidencias/gato_ratificacion_2026-11-12.txt`.
+
+**Bloqueos abiertos.** Número inexistente en WhatsApp (C8), UI en el panel (C9),
+documento por WhatsApp (C10), acuse de entrega (C11), test de integración con
+base real (C12) y **despliegue al VPS** (la 075/076 no están aplicadas allá).
+
+**Próximo paso exacto.** Probar en `/panel` el flujo "prepara → sí" con el perfil
+de Secretaría y, si responde bien, desplegar 075/076 al VPS antes de usar un
+número real.
+
+### Addendum 4 (misma sesión) — v6.16: adjuntos, "ahora mismo" y ratificación tardía
+
+**Origen.** Prueba real de Julio: "revisa si el Ing Reyes nos envió el pago",
+luego "notifícale al 0967491847... pásale la factura", "ahora mismo", "19:50".
+El mensaje nunca salió.
+
+**Diagnóstico (con base, no suposición).** La fila `98d4e995` quedó en
+`BORRADOR` sin `confirmado_por`: faltó el "sí". Además, `confirmar` rechazaba
+cuando la hora ya había pasado, así que la ratificación tardía era un callejón
+sin salida. Y "pásale la factura" viajaba como texto: no existía envío de
+documentos.
+
+**Hecho.**
+
+1. `parsear_cuando` acepta "ahora mismo", "ya", "de una", "en este momento".
+2. `confirmar` reprograma con `GREATEST(programado_at, now())`: ya no rechaza.
+3. Mensaje: verbos ampliados (`notifícale`, `pásale`, `pídele`, ...).
+4. Adjuntos: migración 077 (`media_id`), `enviar_documento()` en los tres
+   notificadores, despachador que carga el archivo del sandbox o del CDN.
+5. Migración 078: el outbox admite `DOCUMENTO` (el primer intento falló con
+   `CheckViolationError`; el reintento funcionó).
+6. `adjuntar_factura` y `factura_de` en la herramienta; aviso si es ficticia.
+
+**Evidencia.**
+
+| Verificación | Resultado |
+|---|---|
+| Confirmar 4 min tarde | `ENVIADO`, outbox 23 (texto) |
+| "ahora mismo" + número dictado + factura | `BORRADOR` con `origen=DICTADO` y adjunto PRUEBA-0001 |
+| "sí" | `ENVIADO` en el tick, outbox 25 |
+| Outbox 25 | `DOCUMENTO`, `application/pdf`, 132.932 bytes |
+| `pytest` | **374 passed** |
+
+Evidencia completa: `.agents/evidencias/gato_adjuntos_2026-11-12.txt`.
+
+**Decisión.** El texto dictado no se reescribe aunque el adjunto lo haga
+redundante ("pásale la factura" + PDF). Se respeta la literalidad; el aviso de
+que va adjunta se agrega en la ratificación, no en el mensaje.
+
+**Pendiente.** Desplegar 075–078 al VPS; número vivo (C8); UI (C9); acuse (C11);
+test de integración (C12).

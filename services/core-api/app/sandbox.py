@@ -48,6 +48,29 @@ class SandboxNotifier:
         )
         return True
 
+    async def enviar_documento(
+        self,
+        telefono: str,
+        nombre: str,
+        mimetype: str,
+        contenido: bytes,
+        texto: str | None = None,
+    ) -> bool:
+        await self.repo.registrar_outbox(
+            canal="WHATSAPP",
+            destino=telefono,
+            tipo="DOCUMENTO",
+            contenido=f"{nombre} · {texto or ''}".strip(" ·"),
+            metadatos={
+                "modo": "SANDBOX",
+                "proveedor": "evolution",
+                "mimetype": mimetype,
+                "bytes": len(contenido),
+                "archivo": nombre,
+            },
+        )
+        return True
+
 
 @dataclass
 class SandboxBunnyStorageClient:

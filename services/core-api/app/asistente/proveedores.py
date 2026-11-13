@@ -71,6 +71,60 @@ PARAMS: dict[str, dict[str, Any]] = {
     },
     "empresa_info": {},
     "salud": {},
+    "recordatorio_crear": {
+        "destinatario": {
+            "type": "string",
+            "description": (
+                "Nombre exacto del cliente en el CRM, o un número con código "
+                "de país. Nunca inventes el número: si no está en el CRM, pídelo."
+            ),
+        },
+        "mensaje": {
+            "type": "string",
+            "description": (
+                "Texto exacto que se enviará por WhatsApp, tal como lo dictó el "
+                "usuario. No agregues ni quites información."
+            ),
+        },
+        "cuando": {
+            "type": "string",
+            "description": (
+                "La hora tal como la dijo el usuario, sin convertirla a fecha "
+                "absoluta: '18:40', 'en 5 minutos', 'ahora mismo', 'mañana a las 9'. "
+                "El backend calcula la fecha en hora de Ecuador."
+            ),
+        },
+        "adjuntar_factura": {
+            "type": "boolean",
+            "description": (
+                "true si el usuario pide pasar, enviar o adjuntar la factura. "
+                "Nunca preguntes por el contenido: solo marca la bandera."
+            ),
+        },
+        "factura_de": {
+            "type": "string",
+            "description": (
+                "Opcional: cliente al que pertenece la factura, si es distinto "
+                "del destinatario (ej. 'Ing. Reyes')."
+            ),
+        },
+    },
+    "recordatorio_listar": {},
+    "recordatorio_confirmar": {
+        "recordatorio_id": {
+            "type": "string",
+            "description": "Opcional: id del borrador. Si se omite, usa el pendiente del hilo.",
+        }
+    },
+    "recordatorio_descartar": {
+        "recordatorio_id": {
+            "type": "string",
+            "description": "Opcional: id del borrador. Si se omite, usa el pendiente del hilo.",
+        }
+    },
+    "recordatorio_cancelar": {
+        "recordatorio_id": {"type": "string", "description": "id del recordatorio."}
+    },
 }
 
 REQUERIDOS: dict[str, list[str]] = {
@@ -94,6 +148,11 @@ REQUERIDOS: dict[str, list[str]] = {
     "resultados": ["desde", "hasta"],
     "empresa_info": [],
     "salud": [],
+    "recordatorio_crear": ["destinatario", "mensaje", "cuando"],
+    "recordatorio_listar": [],
+    "recordatorio_confirmar": [],
+    "recordatorio_descartar": [],
+    "recordatorio_cancelar": ["recordatorio_id"],
 }
 
 
@@ -226,7 +285,7 @@ async def responder_llm(
                     params = json.loads(fn.get("arguments") or "{}")
                 except json.JSONDecodeError:
                     params = {}
-                rs = await _ejecutar_accion(pilar, accion, params, biblio)
+                rs = await _ejecutar_accion(pilar, accion, params, biblio, actor)
                 resultados.extend(rs)
                 mensajes.append(
                     {

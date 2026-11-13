@@ -65,6 +65,7 @@ from app.m1_whatsapp.models import (  # noqa: E402
     MessageBatch,
     Rol,
     extraer_referencia,
+    formato_whatsapp,
     normalizar_codigo_mixer,
     normalizar_telefono,
 )
@@ -206,6 +207,24 @@ def _pipeline(
 )
 def test_normalizar_telefono(crudo: object, esperado: str) -> None:
     assert normalizar_telefono(crudo) == esperado
+
+
+@pytest.mark.parametrize(
+    ("crudo", "esperado"),
+    [
+        ("0990000013", "593990000013"),
+        ("990000013", "593990000013"),
+        ("593990000013", "593990000013"),
+        ("+593 99 000 0013", "593990000013"),
+        ("00593990000013", "593990000013"),
+        ("021234567", "59321234567"),
+        ("", ""),
+        (None, ""),
+        ("12345", "12345"),
+    ],
+)
+def test_formato_whatsapp_para_evolution(crudo: object, esperado: str) -> None:
+    assert formato_whatsapp(crudo) == esperado
 
 
 @pytest.mark.parametrize(

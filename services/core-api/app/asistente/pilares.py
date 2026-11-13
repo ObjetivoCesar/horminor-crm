@@ -198,6 +198,43 @@ PILARES: dict[str, dict[str, Any]] = {
             },
         },
     },
+    "recordatorios": {
+        "descripcion": (
+            "Mensajes programados por WhatsApp: Gato prepara la tarea, el "
+            "usuario la ratifica y el despachador la envía a la hora indicada."
+        ),
+        "roles": ("SUPERADMIN", "SECRETARIA"),
+        "acciones": {
+            "recordatorio_crear": {
+                "consulta": "recordatorio_crear",
+                "roles": ("SUPERADMIN", "SECRETARIA"),
+                "descripcion": (
+                    "Prepara un mensaje de WhatsApp a un cliente para una hora "
+                    "exacta. Queda en BORRADOR hasta que el usuario lo ratifique."
+                ),
+            },
+            "recordatorio_confirmar": {
+                "consulta": "recordatorio_confirmar",
+                "roles": ("SUPERADMIN", "SECRETARIA"),
+                "descripcion": "Ratifica el borrador pendiente y lo programa.",
+            },
+            "recordatorio_descartar": {
+                "consulta": "recordatorio_descartar",
+                "roles": ("SUPERADMIN", "SECRETARIA"),
+                "descripcion": "Descarta el borrador pendiente sin enviarlo.",
+            },
+            "recordatorio_listar": {
+                "consulta": "recordatorio_listar",
+                "roles": ("SUPERADMIN", "SECRETARIA"),
+                "descripcion": "Lista los recordatorios pendientes.",
+            },
+            "recordatorio_cancelar": {
+                "consulta": "recordatorio_cancelar",
+                "roles": ("SUPERADMIN", "SECRETARIA"),
+                "descripcion": "Cancela un recordatorio pendiente por su id.",
+            },
+        },
+    },
 }
 
 

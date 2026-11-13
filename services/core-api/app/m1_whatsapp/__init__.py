@@ -45,6 +45,7 @@ from .models import (
     ReferenciaViaje,
     Rol,
     extraer_referencia,
+    formato_whatsapp,
     normalizar_telefono,
 )
 from .pipeline import ResultadoLote, WhatsAppPipeline
@@ -83,6 +84,7 @@ __all__ = [
     "construir_juez",
     "construir_runtime",
     "extraer_referencia",
+    "formato_whatsapp",
     "normalizar_telefono",
     "router",
 ]

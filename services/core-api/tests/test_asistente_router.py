@@ -17,7 +17,16 @@ from app.asistente.orquestador import Respuesta  # noqa: E402
 
 
 def _cliente(monkeypatch) -> TestClient:
-    async def falso(pregunta: str, rol: str, biblio, nombre=None, historial=None):
+    async def falso(
+        pregunta: str,
+        rol: str,
+        biblio,
+        nombre=None,
+        historial=None,
+        actor_id="panel",
+        conversacion_id=None,
+        modo_envio="",
+    ):
         return Respuesta(f"{rol}:{pregunta}", "OK")
 
     monkeypatch.setattr(mod, "responder_detallado", falso)

@@ -21,18 +21,31 @@ __all__ = [
 ]
 
 
-def _actor(rol: str, nombre: str | None = None) -> Actor:
+def _actor(
+    rol: str,
+    nombre: str | None = None,
+    actor_id: str = "panel",
+    conversacion_id: str | None = None,
+    modo_envio: str = "",
+) -> Actor:
     rol = rol.upper()
     if rol == "JULIO":
         rol = "SUPERADMIN"
         nombre = nombre or "Julio"
-    if nombre:
-        return Actor(nombre=nombre, rol=rol)
-    if rol == "SUPERADMIN":
-        return Actor(nombre="Julio", rol=rol)
-    if rol == "SECRETARIA":
-        return Actor(nombre="Secretaría", rol=rol)
-    return Actor(nombre=rol.title(), rol=rol)
+    if not nombre:
+        if rol == "SUPERADMIN":
+            nombre = "Julio"
+        elif rol == "SECRETARIA":
+            nombre = "Secretaría"
+        else:
+            nombre = rol.title()
+    return Actor(
+        nombre=nombre,
+        rol=rol,
+        actor_id=actor_id,
+        conversacion_id=conversacion_id,
+        modo_envio=modo_envio,
+    )
 
 
 async def responder_detallado(
@@ -41,9 +54,20 @@ async def responder_detallado(
     biblio: Bibliotecario,
     nombre: str | None = None,
     historial: list[dict[str, str]] | None = None,
+    actor_id: str = "panel",
+    conversacion_id: str | None = None,
+    modo_envio: str = "",
 ) -> Respuesta:
     return await _responder(
-        pregunta, _actor(rol, nombre), biblio, historial=historial
+        pregunta,
+        _actor(
+            rol, nombre,
+            actor_id=actor_id,
+            conversacion_id=conversacion_id,
+            modo_envio=modo_envio,
+        ),
+        biblio,
+        historial=historial,
     )
 
 
@@ -53,8 +77,15 @@ async def responder(
     biblio: Bibliotecario,
     nombre: str | None = None,
     historial: list[dict[str, str]] | None = None,
+    actor_id: str = "panel",
+    conversacion_id: str | None = None,
+    modo_envio: str = "",
 ) -> str:
     respuesta = await responder_detallado(
-        pregunta, rol, biblio, nombre, historial=historial
+        pregunta, rol, biblio, nombre,
+        historial=historial,
+        actor_id=actor_id,
+        conversacion_id=conversacion_id,
+        modo_envio=modo_envio,
     )
     return respuesta.texto

@@ -330,7 +330,29 @@ def _salud(r: Resultado, actor_rol: str, actor_nombre: str) -> str:
     return "\n".join(lineas)
 
 
+def _recordatorio(r: Resultado, actor_rol: str, actor_nombre: str) -> str:
+    if r.estado in ("ACL", "NO_CONECTADA", "PROPUESTA", "ERROR"):
+        return f"{_saludo(actor_rol, actor_nombre)}, {r.nota or 'no puedo con esa acción'}."
+    if r.consulta_id == "recordatorio_listar" and r.ok:
+        filas = r.datos or []
+        lineas = [f"{_saludo(actor_rol, actor_nombre)}, recordatorios pendientes:"]
+        for f in filas:
+            lineas.append(f"- {f['programado_local']} · {f['destinatario']}: {f['mensaje']}")
+        lineas.append(_traza(r))
+        return "\n".join(lineas)
+    # crear, cancelar y los vacios devuelven la nota tal cual: ya viene redactada.
+    return r.nota or "Listo."
+
+
 def _parte(r: Resultado, actor_rol: str, actor_nombre: str) -> str:
+    if r.consulta_id in (
+        "recordatorio_crear",
+        "recordatorio_confirmar",
+        "recordatorio_descartar",
+        "recordatorio_listar",
+        "recordatorio_cancelar",
+    ):
+        return _recordatorio(r, actor_rol, actor_nombre)
     if r.estado in ("ACL", "NO_CONECTADA", "PROPUESTA", "ERROR"):
         return ""
     if r.estado == "VACIO":
