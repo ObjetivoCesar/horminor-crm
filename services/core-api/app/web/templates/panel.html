@@ -927,7 +927,8 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
 }
 .sec-accion.primary {
   background: linear-gradient(180deg, var(--accent-cat-amber-bright) 0%, var(--accent-cat-amber) 100%);
-  border-color: rgba(251, 191, 36, 0.75);
+  color: #1A1200;
+  border: 1px solid rgba(251, 191, 36, 0.75);
   box-shadow: 0 8px 18px -12px rgba(245, 158, 11, 0.55);
 }
 .sec-accion.primary .sec-accion-txt strong,
@@ -2113,6 +2114,18 @@ tbody tr:last-child td { border-bottom: 0; }
 .dash-panel.active { display: block; }
 .dash-subview { display: none; }
 .dash-subview.active { display: block; }
+
+/* Graficos SVG del tablero: sin CDN ni build */
+.dash-chart { width: 100%; overflow-x: auto; }
+.dash-chart svg { display: block; width: 100%; height: auto; min-width: 520px; }
+.dash-chart .chart-axis { fill: var(--text-muted); font-size: 10px; font-family: inherit; }
+.dash-chart .chart-empty {
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--surface-row-pill);
+  color: var(--text-muted);
+  font-size: 12px;
+}
 .dash2-lower.single { grid-template-columns: 1fr; }
 
 .inv-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
@@ -2132,6 +2145,23 @@ tbody tr:last-child td { border-bottom: 0; }
 .inv-card .inv-estado { margin-top: auto; font-size: 10px; font-weight: 700; letter-spacing: .05em; color: var(--accent-cat-amber); }
 .inv-card.sin-dato .inv-value { color: var(--text-muted); }
 
+.cob-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 12px; }
+.cob-presets button {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 6px 11px;
+  background: var(--surface-row-pill);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cob-presets button:hover { color: var(--text-pure); }
+.cob-presets button.active {
+  background: rgba(245, 158, 11, .16);
+  border-color: rgba(245, 158, 11, .45);
+  color: var(--accent-cat-amber);
+}
 .cob-cubos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .cob-cubo {
   padding: 16px;
@@ -2657,7 +2687,43 @@ tbody tr:last-child td { border-bottom: 0; }
       </div>
     </div>
 
-    <div class="dash-resumen metric-grid">
+    <!-- 1. BANNER DE VENTANAS: primero, encima de KPIs y graficos -->
+    <div class="card sec-ventanilla" id="julio-ventanilla">
+      <div>
+        <span class="sec-eyebrow">TABLERO DE JULIO</span>
+        <h2>¿Qué necesitas decidir hoy?</h2>
+        <p class="small muted" style="margin:0">Capacidad, material y caja. Los números salen de la base; si falta un dato, se muestra el vacío.</p>
+      </div>
+      <div class="sec-acciones">
+        <button type="button" class="sec-accion primary" role="tab" aria-selected="true"
+                data-dash-tab="operacion" onclick="setDashTab('operacion')">
+          <span class="sec-accion-ico" aria-hidden="true">🚚</span>
+          <span class="sec-accion-txt"><strong>Operación y capacidad</strong><small>Qué puedo producir y entregar hoy</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button type="button" class="sec-accion" role="tab" aria-selected="false"
+                data-dash-tab="inventario_ventas" onclick="setDashTab('inventario_ventas')">
+          <span class="sec-accion-ico" aria-hidden="true">🧱</span>
+          <span class="sec-accion-txt"><strong>Inventario vs ventas</strong><small>Alcanza el material para lo vendido</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button type="button" class="sec-accion" role="tab" aria-selected="false"
+                data-dash-tab="inventario_fechas" onclick="setDashTab('inventario_fechas')">
+          <span class="sec-accion-ico" aria-hidden="true">📅</span>
+          <span class="sec-accion-txt"><strong>Inventario por fechas</strong><small>Consumo, merma y último conteo</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button type="button" class="sec-accion" role="tab" aria-selected="false"
+                data-dash-tab="cobranza" onclick="setDashTab('cobranza')">
+          <span class="sec-accion-ico" aria-hidden="true">💵</span>
+          <span class="sec-accion-txt"><strong>Cobranza y caja</strong><small>Qué está vencido y qué entra</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. KPI QUE CAMBIAN CON LA VENTANA -->
+    <div class="dash-resumen metric-grid kpi-window" data-kpi-window="operacion">
       <!-- Mercado: el número que importa -->
       <article class="metric-card metric-market">
         <div class="metric-head">
@@ -2730,36 +2796,83 @@ tbody tr:last-child td { border-bottom: 0; }
       </article>
     </div>
 
-    <nav class="dash-tabs" role="tablist" aria-label="Tablero operativo">
-      <button type="button" class="dash-tab active" role="tab" aria-selected="true"
-              data-dash-tab="ocupacion" onclick="setDashTab('ocupacion')">
-        <span class="dash-tab-ico" aria-hidden="true">🚚</span>
-        <span class="dash-tab-txt"><strong>Ocupación</strong><em>Mixers, viajes y capacidad</em></span>
-        <span class="dash-tab-chip" id="tab-chip-ocupacion">Hoy</span>
-      </button>
-      <button type="button" class="dash-tab" role="tab" aria-selected="false"
-              data-dash-tab="inventario" onclick="setDashTab('inventario')">
-        <span class="dash-tab-ico" aria-hidden="true">🧱</span>
-        <span class="dash-tab-txt"><strong>Inventario</strong><em>Cemento, arena, ripio y retardante</em></span>
-        <span class="dash-tab-chip" id="tab-chip-inventario">—</span>
-      </button>
-      <button type="button" class="dash-tab" role="tab" aria-selected="false"
-              data-dash-tab="cobranza" onclick="setDashTab('cobranza')">
-        <span class="dash-tab-ico" aria-hidden="true">💵</span>
-        <span class="dash-tab-txt"><strong>Cobranza</strong><em>Vencido, por vencer y saldo real</em></span>
-        <span class="dash-tab-chip" id="tab-chip-cobranza">—</span>
-      </button>
-    </nav>
+    <div class="metric-grid kpi-window" data-kpi-window="inventario_ventas" hidden>
+      <article class="metric-card">
+        <div class="metric-head"><span class="card-kicker">Cobertura crítica</span><span class="metric-chip">MRP</span></div>
+        <div class="sales-main"><strong id="kpi-inv-cobertura">—</strong><span>%</span></div>
+        <div class="sales-money" id="kpi-inv-material">—</div>
+        <div class="sales-foot"><div class="mini-stat"><span>Comprometido</span><strong id="kpi-inv-m3">—</strong></div><div class="mini-stat"><span>Stock neto</span><strong id="kpi-inv-neto">—</strong></div></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="card-kicker">Requerido por ventas</span><span class="metric-chip">404 m³</span></div>
+        <div class="sales-main"><strong id="kpi-inv-necesario">—</strong><span>sacos</span></div>
+        <div class="sales-money">Cemento para las órdenes confirmadas</div>
+        <div class="sales-foot"><div class="mini-stat"><span>FC-210 disp.</span><strong id="kpi-inv-fc210">—</strong></div><div class="mini-stat"><span>Cuello</span><strong id="kpi-inv-cuello">—</strong></div></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="card-kicker">Estado del stock</span><span class="metric-chip">Triple lectura</span></div>
+        <div class="sales-main"><strong id="kpi-inv-sinconteo">—</strong><span>materiales</span></div>
+        <div class="sales-money">Sin fecha de conteo físico</div>
+        <div class="sales-foot"><div class="mini-stat"><span>Movimientos</span><strong id="kpi-inv-movs">—</strong></div><div class="mini-stat"><span>Asimetrías</span><strong id="kpi-inv-asim">—</strong></div></div>
+      </article>
+    </div>
 
+    <div class="metric-grid kpi-window" data-kpi-window="inventario_fechas" hidden>
+      <article class="metric-card">
+        <div class="metric-head"><span class="card-kicker">Movimientos</span><span class="metric-chip">Kardex</span></div>
+        <div class="sales-main"><strong id="kpi-fechas-movs">—</strong><span>teóricos</span></div>
+        <div class="sales-money">Sin movimientos REAL ni COMPRA</div>
+        <div class="sales-foot"><div class="mini-stat"><span>Rango</span><strong>14 días</strong></div><div class="mini-stat"><span>Conteo</span><strong id="kpi-fechas-conteo">—</strong></div></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="card-kicker">Consumo de cemento</span><span class="metric-chip">Teórico</span></div>
+        <div class="sales-main"><strong id="kpi-fechas-consumo">—</strong><span>sacos</span></div>
+        <div class="sales-money">8-nov + 9-nov</div>
+        <div class="sales-foot"><div class="mini-stat"><span>Asimetrías</span><strong id="kpi-fechas-asim">—</strong></div><div class="mini-stat"><span>Merma real</span><strong>SIN LECTURA</strong></div></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="card-kicker">Último conteo</span><span class="metric-chip">Bodega</span></div>
+        <div class="sales-main"><strong id="kpi-fechas-ultimo">—</strong><span>fecha</span></div>
+        <div class="sales-money">Sin conteo físico registrado</div>
+        <div class="sales-foot"><div class="mini-stat"><span>Materiales</span><strong>4</strong></div><div class="mini-stat"><span>Estado</span><strong>SIN CONTEO</strong></div></div>
+      </article>
+    </div>
+
+    <div class="metric-grid kpi-window" data-kpi-window="cobranza" hidden>
+      <article class="metric-card">
+        <div class="metric-head"><span class="card-kicker">Saldo real</span><span class="metric-chip">Único</span></div>
+        <div class="sales-main"><strong id="kpi-cob-saldo">—</strong><span>USD</span></div>
+        <div class="sales-money">Documento único, sin duplicar la factura</div>
+        <div class="sales-foot"><div class="mini-stat"><span>Clientes</span><strong id="kpi-cob-clientes">—</strong></div><div class="mini-stat"><span>Documentos</span><strong id="kpi-cob-docs">—</strong></div></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="card-kicker">Exigible hoy</span><span class="metric-chip">Entrega</span></div>
+        <div class="sales-main"><strong id="kpi-cob-exigible">—</strong><span>USD</span></div>
+        <div class="sales-money">Recepción confirmada o factura real</div>
+        <div class="sales-foot"><div class="mini-stat"><span>Con salida</span><strong id="kpi-cob-salida">—</strong></div><div class="mini-stat"><span>Sin salir</span><strong id="kpi-cob-sinsalir">—</strong></div></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="card-kicker">Cartera ciega</span><span class="metric-chip">Sin fecha</span></div>
+        <div class="sales-main"><strong id="kpi-cob-sinfecha">—</strong><span>docs</span></div>
+        <div class="sales-money" id="kpi-cob-sinfecha-monto">—</div>
+        <div class="sales-foot"><div class="mini-stat"><span>Caja 7d</span><strong id="kpi-cob-caja7">—</strong></div><div class="mini-stat"><span>DSO</span><strong id="kpi-cob-dso">—</strong></div></div>
+      </article>
+    </div>
+
+    <!-- 3. SUBMENU DE LA VENTANA ACTIVA -->
     <div class="dash-subnavs">
-      <div class="dash-subnav active" data-subnav="ocupacion">
-        <button type="button" class="active" onclick="setDashSub('ocupacion','resumen',this)">Resumen</button>
-        <button type="button" onclick="setDashSub('ocupacion','mixers',this)">Mixers</button>
-        <button type="button" onclick="setDashSub('ocupacion','agenda',this)">Agenda</button>
+      <div class="dash-subnav active" data-subnav="operacion">
+        <button type="button" class="active" onclick="setDashSub('operacion','resumen',this)">Resumen</button>
+        <button type="button" onclick="setDashSub('operacion','mixers',this)">Mixers</button>
+        <button type="button" onclick="setDashSub('operacion','agenda',this)">Agenda</button>
       </div>
-      <div class="dash-subnav" data-subnav="inventario">
-        <button type="button" class="active" onclick="setDashSub('inventario','materiales',this)">Materiales</button>
-        <button type="button" onclick="setDashSub('inventario','fechas',this)">Por fechas</button>
+      <div class="dash-subnav" data-subnav="inventario_ventas">
+        <button type="button" class="active" onclick="setDashSub('inventario_ventas','cobertura',this)">Cobertura</button>
+        <button type="button" onclick="setDashSub('inventario_ventas','detalle',this)">Detalle</button>
+      </div>
+      <div class="dash-subnav" data-subnav="inventario_fechas">
+        <button type="button" class="active" onclick="setDashSub('inventario_fechas','consumo',this)">Consumo</button>
+        <button type="button" onclick="setDashSub('inventario_fechas','conteos',this)">Conteos</button>
       </div>
       <div class="dash-subnav" data-subnav="cobranza">
         <button type="button" class="active" onclick="setDashSub('cobranza','resumen',this)">Resumen</button>
@@ -2767,10 +2880,21 @@ tbody tr:last-child td { border-bottom: 0; }
       </div>
     </div>
 
-    <div class="dash-panel active" data-dash-panel="ocupacion">
+    <!-- 4. PANELES -->
+    <div class="dash-panel active" data-dash-panel="operacion">
       <div class="dash-subview active" data-sub-view="resumen">
         <div class="notice info" id="op-capacidad-nota">Leyendo capacidad declarada…</div>
-        <div class="dash2-section">
+        <div class="dash-card" style="margin-top:12px">
+          <div class="donut-head">
+            <div><p class="card-kicker">Capacidad y despacho</p><h2>Comprometido contra capacidad</h2></div>
+            <span class="badge neutral" id="chart-op-estado">—</span>
+          </div>
+          <div id="chart-op-bullet" class="dash-chart"></div>
+          <div id="chart-op-serie" class="dash-chart" style="margin-top:10px"></div>
+          <div id="chart-op-resistencia" class="dash-chart" style="margin-top:10px"></div>
+        </div>
+
+        <div class="dash2-section" style="margin-top:16px">
           <div class="dash2-section-head">
             <div>
               <span class="card-kicker">Obras activas</span>
@@ -2817,14 +2941,16 @@ tbody tr:last-child td { border-bottom: 0; }
           <div class="mixer-list" id="mixers-lista"></div>
         </div>
       </div>
+
+      <div class="dash-subview" data-sub-view="agenda">
         <div class="dash-card cal-card" data-modulo="agenda_despachos">
           <div id="agenda-mount-dashboard"></div>
         </div>
       </div>
     </div>
 
-    <div class="dash-panel" data-dash-panel="inventario">
-      <div class="dash-subview active" data-sub-view="materiales">
+    <div class="dash-panel" data-dash-panel="inventario_ventas">
+      <div class="dash-subview active" data-sub-view="cobertura">
         <div class="dash2-section-head">
           <div>
             <span class="card-kicker">Stock</span>
@@ -2834,13 +2960,43 @@ tbody tr:last-child td { border-bottom: 0; }
         </div>
         <div class="inv-grid" id="inv-grid"></div>
         <p class="muted small" id="inv-nota"></p>
+        <div class="dash-card" style="margin-top:12px">
+          <div class="donut-head">
+            <div><p class="card-kicker">Cobertura</p><h2>Requerido vs stock</h2></div>
+            <span class="badge neutral">Triple lectura</span>
+          </div>
+          <div id="chart-inventario" class="dash-chart"></div>
+        </div>
       </div>
 
-      <div class="dash-subview" data-sub-view="fechas">
+      <div class="dash-subview" data-sub-view="detalle">
+        <div class="dash-card">
+          <div class="donut-head">
+            <div><p class="card-kicker">Detalle</p><h2>Materiales y cobertura</h2></div>
+            <span class="badge neutral" id="inv-detalle-chip">—</span>
+          </div>
+          <div class="table-wrap" id="inv-detalle"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-panel" data-dash-panel="inventario_fechas">
+      <div class="dash-subview active" data-sub-view="consumo">
+        <div class="dash-card">
+          <div class="donut-head">
+            <div><p class="card-kicker">Kardex</p><h2>Consumo por día</h2></div>
+            <span class="badge neutral" id="chart-fechas-chip">—</span>
+          </div>
+          <div id="chart-fechas" class="dash-chart"></div>
+        </div>
+      </div>
+
+      <div class="dash-subview" data-sub-view="conteos">
         <div class="dash-card">
           <p class="card-kicker">Inventario por fechas</p>
           <h2>Sin conteos registrados</h2>
           <p class="muted small" id="inv-fechas-nota">El stock proyectado necesita al menos un conteo físico con fecha. Todavía no hay ninguno: por eso el tablero muestra el vacío y no un número estimado.</p>
+          <div class="table-wrap" id="inv-conteos"></div>
         </div>
       </div>
     </div>
@@ -2855,7 +3011,30 @@ tbody tr:last-child td { border-bottom: 0; }
           <span class="badge neutral" id="cob-fuente">—</span>
         </div>
         <p class="cob-saldo-line">Saldo real por cobrar: <strong id="cob-saldo-real">—</strong></p>
+        <div class="cob-presets" id="cob-presets">
+          <button type="button" class="active" onclick="cargarCobranzaPreset('TODOS', this)">Todos</button>
+          <button type="button" onclick="cargarCobranzaPreset('URGENCIA_7D', this)">Urgencia 7 días</button>
+          <button type="button" onclick="cargarCobranzaPreset('MORA_ACTIVA', this)">Mora</button>
+          <button type="button" onclick="cargarCobranzaPreset('CLIENTES_GRANDES', this)">Clientes grandes</button>
+          <button type="button" onclick="cargarCobranzaPreset('SIN_VENCIMIENTO', this)">Sin vencimiento</button>
+          <button type="button" onclick="cargarCobranzaPreset('CUPO_EXCEDIDO', this)">Cupo excedido</button>
+          <button type="button" onclick="cargarCobranzaPreset('LISTO_PARA_COBRAR_ENTREGADO', this)">Listo para cobrar</button>
+        </div>
         <div class="cob-cubos" id="cob-cubos"></div>
+        <div class="dash-card" style="margin-top:12px">
+          <div class="donut-head">
+            <div><p class="card-kicker">Antigüedad</p><h2>Aging por documento</h2></div>
+            <span class="badge neutral">8 cubos</span>
+          </div>
+          <div id="chart-cobranza" class="dash-chart"></div>
+        </div>
+        <div class="dash-card" style="margin-top:12px">
+          <div class="donut-head">
+            <div><p class="card-kicker">Bandeja</p><h2>Documentos por cobrar</h2></div>
+            <span class="badge neutral" id="cob-docs-count">—</span>
+          </div>
+          <div class="table-wrap" id="cob-documentos"></div>
+        </div>
         <p class="muted small" id="cob-nota"></p>
       </div>
 
@@ -4293,8 +4472,12 @@ function renderObras() {
 function setDashTab(tab) {
   document.querySelectorAll('[data-dash-tab]').forEach(b => {
     const on = b.dataset.dashTab === tab;
+    b.classList.toggle('primary', on);
     b.classList.toggle('active', on);
     b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.querySelectorAll('[data-kpi-window]').forEach(k => {
+    k.hidden = k.dataset.kpiWindow !== tab;
   });
   document.querySelectorAll('[data-dash-panel]').forEach(p => {
     p.classList.toggle('active', p.dataset.dashPanel === tab);
@@ -4302,6 +4485,14 @@ function setDashTab(tab) {
   document.querySelectorAll('[data-subnav]').forEach(n => {
     n.classList.toggle('active', n.dataset.subnav === tab);
   });
+  const panel = document.querySelector('[data-dash-panel="' + tab + '"]');
+  if (panel) {
+    panel.querySelectorAll('[data-sub-view]').forEach((v, i) => v.classList.toggle('active', i === 0));
+  }
+  const nav = document.querySelector('[data-subnav="' + tab + '"]');
+  if (nav) nav.querySelectorAll('button').forEach((b, i) => b.classList.toggle('active', i === 0));
+  if (tab === 'operacion') montarAgendaDashboard();
+  renderChartsDash(tab);
 }
 
 function setDashSub(tab, sub, btn) {
@@ -4313,7 +4504,8 @@ function setDashSub(tab, sub, btn) {
   }
   const nav = document.querySelector('[data-subnav="' + tab + '"]');
   if (nav) nav.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
-  if (tab === 'ocupacion' && sub === 'agenda') montarAgendaDashboard();
+  if (tab === 'operacion' && sub === 'agenda') montarAgendaDashboard();
+  renderChartsDash(tab);
 }
 
 const CUBOS_COBRANZA = [
@@ -4431,6 +4623,22 @@ function renderCobranzaDash() {
       <div class="cob-cliente"><strong>${esc(c.nombre)}</strong><span>${money(Number(c.saldo || 0))}</span></div>
     `).join('') || '<p class="muted small">Ningún cliente con saldo pendiente.</p>';
   }
+  const docsHost = $('#cob-documentos');
+  if (docsHost) {
+    const docs = datos.documentos || [];
+    const count = $('#cob-docs-count');
+    if (count) count.textContent = docs.length + ' doc' + (docs.length === 1 ? '' : 's');
+    docsHost.innerHTML = docs.length ? `<table class="tabla-editor"><thead><tr>
+      <th>Documento</th><th>Cliente</th><th>Emisión</th><th>Vencimiento</th><th>Saldo</th><th>Cubo</th>
+    </tr></thead><tbody>${docs.map(d => `<tr>
+      <td>${esc(d.tipo_doc)} ${esc(d.doc_numero)}</td>
+      <td>${esc(d.cliente_nombre)}</td>
+      <td>${esc(String(d.fecha_emision || '').slice(0, 10))}</td>
+      <td>${d.fecha_vencimiento ? esc(String(d.fecha_vencimiento).slice(0, 10)) : 'SIN FECHA'}</td>
+      <td>${money(Number(d.saldo || 0))}</td>
+      <td>${esc(String(d.cubo_aging || '').replace(/_/g, ' '))}</td>
+    </tr>`).join('')}</tbody></table>` : '<p class="muted small">Sin documentos para este filtro.</p>';
+  }
   const nota = $('#cob-nota');
   if (nota) {
     const base = 'El monto es el total del documento, no el saldo pendiente. El saldo real por cliente sale de v_cliente_saldo.';
@@ -4446,6 +4654,221 @@ function renderCobranzaDash() {
   }
 }
 
+async function cargarCobranzaPreset(preset, btn) {
+  try {
+    const data = await api('/api/v1/dashboard/cobranza?preset=' + encodeURIComponent(preset));
+    state.cobranzaDash = data;
+    document.querySelectorAll('#cob-presets button').forEach(b => b.classList.toggle('active', b === btn));
+    renderCobranzaDash();
+    renderKpisDash();
+    renderChartsDash();
+  } catch(e) {
+    toast('Cobranza no disponible: ' + e.message, 'bad');
+  }
+}
+
+function _chartAxis(valor) { return esc(String(valor ?? '')); }
+
+function svgBars(rows, opts = {}) {
+  if (!rows || !rows.length) return '<div class="chart-empty">Sin datos para el rango.</div>';
+  const w = 720, h = 220, padL = 44, padR = 12, padT = 12, padB = 34;
+  const max = Math.max(1, ...rows.map(r => Math.max(Number(r.value) || 0, Number(r.value2) || 0)));
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const group = plotW / Math.max(1, rows.length);
+  const barW = Math.max(6, Math.min(18, group * 0.32));
+  const grid = [0, 0.5, 1].map(t => {
+    const y = padT + plotH - plotH * t;
+    return `<line x1="${padL}" x2="${w - padR}" y1="${y}" y2="${y}" stroke="rgba(148,163,184,.18)" stroke-width="1"/>`
+      + `<text x="${padL - 8}" y="${y + 4}" text-anchor="end" class="chart-axis">${num(max * t)}</text>`;
+  }).join('');
+  const bars = rows.map((r, i) => {
+    const x = padL + i * group + group / 2;
+    const v1 = Number(r.value) || 0, v2 = Number(r.value2) || 0;
+    const h1 = plotH * v1 / max, h2 = plotH * v2 / max;
+    const showLabel = rows.length <= 10 || i % 2 === 0;
+    return `${v1 ? `<rect x="${x - barW - 2}" y="${padT + plotH - h1}" width="${barW}" height="${h1}" rx="3" fill="${r.color || 'var(--accent-cat-amber)'}" opacity=".9"/>` : ''}`
+      + `${v2 ? `<rect x="${x + 2}" y="${padT + plotH - h2}" width="${barW}" height="${h2}" rx="3" fill="${r.color2 || 'rgba(148,163,184,.45)'}"/>` : ''}`
+      + `${showLabel ? `<text x="${x}" y="${h - 12}" text-anchor="middle" class="chart-axis">${_chartAxis(r.label)}</text>` : ''}`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(opts.aria || 'Gráfico de barras')}"><title>${esc(opts.aria || 'Gráfico de barras')}</title>${grid}${bars}</svg>`;
+}
+
+function svgHBars(rows, opts = {}) {
+  if (!rows || !rows.length) return '<div class="chart-empty">Sin datos.</div>';
+  const w = 720, rowH = 30, gap = 10, padL = 150, padR = 90, padT = 8, padB = 8;
+  const max = Math.max(1, Number(opts.max) || 0, ...rows.map(r => Number(r.value) || 0));
+  const h = padT + rows.length * (rowH + gap) + padB;
+  const plotW = w - padL - padR;
+  const bars = rows.map((r, i) => {
+    const y = padT + i * (rowH + gap);
+    const v = Number(r.value) || 0;
+    const bw = Math.max(0, Math.min(plotW, plotW * v / max));
+    return `<text x="${padL - 10}" y="${y + rowH / 2 + 4}" text-anchor="end" class="chart-axis">${_chartAxis(r.label)}</text>`
+      + `<rect x="${padL}" y="${y}" width="${plotW}" height="${rowH}" rx="6" fill="rgba(148,163,184,.12)"/>`
+      + `<rect x="${padL}" y="${y}" width="${bw}" height="${rowH}" rx="6" fill="${r.color || 'var(--accent-cat-amber)'}" opacity=".9"/>`
+      + `<text x="${padL + bw + 8}" y="${y + rowH / 2 + 4}" class="chart-axis">${_chartAxis(r.display ?? num(v))}</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(opts.aria || 'Gráfico de barras')}"><title>${esc(opts.aria || 'Gráfico de barras')}</title>${bars}</svg>`;
+}
+
+function svgBullet(valor, maximo, etiqueta, estado) {
+  const w = 720, h = 58, padL = 150, padR = 90, barH = 20, y = 18;
+  const plotW = w - padL - padR;
+  const v = valor == null ? 0 : Number(valor);
+  const m = maximo == null ? 0 : Number(maximo);
+  const pct = m > 0 ? Math.min(100, v / m * 100) : 0;
+  const texto = m > 0 ? `${num(v)} / ${num(m)} m³` : (estado || 'NO CONFIGURADO');
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(etiqueta)}"><title>${esc(etiqueta)}</title>`
+    + `<text x="${padL - 10}" y="${y + barH / 2 + 4}" text-anchor="end" class="chart-axis">${esc(etiqueta)}</text>`
+    + `<rect x="${padL}" y="${y}" width="${plotW}" height="${barH}" rx="6" fill="rgba(148,163,184,.12)"/>`
+    + `<rect x="${padL}" y="${y}" width="${Math.max(0, plotW * pct / 100)}" height="${barH}" rx="6" fill="var(--accent-cat-amber)" opacity=".9"/>`
+    + `<line x1="${padL + plotW}" x2="${padL + plotW}" y1="${y - 5}" y2="${y + barH + 5}" stroke="#F87171" stroke-width="2.5"/>`
+    + `<text x="${padL + plotW + 8}" y="${y + barH / 2 + 4}" class="chart-axis">${esc(texto)}</text></svg>`;
+}
+
+function _setText(id, valor) {
+  const el = $(id);
+  if (el) el.textContent = valor == null || valor === '' ? '—' : String(valor);
+}
+
+function renderKpisDash() {
+  const inv = (state.inventarioDash && state.inventarioDash.datos) || {};
+  const cob = (state.cobranzaDash && state.cobranzaDash.datos) || {};
+  const mats = inv.materiales || [];
+  const cemento = mats.find(m => m.codigo === 'CEMENTO') || {};
+  const medibles = mats.filter(m => m.cobertura_neta_registrada_pct != null);
+  const critico = medibles.slice().sort((a, b) => Number(a.cobertura_neta_registrada_pct) - Number(b.cobertura_neta_registrada_pct))[0] || {};
+  const alerta = inv.alerta_integridad_bodega || {};
+  const equivalencia = inv.ventas_equivalencia || {};
+  const ex = cob.desglose_exigibilidad || {};
+  const caja = cob.caja || {};
+  _setText('#kpi-inv-cobertura', critico.cobertura_neta_registrada_pct);
+  _setText('#kpi-inv-material', critico.nombre);
+  _setText('#kpi-inv-m3', equivalencia.m3_comprometidos);
+  _setText('#kpi-inv-neto', cemento.stock_neto_registrado);
+  _setText('#kpi-inv-necesario', cemento.necesario_ventas);
+  _setText('#kpi-inv-fc210', equivalencia.m3_fc210_disponibles_neto_kardex);
+  _setText('#kpi-inv-cuello', equivalencia.material_cuello_botella);
+  _setText('#kpi-inv-sinconteo', alerta.materiales_sin_conteo_count);
+  _setText('#kpi-inv-movs', alerta.movimientos_teoricos_count);
+  _setText('#kpi-inv-asim', alerta.viajes_asimetria_kardex_count);
+  _setText('#kpi-fechas-movs', alerta.movimientos_teoricos_count);
+  _setText('#kpi-fechas-consumo', cemento.consumo_30d);
+  _setText('#kpi-fechas-conteo', cemento.ultimo_conteo ? 'CON CONTEO' : 'SIN CONTEO');
+  _setText('#kpi-fechas-asim', alerta.viajes_asimetria_kardex_count);
+  _setText('#kpi-fechas-ultimo', cemento.ultimo_conteo || 'SIN CONTEO');
+  _setText('#kpi-cob-saldo', money(Number(cob.saldo_total || 0)));
+  _setText('#kpi-cob-clientes', (cob.clientes || []).length);
+  _setText('#kpi-cob-docs', cob.documentos_total);
+  _setText('#kpi-cob-exigible', money(Number(ex.recepcion_confirmada_o_facturada_usd || 0)));
+  _setText('#kpi-cob-salida', money(Number(ex.con_viaje_salido_planta_usd || 0)));
+  _setText('#kpi-cob-sinsalir', money(Number(ex.comprometido_sin_salida_planta_usd || 0)));
+  _setText('#kpi-cob-sinfecha', caja.documentos_sin_fecha_count);
+  _setText('#kpi-cob-sinfecha-monto', money(Number(caja.monto_sin_fecha || 0)) + ' sin fecha');
+  _setText('#kpi-cob-caja7', caja.esperada_7d == null ? 'SIN FECHA' : money(Number(caja.esperada_7d)));
+  _setText('#kpi-cob-dso', caja.dso_dias == null ? 'SIN PAGOS' : caja.dso_dias + ' días');
+}
+
+function renderInvDetalle() {
+  const host = $('#inv-detalle');
+  if (!host) return;
+  const mats = (state.inventarioDash && state.inventarioDash.datos && state.inventarioDash.datos.materiales) || [];
+  if (!mats.length) { host.innerHTML = '<p class="muted small">Sin materiales.</p>'; return; }
+  host.innerHTML = `<table class="tabla-editor"><thead><tr>
+    <th>Material</th><th>Declarado</th><th>Kardex</th><th>Corregido</th><th>Requerido</th><th>Cobertura</th><th>Estado</th>
+  </tr></thead><tbody>${mats.map(m => `<tr>
+    <td>${esc(m.nombre)}</td>
+    <td>${m.stock_declarado == null ? '—' : num(m.stock_declarado)}</td>
+    <td>${m.stock_neto_registrado == null ? '—' : num(m.stock_neto_registrado)}</td>
+    <td>${m.stock_neto_corregido_por_asimetria == null ? '—' : num(m.stock_neto_corregido_por_asimetria)}</td>
+    <td>${m.necesario_ventas == null ? '—' : num(m.necesario_ventas)}</td>
+    <td>${m.cobertura_neta_registrada_pct == null ? '—' : m.cobertura_neta_registrada_pct + ' %'}</td>
+    <td>${esc(String(m.estado_conservador || m.estado || '').replace(/_/g, ' '))}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function renderInvConteos() {
+  const host = $('#inv-conteos');
+  if (!host) return;
+  const mats = (state.inventarioDash && state.inventarioDash.datos && state.inventarioDash.datos.materiales) || [];
+  host.innerHTML = mats.length ? `<table class="tabla-editor"><thead><tr><th>Material</th><th>Último conteo</th><th>Estado</th></tr></thead><tbody>${mats.map(m => `<tr>
+    <td>${esc(m.nombre)}</td>
+    <td>${m.ultimo_conteo ? esc(m.ultimo_conteo.slice(0, 10)) : 'SIN CONTEO'}</td>
+    <td>${esc(String(m.estado || '').replace(/_/g, ' '))}</td>
+  </tr>`).join('')}</tbody></table>` : '<p class="muted small">Sin materiales.</p>';
+}
+
+function renderChartsDash() {
+  const op = (state.operacion && state.operacion.datos) || {};
+  const cap = op.capacidad || {};
+  const comp = op.comprometido || {};
+  const eficaz = cap.efectiva_m3_dia == null ? null : Number(cap.efectiva_m3_dia);
+  const bullet = $('#chart-op-bullet');
+  if (bullet) {
+    bullet.innerHTML = svgBullet(Number(comp.hoy_m3 || 0), eficaz, 'Comprometido hoy', cap.estado_configuracion);
+    _setText('#chart-op-estado', cap.estado_configuracion || 'NO_CONFIGURADO');
+  }
+  const serie = $('#chart-op-serie');
+  if (serie) {
+    serie.innerHTML = svgBars((op.serie_dias || []).map(d => ({
+      label: String(d.fecha || '').slice(5),
+      value: Number(d.m3_ejecutados || 0),
+      value2: Number(d.m3_programados_sin_salida || 0),
+      color: '#34D399',
+      color2: 'rgba(148,163,184,.45)'
+    })), {aria: 'Despacho por día: ejecutado vs programado'});
+  }
+  const resist = $('#chart-op-resistencia');
+  if (resist) {
+    resist.innerHTML = svgHBars((op.por_resistencia || []).map(r => ({
+      label: r.resistencia,
+      value: Number(r.m3 || 0),
+      display: num(r.m3) + ' m³',
+      color: '#06B6D4'
+    })), {aria: 'Mezcla por resistencia'});
+  }
+
+  const inv = (state.inventarioDash && state.inventarioDash.datos) || {};
+  const chartInv = $('#chart-inventario');
+  if (chartInv) {
+    const rows = (inv.materiales || []).filter(m => m.cobertura_neta_registrada_pct != null).map(m => {
+      const c = Number(m.cobertura_neta_registrada_pct);
+      return {
+        label: m.nombre,
+        value: c,
+        display: c + ' %',
+        color: c < 100 ? '#F87171' : c <= 120 ? '#FBBF24' : '#34D399'
+      };
+    });
+    chartInv.innerHTML = svgHBars(rows, {max: Math.max(150, ...rows.map(r => r.value)), aria: 'Cobertura por material'});
+  }
+  renderInvDetalle();
+
+  const chartFechas = $('#chart-fechas');
+  if (chartFechas) {
+    const serieK = (inv.serie_kardex || []).filter(r => r.material === 'CEMENTO' && r.tipo === 'TEORICO');
+    chartFechas.innerHTML = svgBars(serieK.map(r => ({
+      label: String(r.fecha || '').slice(5),
+      value: Math.abs(Number(r.cantidad_neta || 0)),
+      color: '#F59E0B'
+    })), {aria: 'Consumo de cemento por día'});
+    _setText('#chart-fechas-chip', serieK.length ? serieK.length + ' días' : 'SIN DATOS');
+  }
+  renderInvConteos();
+
+  const cob = (state.cobranzaDash && state.cobranzaDash.datos) || {};
+  const chartCob = $('#chart-cobranza');
+  if (chartCob) {
+    const rows = (cob.aging || []).map(a => ({
+      label: String(a.cubo || '').replace(/_/g, ' '),
+      value: Number(a.monto || 0),
+      display: money(Number(a.monto || 0)),
+      color: a.cubo === 'SIN_VENCIMIENTO' ? '#F59E0B' : '#F87171'
+    }));
+    chartCob.innerHTML = svgHBars(rows, {aria: 'Antigüedad de la cartera'});
+  }
+}
+
 function renderDashboard() {
   renderDonut();
   renderVentas();
@@ -4457,6 +4880,8 @@ function renderDashboard() {
   renderOperacionDash();
   renderInventarioDash();
   renderCobranzaDash();
+  renderKpisDash();
+  renderChartsDash();
   renderKpis();
   renderNotificaciones();
   const chip = $('#dash-actualizado');

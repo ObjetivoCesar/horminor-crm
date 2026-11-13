@@ -4144,3 +4144,81 @@ aging. Corregir la vista `agenda` huérfana.
 - `docs/DASHBOARD_OPERATIVO.md`
 - `.agents/ESTADO.md`, `.agents/BITACORA.md`
 - Evidencia: `.agents/evidencias/dashboard_c0_c3_2026-11-13.txt`
+
+
+## 2026-11-13 — Dashboard C5/C6: banner amarillo, 4 ventanas y gráficos SVG
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** cerrar la capa visual del tablero con el componente Ventanilla y
+gráficos reales, y dejar el cuaderno del manual de manejo.
+
+### Hecho
+
+1. **Banner `sec-ventanilla` primero.** Reemplaza las pestañas viejas. La
+   ventana activa usa `.sec-accion.primary` (amarillo sólido, texto oscuro).
+   Cuatro ventanas: Operación y capacidad, Inventario vs ventas, Inventario por
+   fechas, Cobranza y caja.
+2. **3 KPI mutables por ventana.** El resumen comercial (Mercado, Ventas, Dónde
+   vendes) queda en Operación; las otras ventanas estrenan sus propios KPI de
+   cobertura, kardex y cobranza.
+3. **6 gráficos SVG nativos, sin CDN ni build:** bullet de capacidad, barras de
+   despacho por día, barras por resistencia, cobertura por material, consumo de
+   cemento por día y aging de 8 cubos.
+4. **Presets de cobranza operativos:** Todos, Urgencia 7 días, Mora, Clientes
+   grandes, Sin vencimiento, Cupo excedido y Listo para cobrar. Filtran la
+   bandeja de documentos en el backend.
+5. **Agenda reparada:** el calendario deja de ser un nodo huérfano y vive en
+   `data-sub-view="agenda"`.
+6. **Manual en borrador:** `docs/MANUAL_DASHBOARD_JULIO.md` con las 4 ventanas,
+   estados, glosario, pasos de Superadmin y limitaciones.
+
+### Evidencia (real, ejecutada)
+
+| Comando / verificación | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **394 passed**, exit 0 |
+| Navegador Chromium `/panel` | banner antes de KPI; 4 ventanas; 6 SVG; 7 presets; Agenda encapsulada; 0 errores de consola; overflow 0 |
+| `SIN_VENCIMIENTO` | 3 documentos, 55.043,60 |
+| `URGENCIA_7D` | 0 documentos, motivo `SIN_FECHAS_CAPTURADAS` |
+| `LISTO_PARA_COBRAR_ENTREGADO` | 1 documento (Orden #57) |
+
+Evidencia completa: `.agents/evidencias/dashboard_c5_c6_2026-11-13.txt`.
+
+### Decisiones tomadas
+
+1. **Cuatro ventanas, no tres pestañas.** “Inventario vs ventas” e “Inventario
+   por fechas” responden preguntas distintas y ahora tienen panel propio.
+2. **La ventana activa manda.** Cambian submenú, KPI y gráficos; no hay filtros
+   globales de planta/resistencia/pago.
+3. **Gráficos sin librerías.** SVG inline con los datos del backend; el
+   navegador solo escala píxeles, no suma negocio.
+4. **Los presets filtran la bandeja, no el total.** El saldo y los cubos siguen
+   siendo la foto completa; la bandeja muestra el subconjunto del preset.
+5. **El manual se escribe en paralelo.** `MANUAL_DASHBOARD_JULIO.md` es un
+   borrador vivo; se completa con capturas y validación de Julio.
+
+### Bloqueos / preguntas al cliente
+
+1. Flota real: ¿2 camiones de 7 m³? ¿El tercero de la semilla existe o está
+   inactivo?
+2. Stock físico: ¿3.500 sacos es el stock de hoy o el inicial? ¿Los 249
+   movimientos son consumos reales?
+3. Cobrable: ¿la orden confirmada sin entregar se cobra, o solo lo
+   entregado/facturado?
+4. Capacidad de planta (m³/hora y horas efectivas).
+5. Días de crédito y umbral de mora.
+6. Umbral de ocupación (70/90 propuesto).
+
+### Próximo paso exacto
+
+C4: capturar `fecha_vencimiento` en los formularios de Nueva Orden y Subida de
+Factura Interna. Después, validar las 4 ventanas y el manual con Julio.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v72_dashboard_operativo.py`
+- `docs/DASHBOARD_OPERATIVO.md`
+- `docs/MANUAL_DASHBOARD_JULIO.md` (nuevo)
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/dashboard_c5_c6_2026-11-13.txt`

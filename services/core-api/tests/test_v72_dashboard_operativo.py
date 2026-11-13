@@ -315,6 +315,32 @@ def test_superadmin_persiste_viajes_y_capacidad_declarada() -> None:
     assert leida["umbrales_ocupacion"]["libre_max_pct"] == 70
 
 
+def test_panel_banner_primero_y_agenda_encapsulada() -> None:
+    html = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "web"
+        / "templates"
+        / "panel.html"
+    ).read_text(encoding="utf-8")
+
+    assert html.index('id="julio-ventanilla"') < html.index('data-kpi-window="operacion"')
+    assert html.index('data-kpi-window="operacion"') < html.index('id="chart-op-bullet"')
+    assert html.count("data-dash-tab=") == 4
+    assert 'class="sec-accion primary"' in html
+    assert 'data-sub-view="agenda"' in html
+    for chart_id in (
+        "chart-op-bullet",
+        "chart-op-serie",
+        "chart-op-resistencia",
+        "chart-inventario",
+        "chart-fechas",
+        "chart-cobranza",
+        "cob-documentos",
+    ):
+        assert f'id="{chart_id}"' in html
+
+
 def test_router_expone_los_tres_endpoints() -> None:
     from app.m4_dashboard.router import router
 

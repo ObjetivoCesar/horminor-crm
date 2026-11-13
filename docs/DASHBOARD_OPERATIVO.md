@@ -19,42 +19,47 @@ La **cuarta captura** (mercado, ventas, provincias) queda como resumen anual
 **comprimido** arriba de las pestañas. Es un reporte de año, no un tablero del
 día, y así debe leerse.
 
-## 3. Las tres pestañas
+## 3. Las cuatro ventanas (C5/C6)
 
-| Pestaña | Pregunta que responde | Fuente | Estado del dato |
+El banner `sec-ventanilla` es el primer bloque del dashboard; la ventana activa
+se pinta en **amarillo sólido** (`.sec-accion.primary`). Al cambiar de ventana
+mutan el submenú, las 3 tarjetas KPI y los gráficos.
+
+| Ventana | Pregunta | Fuente | Estado |
 |---|---|---|---|
-| **Ocupación** (por defecto) | ¿qué está haciendo la planta hoy y qué puedo prometer? | `mixer_dispatches`, `dispatch_schedule`, capacidad | **real desde el día uno** |
-| **Inventario** | ¿alcanza el material para lo comprometido? | `v_stock_proyectado`, kardex, conteo | bloqueado hasta el conteo físico |
-| **Cobranza** | ¿qué está vencido y qué vence esta semana? | `v_cobranza_documentos`, `v_cliente_saldo` | listo el esqueleto; faltan fechas |
+| **Operación y capacidad** (por defecto) | ¿cuánto puedo producir y entregar hoy? | `system_settings`, `dispatch_schedule`, `v_dispatch_timeline` | real; capacidad pendiente de confirmar |
+| **Inventario vs ventas** | ¿alcanza el material para lo vendido? | `orders` × `concrete_recipes`, `materials`, kardex | triple lectura; sin conteo físico |
+| **Inventario por fechas** | ¿cómo se movió el material y cuándo se contó? | `inventory_movements` | real; sin `REAL` ni `COMPRA` |
+| **Cobranza y caja** | ¿qué está vencido y cuánto entra? | `orders`, `client_invoices`, `payments`, `v_cliente_saldo` | documento único; sin fechas ni pagos |
 
-Cada pestaña tiene su **submenú propio** (mismo patrón visual que Ventanilla,
-activo en ámbar). No hay filtros globales.
+### 3.1 Operación y capacidad
 
-### 3.1 Ocupación
+- Capacidad declarada `min(flota, planta, jornada)`; no se estima.
+- Comprometido hoy/semana/mes, cola sin plan y sin despachar.
+- Serie por día: ejecutado vs programado; mezcla por resistencia.
+- Submenú: `Resumen`, `Mixers`, `Agenda`.
 
-- Timeline de mixers del día: en planta, cargando, en ruta, en obra, volviendo.
-- Capacidad comprometida vs. disponible (m³ y viajes).
-- Tabla del día: orden, cliente, obra, volumen pactado, despachado, estado.
-- Barra **“horas fuera de jornada”** cuando exista `jornada_eventos` (fase 081).
-- Submenú: `Hoy`, `Semana`, `Mixers`, `Calendario`.
+### 3.2 Inventario vs ventas
 
-### 3.2 Inventario
+- Explosión MRP: m³ vendidos × receta.
+- Tres lecturas: declarada, kardex y corregida por asimetría.
+- Cobertura por material, material crítico y m³ FC-210 disponibles.
+- Submenú: `Cobertura`, `Detalle`.
 
-- Stock por material: **CEMENTO, ARENA, RIPIO, RETARDANTE**. El agua no es stock;
-  sigue en la receta y en el costo.
-- Submenú: `Stock`, `Por fechas`, `Kardex`, `Compras`.
-- “Inventario por fechas” es un filtro **dentro** de Inventario, no una pestaña.
-- Sin conteo físico: cada material muestra `SIN_LEVANTAR` o `SIN_FECHA_CONTEO`,
-  nunca un número estimado presentado como real.
+### 3.3 Inventario por fechas
 
-### 3.3 Cobranza
+- Consumo diario por material (kardex), en su unidad nativa.
+- Último conteo o `SIN CONTEO`; detector de asimetrías.
+- Submenú: `Consumo`, `Conteos`.
 
-- Cubos de `v_cobranza_documentos`: `SIN_VENCIMIENTO`, `VENCIDA`,
-  `POR_VENCER_7`, `CORRIENTE`.
-- Saldo real por cliente desde `v_cliente_saldo`.
-- Submenú: `Vencidos`, `Por vencer`, `Clientes`, `Documentos`.
-- Límite escrito: `monto_documento` es el total del documento, **no** el saldo
-  pendiente. El aging por factura espera la regla de imputación pago → documento.
+### 3.4 Cobranza y caja
+
+- Documento único: factura real reemplaza la orden; ficticia excluida.
+- Aging de 8 cubos y bandeja de documentos.
+- Exigibilidad: confirmado/facturado, con salida, sin salir.
+- Presets: Todos, Urgencia 7 días, Mora, Clientes grandes, Sin vencimiento,
+  Cupo excedido, Listo para cobrar.
+- Submenú: `Resumen`, `Clientes`.
 
 ## 4. Contrato de los endpoints
 
@@ -172,6 +177,6 @@ Estado al 2026-11-13 (C0–C3):
 |---|---|---|
 | D1 | Migración 079: vencimiento y vista de cobranza | **hecho** (2026-11-13) |
 | D2 | Endpoints `inventario` y `cobranza` | **hecho**: envoltura completa, tests y vacío explícito |
-| D3 | Pestañas y submenús en el panel | **hecho**: tres pestañas, activa en ámbar, sin “Filtros de obras” |
+| D3 | Ventanas y submenús en el panel | **hecho**: banner Ventanilla, 4 ventanas, activa en amarillo sólido, sin “Filtros de obras” |
 | D4 | `GET /dashboard/operacion` + timeline de mixers | **hecho**: capacidad declarada, cola sin plan/despacho, serie por fecha del viaje |
 | D5 | Indicadores de cotizaciones y excedente | Pipeline y fuga de margen visibles |
