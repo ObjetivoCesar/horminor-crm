@@ -35,6 +35,7 @@ decorativa: son reglas operativas.
 1. `.agents/ESTADO.md` → qué está hecho, qué está bloqueado, próximo paso.
 2. Últimas 3 entradas de `.agents/BITACORA.md` → qué pasó la última vez.
 3. Según la tarea:
+   - diseñar o tocar un módulo → `.agents/MAPA_MODULOS.md` y `.agents/tareas/PENDIENTES.md`
    - levantar/verificar el entorno → `.agents/skills/orminorth-entorno/SKILL.md`
    - correr o interpretar un Test de Candado → `.agents/skills/orminorth-candado/SKILL.md`
    - diagnosticar salud del sistema → `.agents/skills/orminorth-diag-centinela/SKILL.md`

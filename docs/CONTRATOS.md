@@ -74,7 +74,7 @@ OR
 | `forma_pago` | text | `EFECTIVO`, `TRANSFERENCIA`, `ABONO`, `FIADO` |
 | `plazo_entrega` | text | fecha o ventana |
 | `medicion` | text | `PACTADO` — se cobra el volumen acordado; el excedente despachado es costo, no cobro |
-| `extras` | jsonb | rubros manuales: descripción, monto, `cobrable`, categoría. Ver `docs/COTIZACIONES.md` |
+| `extras` | jsonb | rubro **global** manual: descripción libre, monto, `cobrable`. Sin categorías. Ver `docs/COTIZACIONES.md` |
 
 El total del contrato es `volumen_m3 * precio_m3` (más IVA si aplica). Se
 congela al firmar.
@@ -185,9 +185,11 @@ Una página, generada desde una orden cuando existe:
 ## 8. Preguntas abiertas
 
 1. **Anticipos:** ¿se descuentan del siguiente salario o en cuotas?
-2. **Extras:** ¿qué categorías usa Julio? (distancia, acceso, espera, otro)
-3. **Cotización previa:** ¿toda venta pasa por cotización o solo las que el
+2. **Cotización previa:** ¿toda venta pasa por cotización o solo las que el
    cliente pide? Ver `docs/COTIZACIONES.md`.
+
+Los extras ya están cerrados: **un solo rubro global** con descripción libre,
+`cobrable` o costo interno. No hay categorías.
 
 ## 9. Fases
 

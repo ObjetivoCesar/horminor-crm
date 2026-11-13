@@ -13,3 +13,7 @@
 | Folio duplicado | ALTA | Secuencia no atómica | Secuencia por año con bloqueo | RESUELTO |
 | Preliminar enviada como definitiva | ALTA | El canal ignoró el estado | Marca PRELIMINAR y `estado` en la respuesta | RESUELTO |
 | Plantilla inexistente | MEDIA | `plantilla` fuera del enum | Rechazo en el contrato | RESUELTO |
+| Precio provisional a cliente real | CRÍTICA | Semilla ficticia emitida fuera de SANDBOX | `PRECIO_PROVISIONAL` y marca visible | RESUELTO |
+| Extra con categoría | MEDIA | El llamador envía `categoria` | Rubro único global; `additionalProperties: false` | RESUELTO |
+| Extra interno impreso al cliente | ALTA | Se imprimió un `cobrable=false` | Copia interna separada y filtro por `cobrable` | RESUELTO |
+| PDF no archivado en el cliente | MEDIA | Se guardó fuera de `media_assets` | Registro obligatorio con `cliente_id` y `sha256` | RESUELTO |

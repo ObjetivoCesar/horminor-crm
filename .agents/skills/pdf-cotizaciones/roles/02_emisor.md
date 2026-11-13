@@ -13,6 +13,10 @@
 5. Una cotización `EMITIDA` no se edita: se anula y se emite otra.
 6. No se emite si el rol 01 no devolvió `estado_sugerido: VALIDADA`.
 7. La emisión y el folio van en una sola transacción.
+8. Los extras se persisten con su `cobrable`; el total solo suma los `true`.
+9. Al pasar a `ACEPTADA`, el emisor asigna la etiqueta `VENTA` al cliente.
+10. La etiqueta `VENTA` no crea orden ni contrato: la conversión es otro paso.
+11. Una cotización `VENCIDA` no se revive: se re-emite con folio nuevo.
 
 ## Entradas
 

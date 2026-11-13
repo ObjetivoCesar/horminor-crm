@@ -140,7 +140,7 @@ def main() -> int:
 
     # 4. PDF
     pdf = carga(SKILLS / "pdf-cotizaciones" / "contracts" / "solicitud_cotizacion.json")
-    check(str(pdf.get("version", "")).startswith("1.2"), f"solicitud_cotizacion versión {pdf.get('version')} (se espera 1.2.x)")
+    check(str(pdf.get("version", "")).startswith(("1.2", "1.3")), f"solicitud_cotizacion versión {pdf.get('version')} (se espera 1.2.x o 1.3.x)")
     ficha_id = pdf["properties"]["lineas"]["items"]["properties"]["precio_ref"]["properties"]["ficha_id"]
     check(ficha_id.get("pattern") == "^[0-9a-fA-F-]{36}$", "solicitud_cotizacion: ficha_id UUID")
     check('"number"' not in (SKILLS / "pdf-cotizaciones" / "contracts" / "solicitud_cotizacion.json").read_text(encoding="utf-8"), "solicitud_cotizacion: sin montos type=number")
@@ -202,6 +202,23 @@ def main() -> int:
             "creado_por": {"actor_id": "panel:ana", "rol": "SECRETARIA", "canal": "WEB_PANEL"},
         }
         check(valido(pdf, solicitud), "PDF: solicitud con ficha_id + vigencia es válida")
+
+        con_extra = {
+            **solicitud,
+            "extras": [{
+                "descripcion": "Uso de retro para abrir paso al mixer",
+                "monto": "150.00",
+                "cobrable": False,
+                "nota": "Costo interno: no se cobra al cliente",
+            }],
+        }
+        check(valido(pdf, con_extra), "PDF: extra global con costo interno es válido")
+
+        con_categoria = {
+            **solicitud,
+            "extras": [{"descripcion": "Retro para abrir paso", "cobrable": False, "categoria": "ACCESO"}],
+        }
+        check(not valido(pdf, con_categoria), "PDF: extra con categoria se rechaza (rubro único)")
 
     # 7. Resumen
     lineas = [f"[OK]    {m}" for m in ok]

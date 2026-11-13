@@ -13,7 +13,9 @@ repositorio.
 | Ruta | Para qué | Cuándo se lee |
 |---|---|---|
 | `ESTADO.md` | Tablero: hitos, bloqueos, próximo paso | **Al empezar toda sesión** |
+| `MAPA_MODULOS.md` | Qué módulo existe, dónde está su diseño y qué skill lo gobierna | Al tocar un módulo, documento o pantalla |
 | `BITACORA.md` | Registro append-only de sesiones y decisiones | Al empezar (últimas 3) y al cerrar (añadir) |
+| `tareas/PENDIENTES.md` | Tareas vivas por módulo, con criterio de cierre | Al planificar o retomar |
 | `procesos/` | Procedimientos paso a paso | Cuando la tarea coincide |
 | `skills/` | Instrucciones autocontenidas para tareas repetibles | Cuando la tarea coincide |
 | `plantillas/` | Formatos para no improvisar | Al escribir |
