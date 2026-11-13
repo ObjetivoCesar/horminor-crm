@@ -12,6 +12,7 @@ if str(RAIZ_SERVICIO) not in sys.path:
     sys.path.insert(0, str(RAIZ_SERVICIO))
 
 import asyncio  # noqa: E402
+from decimal import Decimal  # noqa: E402
 
 from app.asistente import recordatorios  # noqa: E402
 from app.asistente.despachador import DespachadorRecordatorios  # noqa: E402
@@ -103,6 +104,18 @@ def test_ahora_mismo_es_ahora() -> None:
     cuando = recordatorios.parsear_cuando("ahora mismo", ahora=BASE)
     assert cuando is not None
     assert abs((cuando - BASE).total_seconds()) <= 60
+
+
+def test_cifras_de_detecta_montos() -> None:
+    valores = recordatorios.cifras_de(
+        "Su saldo es USD 52.872,40 y la factura $43,424.00"
+    )
+    assert Decimal("52872.40") in valores
+    assert Decimal("43424.00") in valores
+
+
+def test_cifras_de_ignora_horas_y_numeros_de_orden() -> None:
+    assert recordatorios.cifras_de("a las 18:40 la orden 55") == set()
 
 
 def test_interpreta_factura_adjunta() -> None:

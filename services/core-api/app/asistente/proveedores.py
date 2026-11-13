@@ -82,8 +82,9 @@ PARAMS: dict[str, dict[str, Any]] = {
         "mensaje": {
             "type": "string",
             "description": (
-                "Texto exacto que se enviará por WhatsApp, tal como lo dictó el "
-                "usuario. No agregues ni quites información."
+                "Texto del mensaje. Puedes redactarlo breve y en nombre de "
+                "Horminor. Prohibido inventar cifras: solo las que aparezcan en "
+                "las fichas de esta conversación."
             ),
         },
         "cuando": {

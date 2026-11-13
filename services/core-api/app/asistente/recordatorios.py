@@ -21,6 +21,7 @@ import logging
 import re
 import unicodedata
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -70,6 +71,12 @@ _RE_MENSAJE = re.compile(
 _RE_FACTURA = re.compile(
     r"\b(?:p[aá]sale|env[ií]ale|adjunta(?:le|r)?|m[aá]ndale|incluye)\b"
     r"[^.]{0,40}\bfactura\b",
+    re.IGNORECASE,
+)
+_RE_MONTO = re.compile(
+    r"(?:USD|\$)\s*[\d.,]+"
+    r"|\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?\b"
+    r"|\b\d+[.,]\d{2}\b",
     re.IGNORECASE,
 )
 
@@ -240,6 +247,72 @@ def interpretar(texto: str, ahora: datetime | None = None) -> dict[str, Any]:
 
 def _ahora_texto(momento: datetime, zona: ZoneInfo) -> str:
     return momento.astimezone(zona).strftime("%d/%m/%Y %H:%M")
+
+
+def _a_decimal(token: str) -> Decimal | None:
+    limpio = (
+        token.replace("USD", "").replace("usd", "").replace("$", "").replace(" ", "")
+    )
+    if not limpio:
+        return None
+    if "," in limpio and "." in limpio:
+        if limpio.rfind(",") > limpio.rfind("."):
+            limpio = limpio.replace(".", "").replace(",", ".")
+        else:
+            limpio = limpio.replace(",", "")
+    elif "," in limpio:
+        partes = limpio.split(",")
+        limpio = limpio.replace(",", ".") if len(partes[-1]) == 2 else limpio.replace(",", "")
+    elif "." in limpio and len(limpio.split(".")[-1]) == 3:
+        limpio = limpio.replace(".", "")
+    try:
+        return Decimal(limpio).quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def cifras_de(texto: str) -> set[Decimal]:
+    """Montos mencionados en un texto. '18:40' y 'orden 55' no cuentan."""
+    valores: set[Decimal] = set()
+    for encontrado in _RE_MONTO.findall(str(texto or "")):
+        valor = _a_decimal(encontrado)
+        if valor is not None:
+            valores.add(valor)
+    return valores
+
+
+async def _cifras_permitidas(
+    biblio: Bibliotecario, cliente_id: str | None
+) -> set[Decimal]:
+    """Solo cifras que existen en la ficha del cliente."""
+    if not cliente_id:
+        return set()
+    permitidas: set[Decimal] = set()
+
+    saldo = await biblio.pool.fetchrow(
+        """
+        SELECT saldo_pendiente, total_fiado, total_cobrado
+          FROM v_cliente_saldo
+         WHERE id = $1
+        """,
+        cliente_id,
+    )
+    if saldo is not None:
+        for clave in ("saldo_pendiente", "total_fiado", "total_cobrado"):
+            if saldo[clave] is not None:
+                permitidas.add(Decimal(str(saldo[clave])).quantize(Decimal("0.01")))
+
+    facturas = await biblio.pool.fetch(
+        "SELECT subtotal, iva_monto, total FROM client_invoices WHERE cliente_id = $1",
+        cliente_id,
+    )
+    for factura in facturas:
+        for clave in ("subtotal", "iva_monto", "total"):
+            if factura[clave] is not None:
+                permitidas.add(
+                    Decimal(str(factura[clave])).quantize(Decimal("0.01"))
+                )
+    return permitidas
 
 
 def _aviso_modo(modo: str | None) -> str:
@@ -464,6 +537,21 @@ async def crear(
 
     conversacion = conversacion_id or getattr(actor, "conversacion_id", None)
     clave = _clave_idempotencia(actor_id, conversacion, telefono, cuerpo, programado)
+
+    cifras = cifras_de(cuerpo)
+    if cifras:
+        permitidas = await _cifras_permitidas(biblio, cliente_id)
+        sobrantes = cifras - permitidas
+        if sobrantes:
+            detalle = ", ".join(f"{valor:.2f}" for valor in sorted(sobrantes))
+            return Resultado(
+                "recordatorio_crear",
+                "ERROR",
+                nota=(
+                    f"No puedo enviar una cifra que no esté en la ficha: {detalle}. "
+                    "Dime el mensaje sin ese monto o usa el saldo verificado."
+                ),
+            )
 
     fila = await biblio.pool.fetchrow(
         """
