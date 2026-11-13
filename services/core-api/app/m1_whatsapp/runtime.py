@@ -66,6 +66,7 @@ class WhatsAppRuntime:
                 "GEMINI" if self.juez.nombre == "gemini" else "DETERMINISTIC_FALLBACK",
             ),
             "modo": self.extra.get("modo", "SANDBOX"),
+            "envio": self.notifier.nombre,
             "bunny": self.bunny.nombre,
             "notifier": self.notifier.nombre,
             "webhook_centinela": (

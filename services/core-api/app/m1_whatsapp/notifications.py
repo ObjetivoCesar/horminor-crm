@@ -11,6 +11,7 @@ Dos caminos distintos, a proposito:
 
 from __future__ import annotations
 
+import base64
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone

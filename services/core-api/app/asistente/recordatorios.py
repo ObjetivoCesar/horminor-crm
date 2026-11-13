@@ -244,7 +244,7 @@ def _ahora_texto(momento: datetime, zona: ZoneInfo) -> str:
 
 def _aviso_modo(modo: str | None) -> str:
     """Evita que 'Confirmado' se lea como 'ya le llego al cliente'."""
-    if str(modo or "").upper() == "SANDBOX":
+    if str(modo or "").strip().upper() in {"SANDBOX", "MEMORIA", "NO_CONFIGURADO"}:
         return (
             "\n\nModo SANDBOX: en local el mensaje queda en el outbox del panel; "
             "no sale a un teléfono real."

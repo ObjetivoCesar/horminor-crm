@@ -88,12 +88,16 @@ async def actor_actual(request: Request) -> Actor:
 
 
 def _modo_envio(request: Request) -> str:
-    """SANDBOX o EVOLUTION, para no prometer un envío que no sale."""
+    """Canal real de salida: 'evolution' o 'sandbox'.
+
+    No se usa `modo` porque ese campo tambien cambia cuando Bunny esta en
+    sandbox; para el aviso lo que importa es quien envia el WhatsApp.
+    """
     runtime = getattr(request.app.state, "whatsapp", None)
     if runtime is None:
         return ""
     try:
-        return str(runtime.estado().get("modo") or "")
+        return str(runtime.estado().get("envio") or "")
     except Exception:  # un runtime raro no debe romper el chat
         return ""
 
