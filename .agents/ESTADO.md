@@ -56,6 +56,23 @@ scripts de candado.
 
 ## Evidencia de la Ãºltima sesiÃ³n
 
+### 2026-11-13 — Cotizaciones, contratos y mapa de módulos
+
+- Migración **079** aplicada en local: `fecha_vencimiento` en `orders` y
+  `client_invoices` + vista `v_cobranza_documentos`. Commit `c9e3446`.
+- `pytest` → **379 passed**.
+- Auditoría de skills → **APROBADO (179 verificaciones)** con `python
+  scripts/auditar_skills.py`; incluye extra global válido y extra con
+  `categoria` rechazado.
+- `docs/COTIZACIONES.md` v6.20: rubro único global de extras, validez 15 días,
+  envío por WhatsApp con PDF en la carpeta del cliente, etiqueta `VENTA`.
+- `docs/CONTRATOS.md` v6.19: suministro por m³ con equipo y bombeo, medición
+  pactada, firma exclusiva de Julio.
+- `.agents/MAPA_MODULOS.md`, `.agents/tareas/PENDIENTES.md` y
+  `docs/DASHBOARD_OPERATIVO.md` creados.
+- `pdf-cotizaciones` → v1.3.0 (contrato `solicitud_cotizacion` 1.3.0).
+- Evidencia: `.agents/evidencias/dashboard_cobranza_2026-11-13.txt`.
+
 - **v6.17 desplegada y probada en el VPS (2026-11-13).** Seis commits
   (`7850241` … `8c6b301`), migraciones **075–078** aplicadas y `envio:
   evolution`. Envíos reales: `PRUEBA-0002.pdf` y un mensaje redactado, ambos al
@@ -210,29 +227,21 @@ scripts de candado.
 > son la fuente de verdad y el respaldo. `git push` deja de ser un bloqueo y
 > pasa a ser una tarea opcional del despliegue (clonar el repo en el VPS).
 
-## PrÃ³ximo paso exacto
+## Próximo paso exacto
 
-0. **Cerrar C9: UI de recordatorios en el panel.** Pestaña con borradores,
-   pendientes y enviados; botones Ratificar / Descartar / Cancelar. Criterio:
-   crear desde la pestaña y ver el envío real en el VPS.
-1. **C8: validar que el número exista** en WhatsApp antes de crear
-   (`POST /chat/whatsappNumbers/{instancia}`), con aviso si no existe.
-2. **C11: acuse de entrega.** Procesar `MESSAGES_UPDATE` y pasar a `ENTREGADO`
-   solo con el evento real.
-3. **C12: test de integración del despachador** contra PostgreSQL con
-   `ROLLBACK` (hoy solo se probó a mano).
-4. **Probar el panel en local con la secretaria** (cobro/abono, gasto, tasas y
-   conteo) y ajustar pantallas/flujos segÃºn lo que pida Julio.
-5. **Cargar las tasas financieras** en Superadmin >
-   `finanzas.parametros_contables` (`wacc_anual_pct`,
-   `crecimiento_anual_pct`, `participacion_trabajadores_pct`,
-   `impuesto_renta_pct`, `dscr_minimo_banco`) para activar valoraciÃ³n/DSCR.
-6. **Ejecutar el conteo fÃ­sico** de los 5 materiales desde Superadmin; hoy
-   siguen `SIN_FECHA_CONTEO`.
-7. **Instalar el cron de backup** (`backup_db.sh`) y copiar los dumps fuera del
-   VPS; probar una restauraciÃ³n mensual.
-8. **Login de usuario** (`panel_users`, hash `scrypt`, cookie `HttpOnly`) y
-   proteger `/panel` antes de abrirlo a Internet.
+1. **Fase D2 del dashboard:** endpoints `GET /api/v1/dashboard/operacion`,
+   `/inventario`, `/cobranza` con `fuente`, `consultado`, `filtros`, `datos` y
+   `vacio`. Tests con caso vacío. Diseño en `docs/DASHBOARD_OPERATIVO.md`.
+2. **Fase D3:** tres pestañas (Ocupación por defecto) con submenú propio y
+   eliminación de “Filtros de obras”.
+3. **Fase D4:** Ocupación con timeline de mixers y tabla del día desde
+   `mixer_dispatches` y `dispatch_schedule`.
+4. **Cerrar preguntas de cotizaciones** (`.agents/tareas/PENDIENTES.md` §6):
+   toda venta por cotización, precio por resistencia, IVA desglosado.
+5. **Migración 080** (cotizaciones) y después **081** (contratos y horas extra).
+6. **C9: UI de recordatorios en el panel** sigue pendiente de la sesión anterior.
+7. **Capturar `fecha_vencimiento`** en los formularios de orden y factura; hoy
+   todo cae en `SIN_VENCIMIENTO`.
 
 ## Decisiones de arquitectura vigentes
 
@@ -284,6 +293,10 @@ scripts de candado.
 | 44 | **Superadmin edita tasas y conteo, no valores inventados** | `finanzas.parametros_contables` se edita con inputs; el conteo fÃ­sico se registra con stock real y sella `ultimo_levantamiento_at`. Los valores siguen siendo de Julio/Bodega |
 | 45 | **Backup diario verificable, no solo un dump** | `backup_db.sh` valida con `pg_restore --list`, retiene 14 dÃ­as y 6 meses, y se complementa con copia externa y restauraciÃ³n mensual |
 | 46 | **Login desacoplado al backlog pre-VPS** | Se sigue afinando `/panel` con el puente `X-Panel-Role` (sin credenciales ni bloqueo de rutas) para no perder agilidad en pantallas y flujos. El login (`panel_users`, hash, cookie `HttpOnly`) se implementa Ãºnicamente antes de exponer el panel a Internet. Alternativa descartada: bloquear rutas ahora, que obliga a crear usuarios y frena las pruebas locales |
+| 47 | **Un contrato activo no se edita, se adenda** | El impreso firmado y la base no pueden divergir |
+| 48 | **Extras: un solo rubro global con descripcion libre** | Julio cobra o absorbe cualquier cosa ajena a Horminor sin taxonomias que se queden cortas |
+| 49 | **La cotizacion no crea orden** | Una venta aceptada que no se despacha no debe producir una orden fantasma |
+| 50 | **Cada modulo tiene diseno, skill y tareas** | Sin las tres piezas se redisenya lo ya decidido |
 
 ## Riesgos abiertos
 

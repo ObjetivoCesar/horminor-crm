@@ -3902,3 +3902,91 @@ con `envio: evolution`.
 - Evidencias: `gato_recordatorios_2026-11-12.txt`,
   `gato_ratificacion_2026-11-12.txt`, `gato_adjuntos_2026-11-12.txt`,
   `vps_despliegue_recordatorios_2026-11-12.txt`
+
+## 2026-11-13 — Cotizaciones, contratos y mapa de módulos
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** cerrar el diseño de cotizaciones y contratos con las respuestas de
+Julio, y dejar registrado en las skills y en la memoria del proyecto dónde va
+cada módulo.
+
+### Hecho
+
+1. **Rubro único de extras.** Julio corrigió el diseño anterior: no hay
+   categorías (`ACCESO`, `DISTANCIA`, etc.). Existe **un solo rubro global**
+   para cualquier cosa ajena a Horminor que haya que incluir para ejecutar el
+   trabajo. `cobrable=true` suma al cliente; `cobrable=false` es costo interno y
+   no se imprime en la copia del cliente.
+2. **Cotización primero, etiqueta después.** Al aprobar una cotización se asigna
+   la etiqueta `VENTA` al cliente (`cliente_etiquetas`). La etiqueta **no** crea
+   orden: la conversión es explícita, para no generar órdenes fantasma.
+3. **Validez 15 días**, configurable en `cotizaciones.validez_dias`.
+4. **Envío por WhatsApp con PDF** y registro en `media_assets` con
+   `cliente_id`: el archivo queda en la carpeta del cliente, no en una carpeta
+   paralela.
+5. **Lista de precios:** ya existe en `concrete_recipes.precio_m3`, editable en
+   Superadmin > formulas_y_precios. Se agrega `precio_estado`
+   (`PROVISIONAL`/`OFICIAL`): un precio ficticio no puede emitir fuera de
+   SANDBOX.
+6. **Skill `pdf-cotizaciones` → v1.3.0** con extras, validez, precio
+   provisional, archivo en la carpeta del cliente y etiqueta `VENTA`. Contrato
+   `solicitud_cotizacion` → 1.3.0 con `extras` (rubro global, sin categoría).
+7. **`.agents/MAPA_MODULOS.md`**: mapa de módulos con diseño, skill y estado.
+8. **`.agents/tareas/PENDIENTES.md`**: tareas vivas con criterio de cierre.
+9. **`docs/DASHBOARD_OPERATIVO.md`**: diseño de las tres pestañas y contrato de
+   los endpoints, que estaba disperso.
+10. `AGENTS.md` y `.agents/README.md` ahora mandan leer el mapa de módulos antes
+    de tocar un componente.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `python scripts/auditar_skills.py` | `RESULTADO: APROBADO (179 verificaciones)` |
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | `379 passed` (sesión previa, sin cambios de código) |
+| `git log --oneline -1` (diseño) | `44d0876 docs: rubro global de extras, envio por WhatsApp y mapa de modulos; skill pdf-cotizaciones 1.3.0` |
+
+Las dos verificaciones nuevas de la auditoría son: un extra global con
+`cobrable=false` es válido, y un extra con `categoria` se rechaza. Eso fija la
+decisión de Julio en un test, no en un comentario.
+
+### Decisiones tomadas
+
+1. **Un solo rubro global de extras.** Motivo: Julio cobra o absorbe cosas que
+   no tienen que ver con Horminor y no quiere taxonomías. Alternativa
+   descartada: categorías fijas, que se quedan cortas al segundo caso raro.
+2. **La cotización no crea la orden.** Motivo: una venta aceptada que no se
+   despacha no debe producir una orden ni un despacho. Alternativa descartada:
+   convertir automáticamente al aceptar.
+3. **`precio_estado` en la receta.** Motivo: permitir precios ficticios hoy sin
+   que lleguen a un cliente real. Alternativa descartada: confiar en que nadie
+   emita con precios de semilla.
+4. **Cada módulo tiene diseño, skill y tareas.** Motivo: el usuario detectó que
+   se estaba rediseñando sin leer lo ya registrado. Alternativa descartada:
+   seguir usando solo el chat como memoria.
+
+### Bloqueos / preguntas al cliente
+
+1. ¿Toda venta pasa por cotización o solo cuando el cliente la pide?
+2. ¿La lista de precios lleva un precio por resistencia o uno solo?
+3. ¿El IVA se muestra desglosado o incluido en el precio por m³?
+4. Contrato de trabajo: tipo (indefinido, fijo, por obra, prueba).
+5. Anticipos de salario: ¿se descuentan del siguiente salario o en cuotas?
+
+Todas quedan en `.agents/tareas/PENDIENTES.md` §6. Mientras no haya respuesta,
+el campo va `NULL` y marcado `PENDIENTE`.
+
+### Próximo paso exacto
+
+Implementar la fase **D2** del dashboard: `GET /api/v1/dashboard/operacion`,
+`/inventario` y `/cobranza` con la envoltura `fuente`, `consultado`, `filtros`,
+`datos`, `vacio` descrita en `docs/DASHBOARD_OPERATIVO.md` §4, más tests del
+caso vacío. Después D3 (tres pestañas) y D4 (Ocupación con datos reales).
+
+### Archivos tocados
+
+- `docs/COTIZACIONES.md`, `docs/CONTRATOS.md`, `docs/DASHBOARD_OPERATIVO.md`
+- `.agents/MAPA_MODULOS.md`, `.agents/tareas/PENDIENTES.md`, `.agents/README.md`
+- `.agents/skills/pdf-cotizaciones/{SKILL.md,errores.md,roles/01_armador.md,roles/02_emisor.md,roles/03_publicador.md,contracts/solicitud_cotizacion.json}`
+- `scripts/auditar_skills.py`, `AGENTS.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
