@@ -56,6 +56,20 @@ scripts de candado.
 
 ## Evidencia de la Ãºltima sesiÃ³n
 
+### 2026-11-13 — Dashboard C0–C3: capacidad declarada, MRP y cobranza única
+
+- `GET /api/v1/dashboard/operacion`: capacidad `min(flota, planta, jornada)`;
+  con la semilla actual devuelve `CONFIGURACION_INCONSISTENTE`; cola **404 m³
+  sin plan** y **388 m³ sin despachar**.
+- `/inventario`: explosión MRP + triple lectura. Cemento 3.500 declarado /
+  **288 kardex** / cobertura 8,97 %; arena 243,56 corregida; retardante 73,6 L.
+- `/cobranza`: documento único, factura ficticia excluida, total **55.043,60**;
+  exigibilidad 1.085,60 confirmado / 2.171,20 con salida / 52.872,40 sin salir.
+- Superadmin: `viajes_max_dia`, `planta_asignada`, `capacidad_plantas`,
+  `supuestos_capacidad` y `umbrales_ocupacion` persistidos sin migración.
+- `pytest` → **393 passed**. Evidencia:
+  `.agents/evidencias/dashboard_c0_c3_2026-11-13.txt`.
+
 ### 2026-11-13 — Dashboard operativo en tres pestañas
 
 - Se eliminó “Filtros de obras” (planta, resistencia, pago) del panel.
@@ -243,15 +257,15 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **`GET /api/v1/dashboard/operacion`** con timeline de mixers
-   (`mixer_dispatches`, `dispatch_schedule`) y la misma envoltura; reemplazar en
-   Ocupación las sumas que hoy hace el navegador. Tests con caso vacío.
-2. **Cerrar preguntas de cotizaciones** (`.agents/tareas/PENDIENTES.md` §6):
+1. **C5/C6 del dashboard:** banner `sec-ventanilla` primero, ventana activa en
+   amarillo sólido, submenús, 3 KPI mutables y gráficos SVG de capacidad,
+   cobertura y aging; encapsular la Agenda huérfana.
+2. **C4:** capturar `fecha_vencimiento` en los formularios de orden y factura;
+   hoy todo cae en `SIN_VENCIMIENTO`.
+3. **Cerrar preguntas de cotizaciones** (`.agents/tareas/PENDIENTES.md` §6):
    umbral de excedente, precio por resistencia, porcentaje de anticipo.
-3. **Migración 080** (cotizaciones: rubro global, `cliente_etiquetas`,
+4. **Migración 080** (cotizaciones: rubro global, `cliente_etiquetas`,
    `precio_estado`) y después **081** (contratos de obra cierta y horas extra).
-4. **Capturar `fecha_vencimiento`** en los formularios de orden y factura; hoy
-   todo cae en `SIN_VENCIMIENTO`.
 5. **C9: UI de recordatorios en el panel**, pendiente de la sesión anterior.
 
 ## Decisiones de arquitectura vigentes

@@ -108,27 +108,72 @@ async def cuota_mercado(
     return await _store(request).cuota_mercado(periodo=periodo, anio=anio)
 
 
+@router.get("/operacion")
+async def operacion_dashboard(
+    request: Request,
+    fecha: date | None = Query(default=None),
+    dias: int = Query(default=14, ge=1, le=90),
+    planta_id: str | None = Query(default=None),
+) -> dict[str, Any]:
+    """Capacidad declarada, comprometido, cola sin plan y serie por viaje.
+
+    La capacidad no se estima: se lee de `system_settings`. Si falta o es
+    inconsistente, el endpoint devuelve el estado explicito.
+    """
+    return await operativo_svc.operacion(
+        _pool(request), fecha=fecha, dias=dias, planta_id=planta_id
+    )
+
+
 @router.get("/inventario")
-async def inventario_operativo(request: Request) -> dict[str, Any]:
+async def inventario_operativo(
+    request: Request,
+    desde: date | None = Query(default=None),
+    hasta: date | None = Query(default=None),
+    material_codigo: str | None = Query(default=None, max_length=40),
+) -> dict[str, Any]:
     """Stock de los cuatro materiales del tablero, sin agua.
 
     Devuelve el vacio explicito cuando no hay conteo fisico: no se presenta una
-    semilla como stock real.
+    semilla como stock real. Incluye explosion MRP, lectura neta registrada y
+    lectura corregida por asimetria de kardex.
     """
-    return await operativo_svc.inventario(_pool(request))
+    return await operativo_svc.inventario(
+        _pool(request),
+        desde=desde,
+        hasta=hasta,
+        material_codigo=material_codigo,
+    )
 
 
 @router.get("/cobranza")
 async def cobranza_operativa(
     request: Request,
     limite_clientes: int = Query(default=8, ge=1, le=50),
+    fecha: date | None = Query(default=None),
+    preset: str = Query(default="TODOS", max_length=40),
+    cubo_aging: str = Query(default="TODOS", max_length=40),
+    exigibilidad: str = Query(default="TODA_CARTERA", max_length=40),
+    cliente_id: str | None = Query(default=None, max_length=64),
+    provincia: str | None = Query(default=None, max_length=60),
+    ordenar_por: str = Query(default="MONTO_DESC", max_length=40),
 ) -> dict[str, Any]:
-    """Documentos por cobrar agrupados por estado de vencimiento.
+    """Documentos por cobrar sobre documento unico.
 
-    OJO: `monto` es el total del documento, no el saldo pendiente. El saldo real
-    por cliente sale de `v_cliente_saldo`.
+    Excluye facturas ficticias y aplica pagos directos + FIFO por cliente. El
+    `monto` es el documento; el `saldo` es lo que aun se puede cobrar.
     """
-    return await operativo_svc.cobranza(_pool(request), limite_clientes)
+    return await operativo_svc.cobranza(
+        _pool(request),
+        limite_clientes,
+        fecha=fecha,
+        preset=preset,
+        cubo=cubo_aging,
+        exigibilidad=exigibilidad,
+        cliente_id=cliente_id,
+        provincia=provincia,
+        ordenar_por=ordenar_por,
+    )
 
 
 @router.get("/benchmarks")

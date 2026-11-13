@@ -4063,3 +4063,84 @@ que hoy hace el navegador. Tests con caso vacío incluidos.
 - `.agents/MAPA_MODULOS.md`, `.agents/tareas/PENDIENTES.md`
 - `.agents/ESTADO.md`, `.agents/BITACORA.md`
 - Evidencia: `.agents/evidencias/dashboard_operativo_2026-11-13.txt`
+
+
+## 2026-11-13 — Dashboard C0–C3: capacidad declarada, MRP y cobranza única
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** implementar C0–C3 de la especificación de Carbon v2 sin inventar
+capacidad ni duplicar documentos.
+
+### Hecho
+
+1. **C0 — Capacidad declarada en Superadmin.** `_normalizar_mixer` conserva
+   `viajes_max_dia` y `planta_asignada`. `flota_y_operacion` lee y persiste
+   `flota.capacidad_plantas`, `flota.supuestos_capacidad`,
+   `operacion.umbrales_ocupacion` y `operacion.umbrales_cobertura_mrp`.
+2. **C1 — `GET /api/v1/dashboard/operacion`.** Capacidad
+   `min(flota, planta, jornada)`, estado `CONFIGURACION_INCONSISTENTE` con la
+   semilla actual, serie por fecha del viaje, cola `sin plan` (404 m³) y
+   `sin despachar` (388 m³).
+3. **C2 — `/inventario` extendido.** Explosión MRP, lectura declarada, lectura
+   neta registrada y lectura corregida por la asimetría del 8-nov; serie de
+   kardex y alerta de integridad.
+4. **C3 — `/cobranza` extendido.** Documento único (factura real reemplaza la
+   orden), exclusión de `PRUEBA-0001` ficticia, aging de 8 cubos, desglose de
+   exigibilidad y presets.
+5. **UI mínima.** Ocupación muestra el estado de capacidad; Inventario muestra
+   las tres lecturas; Cobranza muestra el desglose de exigibilidad. Sin
+   rediseño visual todavía (C5/C6 pendientes).
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **393 passed**, exit 0 |
+| `GET /api/v1/dashboard/operacion?fecha=2026-11-13` | 200, `CONFIGURACION_INCONSISTENTE`, 404 sin plan / 388 sin despachar |
+| `GET /api/v1/dashboard/inventario` | 200, cemento 3.500 declarado / 288 kardex / cobertura 8,97 %; arena 243,56 corregida |
+| `GET /api/v1/dashboard/cobranza` | 200, total único 55.043,60; 1.085,60 confirmado; 2.171,20 con salida; 3 sin fecha |
+| Navegador Chromium local | `/panel` sin errores de consola; las tres vistas muestran los nuevos datos |
+
+Evidencia completa: `.agents/evidencias/dashboard_c0_c3_2026-11-13.txt`.
+
+### Decisiones tomadas
+
+1. **La capacidad no se estima.** Se lee de `system_settings`. Con 3 mixers
+   8/8/7 sin `viajes_max_dia` el estado es `CONFIGURACION_INCONSISTENTE`; no se
+   devuelve 42 ni 69.
+2. **`sin plan` y `sin despachar` son distintos.** 404 m³ no tienen agenda; 16
+   m³ ya salieron de planta. Mostrar solo 404 habría ocultado la ejecución.
+3. **Documento único.** La factura real reemplaza la orden; la ficticia se
+   excluye. El total documental cierra al centavo contra `v_cliente_saldo`.
+4. **Tres lecturas de stock.** Declarada, neta registrada y corregida por
+   asimetría; la alerta usa la más conservadora.
+5. **Sin migración.** Capacidad y umbrales son parámetros en `system_settings`.
+
+### Bloqueos / preguntas al cliente
+
+1. Flota real: ¿2 camiones de 7 m³? ¿El tercero de la semilla existe o está
+   inactivo?
+2. Stock físico: ¿3.500 sacos es el stock de hoy o el inicial? ¿Los 249
+   movimientos son consumos reales?
+3. Cobrable: ¿la orden confirmada sin entregar se cobra, o solo lo
+   entregado/facturado?
+4. Capacidad de planta (m³/hora y horas efectivas).
+5. Días de crédito y umbral de mora.
+6. Umbral de ocupación (70/90 propuesto).
+
+### Próximo paso exacto
+
+Implementar C5/C6: banner `sec-ventanilla` con la ventana activa en amarillo
+sólido, submenús, tarjetas KPI mutables y gráficos SVG de capacidad, cobertura y
+aging. Corregir la vista `agenda` huérfana.
+
+### Archivos tocados
+
+- `services/core-api/app/superadmin/store.py`
+- `services/core-api/app/m4_dashboard/operativo.py`
+- `services/core-api/app/m4_dashboard/router.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v72_dashboard_operativo.py`
+- `docs/DASHBOARD_OPERATIVO.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/dashboard_c0_c3_2026-11-13.txt`

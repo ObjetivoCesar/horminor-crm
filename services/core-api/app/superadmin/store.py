@@ -192,10 +192,15 @@ def _normalizar_mixer(datos: Mapping[str, Any]) -> dict[str, Any]:
     capacidad = _num(datos.get("capacidad_m3"))
     if capacidad is None or capacidad <= 0:
         raise ValueError("El mixer necesita 'capacidad_m3' mayor que 0")
+    viajes = _num(datos.get("viajes_max_dia"))
     return {
         "codigo": codigo.upper(),
         "placa": _texto(datos.get("placa")),
         "capacidad_m3": capacidad,
+        # Restriccion declarada de capacidad: sin este dato no se puede
+        # calcular la capacidad diaria. 0 = pendiente de configurar.
+        "viajes_max_dia": int(viajes) if viajes is not None and viajes >= 0 else 0,
+        "planta_asignada": _texto(datos.get("planta_asignada")),
         "chofer_asignado": _texto(
             datos.get("chofer_asignado") or datos.get("chofer")
         ),
@@ -410,6 +415,19 @@ class PostgresConfigStore:
             ) or 30.0
             return {
                 "mixers": mixers,
+                # Restricciones declaradas del tablero de capacidad.
+                "capacidad_plantas": dict(
+                    await self._setting("flota.capacidad_plantas", {}) or {}
+                ),
+                "supuestos_capacidad": dict(
+                    await self._setting("flota.supuestos_capacidad", {}) or {}
+                ),
+                "umbrales_ocupacion": dict(
+                    await self._setting("operacion.umbrales_ocupacion", {}) or {}
+                ),
+                "umbrales_cobertura_mrp": dict(
+                    await self._setting("operacion.umbrales_cobertura_mrp", {}) or {}
+                ),
                 "politica_ultimo_viaje": _POLITICA_CORTA.get(
                     normalizar_politica(str(politica)), "PARCIAL"
                 ),
@@ -562,6 +580,15 @@ class PostgresConfigStore:
             if isinstance(cuerpo.get("mixers"), list):
                 for mixer in cuerpo["mixers"]:
                     await self.upsert_mixer(mixer)
+            # Parametros declarados de capacidad (JSONB, sin migracion).
+            for campo, clave in (
+                ("capacidad_plantas", "flota.capacidad_plantas"),
+                ("supuestos_capacidad", "flota.supuestos_capacidad"),
+                ("umbrales_ocupacion", "operacion.umbrales_ocupacion"),
+                ("umbrales_cobertura_mrp", "operacion.umbrales_cobertura_mrp"),
+            ):
+                if isinstance(cuerpo.get(campo), Mapping):
+                    await self._guardar_setting(clave, dict(cuerpo[campo]))
             if "politica_ultimo_viaje" in cuerpo:
                 await self._guardar_setting(
                     "operacion.politica_redondeo_viajes",
@@ -981,6 +1008,18 @@ class MemoryConfigStore:
             )
             return {
                 "mixers": await self.listar_flota(),
+                "capacidad_plantas": copy.deepcopy(
+                    self.settings.get("flota.capacidad_plantas", {})
+                ),
+                "supuestos_capacidad": copy.deepcopy(
+                    self.settings.get("flota.supuestos_capacidad", {})
+                ),
+                "umbrales_ocupacion": copy.deepcopy(
+                    self.settings.get("operacion.umbrales_ocupacion", {})
+                ),
+                "umbrales_cobertura_mrp": copy.deepcopy(
+                    self.settings.get("operacion.umbrales_cobertura_mrp", {})
+                ),
                 "politica_ultimo_viaje": _POLITICA_CORTA.get(
                     normalizar_politica(
                         str(self.settings["operacion.politica_redondeo_viajes"])
@@ -1093,6 +1132,14 @@ class MemoryConfigStore:
             if isinstance(cuerpo.get("mixers"), list):
                 for mixer in cuerpo["mixers"]:
                     await self.upsert_mixer(mixer)
+            for campo, clave in (
+                ("capacidad_plantas", "flota.capacidad_plantas"),
+                ("supuestos_capacidad", "flota.supuestos_capacidad"),
+                ("umbrales_ocupacion", "operacion.umbrales_ocupacion"),
+                ("umbrales_cobertura_mrp", "operacion.umbrales_cobertura_mrp"),
+            ):
+                if isinstance(cuerpo.get(campo), Mapping):
+                    self.settings[clave] = dict(cuerpo[campo])
             if "politica_ultimo_viaje" in cuerpo:
                 self.settings["operacion.politica_redondeo_viajes"] = (
                     normalizar_politica(str(cuerpo["politica_ultimo_viaje"])).upper()

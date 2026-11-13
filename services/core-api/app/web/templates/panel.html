@@ -2769,6 +2769,7 @@ tbody tr:last-child td { border-bottom: 0; }
 
     <div class="dash-panel active" data-dash-panel="ocupacion">
       <div class="dash-subview active" data-sub-view="resumen">
+        <div class="notice info" id="op-capacidad-nota">Leyendo capacidad declarada…</div>
         <div class="dash2-section">
           <div class="dash2-section-head">
             <div>
@@ -3672,13 +3673,31 @@ tbody tr:last-child td { border-bottom: 0; }
     <div class="spread">
       <div>
         <h3 style="margin:0">Flota de mixers</h3>
-        <p class="small muted" style="margin:2px 0 0">Código, placa, capacidad y chofer asignado.</p>
+        <p class="small muted" style="margin:2px 0 0">Código, placa, capacidad, viajes máximos por día y planta asignada.</p>
       </div>
       <button class="btn small ghost" onclick="agregarMixerFila()">+ Nuevo mixer</button>
     </div>
     <div class="table-wrap" style="margin-top:10px"><table class="tabla-editor" id="flota-tabla"></table></div>
     <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarFlotaSuper()">Guardar flota</button>
     <div id="flota-resultado"></div>
+
+    <div class="divider" style="margin:18px 0"></div>
+    <div>
+      <h3 style="margin:0">Capacidad declarada</h3>
+      <p class="small muted" style="margin:2px 0 0">La capacidad se declara, no se estima. Si falta un dato, el tablero muestra <strong>NO_CONFIGURADO</strong>.</p>
+    </div>
+    <div class="grid two" style="margin-top:10px">
+      <div class="field"><label>Planta Fija El Coca · m³/hora</label><input id="cap-prod-coca" type="number" step="0.1" min="0" placeholder="Pendiente"></div>
+      <div class="field"><label>Planta Fija · horas efectivas/día</label><input id="cap-horas-coca" type="number" step="0.5" min="0" placeholder="Pendiente"></div>
+      <div class="field"><label>Planta Móvil · m³/hora</label><input id="cap-prod-movil" type="number" step="0.1" min="0" placeholder="Pendiente"></div>
+      <div class="field"><label>Planta Móvil · horas efectivas/día</label><input id="cap-horas-movil" type="number" step="0.5" min="0" placeholder="Pendiente"></div>
+      <div class="field"><label>Ciclo de viaje (min)</label><input id="cap-ciclo" type="number" step="1" min="1" placeholder="110"></div>
+      <div class="field"><label>Mixers activos esperados</label><input id="cap-esperados" type="number" step="1" min="0" placeholder="2"></div>
+      <div class="field"><label>Ocupación libre hasta (%)</label><input id="cap-libre" type="number" step="1" min="0" max="100" placeholder="70"></div>
+      <div class="field"><label>Ocupación ajustada hasta (%)</label><input id="cap-ajustado" type="number" step="1" min="0" max="100" placeholder="90"></div>
+    </div>
+    <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarCapacidadSuper()">Guardar capacidad</button>
+    <div id="capacidad-resultado"></div>
   </div>
   <div class="dialog-foot"><button class="btn ghost" onclick="document.getElementById('dlg-super-recetas').close()">Cerrar</button></div>
 </dialog>
@@ -3723,7 +3742,7 @@ const state = {
   ordenes:[], detalle:{}, inventario:[], donutMode:0, catalogo:null,
   proveedores:[], inventarioOverview:null, agenda:[], agendaY:null, agendaM:null,
   reglasPago:{}, agendaParams:null, perfil:null, perfiles:[], operacionConfig:null,
-  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], notifs:[], cargando:false,
+  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], operacion:null, notifs:[], cargando:false,
   clientesBusqueda:[], cliGrupo:'TODOS', cliPagina:1, cliPaginas:1, cliTotal:0,
   cliResumen:null, cliFiltrosMeta:{ciudades:[],resistencias:[]}, cliTimer:null, cliSeq:0,
   carpetaTab:'ordenes', ordenExpandida:null,
@@ -4321,6 +4340,31 @@ function renderMixers() {
   }).join('') || '<p class="muted small">Ningún mixer con lectura de ruta hoy.</p>';
 }
 
+function renderOperacionDash() {
+  const host = $('#op-capacidad-nota');
+  if (!host) return;
+  const op = state.operacion;
+  if (!op || !op.datos) {
+    host.textContent = 'Capacidad declarada no disponible.';
+    return;
+  }
+  const cap = op.datos.capacidad || {};
+  const sa = op.datos.sin_agendar || {};
+  const comp = op.datos.comprometido || {};
+  const estado = cap.estado_configuracion || 'NO_CONFIGURADO';
+  let texto;
+  if (estado === 'CONFIGURACION_INCONSISTENTE') {
+    texto = 'Capacidad: CONFIGURACION_INCONSISTENTE. ' + (cap.detalle_inconsistencia || '');
+  } else if (estado === 'NO_CONFIGURADO') {
+    texto = 'Capacidad: NO_CONFIGURADO. ' + (cap.detalle_inconsistencia || 'Configura la flota en Superadmin.');
+  } else {
+    texto = 'Capacidad: ' + (cap.efectiva_m3_dia || '—') + ' m³/día · cuello de botella: ' + (cap.cuello_botella || '—') + '.';
+  }
+  texto += ' Vendido: ' + num(sa.vendido_total_m3 || 0) + ' m³ · sin plan: ' + num(sa.m3 || 0) + ' m³ · sin despachar: ' + num(sa.sin_despachar_m3 || 0) + ' m³.';
+  if (comp.estado_semaforo_hoy) texto += ' Hoy: ' + comp.estado_semaforo_hoy + '.';
+  host.textContent = texto;
+}
+
 function renderInventarioDash() {
   const env = state.inventarioDash;
   const grid = $('#inv-grid');
@@ -4332,18 +4376,25 @@ function renderInventarioDash() {
   const fuente = $('#inv-fuente');
   if (fuente) fuente.textContent = env && env.fuente ? env.fuente.join(' · ') : 'Sin fuente';
   grid.innerHTML = materiales.map(m => {
-    const sinDato = m.stock === null || m.stock === undefined;
+    const declarado = m.stock_declarado ?? m.stock;
+    const neto = m.stock_neto_registrado;
+    const corregido = m.stock_neto_corregido_por_asimetria;
+    const cobertura = m.cobertura_neta_corregida_pct ?? m.cobertura_neta_registrada_pct ?? m.cobertura_declarada_pct;
+    const sinDato = declarado === null || declarado === undefined;
     return `<article class="inv-card ${sinDato ? 'sin-dato' : ''}">
       <span class="inv-name">${esc(m.nombre)}</span>
-      <span class="inv-value">${sinDato ? '—' : num(m.stock)}</span>
+      <span class="inv-value">${sinDato ? '—' : num(declarado)}</span>
       <span class="inv-unit">${esc(m.unidad || '')}${m.stock_minimo ? ' · mínimo ' + num(m.stock_minimo) : ''}</span>
-      <span class="inv-estado">${sinDato ? 'SIN CONTEO' : esc(String(m.estado || '').replace(/_/g, ' '))}</span>
+      <span class="inv-min">Kardex: ${neto == null ? '—' : num(neto)}${corregido != null && corregido !== neto ? ' · corregido: ' + num(corregido) : ''}</span>
+      <span class="inv-estado">${sinDato ? 'SIN CONTEO' : esc(String(m.estado || '').replace(/_/g, ' '))}${cobertura != null ? ' · cobertura ' + cobertura + '%' : ''}</span>
     </article>`;
   }).join('') || '<p class="muted small">Sin materiales configurados.</p>';
   const nota = $('#inv-nota');
   if (nota) {
+    const alerta = datos.alerta_integridad_bodega || {};
     if (env && env.vacio) nota.textContent = env.vacio.mensaje;
-    else if (datos.sin_conteo) nota.textContent = datos.sin_conteo + ' material(es) sin fecha de conteo: el número es proyectado, no verificado.';
+    else if (datos.sin_conteo) nota.textContent = datos.sin_conteo + ' material(es) sin fecha de conteo: el número es proyectado, no verificado.' +
+      (alerta.viajes_asimetria_kardex_count ? ' · ' + alerta.viajes_asimetria_kardex_count + ' viajes con asimetría de kardex.' : '');
     else nota.textContent = 'Stock con conteo registrado.';
   }
 }
@@ -4383,7 +4434,15 @@ function renderCobranzaDash() {
   const nota = $('#cob-nota');
   if (nota) {
     const base = 'El monto es el total del documento, no el saldo pendiente. El saldo real por cliente sale de v_cliente_saldo.';
-    nota.textContent = env && env.vacio ? env.vacio.mensaje + ' ' + base : base;
+    const ex = datos.desglose_exigibilidad || {};
+    const caja = datos.caja || {};
+    const partes = [];
+    if (ex.recepcion_confirmada_o_facturada_usd != null) partes.push('Confirmado/facturado: ' + money(Number(ex.recepcion_confirmada_o_facturada_usd)));
+    if (ex.con_viaje_salido_planta_usd != null) partes.push('Con salida de planta: ' + money(Number(ex.con_viaje_salido_planta_usd)));
+    if (ex.comprometido_sin_salida_planta_usd != null) partes.push('Sin salir: ' + money(Number(ex.comprometido_sin_salida_planta_usd)));
+    if (caja.documentos_sin_fecha_count) partes.push(caja.documentos_sin_fecha_count + ' sin fecha (' + money(Number(caja.monto_sin_fecha || 0)) + ')');
+    const exigibilidad = partes.length ? partes.join(' · ') + '. ' : '';
+    nota.textContent = (env && env.vacio ? env.vacio.mensaje + ' ' : '') + exigibilidad + base;
   }
 }
 
@@ -4395,6 +4454,7 @@ function renderDashboard() {
   montarAgendaDashboard();
   renderObras();
   renderMixers();
+  renderOperacionDash();
   renderInventarioDash();
   renderCobranzaDash();
   renderKpis();
@@ -4410,7 +4470,7 @@ async function cargarDashboard() {
   if (state.cargando) return;
   state.cargando = true;
   try {
-    const [kpis, ordenes, inventario, mercado, simulador, clientes, inventarioDash, cobranzaDash] = await Promise.all([
+    const [kpis, ordenes, inventario, mercado, simulador, clientes, inventarioDash, cobranzaDash, operacionDash] = await Promise.all([
       api('/api/v1/dashboard/hero-kpis?fecha=' + hoy()).catch(() => null),
       api('/api/v1/orders?limit=50').catch(() => []),
       api('/api/v1/inventory').catch(() => []),
@@ -4418,7 +4478,8 @@ async function cargarDashboard() {
       api('/api/v1/dashboard/simulador').catch(() => null),
       api('/api/v1/secretaria/clientes').catch(() => ({clientes:[]})),
       api('/api/v1/dashboard/inventario').catch(() => null),
-      api('/api/v1/dashboard/cobranza').catch(() => null)
+      api('/api/v1/dashboard/cobranza').catch(() => null),
+      api('/api/v1/dashboard/operacion?fecha=' + hoy()).catch(() => null)
     ]);
     if (kpis) state.kpis = kpis;
     state.ordenes = Array.isArray(ordenes) ? ordenes : [];
@@ -4428,6 +4489,7 @@ async function cargarDashboard() {
     state.clientes = (clientes && clientes.clientes) || state.clientes || [];
     state.inventarioDash = inventarioDash;
     state.cobranzaDash = cobranzaDash;
+    state.operacion = operacionDash;
     const top = ordenesFiltradas().slice(0, 6);
     const detalles = await Promise.all(top.map(o => api('/api/v1/orders/' + o.id).catch(() => null)));
     state.detalle = {};
@@ -6735,6 +6797,7 @@ async function cargarSuperadmin() {
     renderUsuariosACL();
     renderRecetasSuper();
     renderFlotaSuper();
+    renderCapacidadSuper();
     renderReglasResumen();
   } catch(e) { toast('Superadmin no disponible: ' + e.message, 'bad'); }
 }
@@ -7013,12 +7076,14 @@ function renderFlotaSuper() {
   if (!host) return;
   const filas = state.flotaSuper || [];
   host.innerHTML = `<thead><tr>
-    <th>Código</th><th>Placa</th><th>Capacidad<br><span class="small muted">m³</span></th><th>Chofer asignado</th><th>Activo</th>
+    <th>Código</th><th>Placa</th><th>Capacidad<br><span class="small muted">m³</span></th><th>Viajes<br><span class="small muted">máx/día</span></th><th>Planta asignada</th><th>Chofer asignado</th><th>Activo</th>
   </tr></thead><tbody>${
     filas.map((m, idx) => `<tr data-mixer-idx="${idx}">
       <td><input type="text" data-mix="codigo" value="${esc(_valor(m.codigo))}" placeholder="MIXER-01"></td>
       <td><input type="text" data-mix="placa" value="${esc(_valor(m.placa))}" placeholder="OAA-0000"></td>
-      <td><input type="number" step="0.1" data-mix="capacidad_m3" value="${esc(_valor(m.capacidad_m3))}" placeholder="8"></td>
+      <td><input type="number" step="0.1" data-mix="capacidad_m3" value="${esc(_valor(m.capacidad_m3))}" placeholder="7"></td>
+      <td><input type="number" step="1" min="0" data-mix="viajes_max_dia" value="${esc(_valor(m.viajes_max_dia))}" placeholder="3"></td>
+      <td><input type="text" data-mix="planta_asignada" value="${esc(_valor(m.planta_asignada))}" placeholder="PLANTA-COCA"></td>
       <td><input type="text" data-mix="chofer_asignado" value="${esc(_valor(m.chofer_asignado))}" placeholder="Nombre del chofer"></td>
       <td><input type="checkbox" data-mix="activo" ${m.activo !== false ? 'checked' : ''}></td>
     </tr>`).join('')
@@ -7041,10 +7106,13 @@ async function guardarFlotaSuper() {
       const codigo = (campo('codigo').value || '').trim().toUpperCase();
       if (!codigo) continue;
       const capacidad = campo('capacidad_m3').value;
+      const viajes = (campo('viajes_max_dia').value || '').trim();
       const body = {
         codigo,
         placa: (campo('placa').value || '').trim() || null,
         capacidad_m3: capacidad === '' ? null : Number(capacidad),
+        viajes_max_dia: viajes === '' ? 0 : Number(viajes),
+        planta_asignada: (campo('planta_asignada').value || '').trim() || null,
         chofer_asignado: (campo('chofer_asignado').value || '').trim() || null,
         activo: campo('activo').checked
       };
@@ -7059,6 +7127,58 @@ async function guardarFlotaSuper() {
     toast('Flota guardada', 'ok');
   } catch(e) {
     $('#flota-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+function renderCapacidadSuper() {
+  const flota = (state.config && state.config.flota_y_operacion) || {};
+  const plantas = flota.capacidad_plantas || {};
+  const sup = flota.supuestos_capacidad || {};
+  const umb = flota.umbrales_ocupacion || {};
+  const coca = plantas['PLANTA-COCA'] || {};
+  const movil = plantas['PLANTA-MOVIL'] || {};
+  const set = (id, valor) => { const el = $(id); if (el) el.value = valor ?? ''; };
+  set('#cap-prod-coca', coca.produccion_m3_hora);
+  set('#cap-horas-coca', coca.horas_efectivas_dia);
+  set('#cap-prod-movil', movil.produccion_m3_hora);
+  set('#cap-horas-movil', movil.horas_efectivas_dia);
+  set('#cap-ciclo', sup.ciclo_viaje_min);
+  set('#cap-esperados', sup.mixers_activos_esperados);
+  set('#cap-libre', umb.libre_max_pct);
+  set('#cap-ajustado', umb.ajustado_max_pct);
+  const resultado = $('#capacidad-resultado');
+  if (resultado) resultado.innerHTML = '';
+}
+
+async function guardarCapacidadSuper() {
+  const num = id => { const v = ($(id).value || '').trim(); return v === '' ? null : Number(v); };
+  const flota = (state.config && state.config.flota_y_operacion) || {};
+  const body = {
+    capacidad_plantas: {
+      ...(flota.capacidad_plantas || {}),
+      'PLANTA-COCA': { ...((flota.capacidad_plantas || {})['PLANTA-COCA'] || {}), produccion_m3_hora: num('#cap-prod-coca'), horas_efectivas_dia: num('#cap-horas-coca') },
+      'PLANTA-MOVIL': { ...((flota.capacidad_plantas || {})['PLANTA-MOVIL'] || {}), produccion_m3_hora: num('#cap-prod-movil'), horas_efectivas_dia: num('#cap-horas-movil') }
+    },
+    supuestos_capacidad: {
+      ...(flota.supuestos_capacidad || {}),
+      ciclo_viaje_min: num('#cap-ciclo'),
+      mixers_activos_esperados: num('#cap-esperados'),
+      fuente_declaracion: 'Superadmin'
+    },
+    umbrales_ocupacion: {
+      ...(flota.umbrales_ocupacion || {}),
+      libre_max_pct: num('#cap-libre'),
+      ajustado_max_pct: num('#cap-ajustado')
+    }
+  };
+  try {
+    await api('/api/v1/superadmin/config/flota_y_operacion', {method:'PUT', body});
+    state.config = await api('/api/v1/superadmin/config');
+    renderCapacidadSuper();
+    $('#capacidad-resultado').innerHTML = '<div class="notice ok">Capacidad declarada guardada.</div>';
+    toast('Capacidad guardada', 'ok');
+  } catch(e) {
+    $('#capacidad-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
   }
 }
 
