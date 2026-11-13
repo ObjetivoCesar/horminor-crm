@@ -70,6 +70,21 @@ scripts de candado.
 - `pytest` → **393 passed**. Evidencia:
   `.agents/evidencias/dashboard_c0_c3_2026-11-13.txt`.
 
+### 2026-11-13 — Cotizaciones v6.21
+
+- Migración **080** aplicada: `cotizaciones`, `cotizacion_extras`,
+  `cotizacion_versiones`, `orden_extras`, `cliente_etiquetas`,
+  `concrete_recipes.precio_estado` y settings.
+- API: alta, edición (solo `BORRADOR`), detalle, listado, aceptación (etiqueta
+  `VENTA`) y conversión a orden con `crear_orden`.
+- Vista **Cotizaciones** en la columna izquierda: bandeja, detalle, formulario y
+  extras globales.
+- Permiso `cotizaciones` en el checklist de Superadmin. Julio lo tiene; los
+  demás perfiles lo reciben cuando Julio lo apruebe.
+- `pytest` → **400 passed**. Evidencia:
+  `.agents/evidencias/cotizaciones_v621_2026-11-13.txt`.
+- Manual actualizado: `docs/MANUAL_DASHBOARD_JULIO.md` §9.
+
 ### 2026-11-13 — Meta comercial y punto de equilibrio
 
 - Meta mensual configurable (`comercial.meta_mensual_m3`): cumplimiento,
@@ -284,16 +299,14 @@ scripts de candado.
 
 1. **C4:** capturar `fecha_vencimiento` en los formularios de orden y factura;
    hoy todo cae en `SIN_VENCIMIENTO`.
-2. **Cotizaciones Q2/Q3:** migración 080 (tablas, `precio_estado`, settings),
-   API de alta/edición/aceptación/conversión y vista en la columna izquierda.
-   El permiso `cotizaciones` entra al checklist de Superadmin.
-3. **Validar el dashboard C5/C6 con Julio**: revisar las 4 ventanas, los
-   presets de cobranza y el manual `docs/MANUAL_DASHBOARD_JULIO.md`.
-3. **Cerrar preguntas de cotizaciones** (`.agents/tareas/PENDIENTES.md` §6):
-   umbral de excedente, precio por resistencia, porcentaje de anticipo.
-4. **Migración 080** (cotizaciones: rubro global, `cliente_etiquetas`,
-   `precio_estado`) y después **081** (contratos de obra cierta y horas extra).
-5. **C9: UI de recordatorios en el panel**, pendiente de la sesión anterior.
+2. **Cotizaciones Q4:** PDF cliente/interno y envío por WhatsApp con archivo en
+   la carpeta del cliente. Después Q5 (Gato).
+3. **Factura con extras:** conectar la factura/cartera a `v_orden_total` para
+   que sume `orden_extras`.
+4. **Validar el dashboard C5/C6 y Cotizaciones con Julio**: 4 ventanas, presets
+   de cobranza, meta/equilibrio y manual.
+5. **Migración 081** (contratos de obra cierta y horas extra) y **C9: UI de
+   recordatorios en el panel**.
 
 ## Decisiones de arquitectura vigentes
 

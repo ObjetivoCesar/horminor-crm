@@ -23,7 +23,15 @@ from .m2_planta import ErrorPlanta
 from .m3_secretaria.router import router as secretaria_router
 from .m4_dashboard.router import router as dashboard_router
 from .m5_sentinel.router import router as sentinel_router
-from .routers import catalog, chat_clientes, clients_search, facturas, health, orders
+from .routers import (
+    catalog,
+    chat_clientes,
+    clients_search,
+    cotizaciones,
+    facturas,
+    health,
+    orders,
+)
 from .services.ordenes import OrdenInvalidaError
 from .settings import get_settings
 from .superadmin.operacion import router as operacion_router
@@ -131,6 +139,7 @@ app.include_router(clients_search.router)
 app.include_router(chat_clientes.router)
 app.include_router(facturas.router)
 app.include_router(orders.router)
+app.include_router(cotizaciones.router)
 app.include_router(whatsapp_router)
 app.include_router(superadmin_router)
 app.include_router(operacion_router)

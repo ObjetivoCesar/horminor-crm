@@ -2603,6 +2603,10 @@ tbody tr:last-child td { border-bottom: 0; }
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 11h18"/></svg>
         Carpetas de Clientes
       </button>
+      <button data-role-btn="cotizaciones" onclick="setView('cotizaciones')">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6Z"/><path d="M15 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
+        Cotizaciones
+      </button>
       <button data-role-btn="planta" onclick="setView('planta')">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l6 3V9l6 3V6l6 3v12Z"/><path d="M7 17h.01M12 17h.01M17 17h.01"/></svg>
         Planta, Flota y Kardex
@@ -2884,15 +2888,6 @@ tbody tr:last-child td { border-bottom: 0; }
     <div class="dash-panel active" data-dash-panel="operacion">
       <div class="dash-subview active" data-sub-view="resumen">
         <div class="notice info" id="op-capacidad-nota">Leyendo capacidad declarada…</div>
-        <div class="dash-card" style="margin-top:12px">
-          <div class="donut-head">
-            <div><p class="card-kicker">Capacidad y despacho</p><h2>Comprometido contra capacidad</h2></div>
-            <span class="badge neutral" id="chart-op-estado">—</span>
-          </div>
-          <div id="chart-op-bullet" class="dash-chart"></div>
-          <div id="chart-op-serie" class="dash-chart" style="margin-top:10px"></div>
-          <div id="chart-op-resistencia" class="dash-chart" style="margin-top:10px"></div>
-        </div>
 
         <div class="dash-card" style="margin-top:12px">
           <div class="donut-head">
@@ -2901,6 +2896,16 @@ tbody tr:last-child td { border-bottom: 0; }
           </div>
           <div id="chart-meta" class="dash-chart"></div>
           <p class="muted small" id="meta-nota"></p>
+        </div>
+
+        <div class="dash-card" style="margin-top:12px">
+          <div class="donut-head">
+            <div><p class="card-kicker">Capacidad y despacho</p><h2>Comprometido contra capacidad</h2></div>
+            <span class="badge neutral" id="chart-op-estado">—</span>
+          </div>
+          <div id="chart-op-bullet" class="dash-chart"></div>
+          <div id="chart-op-serie" class="dash-chart" style="margin-top:10px"></div>
+          <div id="chart-op-resistencia" class="dash-chart" style="margin-top:10px"></div>
         </div>
 
         <div class="dash2-section" style="margin-top:16px">
@@ -3058,6 +3063,52 @@ tbody tr:last-child td { border-bottom: 0; }
           </div>
           <div class="cob-clientes" id="cob-clientes"></div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== COTIZACIONES ===================== -->
+  <section class="view" data-view="cotizaciones">
+    <div class="dash2-head">
+      <div>
+        <h1 class="dash-hi">Cotizaciones</h1>
+        <p class="dash-sub">Toda venta pasa primero por aquí. Aceptar no crea la orden: la conversión es un paso explícito.</p>
+      </div>
+      <div class="dash2-head-right">
+        <button class="btn bank" data-mutacion="1" onclick="abrirCotizacion()">+ Nueva cotización</button>
+      </div>
+    </div>
+
+    <div class="card sec-ventanilla">
+      <div>
+        <span class="sec-eyebrow">VENTA</span>
+        <h2>De la cotización a la orden</h2>
+        <p class="small muted" style="margin:0">El precio sale de la lista de Superadmin y se marca PROVISIONAL si aún no es oficial. Los extras son un solo rubro global.</p>
+      </div>
+      <div class="sec-acciones">
+        <button class="sec-accion primary" data-mutacion="1" onclick="abrirCotizacion()">
+          <span class="sec-accion-ico" aria-hidden="true">📄</span>
+          <span class="sec-accion-txt"><strong>Nueva cotización</strong><small>Cliente, obra y volumen</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+        <button class="sec-accion" onclick="cargarCotizaciones()">
+          <span class="sec-accion-ico" aria-hidden="true">🔄</span>
+          <span class="sec-accion-txt"><strong>Actualizar bandeja</strong><small>Estados y totales</small></span>
+          <span class="sec-accion-arrow">→</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:16px">
+      <div class="card">
+        <div class="spread">
+          <div><h2 style="margin-bottom:2px">Bandeja</h2><p class="small muted" style="margin:0">Borradores, enviadas, aceptadas y convertidas.</p></div>
+          <span class="badge neutral" id="cot-contador">—</span>
+        </div>
+        <div class="table-wrap" id="cot-lista" style="margin-top:12px"></div>
+      </div>
+      <div class="card" id="cot-detalle">
+        <p class="muted small">Selecciona una cotización de la bandeja.</p>
       </div>
     </div>
   </section>
@@ -3933,6 +3984,47 @@ tbody tr:last-child td { border-bottom: 0; }
   <div class="dialog-foot"><button class="btn ghost" onclick="document.getElementById('dlg-super-tasas').close()">Cerrar</button></div>
 </dialog>
 
+<dialog id="dlg-cotizacion" class="wide">
+  <div class="dialog-head"><h2 id="cot-dialog-titulo">Nueva cotización</h2><button class="btn small ghost" onclick="document.getElementById('dlg-cotizacion').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <input type="hidden" id="cot-id">
+    <div class="field-row">
+      <div><label class="field">Cliente *</label><select id="cot-cliente"></select></div>
+      <div><label class="field">Obra / dirección *</label><input type="text" id="cot-obra" placeholder="Sector, vía, referencia"></div>
+      <div><label class="field">Resistencia *</label><select id="cot-resistencia" onchange="cotizarPrecioReceta()"></select></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Volumen (m³) *</label><input type="number" id="cot-volumen" step="0.5" min="0.5" placeholder="10"></div>
+      <div><label class="field">Precio por m³</label><input type="number" id="cot-precio" step="0.01" min="0" placeholder="Precio de lista"></div>
+      <div><label class="field">Forma de pago</label><select id="cot-pago">
+        <option value="FIADO">Crédito / Fiado</option>
+        <option value="EFECTIVO">Efectivo</option>
+        <option value="TRANSFERENCIA">Transferencia</option>
+        <option value="ABONO">Abono</option>
+      </select></div>
+      <div><label class="field">Validez (días)</label><input type="number" id="cot-validez" min="1" max="90" value="15"></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <label class="row small"><input type="checkbox" id="cot-equipo" checked style="width:auto"> Incluye equipo</label>
+      <label class="row small"><input type="checkbox" id="cot-bombeo" checked style="width:auto"> Incluye bombeo</label>
+    </div>
+    <label class="field" style="margin-top:10px">Acceso / notas de obra</label>
+    <input type="text" id="cot-acceso" placeholder="Retro para abrir paso, permiso municipal…">
+    <div class="spread" style="margin-top:12px">
+      <div><h3 style="margin:0">Extras · rubro global</h3><p class="small muted" style="margin:2px 0 0">Si no es cobrable, es costo interno y no se imprime al cliente.</p></div>
+      <button class="btn small ghost" type="button" onclick="agregarExtraCot()">+ Extra</button>
+    </div>
+    <div class="table-wrap" id="cot-extras" style="margin-top:8px"></div>
+    <label class="field" style="margin-top:10px">Notas internas</label>
+    <input type="text" id="cot-notas">
+    <div id="cot-resultado"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-cotizacion').close()">Cancelar</button>
+    <button class="btn bank" data-mutacion="1" onclick="guardarCotizacion()">Guardar borrador</button>
+  </div>
+</dialog>
+
 <div class="toast-wrap" id="toasts"></div>
 
 <script src="/static/horminor-agenda.js"></script>
@@ -3944,7 +4036,7 @@ const state = {
   ordenes:[], detalle:{}, inventario:[], donutMode:0, catalogo:null,
   proveedores:[], inventarioOverview:null, agenda:[], agendaY:null, agendaM:null,
   reglasPago:{}, agendaParams:null, perfil:null, perfiles:[], operacionConfig:null,
-  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], operacion:null, notifs:[], cargando:false,
+  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], operacion:null, cotizaciones:[], cotizacion:null, cotExtras:[], notifs:[], cargando:false,
   clientesBusqueda:[], cliGrupo:'TODOS', cliPagina:1, cliPaginas:1, cliTotal:0,
   cliResumen:null, cliFiltrosMeta:{ciudades:[],resistencias:[]}, cliTimer:null, cliSeq:0,
   carpetaTab:'ordenes', ordenExpandida:null,
@@ -3977,6 +4069,10 @@ const VIEW_META = {
   clientes: {
     title: 'Carpetas de Clientes',
     subtitle: 'Maestro-detalle forense con Juez Jeb y evidencia Bunny.'
+  },
+  cotizaciones: {
+    title: 'Cotizaciones',
+    subtitle: 'De la cotización a la orden, con precio de lista y extras.'
   },
   planta: {
     title: 'Planta, Flota y Kardex',
@@ -4082,6 +4178,7 @@ function setView(v) {
   if (v === 'dashboard') cargarDashboard();
   if (v === 'secretaria') cargarSecretaria();
   if (v === 'clientes') cargarClientes();
+  if (v === 'cotizaciones') cargarCotizaciones();
   if (v === 'planta') cargarPlanta();
   if (v === 'banca') cargarBanca();
   if (v === 'superadmin') cargarSuperadmin();
@@ -4095,6 +4192,7 @@ const MODULOS_PANEL = {
   secretaria_cobros_gastos: 'Cobros, abonos y gastos',
   secretaria_cierre_caja: 'Cierre de caja',
   agenda_despachos: 'Agenda de despachos',
+  cotizaciones: 'Cotizaciones y ventas',
   compras_materiales: 'Compras de materiales',
   planta_kardex: 'Planta, flota y kardex',
   clientes_cartera: 'Clientes y cartera',
@@ -4106,6 +4204,7 @@ const MODULO_POR_VISTA = {
   dashboard: ['dashboard_gerencial'],
   secretaria: ['secretaria_ventanilla', 'secretaria_cobros_gastos', 'secretaria_cierre_caja', 'agenda_despachos', 'compras_materiales'],
   clientes: ['clientes_cartera'],
+  cotizaciones: ['cotizaciones'],
   planta: ['planta_kardex', 'compras_materiales'],
   banca: ['finanzas_balance_auditoria'],
   superadmin: ['superadmin_config']
@@ -5012,6 +5111,276 @@ function renderKpis() {
       <div class="kpi-sub">${num(bodega.cemento_sacos)} sacos · ${num(bodega.retardante_litros)} L retardante</div>
       <div class="kpi-sub" style="margin-top:6px">Merma 30 d: ${num(bodega.merma_cemento_sacos_30d)} sacos</div>
     </div>`;
+}
+
+/* ----------------------------- COTIZACIONES v6.20 ----------------------------- */
+async function cargarCotizaciones() {
+  try {
+    if (!state.clientes.length || !state.opciones) {
+      const [clientes, opciones] = await Promise.all([
+        api('/api/v1/secretaria/clientes').catch(() => ({clientes: []})),
+        api('/api/v1/secretaria/opciones').catch(() => ({recetas: [], plantas: [], mixers: []}))
+      ]);
+      state.clientes = clientes.clientes || [];
+      state.opciones = opciones;
+    }
+    const r = await api('/api/v1/cotizaciones');
+    state.cotizaciones = (r && r.cotizaciones) || [];
+    renderCotLista();
+    if (state.cotizacion) {
+      await seleccionarCotizacion(state.cotizacion.id);
+    }
+  } catch (e) {
+    toast('Cotizaciones no disponible: ' + e.message, 'bad');
+  }
+}
+
+function renderCotLista() {
+  const host = $('#cot-lista');
+  if (!host) return;
+  const filas = state.cotizaciones || [];
+  const contador = $('#cot-contador');
+  if (contador) contador.textContent = filas.length + ' cotizaciones';
+  if (!filas.length) {
+    host.innerHTML = '<p class="muted small">Todavía no hay cotizaciones. Crea la primera con “Nueva cotización”.</p>';
+    return;
+  }
+  host.innerHTML = `<table class="tabla-editor"><thead><tr>
+    <th>Número</th><th>Cliente</th><th>Obra</th><th>m³</th><th>Total</th><th>Estado</th><th>Vence</th>
+  </tr></thead><tbody>${filas.map(c => `<tr data-cot-id="${esc(c.id)}" onclick="seleccionarCotizacion('${esc(c.id)}')" style="cursor:pointer">
+    <td><strong>${esc(c.numero)}</strong></td>
+    <td>${esc(c.cliente_nombre)}</td>
+    <td class="small">${esc(c.obra_direccion)}</td>
+    <td>${num(c.volumen_m3)}</td>
+    <td>${money(Number(c.total || 0))}</td>
+    <td><span class="badge neutral">${esc(String(c.estado || '').replace(/_/g, ' '))}</span></td>
+    <td class="small">${esc(c.valida_hasta || '—')}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function renderCotDetalle(cot) {
+  const host = $('#cot-detalle');
+  if (!host) return;
+  if (!cot) {
+    host.innerHTML = '<p class="muted small">Selecciona una cotización de la bandeja.</p>';
+    return;
+  }
+  const extras = cot.extras || [];
+  const estado = String(cot.estado || '');
+  const botones = [];
+  if (estado === 'BORRADOR') {
+    botones.push(`<button class="btn small" onclick="abrirCotizacion('${esc(cot.id)}')">Editar borrador</button>`);
+  }
+  if (estado === 'BORRADOR' || estado === 'ENVIADA') {
+    botones.push(`<button class="btn small bank" onclick="aceptarCotizacion('${esc(cot.id)}')">Aceptar</button>`);
+  }
+  if (estado === 'ACEPTADA') {
+    botones.push(`<button class="btn small bank" onclick="convertirCotizacion('${esc(cot.id)}')">Convertir a orden</button>`);
+  }
+  host.innerHTML = `
+    <div class="spread">
+      <div>
+        <p class="card-kicker">${esc(cot.numero)}</p>
+        <h2 style="margin:2px 0 4px">${esc(cot.cliente_nombre)}</h2>
+        <p class="small muted" style="margin:0">${esc(cot.obra_direccion)}</p>
+      </div>
+      <span class="badge neutral">${esc(estado.replace(/_/g, ' '))}</span>
+    </div>
+    <div class="field-row" style="margin-top:14px">
+      <div><span class="small muted">Volumen</span><strong>${num(cot.volumen_m3)} m³ ${esc(cot.resistencia || '')}</strong></div>
+      <div><span class="small muted">Precio/m³</span><strong>${money(Number(cot.precio_m3 || 0))}</strong> <span class="badge neutral">${esc(cot.precio_estado || '')}</span></div>
+      <div><span class="small muted">Forma de pago</span><strong>${esc(cot.forma_pago)}</strong></div>
+      <div><span class="small muted">Validez</span><strong>${esc(cot.valida_hasta || '—')}</strong></div>
+    </div>
+    <div class="grid two" style="margin-top:14px">
+      <div><span class="small muted">Subtotal</span><strong>${money(Number(cot.subtotal || 0))}</strong></div>
+      <div><span class="small muted">IVA (${num(cot.iva_pct)} %)</span><strong>${money(Number(cot.iva_monto || 0))}</strong></div>
+      <div><span class="small muted">Total</span><strong style="font-size:1.2rem">${money(Number(cot.total || 0))}</strong></div>
+      <div><span class="small muted">Incluye</span><strong>${cot.incluye_equipo ? 'Equipo' : '—'} · ${cot.incluye_bombeo ? 'Bombeo' : '—'}</strong></div>
+    </div>
+    <div class="table-wrap" style="margin-top:14px">
+      ${extras.length ? `<table class="tabla-editor"><thead><tr><th>Extra</th><th>Monto</th><th>¿Cobrable?</th></tr></thead><tbody>${extras.map(e => `<tr>
+        <td>${esc(e.descripcion)}</td><td>${e.monto == null ? 'SIN MONTO' : money(Number(e.monto))}</td><td>${e.cobrable ? 'Sí' : 'No (interno)'}</td>
+      </tr>`).join('')}</tbody></table>` : '<p class="small muted">Sin extras.</p>'}
+    </div>
+    ${cot.notas ? `<p class="small muted" style="margin-top:10px">${esc(cot.notas)}</p>` : ''}
+    <div class="row" style="margin-top:14px;gap:8px;flex-wrap:wrap">${botones.join('') || '<span class="small muted">Sin acciones para este estado.</span>'}</div>`;
+}
+
+async function seleccionarCotizacion(id) {
+  try {
+    const cot = await api('/api/v1/cotizaciones/' + encodeURIComponent(id));
+    state.cotizacion = cot;
+    renderCotDetalle(cot);
+  } catch (e) {
+    toast('No se pudo abrir la cotización: ' + e.message, 'bad');
+  }
+}
+
+function llenarSelectsCot() {
+  const clientes = state.clientes || [];
+  const recetas = (state.opciones && state.opciones.recetas) || [];
+  const cliente = $('#cot-cliente');
+  if (cliente) {
+    cliente.innerHTML = '<option value="">Selecciona un cliente</option>' + (state.cotizacion ? '' : '') +
+      clientes.map(c => `<option value="${esc(c.cliente_id || c.id)}">${esc(c.nombre)}</option>`).join('');
+  }
+  const resistencia = $('#cot-resistencia');
+  if (resistencia) {
+    resistencia.innerHTML = recetas.map(r => `<option value="${esc(r.resistencia)}">${esc(r.resistencia)} · $${num(r.precio_m3)}/m³</option>`).join('') || '<option value="">Sin recetas</option>';
+  }
+}
+
+function cotizarPrecioReceta() {
+  const res = ($('#cot-resistencia') || {}).value;
+  const recetas = (state.opciones && state.opciones.recetas) || [];
+  const receta = recetas.find(r => String(r.resistencia) === String(res));
+  const precio = $('#cot-precio');
+  if (precio && receta) precio.value = receta.precio_m3 == null ? '' : receta.precio_m3;
+}
+
+function renderExtrasCot() {
+  const host = $('#cot-extras');
+  if (!host) return;
+  const extras = state.cotExtras || [];
+  host.innerHTML = extras.length ? `<table class="tabla-editor"><thead><tr><th>Descripción</th><th>Monto</th><th>¿Cobrable?</th><th></th></tr></thead><tbody>${extras.map((e, i) => `<tr data-extra-idx="${i}">
+    <td><input type="text" data-extra="descripcion" value="${esc(e.descripcion || '')}" placeholder="Retro para abrir paso"></td>
+    <td><input type="number" data-extra="monto" step="0.01" min="0" value="${e.monto ?? ''}" placeholder="Opcional"></td>
+    <td style="text-align:center"><input type="checkbox" data-extra="cobrable" ${e.cobrable ? 'checked' : ''}></td>
+    <td><button class="btn small ghost" type="button" onclick="quitarExtraCot(${i})">×</button></td>
+  </tr>`).join('')}</tbody></table>` : '<p class="small muted">Sin extras. Agrega uno si hay un costo que no se cobra o un rubro especial.</p>';
+}
+
+function agregarExtraCot() {
+  state.cotExtras = state.cotExtras || [];
+  state.cotExtras.push({descripcion: '', monto: null, cobrable: false});
+  renderExtrasCot();
+}
+
+function quitarExtraCot(indice) {
+  state.cotExtras.splice(indice, 1);
+  renderExtrasCot();
+}
+
+function leerExtrasCot() {
+  const filas = $$('#cot-extras tbody tr[data-extra-idx]');
+  return filas.map(tr => {
+    const descripcion = (tr.querySelector('[data-extra="descripcion"]').value || '').trim();
+    const montoCrudo = (tr.querySelector('[data-extra="monto"]').value || '').trim();
+    return {
+      descripcion,
+      monto: montoCrudo === '' ? null : Number(montoCrudo),
+      cobrable: tr.querySelector('[data-extra="cobrable"]').checked
+    };
+  }).filter(e => e.descripcion);
+}
+
+function abrirCotizacion(id) {
+  llenarSelectsCot();
+  state.cotExtras = [];
+  state.cotizacion = null;
+  const set = (sel, valor) => { const el = $(sel); if (el) el.value = valor ?? ''; };
+  set('#cot-id', '');
+  set('#cot-obra', '');
+  set('#cot-volumen', '');
+  set('#cot-precio', '');
+  set('#cot-acceso', '');
+  set('#cot-notas', '');
+  set('#cot-validez', 15);
+  set('#cot-pago', 'FIADO');
+  const equipo = $('#cot-equipo'); if (equipo) equipo.checked = true;
+  const bombeo = $('#cot-bombeo'); if (bombeo) bombeo.checked = true;
+  const titulo = $('#cot-dialog-titulo');
+  const resultado = $('#cot-resultado'); if (resultado) resultado.innerHTML = '';
+  if (id) {
+    api('/api/v1/cotizaciones/' + encodeURIComponent(id)).then(cot => {
+      state.cotizacion = cot;
+      set('#cot-id', cot.id);
+      const cliente = $('#cot-cliente'); if (cliente) cliente.value = cot.cliente_id;
+      set('#cot-obra', cot.obra_direccion);
+      set('#cot-volumen', cot.volumen_m3);
+      set('#cot-precio', cot.precio_m3);
+      set('#cot-acceso', cot.acceso_notas || '');
+      set('#cot-notas', cot.notas || '');
+      set('#cot-validez', cot.validez_dias || 15);
+      set('#cot-pago', cot.forma_pago);
+      const res = $('#cot-resistencia'); if (res) res.value = cot.resistencia || '';
+      if (equipo) equipo.checked = cot.incluye_equipo !== false;
+      if (bombeo) bombeo.checked = cot.incluye_bombeo !== false;
+      state.cotExtras = cot.extras || [];
+      renderExtrasCot();
+      if (titulo) titulo.textContent = 'Editar ' + cot.numero;
+    }).catch(e => toast('No se pudo abrir: ' + e.message, 'bad'));
+  } else {
+    if (titulo) titulo.textContent = 'Nueva cotización';
+    renderExtrasCot();
+    cotizarPrecioReceta();
+  }
+  const dlg = document.getElementById('dlg-cotizacion');
+  if (dlg && !dlg.open) dlg.showModal();
+}
+
+async function guardarCotizacion() {
+  const num = id => {
+    const v = ($('#' + id) || {}).value;
+    return v === '' || v === undefined || v === null ? null : Number(v);
+  };
+  const body = {
+    cliente_id: ($('#cot-cliente') || {}).value || '',
+    obra_direccion: (($('#cot-obra') || {}).value || '').trim(),
+    volumen_m3: num('cot-volumen'),
+    resistencia: ($('#cot-resistencia') || {}).value || '',
+    precio_m3: num('cot-precio'),
+    forma_pago: ($('#cot-pago') || {}).value || 'FIADO',
+    incluye_equipo: !!($('#cot-equipo') || {}).checked,
+    incluye_bombeo: !!($('#cot-bombeo') || {}).checked,
+    acceso_notas: (($('#cot-acceso') || {}).value || '').trim() || null,
+    validez_dias: num('cot-validez'),
+    extras: leerExtrasCot(),
+    notas: (($('#cot-notas') || {}).value || '').trim() || null
+  };
+  if (!body.cliente_id || !body.obra_direccion || !body.volumen_m3) {
+    $('#cot-resultado').innerHTML = '<div class="notice bad">Cliente, obra y volumen son obligatorios.</div>';
+    return;
+  }
+  const id = ($('#cot-id') || {}).value;
+  try {
+    const cot = await api(id ? '/api/v1/cotizaciones/' + encodeURIComponent(id) : '/api/v1/cotizaciones', {
+      method: id ? 'PUT' : 'POST',
+      body
+    });
+    document.getElementById('dlg-cotizacion').close();
+    await cargarCotizaciones();
+    await seleccionarCotizacion(cot.id);
+    toast('Cotización guardada', 'ok');
+  } catch (e) {
+    $('#cot-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+async function aceptarCotizacion(id) {
+  if (!confirm('¿Aceptar esta cotización? Se asignará la etiqueta VENTA al cliente.')) return;
+  try {
+    const cot = await api('/api/v1/cotizaciones/' + encodeURIComponent(id) + '/aceptar', {method: 'POST', body: {}});
+    state.cotizacion = cot;
+    renderCotDetalle(cot);
+    await cargarCotizaciones();
+    toast('Cotización aceptada', 'ok');
+  } catch (e) {
+    toast('No se pudo aceptar: ' + e.message, 'bad');
+  }
+}
+
+async function convertirCotizacion(id) {
+  if (!confirm('¿Convertir esta cotización en orden? Se creará la orden y sus viajes.')) return;
+  try {
+    const r = await api('/api/v1/cotizaciones/' + encodeURIComponent(id) + '/convertir', {method: 'POST', body: {}});
+    await cargarCotizaciones();
+    await seleccionarCotizacion(id);
+    toast('Orden #' + (r.orden && r.orden.orden_numero ? r.orden.orden_numero : 'creada'), 'ok');
+  } catch (e) {
+    toast('No se pudo convertir: ' + e.message, 'bad');
+  }
 }
 
 /* ----------------------------- CLIENTES / SABUESO v6.6 ----------------------------- */

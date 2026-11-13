@@ -23,6 +23,7 @@ MODULOS: tuple[str, ...] = (
     "secretaria_cobros_gastos",
     "secretaria_cierre_caja",
     "agenda_despachos",
+    "cotizaciones",
     "compras_materiales",
     "planta_kardex",
     "clientes_cartera",

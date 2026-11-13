@@ -1,8 +1,16 @@
-# Cotizaciones — propuesta v6.20
+# Cotizaciones — v6.21
 
-> **Estado:** propuesta de diseño. Los precios, extras y condiciones los define
-> Julio; el sistema no inventa ninguno. El texto legal del contrato que salga de
-> una cotización sigue sujeto a revisión (`docs/CONTRATOS.md`).
+> **Estado:** migración **080** aplicada; API de alta, edición, aceptación y
+> conversión implementada; vista **Cotizaciones** en la columna izquierda con
+> permiso ACL aprobable desde Superadmin. PDF, WhatsApp y Gato quedan para
+> Q4/Q5. Los precios, extras y condiciones los define Julio; el sistema no
+> inventa ninguno. El texto legal del contrato sigue sujeto a revisión
+> (`docs/CONTRATOS.md`).
+>
+> **Decisión de aprobación (2026-11-13):** “aprobable desde Superadmin” se
+> implementó como **permiso del módulo** en el checklist de perfiles. La
+> aprobación transaccional de cada cotización no se activó; si Julio la pide, se
+> agrega un estado `PENDIENTE_APROBACION` sin rehacer la tabla.
 
 ## 1. Por qué existe
 
@@ -284,3 +292,22 @@ Sigue abierta:
 pestaña Ocupación. Después Q2–Q4. La cotización va **antes** que el contrato: el
 contrato es la cotización aceptada. Si se construye al revés, se duplican campos
 y luego hay que refactorizar.
+
+## 12. Implementación actual (2026-11-13)
+
+| Pieza | Estado |
+|---|---|
+| Migración 080 (`cotizaciones`, `cotizacion_extras`, `cotizacion_versiones`, `orden_extras`, `cliente_etiquetas`, `precio_estado`) | aplicada |
+| `POST /api/v1/cotizaciones` | crea borrador, calcula IVA y versión 1 |
+| `GET /api/v1/cotizaciones` / `/{id}` | bandeja y detalle |
+| `PUT /api/v1/cotizaciones/{id}` | solo `BORRADOR`; crea versión nueva |
+| `POST /api/v1/cotizaciones/{id}/aceptar` | `ACEPTADA` + etiqueta `VENTA` |
+| `POST /api/v1/cotizaciones/{id}/convertir` | crea orden con `crear_orden` y copia extras cobrables |
+| Vista **Cotizaciones** | columna izquierda, bandeja + detalle + formulario |
+| ACL | módulo `cotizaciones`; Superadmin lo aprueba por perfil |
+| PDF / WhatsApp / Gato | pendientes (Q4/Q5) |
+
+**Límite conocido:** la orden conserva su total base; los extras cobrables viven
+en `orden_extras` y la vista `v_orden_total` los suma. La factura/cartera que
+use `orders.total` no los incluye todavía. Se cierra cuando se conecte la
+factura a `v_orden_total`.

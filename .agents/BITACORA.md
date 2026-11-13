@@ -4285,3 +4285,89 @@ permiso `cotizaciones` en el checklist de Superadmin.
 - `docs/MANUAL_DASHBOARD_JULIO.md`
 - `.agents/ESTADO.md`, `.agents/BITACORA.md`
 - Evidencia: `.agents/evidencias/dashboard_meta_equilibrio_2026-11-13.txt`
+
+
+## 2026-11-13 — Cotizaciones v6.21 y meta/equilibrio visible
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** hacer visible la meta y el punto de equilibrio, y estrenar el
+modulo de cotizaciones en la columna izquierda con permiso aprobable desde
+Superadmin.
+
+### Hecho
+
+1. **Meta y equilibrio visible.** La tarjeta se movio arriba de la capacidad,
+   dentro de Operacion, para que se vea sin bajar media pantalla. Sigue en
+   `NO_CONFIGURADO` hasta que Julio/Contadora carguen meta y costos.
+2. **Migracion 080 aplicada.** `cotizaciones`, `cotizacion_extras`,
+   `cotizacion_versiones`, `orden_extras`, `cliente_etiquetas`,
+   `concrete_recipes.precio_estado` y settings de validez/envio.
+3. **API de cotizaciones.** Alta, edicion (solo BORRADOR), detalle, listado,
+   aceptacion (etiqueta VENTA) y conversion a orden con `crear_orden`. Version
+   inmutable con snapshot y hash SHA-256.
+4. **Vista Cotizaciones** en la columna izquierda: bandeja, detalle, formulario
+   con cliente/obra/resistencia/volumen/precio de lista, extras globales y
+   validez. Aceptar y convertir desde el detalle.
+5. **Permiso ACL.** El modulo `cotizaciones` entra al checklist de Superadmin.
+   Julio lo tiene por defecto; los demas perfiles lo reciben cuando Julio lo
+   apruebe. No se agrego aprobacion transaccional por cotizacion.
+6. **Manual** actualizado: seccion 9 de Cotizaciones y 3.1.1 de meta/equilibrio.
+
+### Evidencia (real, ejecutada)
+
+| Comando / prueba | Resultado |
+|---|---|
+| `python scripts/db_migrate.py` | `+ 080_cotizaciones.sql` |
+| `pytest /app/tests` | **400 passed**, exit 0 |
+| `POST /api/v1/cotizaciones` | `HORM-COT-2026-0001`, 10 m³ FC-210, total 1.357,00 |
+| `POST .../aceptar` | `ACEPTADA` + etiqueta `VENTA` |
+| `POST .../convertir` | `CONVERTIDA`, orden #58 creada |
+| UI | sidebar, bandeja, formulario, 6 clientes, 5 recetas, 0 errores de consola |
+| ACL | Julio `cotizaciones=true`; Secretaría/Bodega/Vendedor/Auditor `false` |
+| Limpieza | base de vuelta a 4 órdenes / 249 movimientos / 0 cotizaciones |
+
+Evidencia: `.agents/evidencias/cotizaciones_v621_2026-11-13.txt`.
+
+### Decisiones tomadas
+
+1. **“Aprobable desde Superadmin” = permiso del modulo.** Se implemento como
+   checkbox del perfil (patron de los 10 modulos). Alternativa descartada:
+   aprobacion transaccional por cotizacion, que cambiaria el flujo aceptado por
+   Julio/Secretaria. Si Julio la pide, se agrega `PENDIENTE_APROBACION` sin
+   rehacer la tabla.
+2. **Aceptar no crea orden.** La etiqueta `VENTA` se asigna al aceptar; la orden
+   nace solo con el boton “Convertir a orden”, como pide el diseno.
+3. **Precio de lista con estado.** Se usa `concrete_recipes.precio_m3` y se
+   muestra `PROVISIONAL`. No se inventa un precio oficial.
+4. **Extras cobrables a `orden_extras`.** La orden conserva su total base; la
+   vista `v_orden_total` suma los extras. Falta que la factura los use.
+5. **La tarjeta de meta/equilibrio va arriba.** El usuario no la veia porque
+   estaba debajo de los graficos de capacidad.
+
+### Bloqueos / preguntas al cliente
+
+1. Meta mensual de ventas y costos fijos/variables (reunion con Julio y
+   Contadora).
+2. Flota 2×7, stock 3.500 y politica de cobro.
+3. PDF de cotizacion y envio por WhatsApp (Q4): falta definir si se reutiliza
+   el PDF de factura interna o se hace uno propio.
+4. Factura que sume `orden_extras`: depende de la regla de facturacion.
+
+### Proximo paso exacto
+
+Q4: PDF de cotizacion (cliente e interno) y envio por WhatsApp con archivo en
+la carpeta del cliente. Despues Q5 (Gato) y conectar la factura a
+`v_orden_total`.
+
+### Archivos tocados
+
+- `db/migrations/080_cotizaciones.sql`
+- `services/core-api/app/routers/cotizaciones.py`
+- `services/core-api/app/routers/__init__.py`
+- `services/core-api/app/main.py`
+- `services/core-api/app/panel_acl.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v81_cotizaciones.py`
+- `docs/COTIZACIONES.md`, `docs/MANUAL_DASHBOARD_JULIO.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/cotizaciones_v621_2026-11-13.txt`

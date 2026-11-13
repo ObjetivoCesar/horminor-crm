@@ -273,10 +273,43 @@ rayado es programado/teórico. No se mezclan.
    firma de Julio.
 6. **Meta y punto de equilibrio:** la estructura está lista, pero faltan la meta
    mensual y los costos fijos/variables de la reunión con Julio y Contadora.
+7. **Cotizaciones:** falta PDF, envío por WhatsApp y que la factura sume los
+   extras de `orden_extras`. La bandeja, aceptación y conversión ya funcionan.
 
 ---
 
-## 9. Preguntas que el manual debe responder cuando esté cerrado
+## 9. Cotizaciones
+
+**La cotización va antes que la orden.** Aceptar una cotización **no** crea la
+orden: solo asigna la etiqueta `VENTA` al cliente. La conversión es un botón
+aparte.
+
+**Crear una cotización:**
+1. Columna izquierda → **Cotizaciones**.
+2. **Nueva cotización**.
+3. Cliente, obra, resistencia y volumen.
+4. El precio se llena con la lista de Superadmin. Si dice `PROVISIONAL`, no es
+   un precio oficial: Julio debe cambiarlo en Superadmin.
+5. Extras: un solo rubro global, descripción libre. Si **no** es cobrable, es
+   costo interno y no se imprime al cliente.
+6. Guardar borrador.
+
+**Estados:**
+- `BORRADOR`: se puede editar.
+- `ACEPTADA`: el cliente aprobó; se asignó `VENTA`.
+- `CONVERTIDA`: ya generó una orden.
+- `VENCIDA`: pasó la fecha de validez; se re-emite, no se “revive”.
+
+**Aprobación desde Superadmin:** el módulo aparece en la columna izquierda solo
+si el perfil tiene marcado **Cotizaciones y ventas** en el checklist de
+Superadmin. Julio (Superadmin) lo tiene por defecto; Secretaría y los demás
+perfiles lo reciben cuando Julio lo apruebe.
+
+**Límite actual:** la orden conserva su total base; los extras cobrables quedan
+en `orden_extras` y la vista `v_orden_total` los suma. La factura todavía no los
+incluye. PDF y envío por WhatsApp quedan para la siguiente fase.
+
+## 10. Preguntas que el manual debe responder cuando esté cerrado
 
 1. ¿Qué hago si el tablero dice `SATURADO`?
 2. ¿A quién llamo primero: al de mayor saldo o al de mayor mora?
@@ -289,7 +322,9 @@ rayado es programado/teórico. No se mezclan.
 
 ---
 
-## 10. Bitácora del manual
+## 11. Bitácora del manual
 
 - **2026-11-13:** creado el borrador con las 4 ventanas, estados, glosario y
   pasos de Superadmin. Pendiente: capturas y validación con Julio.
+- **2026-11-13:** agregado el módulo **Cotizaciones** (bandeja, formulario,
+  aceptación, conversión y permiso ACL). Pendiente: PDF y WhatsApp.
