@@ -505,6 +505,12 @@ class PostgresConfigStore:
                 "parametros_contables": dict(
                     await self._setting("finanzas.parametros_contables", {}) or {}
                 ),
+                "meta_mensual_m3": _num(
+                    await self._setting("comercial.meta_mensual_m3")
+                ),
+                "punto_equilibrio": dict(
+                    await self._setting("finanzas.punto_equilibrio", {}) or {}
+                ),
                 "mercado_valorizacion": dict(
                     await self._setting("mercado.valorizacion", {}) or {}
                 ),
@@ -703,6 +709,17 @@ class PostgresConfigStore:
                 await self._guardar_setting(
                     "finanzas.parametros_contables", actual
                 )
+            if "meta_mensual_m3" in cuerpo:
+                await self._guardar_setting(
+                    "comercial.meta_mensual_m3",
+                    _num(cuerpo.get("meta_mensual_m3")),
+                )
+            if isinstance(cuerpo.get("punto_equilibrio"), Mapping):
+                actual = dict(
+                    await self._setting("finanzas.punto_equilibrio", {}) or {}
+                )
+                actual.update(cuerpo["punto_equilibrio"])
+                await self._guardar_setting("finanzas.punto_equilibrio", actual)
             if isinstance(cuerpo.get("mercado_valorizacion"), Mapping):
                 actual = dict(
                     await self._setting("mercado.valorizacion", {}) or {}
@@ -1076,6 +1093,10 @@ class MemoryConfigStore:
                 "parametros_contables": copy.deepcopy(
                     self.settings["finanzas.parametros_contables"]
                 ),
+                "meta_mensual_m3": self.settings.get("comercial.meta_mensual_m3"),
+                "punto_equilibrio": copy.deepcopy(
+                    self.settings.get("finanzas.punto_equilibrio", {})
+                ),
                 "mercado_valorizacion": copy.deepcopy(
                     self.settings["mercado.valorizacion"]
                 ),
@@ -1193,6 +1214,14 @@ class MemoryConfigStore:
                 actual = dict(self.settings["finanzas.parametros_contables"])
                 actual.update(cuerpo["parametros_contables"])
                 self.settings["finanzas.parametros_contables"] = actual
+            if "meta_mensual_m3" in cuerpo:
+                self.settings["comercial.meta_mensual_m3"] = _num(
+                    cuerpo.get("meta_mensual_m3")
+                )
+            if isinstance(cuerpo.get("punto_equilibrio"), Mapping):
+                actual = dict(self.settings.get("finanzas.punto_equilibrio", {}))
+                actual.update(cuerpo["punto_equilibrio"])
+                self.settings["finanzas.punto_equilibrio"] = actual
             if isinstance(cuerpo.get("mercado_valorizacion"), Mapping):
                 actual = dict(self.settings["mercado.valorizacion"])
                 actual.update(cuerpo["mercado_valorizacion"])

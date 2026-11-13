@@ -2894,6 +2894,15 @@ tbody tr:last-child td { border-bottom: 0; }
           <div id="chart-op-resistencia" class="dash-chart" style="margin-top:10px"></div>
         </div>
 
+        <div class="dash-card" style="margin-top:12px">
+          <div class="donut-head">
+            <div><p class="card-kicker">Meta y equilibrio</p><h2>¿Superamos la meta?</h2></div>
+            <span class="badge neutral" id="meta-estado">—</span>
+          </div>
+          <div id="chart-meta" class="dash-chart"></div>
+          <p class="muted small" id="meta-nota"></p>
+        </div>
+
         <div class="dash2-section" style="margin-top:16px">
           <div class="dash2-section-head">
             <div>
@@ -3900,6 +3909,20 @@ tbody tr:last-child td { border-bottom: 0; }
     <div id="fin-param-resultado"></div>
 
     <div class="divider" style="margin:18px 0"></div>
+    <h3 style="margin-top:0">Meta comercial y punto de equilibrio</h3>
+    <p class="small muted" style="margin-top:0">La meta mensual es el objetivo de ventas (m³). El punto de equilibrio contable necesita costos fijos, costo variable y precio. Si falta uno, el tablero lo marca <code>NO_CONFIGURADO</code>.</p>
+    <div class="field-row">
+      <div><label class="field">Meta mensual de ventas (m³)</label><input type="number" id="fin-meta-m3" step="0.1" min="0" placeholder="Sin definir (ej. 350)"></div>
+      <div><label class="field">Costos fijos mensuales (USD)</label><input type="number" id="fin-pe-costos-fijos" step="0.01" min="0" placeholder="Sin definir"></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Costo variable por m³ (USD)</label><input type="number" id="fin-pe-costo-variable" step="0.01" min="0" placeholder="Sin definir"></div>
+      <div><label class="field">Precio promedio por m³ (USD)</label><input type="number" id="fin-pe-precio" step="0.01" min="0" placeholder="Sin definir"></div>
+    </div>
+    <button class="btn" style="margin-top:12px" data-mutacion="1" onclick="guardarMetaEquilibrio()">Guardar meta y equilibrio</button>
+    <div id="fin-pe-resultado"></div>
+
+    <div class="divider" style="margin:18px 0"></div>
     <h3 style="margin-top:0">Levantamiento físico de silos / bodega</h3>
     <p class="small muted" style="margin-top:0">Registra el stock real contado. Al confirmar se sella <code>ultimo_levantamiento_at</code>.</p>
     <div id="conteo-materiales" class="table-wrap"></div>
@@ -4798,6 +4821,38 @@ function renderInvConteos() {
   </tr>`).join('')}</tbody></table>` : '<p class="muted small">Sin materiales.</p>';
 }
 
+function renderMetaDash() {
+  const host = $('#chart-meta');
+  if (!host) return;
+  const op = (state.operacion && state.operacion.datos) || {};
+  const meta = op.meta || {};
+  const pe = op.punto_equilibrio || {};
+  const badge = $('#meta-estado');
+  if (meta.estado === 'NO_CONFIGURADO') {
+    host.innerHTML = '<div class="chart-empty">Falta la meta mensual de m³ en Superadmin. Sin meta no hay comparación ni días extra.</div>';
+    if (badge) badge.textContent = 'NO CONFIGURADO';
+  } else {
+    host.innerHTML = svgBullet(Number(meta.vendido_mes_m3 || 0), Number(meta.meta_mensual_m3 || 0), 'Vendido del mes', meta.estado);
+    if (badge) badge.textContent = meta.estado === 'SUPERADA' ? 'META SUPERADA' : 'EN CURSO';
+  }
+  const nota = $('#meta-nota');
+  if (nota) {
+    const partes = [];
+    if (meta.estado === 'SUPERADA') {
+      partes.push(`Superaste la meta por ${num(meta.diferencia_m3)} m³` + (meta.dias_planta_extra != null ? ` = ${meta.dias_planta_extra} días de planta.` : '.'));
+    } else if (meta.estado === 'EN_CURSO') {
+      partes.push(`Faltan ${num(Math.abs(Number(meta.diferencia_m3 || 0)))} m³ para la meta` + (meta.dias_planta_extra != null ? ` (${Math.abs(Number(meta.dias_planta_extra))} días de planta).` : '.'));
+    }
+    if (pe.estado === 'CONFIGURADO') {
+      partes.push(`Punto de equilibrio contable: ${num(pe.punto_equilibrio_m3)} m³/mes.`);
+    } else {
+      const faltan = (pe.faltantes || []).length ? ` (falta ${pe.faltantes.join(', ')})` : '';
+      partes.push(`Punto de equilibrio: NO_CONFIGURADO${faltan}.`);
+    }
+    nota.textContent = partes.join(' ');
+  }
+}
+
 function renderChartsDash() {
   const op = (state.operacion && state.operacion.datos) || {};
   const cap = op.capacidad || {};
@@ -4867,6 +4922,7 @@ function renderChartsDash() {
     }));
     chartCob.innerHTML = svgHBars(rows, {aria: 'Antigüedad de la cartera'});
   }
+  renderMetaDash();
 }
 
 function renderDashboard() {
@@ -7702,6 +7758,39 @@ function renderFinanzasForm() {
     const el = $('#' + id);
     if (el) el.value = (p[key] === null || p[key] === undefined) ? '' : p[key];
   });
+  const fin = (state.config || {}).finanzas_y_ases_gerenciales || {};
+  const pe = fin.punto_equilibrio || {};
+  const set = (id, valor) => { const el = $('#' + id); if (el) el.value = (valor === null || valor === undefined) ? '' : valor; };
+  set('fin-meta-m3', fin.meta_mensual_m3);
+  set('fin-pe-costos-fijos', pe.costos_fijos_mensual_usd);
+  set('fin-pe-costo-variable', pe.costo_variable_m3_usd);
+  set('fin-pe-precio', pe.precio_m3_usd);
+}
+
+async function guardarMetaEquilibrio() {
+  const num = id => {
+    const v = ($('#' + id) || {}).value;
+    return v === '' || v === undefined || v === null ? null : Number(v);
+  };
+  try {
+    const r = await api('/api/v1/superadmin/config/finanzas_y_ases_gerenciales', {
+      method: 'PUT',
+      body: {
+        meta_mensual_m3: num('fin-meta-m3'),
+        punto_equilibrio: {
+          costos_fijos_mensual_usd: num('fin-pe-costos-fijos'),
+          costo_variable_m3_usd: num('fin-pe-costo-variable'),
+          precio_m3_usd: num('fin-pe-precio')
+        }
+      }
+    });
+    state.config.finanzas_y_ases_gerenciales = r;
+    renderFinanzasForm();
+    $('#fin-pe-resultado').innerHTML = '<div class="notice ok">Meta y punto de equilibrio guardados.</div>';
+    toast('Meta y equilibrio guardados', 'ok');
+  } catch(e) {
+    $('#fin-pe-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
 }
 
 async function guardarParametrosFinancieros() {

@@ -70,6 +70,17 @@ scripts de candado.
 - `pytest` → **393 passed**. Evidencia:
   `.agents/evidencias/dashboard_c0_c3_2026-11-13.txt`.
 
+### 2026-11-13 — Meta comercial y punto de equilibrio
+
+- Meta mensual configurable (`comercial.meta_mensual_m3`): cumplimiento,
+  diferencia en m³ y días de planta cuando hay capacidad.
+- Punto de equilibrio contable (`finanzas.punto_equilibrio`): costos fijos,
+  costo variable y precio; `NO_CONFIGURADO` con faltantes si no están.
+- Tarjeta “Meta y equilibrio” en Operación y 4 campos en Superadmin > Tasas.
+- `pytest` → **394 passed**. Evidencia:
+  `.agents/evidencias/dashboard_meta_equilibrio_2026-11-13.txt`.
+- Manual actualizado: `docs/MANUAL_DASHBOARD_JULIO.md` §3.1.1.
+
 ### 2026-11-13 — Dashboard C5/C6: banner amarillo, 4 ventanas y gráficos SVG
 
 - Banner `sec-ventanilla` primero; ventana activa en amarillo sólido con texto
@@ -273,7 +284,10 @@ scripts de candado.
 
 1. **C4:** capturar `fecha_vencimiento` en los formularios de orden y factura;
    hoy todo cae en `SIN_VENCIMIENTO`.
-2. **Validar el dashboard C5/C6 con Julio**: revisar las 4 ventanas, los
+2. **Cotizaciones Q2/Q3:** migración 080 (tablas, `precio_estado`, settings),
+   API de alta/edición/aceptación/conversión y vista en la columna izquierda.
+   El permiso `cotizaciones` entra al checklist de Superadmin.
+3. **Validar el dashboard C5/C6 con Julio**: revisar las 4 ventanas, los
    presets de cobranza y el manual `docs/MANUAL_DASHBOARD_JULIO.md`.
 3. **Cerrar preguntas de cotizaciones** (`.agents/tareas/PENDIENTES.md` §6):
    umbral de excedente, precio por resistencia, porcentaje de anticipo.

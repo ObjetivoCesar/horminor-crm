@@ -4222,3 +4222,66 @@ Factura Interna. Después, validar las 4 ventanas y el manual con Julio.
 - `docs/MANUAL_DASHBOARD_JULIO.md` (nuevo)
 - `.agents/ESTADO.md`, `.agents/BITACORA.md`
 - Evidencia: `.agents/evidencias/dashboard_c5_c6_2026-11-13.txt`
+
+
+## 2026-11-13 — Dashboard: meta comercial y punto de equilibrio
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** separar la meta comercial (motivación de ventas) del punto de
+equilibrio contable, sin inventar ninguno de los dos.
+
+### Hecho
+
+1. **Meta comercial configurable** en `comercial.meta_mensual_m3`. Devuelve
+   `cumplimiento_pct`, diferencia en m³ y `dias_planta_extra` cuando la
+   capacidad está declarada.
+2. **Punto de equilibrio contable** en `finanzas.punto_equilibrio`
+   (`costos_fijos_mensual_usd`, `costo_variable_m3_usd`, `precio_m3_usd`).
+   Calcula margen y m³ de equilibrio; si falta un dato o el margen no es
+   positivo, devuelve `NO_CONFIGURADO` con la lista de faltantes.
+3. **Superadmin** amplía “Tasas y conteo de silos” con los 4 campos.
+4. **UI** estrena la tarjeta “Meta y equilibrio” en Operación, con el vacío
+   explícito cuando no hay datos.
+5. **Manual** actualizado en `docs/MANUAL_DASHBOARD_JULIO.md` §3.1.1.
+
+### Evidencia (real, ejecutada)
+
+| Comando / prueba | Resultado |
+|---|---|
+| `pytest /app/tests` | **394 passed**, exit 0 |
+| Sin configurar | `meta=NO_CONFIGURADO`, `punto_equilibrio=NO_CONFIGURADO` con 3 faltantes |
+| Prueba temporal (350 / 5.000 / 100 / 150) | `SUPERADA`, +54 m³, 115,43 %; PE = 100 m³ |
+| Reversión | vuelve a `NO_CONFIGURADO` |
+| UI | tarjeta visible, 4 campos en Superadmin, sin errores de consola |
+
+Evidencia: `.agents/evidencias/dashboard_meta_equilibrio_2026-11-13.txt`.
+
+### Decisiones tomadas
+
+1. **Meta comercial ≠ punto de equilibrio.** La primera motiva ventas; el
+   segundo cubre costos fijos. Se muestran separados y con nombres distintos.
+2. **Los días de planta necesitan capacidad.** Si la flota no está configurada,
+   se muestra la diferencia en m³ pero no los días. No se inventa el divisor.
+3. **Sin costos no hay punto de equilibrio.** `NO_CONFIGURADO` con faltantes,
+   nunca un número estimado.
+
+### Bloqueos / preguntas al cliente
+
+1. Meta mensual de ventas (m³) para el tablero.
+2. Costos fijos mensuales, costo variable por m³ y precio promedio (Contadora).
+3. Flota 2×7, stock 3.500 y política de cobro (reunión con Julio).
+
+### Próximo paso exacto
+
+Cotizaciones: Q2 (migración 080 con tablas y `precio_estado`) y Q3 (API de alta,
+envío, aceptación y conversión), más la entrada en la columna izquierda y el
+permiso `cotizaciones` en el checklist de Superadmin.
+
+### Archivos tocados
+
+- `services/core-api/app/m4_dashboard/operativo.py`
+- `services/core-api/app/superadmin/store.py`
+- `services/core-api/app/web/templates/panel.html`
+- `docs/MANUAL_DASHBOARD_JULIO.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/dashboard_meta_equilibrio_2026-11-13.txt`

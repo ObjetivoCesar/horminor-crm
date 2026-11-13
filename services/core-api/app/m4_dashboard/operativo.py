@@ -268,6 +268,8 @@ async def operacion(
     supuestos = await setting(pool, "flota.supuestos_capacidad", {}) or {}
     agenda = await setting(pool, "agenda.parametros", {}) or {}
     umbrales = await setting(pool, "operacion.umbrales_ocupacion", {}) or {}
+    meta_mensual = await setting(pool, "comercial.meta_mensual_m3", None)
+    punto_equilibrio = await setting(pool, "finanzas.punto_equilibrio", {}) or {}
 
     cap = _capacidad(mixers, plantas, supuestos, agenda, umbrales, planta_id)
 
@@ -413,6 +415,66 @@ async def operacion(
     elif cap.get("estado_configuracion") == "CONFIGURACION_INCONSISTENTE":
         semaforo = "CONFIGURACION_INCONSISTENTE"
 
+    vendido_mes = _d(compromiso["vendido_mes_m3"]) if compromiso else Decimal("0")
+    meta: dict[str, Any] = {
+        "estado": "NO_CONFIGURADO",
+        "motivo": "FALTA_META_MENSUAL",
+        "meta_mensual_m3": None,
+        "vendido_mes_m3": _texto(vendido_mes),
+        "diferencia_m3": None,
+        "cumplimiento_pct": None,
+        "dias_planta_extra": None,
+    }
+    if meta_mensual is not None and _d(meta_mensual) > 0:
+        objetivo = _d(meta_mensual)
+        diferencia = vendido_mes - objetivo
+        extra = None
+        if efectiva and efectiva > 0:
+            extra = _texto((diferencia / efectiva).quantize(
+                Decimal("0.1"), rounding=ROUND_HALF_UP
+            ))
+        meta = {
+            "estado": "SUPERADA" if diferencia >= 0 else "EN_CURSO",
+            "motivo": None,
+            "meta_mensual_m3": _texto(objetivo),
+            "vendido_mes_m3": _texto(vendido_mes),
+            "diferencia_m3": _texto(diferencia),
+            "cumplimiento_pct": _pct(vendido_mes, objetivo),
+            "dias_planta_extra": extra,
+        }
+
+    pe_cfg = dict(punto_equilibrio)
+    faltantes: list[str] = []
+    if pe_cfg.get("costos_fijos_mensual_usd") is None:
+        faltantes.append("COSTOS_FIJOS_MENSUALES")
+    if pe_cfg.get("precio_m3_usd") is None:
+        faltantes.append("PRECIO_M3")
+    if pe_cfg.get("costo_variable_m3_usd") is None:
+        faltantes.append("COSTO_VARIABLE_M3")
+    margen = None
+    pe_m3 = None
+    estado_pe = "NO_CONFIGURADO"
+    motivo_pe = "FALTAN_DATOS" if faltantes else None
+    if not faltantes:
+        margen = _d(pe_cfg.get("precio_m3_usd")) - _d(pe_cfg.get("costo_variable_m3_usd"))
+        if margen <= 0:
+            estado_pe = "NO_CONFIGURADO"
+            motivo_pe = "MARGEN_NO_POSITIVO"
+        else:
+            pe_m3 = _d(pe_cfg.get("costos_fijos_mensual_usd")) / margen
+            estado_pe = "CONFIGURADO"
+
+    punto_equilibrio_out = {
+        "estado": estado_pe,
+        "motivo": motivo_pe,
+        "costos_fijos_mensual_usd": _texto(pe_cfg.get("costos_fijos_mensual_usd")),
+        "precio_m3_usd": _texto(pe_cfg.get("precio_m3_usd")),
+        "costo_variable_m3_usd": _texto(pe_cfg.get("costo_variable_m3_usd")),
+        "margen_m3_usd": _texto(margen) if margen is not None else None,
+        "punto_equilibrio_m3": _texto(pe_m3) if pe_m3 is not None else None,
+        "faltantes": faltantes,
+    }
+
     return {
         "fuente": [
             "system_settings",
@@ -429,6 +491,8 @@ async def operacion(
         },
         "datos": {
             "capacidad": cap,
+            "meta": meta,
+            "punto_equilibrio": punto_equilibrio_out,
             "comprometido": {
                 "hoy_m3": _texto(compromiso["hoy_m3"]) if compromiso else "0",
                 "viajes_hoy": _entero(compromiso["viajes_hoy"]) if compromiso else 0,

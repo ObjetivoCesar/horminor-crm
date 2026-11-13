@@ -68,6 +68,34 @@ submenú, las 3 tarjetas KPI y los gráficos.
 - Si `CONFIGURACION_INCONSISTENTE`: Julio debe reconciliar la flota en
   Superadmin.
 
+### 3.1.1 Meta comercial y punto de equilibrio
+
+**No son lo mismo.** El tablero muestra los dos por separado:
+
+| Indicador | Qué responde | Qué necesita |
+|---|---|---|
+| **Meta comercial** | ¿superamos el objetivo de ventas del mes? | meta mensual en m³ (Superadmin) |
+| **Punto de equilibrio contable** | ¿cuántos m³ cubren los costos fijos? | costos fijos, costo variable/m³ y precio/m³ |
+
+**Meta comercial:**
+- `cumplimiento = vendido_mes / meta_mensual`.
+- Si `vendido_mes > meta`, el mensaje es motivador: “Superaste la meta por X m³
+  = Y días de planta”.
+- Los “días de planta” salen de `(vendido_mes − meta) / capacidad_día`. Si la
+  capacidad no está declarada, se muestra la diferencia en m³ pero no los días.
+- Si no hay meta: `NO_CONFIGURADO`; no se inventa un objetivo.
+
+**Punto de equilibrio contable:**
+- `margen_m3 = precio_m3 − costo_variable_m3`.
+- `punto_equilibrio_m3 = costos_fijos_mensual / margen_m3`.
+- Si falta un dato o el margen es ≤ 0: `NO_CONFIGURADO` con la lista de
+  faltantes. Nunca se muestra un punto de equilibrio falso.
+- La meta comercial **no** es el punto de equilibrio: una puede superarse sin
+  cubrir costos fijos.
+
+**Dónde se carga:** Superadmin → Tasas y conteo de silos → “Meta comercial y
+punto de equilibrio”.
+
 ### 3.2 Inventario vs ventas
 
 **Pregunta:** ¿el material alcanza para lo que ya vendí?
@@ -243,6 +271,8 @@ rayado es programado/teórico. No se mezclan.
    exigibilidad siguen sin confirmar.
 5. **Manual final:** falta captura de pantalla por ventana, glosario ilustrado y
    firma de Julio.
+6. **Meta y punto de equilibrio:** la estructura está lista, pero faltan la meta
+   mensual y los costos fijos/variables de la reunión con Julio y Contadora.
 
 ---
 
