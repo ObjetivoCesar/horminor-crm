@@ -47,7 +47,10 @@ Si un módulo no tiene las tres, está a medias aunque el código compile.
   submenú propio; se elimina “Filtros de obras”; resumen anual comprimido.
 - **Hecho:** migración `079` (vencimiento y `v_cobranza_documentos`), evidencia
   en `.agents/evidencias/dashboard_cobranza_2026-11-13.txt`.
-- **Falta:** endpoints `operacion`, `inventario`, `cobranza`; pestaña Ocupación.
+- **Hecho (2026-11-13):** tres pestañas con submenú en el panel, sin “Filtros de
+  obras”; endpoints `/dashboard/inventario` y `/dashboard/cobranza` con tests.
+  Evidencia en `.agents/evidencias/dashboard_operativo_2026-11-13.txt`.
+- **Falta:** endpoint `operacion` (timeline de mixers) y capacidad comprometida.
 
 ### 3.2 Cotizaciones
 

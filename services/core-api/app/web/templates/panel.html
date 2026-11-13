@@ -2037,42 +2037,129 @@ tbody tr:last-child td { border-bottom: 0; }
 .dash2-head-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .dash2-head .dash-sub { margin-top: 3px; }
 
-.filter-drop { position: relative; }
-.filter-drop summary {
-  list-style: none;
-  cursor: pointer;
-  display: inline-flex;
+/* Tablero operativo: tres tarjetas con submenu propio */
+.dash-resumen { margin-bottom: 16px; }
+.dash-resumen .metric-card { min-height: 0; padding: 15px 17px; }
+.dash-resumen .market-layout { margin: 8px 0 6px; gap: 12px; }
+.dash-resumen .market-ring { width: 104px; height: 104px; flex-basis: 104px; }
+.dash-resumen .sales-main strong { font-size: 2.35rem; }
+.dash-resumen .sales-main { margin-bottom: 2px; }
+.dash-resumen .sales-foot { margin-top: 8px; }
+
+.dash-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.dash-tab {
+  display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
-  border: 1px solid var(--input-border);
+  gap: 11px;
+  padding: 13px 15px;
+  text-align: left;
+  border: var(--border-subtle);
+  border-radius: 16px;
+  background: var(--surface-card);
+  color: var(--text-slate);
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.dash-tab:hover { border-color: rgba(245, 158, 11, .35); transform: translateY(-1px); }
+.dash-tab.active {
+  background: rgba(245, 158, 11, .10);
+  border-color: rgba(245, 158, 11, .55);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, .18);
+}
+.dash-tab-ico { font-size: 18px; line-height: 1; }
+.dash-tab-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dash-tab-txt strong { font-size: 13.5px; color: var(--text-pure); letter-spacing: -0.01em; }
+.dash-tab-txt em { font-style: normal; font-size: 10.5px; color: var(--text-muted); }
+.dash-tab.active .dash-tab-txt strong { color: var(--accent-cat-amber); }
+.dash-tab-chip {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: 3px 8px;
   border-radius: 999px;
   background: var(--surface-row-pill);
-  color: var(--text-slate);
-  font-size: 11px;
-  font-weight: 600;
-  user-select: none;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
-.filter-drop summary::-webkit-details-marker { display: none; }
-.filter-drop summary::after { content: "⌄"; font-size: 12px; line-height: 1; color: var(--text-muted); }
-.filter-drop[open] summary { color: var(--text-pure); border-color: rgba(59, 130, 246, 0.55); }
-.filter-drop-body {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  z-index: 40;
-  width: 260px;
-  padding: 12px;
+.dash-tab.active .dash-tab-chip { background: rgba(245, 158, 11, .18); color: var(--accent-cat-amber); }
+
+.dash-subnavs { margin-bottom: 16px; }
+.dash-subnav { display: none; gap: 6px; flex-wrap: wrap; }
+.dash-subnav.active { display: flex; }
+.dash-subnav button {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dash-subnav button:hover { color: var(--text-pure); }
+.dash-subnav button.active {
+  background: rgba(245, 158, 11, .14);
+  border-color: rgba(245, 158, 11, .42);
+  color: var(--accent-cat-amber);
+}
+
+.dash-panel { display: none; }
+.dash-panel.active { display: block; }
+.dash-subview { display: none; }
+.dash-subview.active { display: block; }
+.dash2-lower.single { grid-template-columns: 1fr; }
+
+.inv-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.inv-card {
+  padding: 16px;
   border: var(--border-subtle);
-  border-radius: 14px;
-  background: var(--bg-obsidian);
-  box-shadow: 0 22px 48px -18px rgba(0, 0, 0, 0.8);
+  border-radius: 16px;
+  background: var(--surface-card);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
-.filter-drop-body .filter-pill { justify-content: space-between; width: 100%; }
-.filter-drop-body .filter-pill select { max-width: 150px; text-align: right; }
+.inv-card .inv-name { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
+.inv-card .inv-value { font-size: 1.85rem; font-weight: 700; color: var(--text-pure); letter-spacing: -0.03em; }
+.inv-card .inv-unit { font-size: 11.5px; color: var(--text-muted); }
+.inv-card .inv-min { font-size: 10.5px; color: var(--text-muted); }
+.inv-card .inv-estado { margin-top: auto; font-size: 10px; font-weight: 700; letter-spacing: .05em; color: var(--accent-cat-amber); }
+.inv-card.sin-dato .inv-value { color: var(--text-muted); }
+
+.cob-cubos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.cob-cubo {
+  padding: 16px;
+  border: var(--border-subtle);
+  border-radius: 16px;
+  background: var(--surface-card);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.cob-cubo .cob-label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
+.cob-cubo .cob-monto { font-size: 1.5rem; font-weight: 700; color: var(--text-pure); letter-spacing: -0.03em; }
+.cob-cubo .cob-docs { font-size: 11px; color: var(--text-muted); }
+.cob-cubo.alerta { border-color: rgba(239, 68, 68, .55); box-shadow: inset 0 0 0 1px rgba(239, 68, 68, .12); }
+.cob-cubo.proximo { border-color: rgba(245, 158, 11, .5); }
+.cob-saldo-line { margin: 0 0 12px; font-size: 12px; color: var(--text-muted); }
+.cob-saldo-line strong { color: var(--text-pure); font-size: 15px; letter-spacing: -0.02em; }
+
+.cob-clientes { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.cob-cliente { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 11px; background: var(--surface-row-pill); }
+.cob-cliente strong { font-size: 12px; color: var(--text-pure); }
+.cob-cliente span { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--accent-cat-amber); }
+
+.mixer-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.mixer-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 11px; background: var(--surface-row-pill); font-size: 12px; }
+.mixer-row .mixer-code { font-weight: 700; color: var(--text-pure); }
+.mixer-row .mixer-meta { color: var(--text-muted); font-size: 11px; }
+.mixer-row .mixer-sem { margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: .05em; }
 
 .metric-grid {
   display: grid;
@@ -2366,6 +2453,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .metric-places { grid-column: 1 / -1; min-height: 0; }
   .dash2-lower { grid-template-columns: 1fr; }
+  .inv-grid, .cob-cubos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 980px) {
   .metric-grid { grid-template-columns: 1fr; }
@@ -2373,7 +2461,8 @@ tbody tr:last-child td { border-bottom: 0; }
   .metric-card { min-height: 0; }
   .dash2-more .grid.kpis { grid-template-columns: 1fr; }
   .mercado-resumen { grid-template-columns: 1fr; }
-  .filter-drop-body { position: fixed; left: 14px; right: 14px; top: auto; width: auto; }
+  .dash-tabs { grid-template-columns: 1fr; }
+  .dash-tab-txt em { display: none; }
 }
 @media (max-width: 520px) {
   .metric-grid, .dash2-lower { gap: 12px; }
@@ -2383,6 +2472,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .sales-main strong { font-size: 2.9rem; }
   .dash2-head-right { width: 100%; justify-content: space-between; }
   .dash2-section-head h2 { font-size: 16px; }
+  .inv-grid, .cob-cubos { grid-template-columns: 1fr; }
 }
 
 /* Gato — asistente interno flotante */
@@ -2564,43 +2654,10 @@ tbody tr:last-child td { border-bottom: 0; }
       </div>
       <div class="dash2-head-right">
         <span class="badge neutral" id="dash-actualizado">Actualizando…</span>
-        <details class="filter-drop">
-          <summary>Filtros de obras</summary>
-          <div class="filter-drop-body">
-            <div hidden>
-              <select id="f-periodo" onchange="cargarDashboard()" aria-label="Período">
-                <option value="ANIO" selected>Año 2026</option>
-              </select>
-            </div>
-            <label class="filter-pill"><span aria-hidden="true">🏭</span>
-              <select id="f-planta" onchange="cargarDashboard()" aria-label="Planta">
-                <option value="">Todas las plantas</option>
-                <option value="PLANTA-COCA">Fija El Coca</option>
-                <option value="PLANTA-MOVIL">Móvil Campamento</option>
-              </select>
-            </label>
-            <label class="filter-pill"><span aria-hidden="true">🧱</span>
-              <select id="f-resistencia" onchange="cargarDashboard()" aria-label="Resistencia">
-                <option value="">Todas</option>
-                <option>FC-180</option><option>FC-210</option><option>FC-240</option>
-                <option>FC-280</option><option>FC-350</option>
-              </select>
-            </label>
-            <label class="filter-pill"><span aria-hidden="true">💳</span>
-              <select id="f-pago" onchange="cargarDashboard()" aria-label="Estado de pago">
-                <option value="">Todos</option>
-                <option value="EFECTIVO">Efectivo</option>
-                <option value="TRANSFERENCIA">Transferencia</option>
-                <option value="ABONO">Abono</option>
-                <option value="FIADO">Crédito / Fiado</option>
-              </select>
-            </label>
-          </div>
-        </details>
       </div>
     </div>
 
-    <div class="metric-grid">
+    <div class="dash-resumen metric-grid">
       <!-- Mercado: el número que importa -->
       <article class="metric-card metric-market">
         <div class="metric-head">
@@ -2673,45 +2730,147 @@ tbody tr:last-child td { border-bottom: 0; }
       </article>
     </div>
 
-    <div class="dash2-section">
-      <div class="dash2-section-head">
-        <div>
-          <span class="card-kicker">Obras activas</span>
-          <h2>Mixers en calle</h2>
-        </div>
-        <a href="#" onclick="setView('clientes');return false;">Ver carpetas →</a>
+    <nav class="dash-tabs" role="tablist" aria-label="Tablero operativo">
+      <button type="button" class="dash-tab active" role="tab" aria-selected="true"
+              data-dash-tab="ocupacion" onclick="setDashTab('ocupacion')">
+        <span class="dash-tab-ico" aria-hidden="true">🚚</span>
+        <span class="dash-tab-txt"><strong>Ocupación</strong><em>Mixers, viajes y capacidad</em></span>
+        <span class="dash-tab-chip" id="tab-chip-ocupacion">Hoy</span>
+      </button>
+      <button type="button" class="dash-tab" role="tab" aria-selected="false"
+              data-dash-tab="inventario" onclick="setDashTab('inventario')">
+        <span class="dash-tab-ico" aria-hidden="true">🧱</span>
+        <span class="dash-tab-txt"><strong>Inventario</strong><em>Cemento, arena, ripio y retardante</em></span>
+        <span class="dash-tab-chip" id="tab-chip-inventario">—</span>
+      </button>
+      <button type="button" class="dash-tab" role="tab" aria-selected="false"
+              data-dash-tab="cobranza" onclick="setDashTab('cobranza')">
+        <span class="dash-tab-ico" aria-hidden="true">💵</span>
+        <span class="dash-tab-txt"><strong>Cobranza</strong><em>Vencido, por vencer y saldo real</em></span>
+        <span class="dash-tab-chip" id="tab-chip-cobranza">—</span>
+      </button>
+    </nav>
+
+    <div class="dash-subnavs">
+      <div class="dash-subnav active" data-subnav="ocupacion">
+        <button type="button" class="active" onclick="setDashSub('ocupacion','resumen',this)">Resumen</button>
+        <button type="button" onclick="setDashSub('ocupacion','mixers',this)">Mixers</button>
+        <button type="button" onclick="setDashSub('ocupacion','agenda',this)">Agenda</button>
       </div>
-      <div class="works-grid" id="obras-grid">
-        <div class="work-card"><div class="work-thumb2"><span class="thumb-tag">Cargando</span></div><div class="work-body"><h3>Leyendo órdenes activas…</h3><p>Sin datos todavía.</p></div></div>
+      <div class="dash-subnav" data-subnav="inventario">
+        <button type="button" class="active" onclick="setDashSub('inventario','materiales',this)">Materiales</button>
+        <button type="button" onclick="setDashSub('inventario','fechas',this)">Por fechas</button>
+      </div>
+      <div class="dash-subnav" data-subnav="cobranza">
+        <button type="button" class="active" onclick="setDashSub('cobranza','resumen',this)">Resumen</button>
+        <button type="button" onclick="setDashSub('cobranza','clientes',this)">Clientes</button>
       </div>
     </div>
 
-    <div class="dash2-lower">
-      <!-- Agenda real compartida (HorminorAgenda) -->
-      <div class="dash-card cal-card" data-modulo="agenda_despachos">
-        <div id="agenda-mount-dashboard"></div>
-      </div>
-
-      <!-- Actividad -->
-      <div class="dash-card act-card">
-        <div class="donut-head">
-          <div>
-            <p class="card-kicker">Actividad</p>
-            <h2>Últimos movimientos</h2>
+    <div class="dash-panel active" data-dash-panel="ocupacion">
+      <div class="dash-subview active" data-sub-view="resumen">
+        <div class="dash2-section">
+          <div class="dash2-section-head">
+            <div>
+              <span class="card-kicker">Obras activas</span>
+              <h2>Mixers en calle</h2>
+            </div>
+            <a href="#" onclick="setView('clientes');return false;">Ver carpetas →</a>
           </div>
-          <span class="badge neutral" id="act-contador">—</span>
+          <div class="works-grid" id="obras-grid">
+            <div class="work-card"><div class="work-thumb2"><span class="thumb-tag">Cargando</span></div><div class="work-body"><h3>Leyendo órdenes activas…</h3><p>Sin datos todavía.</p></div></div>
+          </div>
         </div>
-        <ul class="act-list" id="actividad-lista">
-          <li class="act-item"><span class="act-ico">⏳</span><div class="act-body"><strong>Cargando…</strong><span>Leyendo órdenes y viajes.</span></div></li>
-        </ul>
-        <div class="act-foot"><a href="#" onclick="setView('clientes');return false;">Ver bitácora →</a></div>
+
+        <div class="dash2-lower single">
+          <div class="dash-card act-card">
+            <div class="donut-head">
+              <div>
+                <p class="card-kicker">Actividad</p>
+                <h2>Últimos movimientos</h2>
+              </div>
+              <span class="badge neutral" id="act-contador">—</span>
+            </div>
+            <ul class="act-list" id="actividad-lista">
+              <li class="act-item"><span class="act-ico">⏳</span><div class="act-body"><strong>Cargando…</strong><span>Leyendo órdenes y viajes.</span></div></li>
+            </ul>
+            <div class="act-foot"><a href="#" onclick="setView('clientes');return false;">Ver bitácora →</a></div>
+          </div>
+        </div>
+
+        <details class="dash2-more">
+          <summary><span>Detalle operativo</span><small>Caja · mixers · bodega</small></summary>
+          <div class="grid kpis" id="hero-kpis"></div>
+        </details>
+      </div>
+
+      <div class="dash-subview" data-sub-view="mixers">
+        <div class="dash-card">
+          <div class="donut-head">
+            <div>
+              <p class="card-kicker">En calle</p>
+              <h2>Mixers con lectura</h2>
+            </div>
+            <span class="badge neutral" id="mixers-contador">—</span>
+          </div>
+          <div class="mixer-list" id="mixers-lista"></div>
+        </div>
+      </div>
+        <div class="dash-card cal-card" data-modulo="agenda_despachos">
+          <div id="agenda-mount-dashboard"></div>
+        </div>
       </div>
     </div>
 
-    <details class="dash2-more">
-      <summary><span>Detalle operativo</span><small>Caja · mixers · bodega</small></summary>
-      <div class="grid kpis" id="hero-kpis"></div>
-    </details>
+    <div class="dash-panel" data-dash-panel="inventario">
+      <div class="dash-subview active" data-sub-view="materiales">
+        <div class="dash2-section-head">
+          <div>
+            <span class="card-kicker">Stock</span>
+            <h2>Materiales del tablero</h2>
+          </div>
+          <span class="badge neutral" id="inv-fuente">—</span>
+        </div>
+        <div class="inv-grid" id="inv-grid"></div>
+        <p class="muted small" id="inv-nota"></p>
+      </div>
+
+      <div class="dash-subview" data-sub-view="fechas">
+        <div class="dash-card">
+          <p class="card-kicker">Inventario por fechas</p>
+          <h2>Sin conteos registrados</h2>
+          <p class="muted small" id="inv-fechas-nota">El stock proyectado necesita al menos un conteo físico con fecha. Todavía no hay ninguno: por eso el tablero muestra el vacío y no un número estimado.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-panel" data-dash-panel="cobranza">
+      <div class="dash-subview active" data-sub-view="resumen">
+        <div class="dash2-section-head">
+          <div>
+            <span class="card-kicker">Documentos</span>
+            <h2>Estado de cobranza</h2>
+          </div>
+          <span class="badge neutral" id="cob-fuente">—</span>
+        </div>
+        <p class="cob-saldo-line">Saldo real por cobrar: <strong id="cob-saldo-real">—</strong></p>
+        <div class="cob-cubos" id="cob-cubos"></div>
+        <p class="muted small" id="cob-nota"></p>
+      </div>
+
+      <div class="dash-subview" data-sub-view="clientes">
+        <div class="dash-card">
+          <div class="donut-head">
+            <div>
+              <p class="card-kicker">Saldos</p>
+              <h2>Clientes con saldo</h2>
+            </div>
+            <strong id="cob-saldo-total">—</strong>
+          </div>
+          <div class="cob-clientes" id="cob-clientes"></div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ===================== SECRETARIA Y CAJA ===================== -->
@@ -3937,18 +4096,11 @@ function clienteAutoseleccion() {
 }
 
 function ordenesFiltradas() {
-  const r = ($('#f-resistencia') || {}).value || '';
-  const p = ($('#f-pago') || {}).value || '';
-  const pl = ($('#f-planta') || {}).value || '';
-  return (state.ordenes || []).filter(o => {
-    if (r && o.resistencia !== r) return false;
-    if (p && o.forma_pago !== p) return false;
-    if (pl) {
-      const nombre = pl === 'PLANTA-COCA' ? 'Planta Fija El Coca' : 'Planta Movil Campamento';
-      if (String(o.planta || '').toLowerCase().replace(/ó/g,'o') !== nombre.toLowerCase().replace(/ó/g,'o')) return false;
-    }
-    return true;
-  }).sort((a, b) => Number(b.volumen_m3 || 0) - Number(a.volumen_m3 || 0));
+  // El tablero ya no filtra por planta, resistencia ni pago: esos filtros no
+  // tenian sentido (solo la planta llegaba al backend). La tabulacion ahora es
+  // por pestana: Ocupacion, Inventario y Cobranza.
+  return (state.ordenes || []).slice()
+    .sort((a, b) => Number(b.volumen_m3 || 0) - Number(a.volumen_m3 || 0));
 }
 
 function metricasDashboard() {
@@ -4116,7 +4268,123 @@ function renderObras() {
       </div></article>`;
   });
   const grid = $('#obras-grid');
-  if (grid) grid.innerHTML = cards.join('') || '<p class="muted small">Sin órdenes activas para los filtros seleccionados.</p>';
+  if (grid) grid.innerHTML = cards.join('') || '<p class="muted small">Sin órdenes activas en este momento.</p>';
+}
+
+function setDashTab(tab) {
+  document.querySelectorAll('[data-dash-tab]').forEach(b => {
+    const on = b.dataset.dashTab === tab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.querySelectorAll('[data-dash-panel]').forEach(p => {
+    p.classList.toggle('active', p.dataset.dashPanel === tab);
+  });
+  document.querySelectorAll('[data-subnav]').forEach(n => {
+    n.classList.toggle('active', n.dataset.subnav === tab);
+  });
+}
+
+function setDashSub(tab, sub, btn) {
+  const panel = document.querySelector('[data-dash-panel="' + tab + '"]');
+  if (panel) {
+    panel.querySelectorAll('[data-sub-view]').forEach(v => {
+      v.classList.toggle('active', v.dataset.subView === sub);
+    });
+  }
+  const nav = document.querySelector('[data-subnav="' + tab + '"]');
+  if (nav) nav.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+  if (tab === 'ocupacion' && sub === 'agenda') montarAgendaDashboard();
+}
+
+const CUBOS_COBRANZA = [
+  {id: 'VENCIDA', label: 'Vencida', clase: 'vencida'},
+  {id: 'POR_VENCER_7', label: 'Por vencer 7 días', clase: 'por-vencer'},
+  {id: 'CORRIENTE', label: 'Corriente', clase: ''},
+  {id: 'SIN_VENCIMIENTO', label: 'Sin vencimiento', clase: ''}
+];
+
+function renderMixers() {
+  const host = $('#mixers-lista');
+  if (!host) return;
+  const op = (state.kpis && state.kpis.kpi_operacion) || {};
+  const mixers = op.detalle_mixers || [];
+  const contador = $('#mixers-contador');
+  if (contador) contador.textContent = mixers.length ? mixers.length + ' con lectura' : 'Sin lectura';
+  host.innerHTML = mixers.map(m => {
+    const color = m.semaforo === 'ROJO' ? '#F87171' : m.semaforo === 'AMBAR' ? '#FBBF24' : '#34D399';
+    return `<div class="mixer-row">
+      <span class="mixer-code">${esc(m.mixer_codigo || 'sin mixer')}</span>
+      <span class="mixer-meta">${m.minutos_en_ruta ?? '—'} min en ruta</span>
+      <span class="mixer-sem" style="color:${color}">${esc(m.semaforo || '—')}</span>
+    </div>`;
+  }).join('') || '<p class="muted small">Ningún mixer con lectura de ruta hoy.</p>';
+}
+
+function renderInventarioDash() {
+  const env = state.inventarioDash;
+  const grid = $('#inv-grid');
+  if (!grid) return;
+  const datos = (env && env.datos) || {};
+  const materiales = datos.materiales || [];
+  const chip = $('#tab-chip-inventario');
+  if (chip) chip.textContent = materiales.length ? datos.sin_conteo + ' sin conteo' : 'Sin datos';
+  const fuente = $('#inv-fuente');
+  if (fuente) fuente.textContent = env && env.fuente ? env.fuente.join(' · ') : 'Sin fuente';
+  grid.innerHTML = materiales.map(m => {
+    const sinDato = m.stock === null || m.stock === undefined;
+    return `<article class="inv-card ${sinDato ? 'sin-dato' : ''}">
+      <span class="inv-name">${esc(m.nombre)}</span>
+      <span class="inv-value">${sinDato ? '—' : num(m.stock)}</span>
+      <span class="inv-unit">${esc(m.unidad || '')}${m.stock_minimo ? ' · mínimo ' + num(m.stock_minimo) : ''}</span>
+      <span class="inv-estado">${sinDato ? 'SIN CONTEO' : esc(String(m.estado || '').replace(/_/g, ' '))}</span>
+    </article>`;
+  }).join('') || '<p class="muted small">Sin materiales configurados.</p>';
+  const nota = $('#inv-nota');
+  if (nota) {
+    if (env && env.vacio) nota.textContent = env.vacio.mensaje;
+    else if (datos.sin_conteo) nota.textContent = datos.sin_conteo + ' material(es) sin fecha de conteo: el número es proyectado, no verificado.';
+    else nota.textContent = 'Stock con conteo registrado.';
+  }
+}
+
+function renderCobranzaDash() {
+  const env = state.cobranzaDash;
+  const host = $('#cob-cubos');
+  if (!host) return;
+  const datos = (env && env.datos) || {};
+  const porEstado = {};
+  (datos.cubos || []).forEach(c => { porEstado[c.estado] = c; });
+  host.innerHTML = CUBOS_COBRANZA.map(def => {
+    const c = porEstado[def.id] || {documentos: 0, monto: '0'};
+    const monto = Number(c.monto || 0);
+    const alerta = def.id === 'VENCIDA' && monto > 0;
+    const proximo = def.id === 'POR_VENCER_7' && monto > 0;
+    return `<article class="cob-cubo ${alerta ? 'alerta' : ''} ${proximo ? 'proximo' : ''}">
+      <span class="cob-label">${def.label}</span>
+      <span class="cob-monto">${money(monto)}</span>
+      <span class="cob-docs">${c.documentos} documento(s)</span>
+    </article>`;
+  }).join('');
+  const saldoReal = $('#cob-saldo-real');
+  if (saldoReal) saldoReal.textContent = money(Number(datos.saldo_total || 0));
+  const chip = $('#tab-chip-cobranza');
+  if (chip) chip.textContent = datos.documentos ? datos.documentos + ' docs' : 'Sin datos';
+  const fuente = $('#cob-fuente');
+  if (fuente) fuente.textContent = env && env.fuente ? env.fuente.join(' · ') : 'Sin fuente';
+  const total = $('#cob-saldo-total');
+  if (total) total.textContent = money(Number(datos.saldo_total || 0));
+  const lista = $('#cob-clientes');
+  if (lista) {
+    lista.innerHTML = (datos.clientes || []).map(c => `
+      <div class="cob-cliente"><strong>${esc(c.nombre)}</strong><span>${money(Number(c.saldo || 0))}</span></div>
+    `).join('') || '<p class="muted small">Ningún cliente con saldo pendiente.</p>';
+  }
+  const nota = $('#cob-nota');
+  if (nota) {
+    const base = 'El monto es el total del documento, no el saldo pendiente. El saldo real por cliente sale de v_cliente_saldo.';
+    nota.textContent = env && env.vacio ? env.vacio.mensaje + ' ' + base : base;
+  }
 }
 
 function renderDashboard() {
@@ -4126,6 +4394,9 @@ function renderDashboard() {
   renderActividad();
   montarAgendaDashboard();
   renderObras();
+  renderMixers();
+  renderInventarioDash();
+  renderCobranzaDash();
   renderKpis();
   renderNotificaciones();
   const chip = $('#dash-actualizado');
@@ -4138,15 +4409,16 @@ function renderDashboard() {
 async function cargarDashboard() {
   if (state.cargando) return;
   state.cargando = true;
-  const planta = ($('#f-planta') || {}).value || '';
   try {
-    const [kpis, ordenes, inventario, mercado, simulador, clientes] = await Promise.all([
-      api('/api/v1/dashboard/hero-kpis?fecha=' + hoy() + (planta ? '&planta=' + encodeURIComponent(planta) : '')).catch(() => null),
+    const [kpis, ordenes, inventario, mercado, simulador, clientes, inventarioDash, cobranzaDash] = await Promise.all([
+      api('/api/v1/dashboard/hero-kpis?fecha=' + hoy()).catch(() => null),
       api('/api/v1/orders?limit=50').catch(() => []),
       api('/api/v1/inventory').catch(() => []),
       api('/api/v1/dashboard/mercado?periodo=12_MESES_MOVILES&anio=' + new Date().getFullYear()).catch(() => null),
       api('/api/v1/dashboard/simulador').catch(() => null),
-      api('/api/v1/secretaria/clientes').catch(() => ({clientes:[]}))
+      api('/api/v1/secretaria/clientes').catch(() => ({clientes:[]})),
+      api('/api/v1/dashboard/inventario').catch(() => null),
+      api('/api/v1/dashboard/cobranza').catch(() => null)
     ]);
     if (kpis) state.kpis = kpis;
     state.ordenes = Array.isArray(ordenes) ? ordenes : [];
@@ -4154,6 +4426,8 @@ async function cargarDashboard() {
     if (mercado) state.mercado = mercado;
     if (simulador) state.simulador = simulador;
     state.clientes = (clientes && clientes.clientes) || state.clientes || [];
+    state.inventarioDash = inventarioDash;
+    state.cobranzaDash = cobranzaDash;
     const top = ordenesFiltradas().slice(0, 6);
     const detalles = await Promise.all(top.map(o => api('/api/v1/orders/' + o.id).catch(() => null)));
     state.detalle = {};

@@ -56,6 +56,20 @@ scripts de candado.
 
 ## Evidencia de la Ãºltima sesiÃ³n
 
+### 2026-11-13 — Dashboard operativo en tres pestañas
+
+- Se eliminó “Filtros de obras” (planta, resistencia, pago) del panel.
+- Tres pestañas con submenú: **Ocupación** (por defecto, ámbar), **Inventario**,
+  **Cobranza**; el resumen anual queda comprimido arriba.
+- Endpoints nuevos `GET /api/v1/dashboard/inventario` y `/cobranza` con
+  `fuente`, `consultado`, `filtros`, `datos` y `vacio`.
+- Inventario: CEMENTO, ARENA, RIPIO, RETARDANTE (sin agua), con
+  `SIN_FECHA_CONTEO` cuando no hay conteo físico.
+- Cobranza: cuatro cubos y saldo real por cobrar separado del total documental.
+- `pytest` → **386 passed** (7 tests nuevos).
+- Verificado en Chromium: 3 pestañas, 4 tarjetas, 4 cubos, sin errores de consola.
+- Evidencia: `.agents/evidencias/dashboard_operativo_2026-11-13.txt`.
+
 ### 2026-11-13 — Cotizaciones, contratos y mapa de módulos
 
 - Migración **079** aplicada en local: `fecha_vencimiento` en `orders` y
@@ -229,19 +243,16 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **Fase D2 del dashboard:** endpoints `GET /api/v1/dashboard/operacion`,
-   `/inventario`, `/cobranza` con `fuente`, `consultado`, `filtros`, `datos` y
-   `vacio`. Tests con caso vacío. Diseño en `docs/DASHBOARD_OPERATIVO.md`.
-2. **Fase D3:** tres pestañas (Ocupación por defecto) con submenú propio y
-   eliminación de “Filtros de obras”.
-3. **Fase D4:** Ocupación con timeline de mixers y tabla del día desde
-   `mixer_dispatches` y `dispatch_schedule`.
-4. **Cerrar preguntas de cotizaciones** (`.agents/tareas/PENDIENTES.md` §6):
-   toda venta por cotización, precio por resistencia, IVA desglosado.
-5. **Migración 080** (cotizaciones) y después **081** (contratos y horas extra).
-6. **C9: UI de recordatorios en el panel** sigue pendiente de la sesión anterior.
-7. **Capturar `fecha_vencimiento`** en los formularios de orden y factura; hoy
+1. **`GET /api/v1/dashboard/operacion`** con timeline de mixers
+   (`mixer_dispatches`, `dispatch_schedule`) y la misma envoltura; reemplazar en
+   Ocupación las sumas que hoy hace el navegador. Tests con caso vacío.
+2. **Cerrar preguntas de cotizaciones** (`.agents/tareas/PENDIENTES.md` §6):
+   umbral de excedente, precio por resistencia, porcentaje de anticipo.
+3. **Migración 080** (cotizaciones: rubro global, `cliente_etiquetas`,
+   `precio_estado`) y después **081** (contratos de obra cierta y horas extra).
+4. **Capturar `fecha_vencimiento`** en los formularios de orden y factura; hoy
    todo cae en `SIN_VENCIMIENTO`.
+5. **C9: UI de recordatorios en el panel**, pendiente de la sesión anterior.
 
 ## Decisiones de arquitectura vigentes
 

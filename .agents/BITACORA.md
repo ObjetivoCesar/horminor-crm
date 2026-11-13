@@ -3990,3 +3990,76 @@ caso vacío. Después D3 (tres pestañas) y D4 (Ocupación con datos reales).
 - `.agents/skills/pdf-cotizaciones/{SKILL.md,errores.md,roles/01_armador.md,roles/02_emisor.md,roles/03_publicador.md,contracts/solicitud_cotizacion.json}`
 - `scripts/auditar_skills.py`, `AGENTS.md`
 - `.agents/ESTADO.md`, `.agents/BITACORA.md`
+
+## 2026-11-13 — Dashboard operativo: tres pestañas y endpoints reales
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** quitar “Filtros de obras” y rediseñar el dashboard en tres pestañas
+con datos reales.
+
+### Hecho
+
+1. **Se eliminó “Filtros de obras”** (planta, resistencia, pago) y su bloque
+   `filter-drop`. `ordenesFiltradas()` ya no lee selects que no existen.
+2. **Tres pestañas con submenú propio**: `Ocupación` (por defecto, ámbar),
+   `Inventario`, `Cobranza`. Submenús: Ocupación → Resumen/Mixers/Agenda;
+   Inventario → Materiales/Por fechas; Cobranza → Resumen/Clientes.
+3. **Resumen anual comprimido** arriba: mercado, ventas y provincias.
+4. **`Detalle operativo`** (caja, mixers, bodega) se movió dentro de Ocupación;
+   antes se veía en todas las pestañas.
+5. **Endpoints nuevos**: `GET /api/v1/dashboard/inventario` y `/cobranza`, con
+   `fuente`, `consultado`, `filtros`, `datos` y `vacio`.
+6. **Inventario** muestra solo CEMENTO, ARENA, RIPIO y RETARDANTE. El agua no
+   aparece porque no es stock. Cada material lleva `SIN_FECHA_CONTEO` cuando no
+   hay conteo: no se presenta semilla como stock verificado.
+7. **Cobranza** muestra los cuatro cubos y, arriba, el **saldo real** por
+   cobrar. El cubo `SIN_VENCIMIENTO` usa total de documento y así se explica.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `curl.exe -s http://localhost:8000/api/v1/dashboard/inventario` | 200, 4 materiales, `vacio.motivo = SIN_CONTEO_FISICO` |
+| `curl.exe -s http://localhost:8000/api/v1/dashboard/cobranza` | 200, 4 cubos, `saldo_total = 55043.6`, `SIN_VENCIMIENTO = 98467.6` |
+| `python -m pytest tests -q -o asyncio_mode=auto` | `386 passed` (7 tests nuevos) |
+| Navegador Chromium del entorno | 3 pestañas, 3 paneles, 4 tarjetas de inventario, 4 cubos, `console errors: []` |
+
+Evidencia completa en `.agents/evidencias/dashboard_operativo_2026-11-13.txt`.
+
+### Decisiones tomadas
+
+1. **La pestaña no filtra, cambia de pregunta.** Ocupación responde “qué está
+   pasando hoy”, Inventario “alcanza el material”, Cobranza “qué se debe”. Un
+   filtro global de planta/resistencia/pago no respondía ninguna.
+2. **El vacío es una respuesta.** `SIN_FECHA_CONTEO` y `SIN_FECHAS_CAPTURADAS`
+   se muestran con su motivo; el cero no.
+3. **Saldo real separado del total documental.** En Cobranza se muestran los dos
+   números porque no son lo mismo: 98,467.60 de documentos contra 55,043.60 de
+   saldo.
+4. **Solo se resaltan en rojo los cubos con monto.** Un borde de alarma en
+   `VENCIDA` con $0.00 enseña a ignorar el color.
+
+### Bloqueos / preguntas al cliente
+
+1. Falta `GET /api/v1/dashboard/operacion` con el timeline de mixers; Ocupación
+   hoy usa órdenes y KPIs existentes.
+2. El stock de inventario sigue siendo semilla: falta el conteo físico.
+3. Umbral de excedente despachado sin definir.
+
+### Próximo paso exacto
+
+Implementar `GET /api/v1/dashboard/operacion` en
+`services/core-api/app/m4_dashboard/operativo.py` (misma envoltura) leyendo
+`mixer_dispatches` y `dispatch_schedule`, y reemplazar en Ocupación las sumas
+que hoy hace el navegador. Tests con caso vacío incluidos.
+
+### Archivos tocados
+
+- `services/core-api/app/m4_dashboard/operativo.py` (nuevo)
+- `services/core-api/app/m4_dashboard/router.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v72_dashboard_operativo.py` (nuevo)
+- `docs/DASHBOARD_OPERATIVO.md`, `docs/COTIZACIONES.md`, `docs/CONTRATOS.md`
+- `.agents/MAPA_MODULOS.md`, `.agents/tareas/PENDIENTES.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/dashboard_operativo_2026-11-13.txt`

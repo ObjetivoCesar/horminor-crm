@@ -9,10 +9,8 @@
 
 | # | Tarea | Depende de | Criterio de cierre |
 |---|---|---|---|
-| D2 | Endpoints `GET /api/v1/dashboard/operacion`, `/inventario`, `/cobranza` | 079 aplicada | Cada uno devuelve `fuente`, `consultado`, `filtros`, `datos` y `vacio`; tests con caso vacío |
-| D3 | Tres pestañas con submenú; quitar “Filtros de obras” | D2 | Ocupación activa por defecto en ámbar; ninguna cifra sumada en JavaScript |
-| D4 | Ocupación: timeline de mixers y tabla del día | D3 | Datos desde `mixer_dispatches`/`dispatch_schedule`, no desde `/orders` |
-| D5 | Indicadores de cotizaciones abiertas y excedente | 080 | Pipeline y fuga de margen visibles sin pestaña nueva |
+| D2 | Endpoint `GET /api/v1/dashboard/operacion` | 079 aplicada | Devuelve timeline de mixers con `fuente`, `consultado`, `filtros`, `vacio`; tests con caso vacío |
+| D3 | Indicadores de cotizaciones abiertas y excedente | 080 | Pipeline y fuga de margen visibles sin pestaña nueva |
 
 ## 2. Cotizaciones
 
@@ -54,12 +52,19 @@
 
 ## 6. Preguntas abiertas (no se decide por Julio)
 
-1. ¿Toda venta pasa por cotización o solo cuando el cliente la pide?
-2. ¿La lista de precios lleva un precio por resistencia o uno solo?
-3. ¿El IVA se muestra desglosado o incluido en el precio por m³?
-4. Contrato de trabajo: ¿indefinido, fijo, por obra o prueba?
-5. Anticipos de salario: ¿se descuentan del siguiente salario o en cuotas?
-6. ¿Qué umbral de excedente despachado debe avisar en el tablero?
+Cerradas el 2026-11-13:
+
+- **Toda venta pasa primero por cotización.** La orden no nace suelta.
+- **Precios en Superadmin** (`concrete_recipes.precio_m3`), hoy ficticios y
+  marcados `PROVISIONAL`; Julio los dará después y serán variables.
+- **IVA desglosado** en la cotización y la factura.
+- **Contrato de trabajo: obra cierta.** Anticipos y saldo final.
+
+Siguen abiertas:
+
+1. ¿Qué umbral de excedente despachado debe avisar en el tablero?
+2. ¿La lista de precios lleva un valor por resistencia o uno solo por planta?
+3. Anticipos de salario: ¿porcentaje y forma de descuento?
 
 Mientras no haya respuesta, el sistema deja el campo `NULL` y lo marca
 `PENDIENTE`. No se rellena con un valor “razonable”.

@@ -83,6 +83,13 @@ Reglas:
 
 Rutas: `GET /api/v1/dashboard/operacion`, `/inventario`, `/cobranza`.
 
+Estado al 2026-11-13:
+
+- `/inventario` y `/cobranza`: **implementados** en
+  `services/core-api/app/m4_dashboard/operativo.py`, con tests.
+- `/operacion`: pendiente. La pestaña Ocupación usa por ahora las órdenes y los
+  KPIs existentes.
+
 ## 5. Reglas duras
 
 1. **Nada de cálculo de negocio en JavaScript.** El backend suma con `Decimal`.
@@ -99,7 +106,7 @@ Rutas: `GET /api/v1/dashboard/operacion`, `/inventario`, `/cobranza`.
 | Fase | Qué | Criterio |
 |---|---|---|
 | D1 | Migración 079: vencimiento y vista de cobranza | **hecho** (2026-11-13) |
-| D2 | Endpoints `operacion`, `inventario`, `cobranza` | Tests con `fuente`, `filtros`, `consultado` y vacío |
-| D3 | Pestañas y submenús en el panel | Tres pestañas, activa en ámbar, sin “Filtros de obras” |
-| D4 | Ocupación con datos reales | Timeline y tabla del día desde la base |
+| D2 | Endpoints `inventario` y `cobranza` | **hecho**: envoltura completa, tests y vacío explícito |
+| D3 | Pestañas y submenús en el panel | **hecho**: tres pestañas, activa en ámbar, sin “Filtros de obras” |
+| D4 | `GET /dashboard/operacion` + timeline de mixers | Timeline y tabla del día desde la base |
 | D5 | Indicadores de cotizaciones y excedente | Pipeline y fuga de margen visibles |

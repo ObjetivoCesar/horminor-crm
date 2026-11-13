@@ -88,11 +88,12 @@ factura. Si se despacha menos, también se cobra lo pactado.
 
 | Campo | Tipo | Regla |
 |---|---|---|
+| `tipo_contrato` | text | `OBRA_CIERTA` — cerrado con Julio el 2026-11-13 |
 | `cargo` | text | obligatorio |
 | `jornada_horas_semana` | numeric | `NULL` hasta cargar |
 | `horario` | jsonb | `{"entrada":"07:00","salida":"17:00","dias":[...]}` |
 | `salario_base` | numeric | mensual, `NULL` hasta cargar |
-| `modalidad_pago` | text | `MENSUAL` |
+| `modalidad_pago` | text | `MENSUAL`, con **anticipos** durante la obra y **saldo final** al cierre |
 | `horas_extra_modo` | text | `POR_HORA`, `MONTO_FIJO`, `NO_APLICA` |
 | `tarifa_hora_extra` | numeric | `NULL` hasta cargar |
 | `anticipos_permitidos` | boolean | `true` (de ley) |
@@ -184,9 +185,16 @@ Una página, generada desde una orden cuando existe:
 
 ## 8. Preguntas abiertas
 
-1. **Anticipos:** ¿se descuentan del siguiente salario o en cuotas?
-2. **Cotización previa:** ¿toda venta pasa por cotización o solo las que el
-   cliente pide? Ver `docs/COTIZACIONES.md`.
+Cerrada el 2026-11-13: **contrato de trabajo de obra cierta**, con anticipos
+durante la obra y saldo final al cierre. El porcentaje del anticipo sigue
+pendiente de Julio.
+
+Siguen abiertas:
+
+1. **Porcentaje de anticipo** y forma de descuento contra el saldo final.
+2. **Cotización previa:** toda venta pasa primero por cotización (cerrado); la
+   pregunta que queda es si el contrato de suministro se firma siempre o solo
+   cuando el cliente lo pide. Ver `docs/COTIZACIONES.md`.
 
 Los extras ya están cerrados: **un solo rubro global** con descripción libre,
 `cobrable` o costo interno. No hay categorías.

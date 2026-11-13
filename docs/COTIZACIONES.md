@@ -36,8 +36,9 @@ Decisiones cerradas con Julio:
    etiqueta **`VENTA`** y desde ahí se habilita la orden o el contrato.
 2. **La etiqueta no crea la orden.** Aceptar una cotización no debe producir una
    orden fantasma si al final no se despacha. La conversión es un paso explícito.
-3. **El contrato es opcional.** No toda venta necesita contrato; la cotización y
-   la orden sí son obligatorias para ejecutar.
+3. **El contrato es opcional.** No toda venta necesita contrato; **toda venta sí
+   pasa primero por cotización**, y la cotización y la orden son obligatorias
+   para ejecutar.
 
 ## 3. Modelo de datos
 
@@ -253,9 +254,19 @@ Van en la franja de resumen o en Cobranza, no como pestaña nueva.
 
 ## 10. Preguntas abiertas
 
-1. ¿Toda venta pasa por cotización o solo cuando el cliente la pide?
-2. ¿La lista de precios lleva un precio por resistencia o uno solo?
-3. ¿El IVA se muestra desglosado o incluido en el precio por m³?
+Cerradas el 2026-11-13:
+
+1. **Toda venta pasa primero por cotización.** No hay orden sin cotización
+   previa. La cotización aceptada habilita la etiqueta `VENTA` y la conversión.
+2. **La lista de precios está en Superadmin** (`concrete_recipes.precio_m3`).
+   Hoy los valores son ficticios y van marcados `PROVISIONAL`; Julio los
+   reemplazará en la reunión. Serán variables.
+3. **El IVA se muestra desglosado** (subtotal, IVA, total) en la cotización y en
+   la factura.
+
+Sigue abierta:
+
+4. ¿La lista lleva un valor por resistencia o uno solo por planta?
 
 ## 11. Fases
 

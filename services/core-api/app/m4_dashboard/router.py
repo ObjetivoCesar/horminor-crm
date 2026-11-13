@@ -14,6 +14,7 @@ from ..panel_acl import exigir_modulo
 from ..superadmin.secciones import SECCION_EMPRESA, SECCION_FINANZAS
 from ..superadmin.store import ConfigStore, PostgresConfigStore
 from . import bancos as bancos_svc
+from . import operativo as operativo_svc
 from .calculos import simular_bancario
 from .dossier import construir_dossier_html
 from .service import DashboardStore, MemoryDashboardStore, PostgresDashboardStore
@@ -105,6 +106,29 @@ async def cuota_mercado(
     anio: int = Query(default=2026, ge=2020, le=2100),
 ) -> dict[str, Any]:
     return await _store(request).cuota_mercado(periodo=periodo, anio=anio)
+
+
+@router.get("/inventario")
+async def inventario_operativo(request: Request) -> dict[str, Any]:
+    """Stock de los cuatro materiales del tablero, sin agua.
+
+    Devuelve el vacio explicito cuando no hay conteo fisico: no se presenta una
+    semilla como stock real.
+    """
+    return await operativo_svc.inventario(_pool(request))
+
+
+@router.get("/cobranza")
+async def cobranza_operativa(
+    request: Request,
+    limite_clientes: int = Query(default=8, ge=1, le=50),
+) -> dict[str, Any]:
+    """Documentos por cobrar agrupados por estado de vencimiento.
+
+    OJO: `monto` es el total del documento, no el saldo pendiente. El saldo real
+    por cliente sale de `v_cliente_saldo`.
+    """
+    return await operativo_svc.cobranza(_pool(request), limite_clientes)
 
 
 @router.get("/benchmarks")
