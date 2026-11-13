@@ -3782,3 +3782,123 @@ cambio del notificador se prueba al menos una vez con Evolution.
 
 **Próximo paso exacto.** Confirmar en el teléfono 0967491847 que llegó
 `PRUEBA-0002.pdf`; luego definir la UI (C9) y el acuse de entrega (C11).
+
+### Addendum 6 (misma sesión) — Gato redacta el mensaje
+
+**Motivo.** Julio probó el flujo: funcionó, pero pidió dictar cada texto. Su
+frase: *"solo lo de redactar el mensaje está feísimo... para eso le envío yo
+mismo"*. La regla "el mensaje es del usuario" convertía a Gato en un formulario.
+
+**Decisión.** Gato redacta; el candado pasa de "no redactar" a "no inventar
+cifras".
+
+1. **Prompt:** puede redactar breve, en nombre de Horminor, sin promesas ni
+   enlaces de pago. Solo cifras que estén en las fichas.
+2. **Código:** `recordatorios.cifras_de()` + `_cifras_permitidas()` extraen los
+   montos del mensaje y los comparan con `v_cliente_saldo` y `client_invoices`.
+   Si sobra uno, no se crea el borrador.
+3. **No interrogar:** si el cliente está en el CRM, no se pide el número; el
+   backend lo resuelve.
+
+**Evidencia.**
+
+| Prueba | Resultado |
+|---|---|
+| "pásale al Ing. Reyes su factura y su saldo" (VPS) | borrador con mensaje redactado, sin pedir texto |
+| Mensaje redactado | menciona USD 43.424,00 y USD 0,00, ambos en la ficha |
+| Cifra inventada (99.999,99) | `ERROR`, sin fila creada |
+| `pytest` | **376 passed** |
+
+**Pendiente.** El mensaje de la API para `ERROR` responde 200 con `estado=ERROR`;
+conviene devolver 422 en una próxima pasada. C9 (UI) y C11 (acuse) siguen
+abiertos.
+
+---
+
+## 2026-11-13 — Cierre: Gato secretaria (ratificación, adjuntos y redacción)
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Duración:** sesión larga, continuación del 2026-11-12
+**Objetivo:** convertir a Gato en una secretaria real: crear recordatorios por
+WhatsApp con ratificación, adjuntar facturas y enviarlos desde el VPS.
+
+### Hecho
+
+1. **Migraciones 075–078** (recordatorios, ratificación, adjunto, `DOCUMENTO` en
+   el outbox), aplicadas en local y en el VPS.
+2. **Ratificación en dos pasos:** `BORRADOR → "sí" → PENDIENTE → ENVIADO`;
+   "no" cancela. El "sí/no" se resuelve en el router, sin depender del LLM.
+3. **Despachador** interno cada 20 s con `FOR UPDATE SKIP LOCKED`, reintentos y
+   relectura de estado antes de enviar.
+4. **Adjuntos reales:** `enviar_documento()` en Evolution y SANDBOX; el PDF sale
+   de `media_assets` (sandbox o CDN).
+5. **Teléfonos:** `formato_whatsapp()` normaliza `0990000013`, `990000013`,
+   `+593…` y `00593…` a `593990000013`; fijos corregidos.
+6. **Hora:** "de la mañana/tarde" y "ahora mismo"; la última hora de la frase
+   manda; la IA pasa la frase, no un ISO.
+7. **Redacción propia:** Gato escribe el mensaje breve; el backend rechaza
+   cualquier cifra que no exista en la ficha (`cifras_de`/`_cifras_permitidas`).
+8. **Trazabilidad:** `conversacion_id`, `creado_por`, `confirmado_por`;
+   `origen_destino` distingue CRM de número dictado; clave de idempotencia.
+9. **VPS:** despliegue con `docker compose -f docker-compose.yml -f
+   docker-compose.vps.yml`, 4 clientes ficticios con su PDF, envíos reales.
+10. **Documento del sistema:** `docs/GATO_SECRETARIA.md` v1.3 con el paquete
+    C8–C12.
+
+### Evidencia (real, ejecutada)
+
+| Verificación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **376 passed** |
+| Migraciones en VPS | 075, 076, 077, 078 aplicadas 01:13:49 |
+| Envío de texto (local) | outbox 19/20/21/22/23 |
+| Envío de PDF (VPS) | `documentMessage · PRUEBA-0002.pdf` al 0967491847 |
+| Envío redactado (VPS) | mensaje propio con saldo verificado, `ENVIADO` |
+| Candado de cifras | `99.999,99` rechazado, sin fila |
+| Normalización | 5 formatos → `593990000013` |
+
+### Decisiones tomadas
+
+1. **Ratificar antes de enviar.** Un error de lectura no llega al cliente.
+   Alternativa descartada: enviar directo y avisar después.
+2. **La IA pasa la frase, no la fecha.** El modelo mezclaba UTC y local (5 h de
+   error). Alternativa descartada: ISO en el modelo.
+3. **Gato redacta, el código verifica las cifras.** Alternativa descartada:
+   obligar a dictar el texto, que convertía a Gato en un formulario.
+4. **Número dictado permitido y marcado.** Es un caso operativo real.
+   Alternativa descartada: exigir siempre cliente registrado.
+5. **Sin tope diario.** El canal de creación es interno (Julio y Secretaría).
+6. **`ENVIADO` = aceptado por Evolution**, no entregado.
+
+### Bloqueos / preguntas al cliente
+
+1. **Datos ficticios en el VPS:** cuatro clientes `(PRUEBA)` con facturas de
+   prueba. Julio debe decidir cuándo se limpian y se cargan los reales.
+2. **Aprobación previa:** hoy cualquier SUPERADMIN/SECRETARIA ratifica y envía.
+   ¿Se exige un segundo visto bueno?
+3. **Consentimiento de mensajes** (LOPDP): no hay registro de opt-in.
+4. **Acuse de entrega:** pendiente (C11).
+
+### Próximo paso exacto
+
+Implementar **C9** (pestaña de recordatorios en `/panel` con Ratificar,
+Descartar y Cancelar) y **C8** (validar el número en WhatsApp antes de crear).
+Criterio: crear un recordatorio desde la pestaña y verlo llegar al 0967491847
+con `envio: evolution`.
+
+### Archivos tocados
+
+- `db/migrations/075_gato_recordatorios.sql`, `076_gato_ratificacion.sql`,
+  `077_gato_adjuntos.sql`, `078_outbox_documento.sql`
+- `services/core-api/app/asistente/recordatorios.py`, `despachador.py`,
+  `herramientas.py`, `orquestador.py`, `pilares.py`, `proveedores.py`,
+  `redactor.py`, `persona.py`, `router.py`, `gato.py`
+- `services/core-api/app/main.py`, `app/sandbox.py`,
+  `app/m1_whatsapp/{models,notifications,runtime,__init__}.py`
+- `services/core-api/tests/test_recordatorios.py`, `test_m1_whatsapp.py`,
+  `test_asistente_router.py`
+- `docs/GATO_SECRETARIA.md`, `docs/GATO_RECORDATORIOS.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencias: `gato_recordatorios_2026-11-12.txt`,
+  `gato_ratificacion_2026-11-12.txt`, `gato_adjuntos_2026-11-12.txt`,
+  `vps_despliegue_recordatorios_2026-11-12.txt`

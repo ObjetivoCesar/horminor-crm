@@ -1,14 +1,14 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-12**.
-> Base v6.16: Custodio v4.4.0 + HTTP, agenda única `HorminorAgenda`,
+> Última actualización: **2026-11-13**.
+> Base v6.17: Custodio v4.4.0 + HTTP, agenda única `HorminorAgenda`,
 > compras/caja chica, perfiles ACL, Superadmin por Action Cards, Carpetas de
 > Clientes con buscador Sabueso, bancos con color de marca, **facturas
 > internas adjuntas al cliente** (PDF o foto) consultables por Gato y
-> **recordatorios por WhatsApp con ratificación y adjuntos**.
-> 24 migraciones, 37 tablas, 7 vistas, 30 cuentas; **374 tests** y los 2
-> candados en verde. Siguiente foco: validación del cliente y login pre-VPS.
+> **recordatorios por WhatsApp con ratificación, adjuntos y redacción propia**.
+> 24 migraciones, 37 tablas, 7 vistas, 30 cuentas; **376 tests** y los 2
+> candados en verde. Siguiente foco: UI de recordatorios y login pre-VPS.
 
 ## Hitos
 
@@ -23,7 +23,7 @@
 | 4b | Custodio v4.4 + Panel de Pagos/Gastos/Tasas/Conteo | ðŸŸ¢ **Cerrado** (2026-11-09) | `evidencias/pytest_panel_v44_2026-11-09.txt` (**247 tests**); `evidencias/http_gate_v44_check_2026-11-09.txt` (`HTTP GATE V4.4: OK`, 12 pasos, `ROLLBACK` 17 tablas); `/panel` con `dlg-pago`, `dlg-gasto`, `conteo-materiales`, `fin-wacc`; `GET /api/v1/panel/catalog` â†’ 26 cuentas | Nada bloqueante. Cargar tasas, ejecutar conteo real e instalar cron quedan como operaciÃ³n del cliente/VPS |
 | 5b | VPS + GitHub + Evolution API | OK **Primera subida** (2026-11-12) | Repo `ObjetivoCesar/horminor-crm` (commit `a94a618`), deploy key read-only, VPS `/opt/horminor`, `core-api` en `127.0.0.1:8012`, Caddy `horminor.178.238.238.158.sslip.io` (solo `/health` y webhook), 21 migraciones, instancia Evolution `horminor` creada y webhook configurado; `docs/DESPLIEGUE_VPS_HORMINOR.md` | Escanear QR, probar texto con teléfono real, rotar API key y cargar backups |
 | 4n | v6.13.1 - Memoria de Gato + descarga de factura | OK **Cerrado** (2026-11-12) | Migración 074 (`gato_turnos`); `conversacion_id` en el endpoint y en el widget; historial de 8 turnos al LLM; búsqueda de clientes sin puntuación ("ing reyes" → "Ing. Reyes"); enlace `?download=1` en la factura; pytest (**342 tests**) | Validar el hilo con el uso real de Julio/Secretaría |
-| 4o | v6.16 - Gato secretaria: ratificación + adjuntos | 🟢 **Desplegado y probado en VPS** (2026-11-12) | Migraciones 075–078 en el VPS; 3 clientes ficticios con factura; envío real de `PRUEBA-0002.pdf` al 0967491847 (`ENVIADO` 20:19:55, Evolution registra `documentMessage`); `pytest` **374** | Confirmar recepción en el teléfono; C8 número vivo, C9 UI, C11 acuse, C12 test de integración |
+| 4o | v6.17 - Gato secretaria: ratificación, adjuntos y redacción | 🟢 **Desplegado y probado en VPS** (2026-11-13) | Migraciones 075–078; envío real de `PRUEBA-0002.pdf` y de un mensaje redactado al 0967491847; candado de cifras (`cifras_de`/`_cifras_permitidas`); 4 clientes ficticios con factura en el VPS; `pytest` **376**. Doc `docs/GATO_SECRETARIA.md` v1.3 | C8 número vivo, C9 UI en el panel, C11 acuse de entrega, C12 test de integración |
 | 4m | v6.13 - Facturas internas adjuntas al cliente | OK **Cerrado** (2026-11-12) | Migración 073 (`client_invoices`); factura ficticia `PRUEBA-0001` (orden #55, **$43.424,00**) con PDF; pestaña **Facturas** en el expediente; `GET/POST /api/v1/clients/{id}/facturas`; Gato `cliente_facturas` con marca **FICTICIA** y SRI fuera de alcance; `evidencias/facturas_v613_2026-11-12.txt` y `panel_v613_facturas_2026-11-12.jpeg`; pytest (**338 tests**) | Validar formato con Julio; definir numeración y datos fiscales reales |
 | 4l | v6.12 - Logos de bancos con color de marca | OK **Cerrado** (2026-11-12) | Tres placas SVG 96x96: Pichincha amarillo `#FFD100`, Guayaquil rosado `#C7007E`, Internacional naranja `#F39200`; isotipos oficiales, símbolo Pichincha a 56/96; `.banco-logo` de 46 px sin caja blanca; evidencias/panel_v612_bancos_dark_2026-11-12.png, _light_ y logos_zoom; pytest (**296 tests**) | Nada bloqueante. Aceptado por Dirección; si pide el lockup completo, placas 92x40 |
 | 4k | v6.11 - Banco activo + detalle de cuenta | OK **Cerrado** (2026-11-12) | Migracion 072 (`bank_accounts`, hijas `1102.01-03`, `saldo_informado`); tarjetas seleccionables en amarillo; detalle con saldo contable/informado, prestamos y movimientos; `PUT /api/v1/dashboard/bancos/{slug}`; evidencias/panel_v611_banca_2026-11-12.jpeg; pytest_v611_2026-11-12.txt (**296 tests**) | Cargar cuentas y saldos reales; asignar pagos a la cuenta hija del banco |
@@ -47,7 +47,7 @@ Leyenda: âšª no iniciado Â· ðŸŸ¡ en curso / candado abierto Â· ðŸŸ
 | PostgreSQL 15 | localhost:5433 (contenedor orminorth-postgres) | contenedor orminorth-postgres (sin puerto público) |
 | Redis 7 | localhost:6380 (contenedor orminorth-redis) | contenedor orminorth-redis (sin puerto público) |
 | Core API | http://localhost:8000 (contenedor orminorth-core-api) | 127.0.0.1:8012 en el VPS; público solo /health y webhook |
-| Panel (M3 + M4 + Superadmin) | http://localhost:8000/panel · Horminor, top header 72 px, sidebar de 6 tabs, dashboard número-primero (mercado, ventas y provincias), obras con SVG locales, agenda y actividad plegables, Poppins local, tema día/noche | http://localhost:8012/panel por túnel SSH; no público hasta tener login |
+| Panel (M3 + M4 + Superadmin) | http://localhost:8000/panel · **SANDBOX: no envía WhatsApp** | http://localhost:8012/panel por túnel SSH (`ssh -i ..\vps-entrada\horminor_vps -N -L 8012:127.0.0.1:8012 root@178.238.238.158`); `envio: evolution`, sí envía |
 
 Datos de demo en local: Ã³rdenes del Ing. Reyes (320 mÂ³ FC-210 y 52 mÂ³ FC-350),
 orden del candado del Hito 3 (16 mÂ³) y clientes de fixture con provincia
@@ -56,15 +56,16 @@ scripts de candado.
 
 ## Evidencia de la Ãºltima sesiÃ³n
 
-- **v6.16 desplegada y probada en el VPS (2026-11-12).** Subida a GitHub
-  (`7850241`, `85e1168`), `git pull` en `/opt/horminor`, migraciones **075–078**
-  aplicadas y `envio: evolution`. Se cargaron tres clientes ficticios con su
-  factura (`PRUEBA-0002/3/4`, propios PDF) y se envió de verdad
-  `PRUEBA-0002.pdf` al 0967491847: `ENVIADO` 20:19:55 y Evolution registra
-  `documentMessage`. Dos fallos del VPS corregidos en el camino: faltaba
-  `import base64` (ningún documento salía) y `modo` decía SANDBOX por Bunny
-  aunque el notificador fuera Evolution; ahora el health expone `envio`.
-  `pytest` -> **374 passed**. Evidencia:
+- **v6.17 desplegada y probada en el VPS (2026-11-13).** Seis commits
+  (`7850241` … `8c6b301`), migraciones **075–078** aplicadas y `envio:
+  evolution`. Envíos reales: `PRUEBA-0002.pdf` y un mensaje redactado, ambos al
+  0967491847, con `documentMessage` en Evolution. Gato ahora **redacta** el
+  mensaje y el backend rechaza cualquier cifra que no esté en la ficha
+  (`cifras_de` / `_cifras_permitidas`). Cuatro clientes ficticios con factura en
+  el VPS. Fallos corregidos en el camino: `import base64` ausente (ningún
+  documento salía), `modo` decía SANDBOX por Bunny aunque el canal fuera
+  Evolution, teléfono duplicado en la ratificación y pregunta innecesaria por el
+  cliente de la factura. `pytest` -> **376 passed**. Evidencia:
   `.agents/evidencias/vps_despliegue_recordatorios_2026-11-12.txt`.
 
 - **VPS + Evolution (2026-11-12).** El CRM quedó desplegado en Contabo (`/opt/horminor`), clonado con deploy key read-only desde `ObjetivoCesar/horminor-crm`. `core-api` escucha en `127.0.0.1:8012`; Caddy publica solo `https://horminor.178.238.238.158.sslip.io/health` y el webhook de Evolution. El panel se usa por túnel SSH hasta que exista login. Instancia Evolution `horminor` creada con webhook; estado `connecting`, pendiente escanear QR. Ver `docs/DESPLIEGUE_VPS_HORMINOR.md` y `.agents/evidencias/vps_deploy_evolution_2026-11-12.txt`.
@@ -211,32 +212,27 @@ scripts de candado.
 
 ## PrÃ³ximo paso exacto
 
-0. **Escanear el QR de Evolution `horminor`** (estado `connecting`), enviar un
-   texto a un teléfono de prueba y confirmar `notifier: evolution`. Luego
-   rotar la API key que se compartió por chat.
-1. **Probar el panel en local con la secretaria** (cobro/abono, gasto, tasas y
-   conteo) y ajustar pantallas/flujos segÃºn lo que pida Julio. El login no
-   bloquea esta etapa.
-2. **Cargar las tasas financieras** en Superadmin >
+0. **Cerrar C9: UI de recordatorios en el panel.** Pestaña con borradores,
+   pendientes y enviados; botones Ratificar / Descartar / Cancelar. Criterio:
+   crear desde la pestaña y ver el envío real en el VPS.
+1. **C8: validar que el número exista** en WhatsApp antes de crear
+   (`POST /chat/whatsappNumbers/{instancia}`), con aviso si no existe.
+2. **C11: acuse de entrega.** Procesar `MESSAGES_UPDATE` y pasar a `ENTREGADO`
+   solo con el evento real.
+3. **C12: test de integración del despachador** contra PostgreSQL con
+   `ROLLBACK` (hoy solo se probó a mano).
+4. **Probar el panel en local con la secretaria** (cobro/abono, gasto, tasas y
+   conteo) y ajustar pantallas/flujos segÃºn lo que pida Julio.
+5. **Cargar las tasas financieras** en Superadmin >
    `finanzas.parametros_contables` (`wacc_anual_pct`,
    `crecimiento_anual_pct`, `participacion_trabajadores_pct`,
    `impuesto_renta_pct`, `dscr_minimo_banco`) para activar valoraciÃ³n/DSCR.
-3. **Ejecutar el conteo fÃ­sico** de los 5 materiales desde Superadmin; hoy
+6. **Ejecutar el conteo fÃ­sico** de los 5 materiales desde Superadmin; hoy
    siguen `SIN_FECHA_CONTEO`.
-4. **Instalar el cron de backup** (`backup_db.sh`) y copiar los dumps fuera del
+7. **Instalar el cron de backup** (`backup_db.sh`) y copiar los dumps fuera del
    VPS; probar una restauraciÃ³n mensual.
-5. **Dashboard V2 aprobado por Julio (2026-11-08).** La captura de referencia es
-   `.agents/evidencias/panel_horminor_dashboard_v2_dark_2026-11-08.png`; el
-   Ã¡ngulo comercial es **372 mÂ³ vendidos de 120,000 mÂ³ (0.31%)** en El Coca.
-   Sigue pendiente que Julio entregue la **capacidad operativa de planta**.
-6. **ProducciÃ³n del Hito 3:** cargar credenciales reales en
-   `PUT /api/v1/superadmin/config/whatsapp_evolution_y_cdn`, poner
-   `evolution_sandbox=false` y `bunny_sandbox=false`, y repetir
-   `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py`.
-7. **Backlog pre-VPS (no antes):** implementar el login de usuario
-   (`panel_users`, hash `scrypt`, cookie `HttpOnly`) y proteger `/panel` y las
-   rutas de SecretarÃ­a/Superadmin. DespuÃ©s: VPS, TLS, proxy inverso y cron de
-   backups.
+8. **Login de usuario** (`panel_users`, hash `scrypt`, cookie `HttpOnly`) y
+   proteger `/panel` antes de abrirlo a Internet.
 
 ## Decisiones de arquitectura vigentes
 
@@ -291,6 +287,15 @@ scripts de candado.
 
 ## Riesgos abiertos
 
+- **El VPS tiene datos ficticios.** Cuatro clientes `(PRUEBA)` con facturas
+  ficticias y un lead real del bot. No usar esa base para operar ni emitir
+  cobros; limpiar antes de cargar clientes reales.
+- **El panel del VPS se usa por túnel SSH.** Si el túnel se cae, el link
+  `localhost:8012` deja de responder; no hay acceso público por diseño.
+- **El número de WhatsApp es no oficial (Baileys).** Un uso masivo o sin
+  consentimiento puede bloquear la línea y con ella todo el bot.
+- **`ENVIADO` no es `ENTREGADO`.** No se procesa `MESSAGES_UPDATE`; un número
+  inexistente puede quedar como enviado.
 - Sin backups de PostgreSQL definidos (se van a generar carpetas bancarias).
 - Sin proxy inverso ni TLS: no se puede exponer el webhook de Evolution.
 - `.env` con clave de desarrollo: **no usar en producciÃ³n** (rotar antes del VPS).
