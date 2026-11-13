@@ -73,12 +73,16 @@ OR
 | `direccion_obra` | text | obligatoria |
 | `forma_pago` | text | `EFECTIVO`, `TRANSFERENCIA`, `ABONO`, `FIADO` |
 | `plazo_entrega` | text | fecha o ventana |
-| `medicion` | text | `DESPACHADO`, `PEDIDO`, `OBRA` — **pendiente definir** |
-| `recargos` | text | altura, distancia, espera; `NULL` = sin recargos |
+| `medicion` | text | `PACTADO` — se cobra el volumen acordado; el excedente despachado es costo, no cobro |
+| `extras` | jsonb | rubros manuales: descripción, monto, `cobrable`, categoría. Ver `docs/COTIZACIONES.md` |
 
 El total del contrato es `volumen_m3 * precio_m3` (más IVA si aplica). Se
-congela al firmar. Si el volumen entregado difiere, la cláusula de medición
-define el ajuste; no se recalcula a espaldas del cliente.
+congela al firmar.
+
+La medición es **pactada**: se cobra el volumen acordado. Si se despacha un
+poco más —que es lo habitual—, ese excedente se registra como costo/merma y
+**no se le cobra al cliente**. La diferencia se ve en el tablero, no en la
+factura. Si se despacha menos, también se cobra lo pactado.
 
 ### 3.3 `datos` de TRABAJO
 
@@ -153,9 +157,9 @@ Una página, generada desde una orden cuando existe:
 3. Volumen, resistencia (o “cualquiera del catálogo”) y precio por m³.
 4. Forma de pago y plazo.
 5. Lugar de entrega y contacto en obra.
-6. Medición: se define si se factura el volumen despachado, el pedido o el
-   medido en obra. `[REVISAR]`
-7. Recargos por altura, distancia o espera, si existen. `[REVISAR]`
+6. Medición: se cobra el volumen pactado. El excedente despachado no se cobra.
+7. Extras: solo los rubros marcados como cobrables. Los de costo interno no se
+   imprimen en la copia del cliente.
 8. Exclusión: no incluye colocación, vibrado ni curado, salvo pacto escrito.
 9. Calidad y muestras: `[REVISAR]`.
 10. Terminación y firma de Julio.
@@ -180,23 +184,25 @@ Una página, generada desde una orden cuando existe:
 
 ## 8. Preguntas abiertas
 
-1. **Medición:** ¿se factura el volumen despachado, el pedido o el medido en
-   obra? Sin esto, un contrato por m³ queda ambiguo.
-2. **Recargos:** ¿el precio por m³ es todo incluido sin recargos, o hay recargo
-   por altura, distancia o espera de bomba?
-3. **Anticipos:** ¿se descuentan del siguiente salario o en cuotas?
+1. **Anticipos:** ¿se descuentan del siguiente salario o en cuotas?
+2. **Extras:** ¿qué categorías usa Julio? (distancia, acceso, espera, otro)
+3. **Cotización previa:** ¿toda venta pasa por cotización o solo las que el
+   cliente pide? Ver `docs/COTIZACIONES.md`.
 
 ## 9. Fases
 
 | Fase | Qué | Criterio |
 |---|---|---|
+| Q1 | Módulo de cotizaciones (ver `docs/COTIZACIONES.md`) | Cotización aceptada que genera contrato/orden |
 | C1 | Revisión de este documento con Julio/contadora | Texto base aprobado o corregido |
-| C2 | Migración 080: `contratos`, `contrato_versiones`, `anticipos_salario`, `jornada_eventos`, settings | Esquema aplicado, `NULL` donde falta dato |
+| C2 | Migración 081: `contratos`, `contrato_versiones`, `anticipos_salario`, `jornada_eventos`, settings | Esquema aplicado, `NULL` donde falta dato |
 | C3 | API: alta, versión, hash, estado, firma solo Julio | Tests de ciclo de vida; no se edita un activo |
 | C4 | Impresión PDF de suministro y trabajo | Un contrato de prueba con hash verificable |
 | C5 | Horas extra por chat + barra en Ocupación | Un mensaje + “sí” = evento registrado |
 | C6 | Lista de contratos en el panel | Secretaría prepara, Julio firma |
 
 **Secuencia:** primero se cierra la fase 2 del dashboard (endpoints) y la
-pestaña Ocupación; después C1–C2. Si se mezclan, el tablero vuelve a quedar a
-medias.
+pestaña Ocupación; después Q1 (cotizaciones) y recién C1–C2. La cotización va
+antes que el contrato porque **el contrato es la cotización aceptada**: si se
+construye al revés, se duplican campos y luego hay que refactorizar. Si se
+mezclan, el tablero vuelve a quedar a medias.
