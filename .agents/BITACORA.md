@@ -3755,3 +3755,30 @@ que va adjunta se agrega en la ratificación, no en el mensaje.
 
 **Pendiente.** Desplegar 075–078 al VPS; número vivo (C8); UI (C9); acuse (C11);
 test de integración (C12).
+
+### Addendum 5 (misma sesión) — despliegue al VPS y envío real
+
+**Hecho.**
+
+1. **Commit `7850241`** (Gato recordatorios) y **`85e1168`** (fix), subidos a
+   `ObjetivoCesar/horminor-crm`; el VPS hizo `git pull`.
+2. **Migraciones 075–078 aplicadas** al reiniciar la API (01:13:49). Tabla
+   `gato_recordatorios` con 21 columnas; despachador activo.
+3. **Tres clientes ficticios** (`PRUEBA`) con teléfono y factura propia
+   (`PRUEBA-0002/3/4`), marcados `es_ficticia=true` y con nota de ficticio.
+4. **Envío real verificado.** Borrador al 0967491847 con la factura PRUEBA-0002;
+   "sí" → `ENVIADO` a las 20:19:55; Evolution registra
+   `documentMessage · PRUEBA-0002.pdf`.
+5. **Dos bugs del VPS corregidos:** faltaba `import base64` en
+   `notifications.py` (todo envío de documento fallaba) y `modo` reportaba
+   `SANDBOX` por Bunny, aunque el notificador fuera Evolution. Se agregó
+   `envio` al health y el aviso usa ese campo.
+
+**Evidencia.** `.agents/evidencias/vps_despliegue_recordatorios_2026-11-12.txt`.
+
+**Lección.** El camino de documentos nunca se ejecutó en local porque SANDBOX no
+usa `base64`; el primer envío real lo destapó. De aquí en adelante, cualquier
+cambio del notificador se prueba al menos una vez con Evolution.
+
+**Próximo paso exacto.** Confirmar en el teléfono 0967491847 que llegó
+`PRUEBA-0002.pdf`; luego definir la UI (C9) y el acuse de entrega (C11).

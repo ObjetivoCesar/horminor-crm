@@ -279,8 +279,9 @@ def _ratificacion(
             else ""
         )
         aviso += f" Va con la factura {adjunto} adjunta{prueba}."
+    destino = etiqueta if etiqueta == telefono else f"{etiqueta} ({telefono})"
     return (
-        f"Voy a enviar a {etiqueta} ({telefono}) el "
+        f"Voy a enviar a {destino} el "
         f"{_ahora_texto(programado, zona)} ({zona}): «{mensaje}».{aviso}\n"
         "Responde «sí» para programarlo o «no» para descartarlo."
     )

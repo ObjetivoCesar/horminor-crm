@@ -23,7 +23,7 @@
 | 4b | Custodio v4.4 + Panel de Pagos/Gastos/Tasas/Conteo | ðŸŸ¢ **Cerrado** (2026-11-09) | `evidencias/pytest_panel_v44_2026-11-09.txt` (**247 tests**); `evidencias/http_gate_v44_check_2026-11-09.txt` (`HTTP GATE V4.4: OK`, 12 pasos, `ROLLBACK` 17 tablas); `/panel` con `dlg-pago`, `dlg-gasto`, `conteo-materiales`, `fin-wacc`; `GET /api/v1/panel/catalog` â†’ 26 cuentas | Nada bloqueante. Cargar tasas, ejecutar conteo real e instalar cron quedan como operaciÃ³n del cliente/VPS |
 | 5b | VPS + GitHub + Evolution API | OK **Primera subida** (2026-11-12) | Repo `ObjetivoCesar/horminor-crm` (commit `a94a618`), deploy key read-only, VPS `/opt/horminor`, `core-api` en `127.0.0.1:8012`, Caddy `horminor.178.238.238.158.sslip.io` (solo `/health` y webhook), 21 migraciones, instancia Evolution `horminor` creada y webhook configurado; `docs/DESPLIEGUE_VPS_HORMINOR.md` | Escanear QR, probar texto con teléfono real, rotar API key y cargar backups |
 | 4n | v6.13.1 - Memoria de Gato + descarga de factura | OK **Cerrado** (2026-11-12) | Migración 074 (`gato_turnos`); `conversacion_id` en el endpoint y en el widget; historial de 8 turnos al LLM; búsqueda de clientes sin puntuación ("ing reyes" → "Ing. Reyes"); enlace `?download=1` en la factura; pytest (**342 tests**) | Validar el hilo con el uso real de Julio/Secretaría |
-| 4o | v6.16 - Gato secretaria: ratificación + adjuntos | 🟡 **Funcionando en local** (2026-11-12) | Migraciones 075–078; `BORRADOR → sí → PENDIENTE → ENVIADO`; factura adjunta como `DOCUMENTO` (outbox 25, 132.932 B); "ahora mismo"; confirmación tardía ya no se rechaza; pytest **374**. Doc v1.3 | Desplegar 075–078 al VPS; C8 número vivo, C9 UI, C11 acuse, C12 test de integración |
+| 4o | v6.16 - Gato secretaria: ratificación + adjuntos | 🟢 **Desplegado y probado en VPS** (2026-11-12) | Migraciones 075–078 en el VPS; 3 clientes ficticios con factura; envío real de `PRUEBA-0002.pdf` al 0967491847 (`ENVIADO` 20:19:55, Evolution registra `documentMessage`); `pytest` **374** | Confirmar recepción en el teléfono; C8 número vivo, C9 UI, C11 acuse, C12 test de integración |
 | 4m | v6.13 - Facturas internas adjuntas al cliente | OK **Cerrado** (2026-11-12) | Migración 073 (`client_invoices`); factura ficticia `PRUEBA-0001` (orden #55, **$43.424,00**) con PDF; pestaña **Facturas** en el expediente; `GET/POST /api/v1/clients/{id}/facturas`; Gato `cliente_facturas` con marca **FICTICIA** y SRI fuera de alcance; `evidencias/facturas_v613_2026-11-12.txt` y `panel_v613_facturas_2026-11-12.jpeg`; pytest (**338 tests**) | Validar formato con Julio; definir numeración y datos fiscales reales |
 | 4l | v6.12 - Logos de bancos con color de marca | OK **Cerrado** (2026-11-12) | Tres placas SVG 96x96: Pichincha amarillo `#FFD100`, Guayaquil rosado `#C7007E`, Internacional naranja `#F39200`; isotipos oficiales, símbolo Pichincha a 56/96; `.banco-logo` de 46 px sin caja blanca; evidencias/panel_v612_bancos_dark_2026-11-12.png, _light_ y logos_zoom; pytest (**296 tests**) | Nada bloqueante. Aceptado por Dirección; si pide el lockup completo, placas 92x40 |
 | 4k | v6.11 - Banco activo + detalle de cuenta | OK **Cerrado** (2026-11-12) | Migracion 072 (`bank_accounts`, hijas `1102.01-03`, `saldo_informado`); tarjetas seleccionables en amarillo; detalle con saldo contable/informado, prestamos y movimientos; `PUT /api/v1/dashboard/bancos/{slug}`; evidencias/panel_v611_banca_2026-11-12.jpeg; pytest_v611_2026-11-12.txt (**296 tests**) | Cargar cuentas y saldos reales; asignar pagos a la cuenta hija del banco |
@@ -56,15 +56,16 @@ scripts de candado.
 
 ## Evidencia de la Ãºltima sesiÃ³n
 
-- **v6.16 con adjuntos (2026-11-12).** La prueba real de Julio destapó cuatro
-  huecos: la ratificación no vencía (la fila quedó `BORRADOR` y "ya pasó el
-  tiempo"), "ahora mismo" no era una hora válida, el mensaje se pedía aunque ya
-  estuviera dictado y "pásale la factura" viajaba como texto sin archivo. Ahora:
-  se confirma igual y sale en el tick; "ahora mismo/ya/de una" valen; el
-  despachador envía el PDF como `DOCUMENTO` (outbox 25, `application/pdf`,
-  132.932 B) leyendo `media_assets`; migraciones 077 (`media_id`) y 078
-  (`DOCUMENTO` en el outbox). `pytest` -> **374 passed**. Doc v1.3; evidencia:
-  `.agents/evidencias/gato_adjuntos_2026-11-12.txt`.
+- **v6.16 desplegada y probada en el VPS (2026-11-12).** Subida a GitHub
+  (`7850241`, `85e1168`), `git pull` en `/opt/horminor`, migraciones **075–078**
+  aplicadas y `envio: evolution`. Se cargaron tres clientes ficticios con su
+  factura (`PRUEBA-0002/3/4`, propios PDF) y se envió de verdad
+  `PRUEBA-0002.pdf` al 0967491847: `ENVIADO` 20:19:55 y Evolution registra
+  `documentMessage`. Dos fallos del VPS corregidos en el camino: faltaba
+  `import base64` (ningún documento salía) y `modo` decía SANDBOX por Bunny
+  aunque el notificador fuera Evolution; ahora el health expone `envio`.
+  `pytest` -> **374 passed**. Evidencia:
+  `.agents/evidencias/vps_despliegue_recordatorios_2026-11-12.txt`.
 
 - **VPS + Evolution (2026-11-12).** El CRM quedó desplegado en Contabo (`/opt/horminor`), clonado con deploy key read-only desde `ObjetivoCesar/horminor-crm`. `core-api` escucha en `127.0.0.1:8012`; Caddy publica solo `https://horminor.178.238.238.158.sslip.io/health` y el webhook de Evolution. El panel se usa por túnel SSH hasta que exista login. Instancia Evolution `horminor` creada con webhook; estado `connecting`, pendiente escanear QR. Ver `docs/DESPLIEGUE_VPS_HORMINOR.md` y `.agents/evidencias/vps_deploy_evolution_2026-11-12.txt`.
 - **v6.13.1 cerrada el 2026-11-12.** Gato ya no pierde el hilo: `gato_turnos` (migración 074) guarda cada turno y el endpoint devuelve `conversacion_id`; el widget lo persiste por usuario. El backend pasa los últimos 8 turnos al LLM, así **"descárgala"** devuelve el PDF de la factura anterior. La búsqueda de clientes ahora normaliza puntuación ("ing reyes" encuentra "Ing. Reyes"). La factura incluye un enlace `?download=1` y el widget lo pinta como **Descargar archivo**. Evidencia: `.agents/evidencias/gato_memoria_v6131_2026-11-12.txt`; `pytest` -> **342 passed**.
