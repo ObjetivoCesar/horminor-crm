@@ -3105,7 +3105,11 @@ tbody tr:last-child td { border-bottom: 0; }
           <div><h2 style="margin-bottom:2px">Bandeja</h2><p class="small muted" style="margin:0">Borradores, enviadas, aceptadas y convertidas.</p></div>
           <span class="badge neutral" id="cot-contador">—</span>
         </div>
-        <div class="table-wrap" id="cot-lista" style="margin-top:12px"></div>
+        <div class="row" style="margin-top:10px;gap:8px">
+          <input id="cot-buscar" type="search" placeholder="Nombre, apellido, fecha, teléfono o número de cotización…" oninput="buscarCotizaciones()" style="flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:var(--border-subtle);background:var(--surface);color:var(--text)">
+          <button class="btn small ghost" type="button" onclick="limpiarBusquedaCot()">Limpiar</button>
+        </div>
+        <div class="table-wrap" id="cot-lista" style="margin-top:10px"></div>
       </div>
       <div class="card" id="cot-detalle">
         <p class="muted small">Selecciona una cotización de la bandeja.</p>
@@ -5114,7 +5118,9 @@ function renderKpis() {
 }
 
 /* ----------------------------- COTIZACIONES v6.20 ----------------------------- */
-async function cargarCotizaciones() {
+let _cotBuscarTimer = null;
+
+async function cargarCotizaciones(q) {
   try {
     if (!state.clientes.length || !state.opciones) {
       const [clientes, opciones] = await Promise.all([
@@ -5124,7 +5130,9 @@ async function cargarCotizaciones() {
       state.clientes = clientes.clientes || [];
       state.opciones = opciones;
     }
-    const r = await api('/api/v1/cotizaciones');
+    const texto = q !== undefined ? q : (($('#cot-buscar') || {}).value || '');
+    const query = String(texto).trim() ? '?q=' + encodeURIComponent(String(texto).trim()) : '';
+    const r = await api('/api/v1/cotizaciones' + query);
     state.cotizaciones = (r && r.cotizaciones) || [];
     renderCotLista();
     if (state.cotizacion) {
@@ -5135,22 +5143,37 @@ async function cargarCotizaciones() {
   }
 }
 
+function buscarCotizaciones() {
+  clearTimeout(_cotBuscarTimer);
+  _cotBuscarTimer = setTimeout(() => cargarCotizaciones(), 250);
+}
+
+function limpiarBusquedaCot() {
+  const el = $('#cot-buscar');
+  if (el) el.value = '';
+  cargarCotizaciones('');
+}
+
 function renderCotLista() {
   const host = $('#cot-lista');
   if (!host) return;
   const filas = state.cotizaciones || [];
+  const busqueda = (($('#cot-buscar') || {}).value || '').trim();
   const contador = $('#cot-contador');
   if (contador) contador.textContent = filas.length + ' cotizaciones';
   if (!filas.length) {
-    host.innerHTML = '<p class="muted small">Todavía no hay cotizaciones. Crea la primera con “Nueva cotización”.</p>';
+    host.innerHTML = busqueda
+      ? `<p class="muted small">Sin resultados para “${esc(busqueda)}”.</p>`
+      : '<p class="muted small">Todavía no hay cotizaciones. Crea la primera con “Nueva cotización”.</p>';
     return;
   }
   host.innerHTML = `<table class="tabla-editor"><thead><tr>
-    <th>Número</th><th>Cliente</th><th>Obra</th><th>m³</th><th>Total</th><th>Estado</th><th>Vence</th>
+    <th>Número</th><th>Cliente</th><th>Obra</th><th>Emisión</th><th>m³</th><th>Total</th><th>Estado</th><th>Vence</th>
   </tr></thead><tbody>${filas.map(c => `<tr data-cot-id="${esc(c.id)}" onclick="seleccionarCotizacion('${esc(c.id)}')" style="cursor:pointer">
     <td><strong>${esc(c.numero)}</strong></td>
     <td>${esc(c.cliente_nombre)}</td>
     <td class="small">${esc(c.obra_direccion)}</td>
+    <td class="small">${esc(String(c.created_at || '').slice(0, 10))}</td>
     <td>${num(c.volumen_m3)}</td>
     <td>${money(Number(c.total || 0))}</td>
     <td><span class="badge neutral">${esc(String(c.estado || '').replace(/_/g, ' '))}</span></td>
@@ -5170,6 +5193,7 @@ function renderCotDetalle(cot) {
   const botones = [];
   if (estado === 'BORRADOR') {
     botones.push(`<button class="btn small" onclick="abrirCotizacion('${esc(cot.id)}')">Editar borrador</button>`);
+    botones.push(`<button class="btn small" onclick="marcarEnviadaCotizacion('${esc(cot.id)}')">Marcar enviada</button>`);
   }
   if (estado === 'BORRADOR' || estado === 'ENVIADA') {
     botones.push(`<button class="btn small bank" onclick="aceptarCotizacion('${esc(cot.id)}')">Aceptar</button>`);
@@ -5355,6 +5379,18 @@ async function guardarCotizacion() {
     toast('Cotización guardada', 'ok');
   } catch (e) {
     $('#cot-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+  }
+}
+
+async function marcarEnviadaCotizacion(id) {
+  try {
+    const cot = await api('/api/v1/cotizaciones/' + encodeURIComponent(id) + '/marcar-enviada', {method: 'POST', body: {}});
+    state.cotizacion = cot;
+    renderCotDetalle(cot);
+    await cargarCotizaciones();
+    toast('Cotización marcada como enviada', 'ok');
+  } catch (e) {
+    toast('No se pudo marcar enviada: ' + e.message, 'bad');
   }
 }
 

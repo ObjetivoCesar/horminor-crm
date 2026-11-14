@@ -311,3 +311,38 @@ y luego hay que refactorizar.
 en `orden_extras` y la vista `v_orden_total` los suma. La factura/cartera que
 use `orders.total` no los incluye todavía. Se cierra cuando se conecte la
 factura a `v_orden_total`.
+
+### 12.1 Respuesta del cliente por WhatsApp
+
+**Requisito:** la cotización debe estar `ENVIADA`. El botón **“Marcar enviada”**
+registra el envío desde el panel (`canal_envio = PANEL`) mientras Q4 agrega el
+PDF y el envío real por Evolution.
+
+**Buscador de la bandeja:** `GET /api/v1/cotizaciones?q=` busca por nombre,
+apellido, razón social, cédula/RUC, número de cotización, obra, teléfono o
+fecha (`YYYY-MM-DD`, `DD/MM/YYYY` o `YYYY-MM`). El panel tiene el campo
+**“Nombre, apellido, fecha, teléfono o número…”**.
+
+**Compuerta determinística (sin LLM):** cuando un cliente registrado escribe,
+M1 busca sus cotizaciones `ENVIADA` vigentes. Si hay una:
+
+| Respuesta | Qué hace el sistema | Estado |
+|---|---|---|
+| **Confirmación explícita** (“confirmo”, “de acuerdo”, “sí”, “aprobado”…) | Marca `ACEPTADA`, asigna etiqueta `VENTA`, guarda evento `CONFIRMACION`, avisa a Secretaría y responde al cliente | `ACEPTADA` |
+| **Negociación** (“precio”, “descuento”, “muy caro”, “8 m³”…) | Guarda evento `NEGOCIACION`, avisa a Secretaría/Julio y responde; **no cambia precio ni estado** | `ENVIADA` |
+| **Rechazo** (“no me interesa”, “cancelar”…) | Guarda evento `RECHAZO`, avisa y responde; **no borra la cotización** | `ENVIADA` |
+| **Pregunta** (“¿incluye bombeo?”…) | Guarda evento `PREGUNTA`, avisa y responde | `ENVIADA` |
+| **Ambigua** (“hola”) | No la toca; sigue el flujo normal de viajes | — |
+| **Varias abiertas** | Pregunta “¿cuál confirmas?” con los números; no adivina | — |
+
+**No crea la orden.** La confirmación del cliente solo acepta y etiqueta; la
+orden nace cuando Julio/Secretaría pulsa **“Convertir a orden”**. Es la misma
+regla del diseño: una venta aceptada que no se despacha no debe producir una
+orden fantasma.
+
+**Auditoría:** migración **081** crea `cotizacion_eventos` con el mensaje
+literal, `whatsapp_msg_id`, actor y fecha. Nada se reescribe.
+
+**Pendiente Q4:** PDF de la cotización y envío real por WhatsApp. Mientras
+tanto, “Marcar enviada” deja la cotización lista para que el cliente responda
+por el canal que ya usan.

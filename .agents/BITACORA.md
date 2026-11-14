@@ -4371,3 +4371,81 @@ la carpeta del cliente. Despues Q5 (Gato) y conectar la factura a
 - `docs/COTIZACIONES.md`, `docs/MANUAL_DASHBOARD_JULIO.md`
 - `.agents/ESTADO.md`, `.agents/BITACORA.md`
 - Evidencia: `.agents/evidencias/cotizaciones_v621_2026-11-13.txt`
+
+
+## 2026-11-13 — Cotizaciones: buscador y confirmación del cliente
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** cerrar el tramo “cliente pide cotización → la recibe → escribe para
+confirmar” y permitir encontrar cotizaciones por nombre, apellido, fecha o
+teléfono.
+
+### Hecho
+
+1. **Buscador de cotizaciones.** `GET /api/v1/cotizaciones?q=` busca por nombre,
+   apellido, razón social, cédula/RUC, número, obra, teléfono y fecha
+   (`YYYY-MM-DD`, `DD/MM/YYYY`, `YYYY-MM`). El panel tiene el campo en la
+   bandeja con debounce y mensaje “Sin resultados”.
+2. **“Marcar enviada”.** Botón y endpoint para pasar `BORRADOR → ENVIADA`
+   mientras Q4 agrega el PDF/WhatsApp. Registra evento `ENVIO`.
+3. **Compuerta de respuesta del cliente en M1.** Si el cliente registrado
+   escribe y tiene una cotización `ENVIADA` vigente:
+   - confirmación explícita → `ACEPTADA`, etiqueta `VENTA`, evento y aviso;
+   - negociación/rechazo/pregunta → evento y aviso, sin cambiar precio/estado;
+   - varias abiertas → pregunta cuál; no adivina;
+   - ambigua → no la toca y sigue el flujo de viajes.
+4. **Migración 081** `cotizacion_eventos` con mensaje literal, `whatsapp_msg_id`,
+   actor y fecha; más `ultima_respuesta_at/tipo` en `cotizaciones`.
+5. **No se crea la orden automáticamente.** La confirmación acepta; la orden
+   nace con “Convertir a orden”.
+
+### Evidencia (real, ejecutada)
+
+| Comando / prueba | Resultado |
+|---|---|
+| `pytest /app/tests` | **404 passed**, exit 0 |
+| Buscar `Prueba`, `Hito 3`, `2026-11-13`, `0001`, `0990000013`, `Buscador` | 1 resultado cada uno |
+| Buscar `xyz` | 0 resultados |
+| Cotización `HORM-COT-2026-0001` → `marcar-enviada` | `ENVIADA` |
+| `repo.confirmar_cotizacion(...)` | `ACEPTADA`, `ultima_respuesta_tipo=CONFIRMACION` |
+| Etiqueta del cliente | `VENTA` con origen `COTIZACION` |
+| `cotizacion_eventos` | `ENVIO` + `CONFIRMACION` con `wamid-prueba-confirmacion` |
+| Limpieza | cotización/eventos/etiqueta borrados; secuencia reiniciada |
+
+### Decisiones tomadas
+
+1. **Confirmación explícita = ACEPTADA, no orden.** El cliente dice “sí”; el
+   sistema registra y avisa, pero la orden la crea un humano.
+2. **La IA no decide.** La clasificación es determinística por palabras; no hay
+   LLM cambiando precios ni estados.
+3. **Negociación no toca el precio.** Se avisa a Julio/Secretaría y se espera
+   una versión nueva si él lo decide.
+4. **Varias cotizaciones abiertas:** se pregunta cuál; nunca se elige la más
+   reciente por conveniencia.
+5. **Buscador único.** Un solo campo resuelve nombre, apellido, fecha, teléfono
+   y número; no se obliga a elegir un tipo de búsqueda.
+
+### Bloqueos / preguntas al cliente
+
+1. PDF de la cotización y envío real por WhatsApp (Q4).
+2. ¿La confirmación del cliente debe crear una **orden borrador** o mantener el
+   clic humano? Hoy se dejó el clic humano.
+3. ¿Un rechazo explícito debe pasar a `RECHAZADA` automáticamente? Hoy se
+   registra el evento y se avisa, sin cerrar la cotización.
+
+### Próximo paso exacto
+
+Q4: generar PDF de cotización (cliente e interno), archivarlo en la carpeta del
+cliente y enviarlo por WhatsApp con `documentMessage`. Después, si Julio lo
+aprueba, evaluar la orden borrador automática.
+
+### Archivos tocados
+
+- `db/migrations/081_cotizacion_eventos.sql`
+- `services/core-api/app/routers/cotizaciones.py`
+- `services/core-api/app/m1_whatsapp/pipeline.py`
+- `services/core-api/app/m1_whatsapp/repositorio.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v81_cotizaciones.py`
+- `docs/COTIZACIONES.md`, `docs/MANUAL_DASHBOARD_JULIO.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`

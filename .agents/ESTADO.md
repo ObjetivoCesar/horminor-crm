@@ -81,7 +81,13 @@ scripts de candado.
   extras globales.
 - Permiso `cotizaciones` en el checklist de Superadmin. Julio lo tiene; los
   demás perfiles lo reciben cuando Julio lo apruebe.
-- `pytest` → **400 passed**. Evidencia:
+- **Buscador** `GET /api/v1/cotizaciones?q=`: nombre, apellido, fecha, teléfono,
+  número de cotización, obra, cédula/RUC o razón social.
+- **Respuesta del cliente (migración 081):** compuerta determinística en M1.
+  Confirmación explícita → `ACEPTADA` + etiqueta `VENTA` + evento + aviso, sin
+  crear orden. Negociación/rechazo/pregunta → evento + aviso, sin cambiar el
+  precio. Varias abiertas → pregunta cuál.
+- `pytest` → **404 passed**. Evidencia:
   `.agents/evidencias/cotizaciones_v621_2026-11-13.txt`.
 - Manual actualizado: `docs/MANUAL_DASHBOARD_JULIO.md` §9.
 

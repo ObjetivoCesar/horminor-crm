@@ -294,6 +294,24 @@ aparte.
    costo interno y no se imprime al cliente.
 6. Guardar borrador.
 
+**Buscador:** el campo de la bandeja busca por **nombre, apellido, fecha,
+teléfono o número de cotización**. También por obra, cédula/RUC o razón social.
+La fecha se escribe `2026-11-13`, `13/11/2026` o `2026-11`.
+
+**Cuando el cliente responde:**
+1. La cotización debe estar **`ENVIADA`**. Usa **“Marcar enviada”** mientras
+   llega el PDF/WhatsApp.
+2. Si el cliente escribe **“confirmo”**, “de acuerdo”, “sí” o “aprobado”, el
+   sistema la marca **`ACEPTADA`**, le pone la etiqueta `VENTA` al cliente,
+   avisa a Secretaría y le responde. **No crea la orden.**
+3. Si pide **descuento, otro precio u otro volumen**, se registra como
+   `NEGOCIACION`, se avisa a Julio/Secretaría y **no se cambia el precio solo**.
+4. Si dice **“no me interesa”**, se registra `RECHAZO` y se avisa. La
+   cotización no se borra.
+5. Si hay **varias cotizaciones abiertas**, el sistema pregunta cuál confirma;
+   no adivina.
+6. La orden se crea recién con **“Convertir a orden”**, con un clic humano.
+
 **Estados:**
 - `BORRADOR`: se puede editar.
 - `ACEPTADA`: el cliente aprobó; se asignó `VENTA`.

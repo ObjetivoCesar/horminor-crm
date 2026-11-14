@@ -359,6 +359,131 @@ class PostgresRepositorio:
         ]
 
 
+    # -- cotizaciones (respuesta del cliente) ----------------------------
+    async def buscar_cotizacion_abierta(self, cliente_id: str) -> dict[str, Any] | None:
+        """Devuelve la cotizacion ENVIADA del cliente o una lista si hay varias.
+
+        Una sola cotizacion: ``{"multiple": False, "cotizacion": {...}}``.
+        Varias: ``{"multiple": True, "cotizaciones": [...]}``. No se adivina.
+        """
+        filas = await self._pool.fetch(
+            """
+            SELECT id::text AS id, numero, total, valida_hasta, estado,
+                   enviada_at, created_at
+              FROM cotizaciones
+             WHERE cliente_id = $1::uuid
+               AND estado = 'ENVIADA'
+               AND (valida_hasta IS NULL OR valida_hasta >= CURRENT_DATE)
+             ORDER BY enviada_at DESC NULLS LAST, created_at DESC
+             LIMIT 5
+            """,
+            cliente_id,
+        )
+        if not filas:
+            return None
+        cotizaciones = [
+            {
+                "id": fila["id"],
+                "numero": fila["numero"],
+                "total": fila["total"],
+                "valida_hasta": fila["valida_hasta"],
+                "estado": fila["estado"],
+            }
+            for fila in filas
+        ]
+        if len(cotizaciones) == 1:
+            return {"multiple": False, "cotizacion": cotizaciones[0]}
+        return {"multiple": True, "cotizaciones": cotizaciones}
+
+    async def registrar_evento_cotizacion(
+        self,
+        cotizacion_id: str,
+        *,
+        tipo: str,
+        mensaje: str | None,
+        whatsapp_msg_id: str | None,
+        actor: str | None,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    """
+                    INSERT INTO cotizacion_eventos
+                        (cotizacion_id, tipo, mensaje, whatsapp_msg_id, actor, payload)
+                    VALUES ($1::uuid, $2, $3, $4, $5, $6::jsonb)
+                    """,
+                    cotizacion_id,
+                    tipo,
+                    mensaje,
+                    whatsapp_msg_id,
+                    actor,
+                    json.dumps(payload or {}, ensure_ascii=False, default=str),
+                )
+                await conn.execute(
+                    """
+                    UPDATE cotizaciones
+                       SET ultima_respuesta_at = now(),
+                           ultima_respuesta_tipo = $2,
+                           updated_at = now()
+                     WHERE id = $1::uuid
+                    """,
+                    cotizacion_id,
+                    tipo,
+                )
+
+    async def confirmar_cotizacion(
+        self,
+        cotizacion_id: str,
+        *,
+        mensaje: str,
+        whatsapp_msg_id: str | None,
+        actor: str | None,
+    ) -> dict[str, Any]:
+        """Marca ACEPTADA, asigna VENTA y deja el evento de confirmacion."""
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                fila = await conn.fetchrow(
+                    """
+                    UPDATE cotizaciones
+                       SET estado = 'ACEPTADA',
+                           aceptada_at = now(),
+                           aprobado_por = COALESCE($2, aprobado_por),
+                           ultima_respuesta_at = now(),
+                           ultima_respuesta_tipo = 'CONFIRMACION',
+                           updated_at = now()
+                     WHERE id = $1::uuid
+                       AND estado IN ('BORRADOR', 'ENVIADA')
+                    RETURNING id::text AS id, numero, cliente_id::text AS cliente_id, total
+                    """,
+                    cotizacion_id,
+                    actor,
+                )
+                if fila is None:
+                    return {}
+                await conn.execute(
+                    """
+                    INSERT INTO cotizacion_eventos
+                        (cotizacion_id, tipo, mensaje, whatsapp_msg_id, actor, payload)
+                    VALUES ($1::uuid, 'CONFIRMACION', $2, $3, $4, '{}'::jsonb)
+                    """,
+                    cotizacion_id,
+                    mensaje,
+                    whatsapp_msg_id,
+                    actor,
+                )
+                await conn.execute(
+                    """
+                    INSERT INTO cliente_etiquetas (cliente_id, etiqueta, origen, origen_id)
+                    VALUES ($1::uuid, 'VENTA', 'COTIZACION', $2::uuid)
+                    ON CONFLICT (cliente_id, etiqueta) DO NOTHING
+                    """,
+                    fila["cliente_id"],
+                    cotizacion_id,
+                )
+                return dict(fila)
+
+
 @dataclass
 class MemoriaRepositorio:
     """Implementacion en memoria: tests y simulacion local.

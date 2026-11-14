@@ -125,6 +125,145 @@ def test_acl_y_rutas_de_cotizaciones() -> None:
     assert "/api/v1/cotizaciones/{cotizacion_id}/convertir" in rutas
 
 
+class RepoFalso:
+    def __init__(self, encontrada):
+        self.encontrada = encontrada
+        self.confirmada = None
+        self.evento = None
+
+    async def buscar_cotizacion_abierta(self, cliente_id):
+        return self.encontrada
+
+    async def confirmar_cotizacion(self, cotizacion_id, **kwargs):
+        self.confirmada = (cotizacion_id, kwargs)
+        return {"id": cotizacion_id, "numero": "HORM-COT-2026-0001"}
+
+    async def registrar_evento_cotizacion(self, cotizacion_id, **kwargs):
+        self.evento = (cotizacion_id, kwargs)
+
+
+class NotifierFalso:
+    def __init__(self):
+        self.mensajes = []
+
+    async def enviar_texto(self, telefono, texto):
+        self.mensajes.append((telefono, texto))
+        return True
+
+
+class AlerterFalso:
+    def __init__(self):
+        self.alertas = []
+
+    async def alertar(self, **kwargs):
+        self.alertas.append(kwargs)
+        return True
+
+
+def _pipeline(repo):
+    from app.m1_whatsapp.pipeline import WhatsAppPipeline
+
+    notifier = NotifierFalso()
+    alerter = AlerterFalso()
+    pipe = WhatsAppPipeline(
+        repo=repo,
+        identidad=None,
+        juez=None,
+        bunny=None,
+        notifier=notifier,
+        alerter=alerter,
+    )
+    return pipe, notifier, alerter
+
+
+def test_clasificador_de_respuestas() -> None:
+    from app.m1_whatsapp.pipeline import clasificar_respuesta_cotizacion
+
+    assert clasificar_respuesta_cotizacion("Confirmo") == "CONFIRMACION"
+    assert clasificar_respuesta_cotizacion("sí, de acuerdo") == "CONFIRMACION"
+    assert clasificar_respuesta_cotizacion("muy caro, bajame el precio") == "NEGOCIACION"
+    assert clasificar_respuesta_cotizacion("no me interesa") == "RECHAZO"
+    assert clasificar_respuesta_cotizacion("¿incluye bombeo?") == "PREGUNTA"
+    assert clasificar_respuesta_cotizacion("hola") == "AMBIGUA"
+
+
+def test_gate_confirmacion_acepta_y_responde() -> None:
+    from types import SimpleNamespace
+
+    from app.m1_whatsapp.pipeline import ResultadoLote
+
+    repo = RepoFalso(
+        {
+            "multiple": False,
+            "cotizacion": {"id": "cot-1", "numero": "HORM-COT-2026-0001", "estado": "ENVIADA"},
+        }
+    )
+    pipe, notifier, alerter = _pipeline(repo)
+    resultado = ResultadoLote(
+        telefono="+593990000013", rol="CLIENTE", origen_identidad="registro_cliente"
+    )
+    lote = SimpleNamespace(telefono="+593990000013", texto="Confirmo", ultimo_id="wamid-1")
+
+    manejo = asyncio.run(pipe._gate_cotizacion(lote, "cliente-1", resultado))
+
+    assert manejo is True
+    assert repo.confirmada is not None
+    assert "COTIZACION_CONFIRMADA" in resultado.acciones
+    assert "quedó confirmada" in notifier.mensajes[0][1]
+    assert alerter.alertas[0]["codigo"] == "COTIZACION_CONFIRMADA"
+
+
+def test_gate_multiples_cotizaciones_pregunta_cual() -> None:
+    from types import SimpleNamespace
+
+    from app.m1_whatsapp.pipeline import ResultadoLote
+
+    repo = RepoFalso(
+        {
+            "multiple": True,
+            "cotizaciones": [
+                {"id": "c1", "numero": "HORM-COT-2026-0001"},
+                {"id": "c2", "numero": "HORM-COT-2026-0002"},
+            ],
+        }
+    )
+    pipe, notifier, _ = _pipeline(repo)
+    resultado = ResultadoLote(
+        telefono="+593990000013", rol="CLIENTE", origen_identidad="registro_cliente"
+    )
+    lote = SimpleNamespace(telefono="+593990000013", texto="Confirmo", ultimo_id="wamid-2")
+
+    assert asyncio.run(pipe._gate_cotizacion(lote, "cliente-1", resultado)) is True
+    assert "COTIZACION_MULTIPLE_PREGUNTADA" in resultado.acciones
+    assert "varias cotizaciones" in notifier.mensajes[0][1]
+    assert repo.confirmada is None
+
+
+def test_gate_negociacion_registra_evento_sin_aceptar() -> None:
+    from types import SimpleNamespace
+
+    from app.m1_whatsapp.pipeline import ResultadoLote
+
+    repo = RepoFalso(
+        {
+            "multiple": False,
+            "cotizacion": {"id": "cot-1", "numero": "HORM-COT-2026-0001", "estado": "ENVIADA"},
+        }
+    )
+    pipe, _, _ = _pipeline(repo)
+    resultado = ResultadoLote(
+        telefono="+593990000013", rol="CLIENTE", origen_identidad="registro_cliente"
+    )
+    lote = SimpleNamespace(
+        telefono="+593990000013", texto="Muy caro, bajame el precio", ultimo_id="wamid-3"
+    )
+
+    assert asyncio.run(pipe._gate_cotizacion(lote, "cliente-1", resultado)) is True
+    assert repo.confirmada is None
+    assert repo.evento[1]["tipo"] == "NEGOCIACION"
+    assert "COTIZACION_NEGOCIACION" in resultado.acciones
+
+
 def test_panel_tiene_cotizaciones_en_la_columna_izquierda() -> None:
     html = (
         Path(__file__).resolve().parents[1]

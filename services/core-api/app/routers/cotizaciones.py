@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+import unicodedata
 import uuid
 from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import asyncpg
 from fastapi import APIRouter, Body, HTTPException, Query, Request
@@ -49,12 +52,27 @@ def _money(valor: Any) -> str | None:
     return str(_d(valor).quantize(_DOS_DECIMALES, rounding=ROUND_HALF_UP))
 
 
+def _normalizar_busqueda(texto: str) -> str:
+    """Minusculas sin tildes, para buscar nombres y apellidos como el Sabueso."""
+    normal = unicodedata.normalize("NFKD", texto or "")
+    return "".join(c for c in normal if not unicodedata.combining(c)).lower().strip()
+
+
 def _fecha(valor: Any) -> str | None:
     if valor is None:
         return None
     if hasattr(valor, "isoformat"):
         return valor.isoformat()
     return str(valor)
+
+
+def _fecha_local(valor: Any) -> str | None:
+    """Fecha operativa de El Coca, no la fecha UTC del servidor."""
+    if isinstance(valor, datetime):
+        return valor.astimezone(ZoneInfo("America/Guayaquil")).date().isoformat()
+    if hasattr(valor, "isoformat"):
+        return valor.isoformat()
+    return str(valor) if valor is not None else None
 
 
 def _uuid(valor: str, campo: str) -> uuid.UUID:
@@ -145,7 +163,7 @@ def _resumen(fila: asyncpg.Record) -> dict[str, Any]:
         "iva_monto": _money(fila["iva_monto"]),
         "total": _money(fila["total"]),
         "orden_id": str(fila["orden_id"]) if fila["orden_id"] else None,
-        "created_at": _fecha(fila["created_at"]),
+        "created_at": _fecha_local(fila["created_at"]),
     }
 
 
@@ -290,10 +308,16 @@ async def _siguiente_numero(conn: asyncpg.Connection) -> str:
 @router.get("")
 async def listar(
     request: Request,
+    q: str | None = Query(default=None, max_length=100),
     estado: str | None = Query(default=None, max_length=20),
     cliente_id: str | None = Query(default=None),
     limite: int = Query(default=50, ge=1, le=200),
 ) -> dict[str, Any]:
+    """Bandeja de cotizaciones con buscador.
+
+    ``q`` busca por nombre/apellido, razon social, cedula/RUC, numero de
+    cotizacion, obra, telefono o fecha (YYYY-MM-DD, DD/MM/YYYY o YYYY-MM).
+    """
     await exigir_modulo(request, "cotizaciones")
     pool = _pool(request)
     filtros = []
@@ -304,6 +328,33 @@ async def listar(
     if cliente_id:
         args.append(_uuid(cliente_id, "cliente_id"))
         filtros.append(f"c.cliente_id = ${len(args)}")
+    if q and q.strip():
+        texto = _normalizar_busqueda(q)
+        args.append(f"%{texto}%")
+        patron = len(args)
+        digitos = re.sub(r"\D", "", q)
+        telefono_sql = "FALSE"
+        if digitos:
+            args.append(f"%{digitos}%")
+            telefono_sql = (
+                "regexp_replace(COALESCE(cl.telefono_whatsapp, ''), '\\D', '', 'g') "
+                f"LIKE ${len(args)}"
+            )
+        filtros.append(
+            f"""(
+                translate(lower(c.numero), 'áéíóúüñ', 'aeiouun') LIKE ${patron}
+                OR translate(lower(cl.nombre), 'áéíóúüñ', 'aeiouun') LIKE ${patron}
+                OR translate(lower(COALESCE(cl.constructora, '')), 'áéíóúüñ', 'aeiouun') LIKE ${patron}
+                OR lower(COALESCE(cl.cedula, '')) LIKE ${patron}
+                OR lower(COALESCE(cl.ruc, '')) LIKE ${patron}
+                OR translate(lower(COALESCE(c.obra_direccion, '')), 'áéíóúüñ', 'aeiouun') LIKE ${patron}
+                OR to_char(c.created_at AT TIME ZONE 'America/Guayaquil', 'YYYY-MM-DD') LIKE ${patron}
+                OR to_char(c.created_at AT TIME ZONE 'America/Guayaquil', 'DD/MM/YYYY') LIKE ${patron}
+                OR to_char(c.valida_hasta, 'YYYY-MM-DD') LIKE ${patron}
+                OR to_char(c.valida_hasta, 'DD/MM/YYYY') LIKE ${patron}
+                OR {telefono_sql}
+            )"""
+        )
     where = ("WHERE " + " AND ".join(filtros)) if filtros else ""
     filas = await pool.fetch(
         f"""
@@ -458,6 +509,46 @@ async def actualizar(
             )
             snapshot = _snapshot(dict(fila), datos["extras"])
             await _insertar_version(conn, actual["id"], fila["numero"], version, snapshot)
+    return await _detalle(pool, cotizacion_id)
+
+
+@router.post("/{cotizacion_id}/marcar-enviada")
+async def marcar_enviada(request: Request, cotizacion_id: str) -> dict[str, Any]:
+    """Registra que la cotizacion salio (panel/impresa). El PDF/WhatsApp es Q4."""
+    await exigir_modulo(request, "cotizaciones", mutacion=True)
+    pool = _pool(request)
+    fila = await pool.fetchrow(
+        "SELECT id, numero, estado FROM cotizaciones WHERE id = $1",
+        _uuid(cotizacion_id, "cotizacion_id"),
+    )
+    if fila is None:
+        raise HTTPException(status_code=404, detail="cotizacion no encontrada")
+    if fila["estado"] != "BORRADOR":
+        raise HTTPException(
+            status_code=422,
+            detail="solo una cotizacion BORRADOR se marca como enviada",
+        )
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                """
+                UPDATE cotizaciones
+                   SET estado = 'ENVIADA', enviada_at = now(),
+                       enviada_por = COALESCE(enviada_por, 'panel'),
+                       canal_envio = COALESCE(canal_envio, 'PANEL'),
+                       updated_at = now()
+                 WHERE id = $1
+                """,
+                fila["id"],
+            )
+            await conn.execute(
+                """
+                INSERT INTO cotizacion_eventos
+                    (cotizacion_id, tipo, canal, mensaje, actor)
+                VALUES ($1, 'ENVIO', 'PANEL', 'Cotizacion marcada como enviada desde el panel.', 'panel')
+                """,
+                fila["id"],
+            )
     return await _detalle(pool, cotizacion_id)
 
 

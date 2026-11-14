@@ -16,6 +16,8 @@ Flujo (PDR 3.2):
 from __future__ import annotations
 
 import logging
+import re
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -52,6 +54,83 @@ PLANTILLA_SALIDA = (
     "Ormimorth: el mixer {mixer} del viaje {viaje}/{total} de la orden #{orden} "
     "salio de planta a las {hora}. Limite de fraguado: {limite}."
 )
+
+# Respuesta del cliente a una cotizacion. Deterministico, sin LLM: el Juez no
+# decide precios ni estados. Una confirmacion explicita acepta la cotizacion;
+# una negociacion o duda se deriva a Secretaria/Julio.
+_CONFIRMA = (
+    "confirmo",
+    "confirmado",
+    "confirmamos",
+    "acepto",
+    "aceptado",
+    "aprobado",
+    "apruebo",
+    "de acuerdo",
+    "adelante",
+    "proceda",
+    "perfecto",
+    "de una",
+)
+_CONFIRMA_CORTA = re.compile(r"\b(si|ok|okay|dale|listo|cerrado)\b")
+_RECHAZA = (
+    "no me interesa",
+    "no gracias",
+    "rechazo",
+    "rechazado",
+    "cancelar",
+    "cancelamos",
+)
+_NEGOCIA = (
+    "precio",
+    "descuento",
+    "rebaja",
+    "muy caro",
+    "menos",
+    "m3",
+    "resistencia",
+    "cotiza",
+    "cotizame",
+    "cambiar",
+    "ajustar",
+    "negociar",
+)
+_TEMA_COTIZACION = (
+    "cotizacion",
+    "cotizacion",
+    "cotizame",
+    "precio",
+    "m3",
+    "hormigon",
+    "bombeo",
+    "validez",
+    "factura",
+)
+
+
+def _sin_tildes(texto: str) -> str:
+    normal = unicodedata.normalize("NFKD", texto or "")
+    return "".join(c for c in normal if not unicodedata.combining(c))
+
+
+def clasificar_respuesta_cotizacion(texto: str) -> str:
+    """Clasifica la respuesta del cliente sin inventar una decision.
+
+    Devuelve ``CONFIRMACION``, ``RECHAZO``, ``NEGOCIACION``, ``PREGUNTA`` o
+    ``AMBIGUA``. Solo la confirmacion explicita mueve la cotizacion a ACEPTADA.
+    """
+    limpio = _sin_tildes(texto).lower().strip()
+    if not limpio:
+        return "AMBIGUA"
+    if any(frase in limpio for frase in _RECHAZA):
+        return "RECHAZO"
+    if any(frase in limpio for frase in _CONFIRMA) or _CONFIRMA_CORTA.search(limpio):
+        return "CONFIRMACION"
+    if any(frase in limpio for frase in _NEGOCIA):
+        return "NEGOCIACION"
+    if any(frase in limpio for frase in _TEMA_COTIZACION):
+        return "PREGUNTA"
+    return "AMBIGUA"
 
 
 @dataclass
@@ -171,6 +250,10 @@ class WhatsAppPipeline:
                 lote, identidad.mixer_codigo, resultado
             )
         else:
+            if identidad.rol is Rol.CLIENTE and await self._gate_cotizacion(
+                lote, identidad.cliente_id, resultado
+            ):
+                return resultado
             await self._gate_cliente(
                 lote, identidad.cliente_id, resultado
             )
@@ -240,6 +323,133 @@ class WhatsAppPipeline:
             resultado.acciones.append("AVISO_CLIENTE_SIN_TELEFONO")
 
     # -- Gate #2 ----------------------------------------------------------
+    async def _gate_cotizacion(
+        self,
+        lote: MessageBatch,
+        cliente_id: str | None,
+        resultado: ResultadoLote,
+    ) -> bool:
+        """Respuesta del cliente a una cotizacion ENVIADA.
+
+        Devuelve ``True`` si el mensaje era sobre una cotizacion y ya se
+        respondio. Si no hay cotizacion abierta o el mensaje no es del tema,
+        devuelve ``False`` para que siga el flujo normal de viajes.
+        """
+        if not cliente_id:
+            return False
+        buscar = getattr(self.repo, "buscar_cotizacion_abierta", None)
+        if buscar is None:
+            return False
+        encontrada = await buscar(cliente_id)
+        if not encontrada:
+            return False
+
+        tipo = clasificar_respuesta_cotizacion(lote.texto)
+        if tipo == "AMBIGUA":
+            return False
+
+        resultado.compuerta = "COTIZACION_CLIENTE"
+        if encontrada.get("multiple"):
+            numeros = ", ".join(c["numero"] for c in encontrada["cotizaciones"])
+            respuesta = (
+                f"Tienes varias cotizaciones abiertas ({numeros}). "
+                "Dime cuál confirmas, por favor."
+            )
+            enviado = await self.notifier.enviar_texto(lote.telefono, respuesta)
+            resultado.respuesta = respuesta
+            resultado.acciones.append(
+                "COTIZACION_MULTIPLE_PREGUNTADA"
+                if enviado
+                else "COTIZACION_MULTIPLE_NO_ENVIADA"
+            )
+            return True
+
+        cotizacion = encontrada["cotizacion"]
+        if tipo == "CONFIRMACION":
+            actualizada = await self.repo.confirmar_cotizacion(
+                cotizacion["id"],
+                mensaje=lote.texto,
+                whatsapp_msg_id=lote.ultimo_id,
+                actor=lote.telefono,
+            )
+            if not actualizada:
+                resultado.acciones.append("COTIZACION_YA_GESTIONADA")
+                return True
+            respuesta = (
+                f"Gracias. Tu cotización {cotizacion['numero']} quedó confirmada. "
+                "Secretaría coordina la orden."
+            )
+            enviado = await self.notifier.enviar_texto(lote.telefono, respuesta)
+            resultado.respuesta = respuesta
+            resultado.acciones.append(
+                "COTIZACION_CONFIRMADA"
+                if enviado
+                else "COTIZACION_CONFIRMADA_SIN_AVISO"
+            )
+            await self.alerter.alertar(
+                codigo="COTIZACION_CONFIRMADA",
+                mensaje=(
+                    f"Cliente confirmo la cotizacion {cotizacion['numero']}. "
+                    "Queda ACEPTADA; falta convertirla a orden."
+                ),
+                contexto={
+                    "cotizacion": cotizacion["numero"],
+                    "cliente_id": cliente_id,
+                    "mensaje": lote.texto,
+                },
+            )
+            return True
+
+        evento = {
+            "NEGOCIACION": "NEGOCIACION",
+            "RECHAZO": "RECHAZO",
+            "PREGUNTA": "PREGUNTA",
+        }.get(tipo, "PREGUNTA")
+        registrar = getattr(self.repo, "registrar_evento_cotizacion", None)
+        if registrar is not None:
+            await registrar(
+                cotizacion["id"],
+                tipo=evento,
+                mensaje=lote.texto,
+                whatsapp_msg_id=lote.ultimo_id,
+                actor=lote.telefono,
+                payload={"estado": cotizacion.get("estado")},
+            )
+        if evento == "NEGOCIACION":
+            respuesta = (
+                f"Recibido. Sobre la cotización {cotizacion['numero']}, "
+                "Julio o Secretaría te contacta para ajustar."
+            )
+            accion = "COTIZACION_NEGOCIACION"
+        elif evento == "RECHAZO":
+            respuesta = (
+                f"Registramos que no continúa la cotización {cotizacion['numero']}. "
+                "Gracias."
+            )
+            accion = "COTIZACION_RECHAZO"
+        else:
+            respuesta = (
+                f"Recibido. Secretaría te responde sobre la cotización "
+                f"{cotizacion['numero']}."
+            )
+            accion = "COTIZACION_PREGUNTA"
+        enviado = await self.notifier.enviar_texto(lote.telefono, respuesta)
+        resultado.respuesta = respuesta
+        resultado.acciones.append(accion if enviado else accion + "_SIN_AVISO")
+        await self.alerter.alertar(
+            codigo=accion,
+            mensaje=(
+                f"Cliente respondio sobre la cotizacion {cotizacion['numero']}: "
+                f"{evento}. Revisar en Secretaria."
+            ),
+            contexto={
+                "cotizacion": cotizacion["numero"],
+                "cliente_id": cliente_id,
+                "mensaje": lote.texto,
+            },
+        )
+        return True
+
     async def _gate_cliente(
         self,
         lote: MessageBatch,
