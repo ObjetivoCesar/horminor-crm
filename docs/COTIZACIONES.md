@@ -1,10 +1,12 @@
-# Cotizaciones — v6.21
+# Cotizaciones — v6.22
 
-> **Estado:** migración **080** aplicada; API de alta, edición, aceptación y
-> conversión implementada; vista **Cotizaciones** en la columna izquierda con
-> permiso ACL aprobable desde Superadmin. PDF, WhatsApp y Gato quedan para
-> Q4/Q5. Los precios, extras y condiciones los define Julio; el sistema no
-> inventa ninguno. El texto legal del contrato sigue sujeto a revisión
+> **Estado:** migraciones **080–083** aplicadas; API de alta, edición,
+> aceptación, envío y conversión; PDF de cotización generado y archivado; envío
+> por WhatsApp (SANDBOX/Evolution); buscador por nombre, apellido, fecha,
+> teléfono y número; vista **Cotizaciones** con permiso ACL aprobable desde
+> Superadmin. Gato (Q5) y la factura interna desde el popout quedan pendientes.
+> Los precios, extras y condiciones los define Julio; el sistema no inventa
+> ninguno. El texto legal del contrato sigue sujeto a revisión
 > (`docs/CONTRATOS.md`).
 >
 > **Decisión de aprobación (2026-11-13):** “aprobable desde Superadmin” se
@@ -343,6 +345,31 @@ orden fantasma.
 **Auditoría:** migración **081** crea `cotizacion_eventos` con el mensaje
 literal, `whatsapp_msg_id`, actor y fecha. Nada se reescribe.
 
-**Pendiente Q4:** PDF de la cotización y envío real por WhatsApp. Mientras
-tanto, “Marcar enviada” deja la cotización lista para que el cliente responda
-por el canal que ya usan.
+**Pendiente Q4:** el PDF ya se genera y se archiva; el envío real depende de
+Evolution configurado. En SANDBOX queda en `sandbox_outbox` y el tablero lo
+avisa.
+
+### 12.2 Envío y conversión (v6.22)
+
+- **La cotización ya no pregunta forma de pago.** Se define al convertir
+  (migración **082**). La cotización queda `POR_DEFINIR`.
+- **Cliente y teléfono:** el formulario permite **+ Nuevo cliente** (nombre,
+  teléfono, RUC/cédula, provincia, ciudad, dirección) y pide el teléfono para
+  enviar el PDF. Si el cliente existente no tiene teléfono, se puede capturar
+  ahí y se actualiza su ficha.
+- **Botones de la cotización:** `Editar`, `Enviar por WhatsApp`,
+  `Convertir a cliente`.
+- **Enviar por WhatsApp:** `POST /api/v1/cotizaciones/{id}/enviar` genera el PDF,
+  lo archiva en la carpeta del cliente (`media_assets`, etiqueta `cotizacion`) y
+  lo envía por Evolution; si está en SANDBOX, lo encola en `sandbox_outbox`.
+  Deja la cotización `ENVIADA` y registra el evento `ENVIO`.
+- **Convertir a cliente:** abre un popout con:
+  - forma de pago (`EFECTIVO`, `TRANSFERENCIA`, `ABONO`, `FIADO`);
+  - si es `ABONO`, monto y método;
+  - datos de factura: razón social, RUC/cédula, dirección, email, fecha de
+    emisión y vencimiento.
+  Crea la orden con `crear_orden` y guarda esos datos en
+  `cotizaciones.factura_datos` (migración **083**). La factura interna se emite
+  después; el dato queda capturado y no se inventa.
+- **Regla:** la confirmación del cliente o la conversión ponen `VENTA`; la orden
+  sigue naciendo con un clic humano.

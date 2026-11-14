@@ -4449,3 +4449,88 @@ aprueba, evaluar la orden borrador automática.
 - `services/core-api/tests/test_v81_cotizaciones.py`
 - `docs/COTIZACIONES.md`, `docs/MANUAL_DASHBOARD_JULIO.md`
 - `.agents/ESTADO.md`, `.agents/BITACORA.md`
+
+
+## 2026-11-13 — Cotizaciones v6.22: cliente nuevo, PDF por WhatsApp y conversión
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** cerrar el tramo de venta: crear cliente desde la cotización,
+enviar el PDF por WhatsApp y convertir a cliente/orden con pago y datos de
+factura.
+
+### Hecho
+
+1. **Cliente nuevo desde la cotización.** Selector con “+ Nuevo cliente” y
+   formulario inline (nombre, teléfono, RUC/cédula, provincia, ciudad,
+   dirección). Se crea con `POST /api/v1/clients` y queda seleccionado.
+2. **Teléfono obligatorio.** Campo “Teléfono para enviar”; si el cliente no lo
+   tiene, se captura y se actualiza con `PUT /api/v1/clients/{id}`.
+3. **Forma de pago fuera de la cotización.** Migración 082: la cotización queda
+   `POR_DEFINIR`; efectivo/transferencia/abono/fiado se elige al convertir.
+4. **Botones nuevos:** `Editar`, `Enviar por WhatsApp`, `Convertir a cliente`.
+5. **PDF de cotización.** `factura_pdf` acepta `tipo_documento=COTIZACION`,
+   referencia, validez, precio provisional y extras cobrables. El PDF se archiva
+   en `media_assets` bajo la carpeta del cliente.
+6. **Envío por WhatsApp.** `POST /api/v1/cotizaciones/{id}/enviar` genera el
+   PDF y lo envía por Evolution; en SANDBOX lo encola en `sandbox_outbox`. Deja
+   la cotización `ENVIADA` y registra el evento `ENVIO`.
+7. **Convertir a cliente.** Popout con forma de pago, abono (monto/método) y
+   datos de factura (razón social, RUC/CI, dirección, email, emisión,
+   vencimiento). Crea la orden con `crear_orden` y guarda
+   `cotizaciones.factura_datos` (migración 083).
+
+### Evidencia (real, ejecutada)
+
+| Comando / prueba | Resultado |
+|---|---|
+| `pytest /app/tests` | **405 passed**, exit 0 |
+| UI alta de cliente | cliente creado y seleccionado; teléfono visible |
+| `POST /enviar` | `ENVIADA`; PDF en `media_assets`; `sandbox_outbox` DOCUMENTO |
+| `POST /convertir` con FIADO + factura | `CONVERTIDA`, orden #59, `factura_datos` guardado |
+| Botones | BORRADOR: Editar/Enviar; ENVIADA: Enviar/Convertir |
+| Consola | 0 errores |
+
+Evidencia: `.agents/evidencias/cotizaciones_v622_2026-11-13.txt`.
+
+### Decisiones tomadas
+
+1. **La forma de pago no se pregunta en la cotización.** Pertenece a la
+   conversión, donde nace la orden. Migración 082 deja `POR_DEFINIR`.
+2. **El teléfono es requisito para enviar.** Sin teléfono no hay PDF por
+   WhatsApp; se puede capturar en la cotización y se actualiza la ficha.
+3. **El PDF se archiva en la carpeta del cliente.** No se crea una carpeta
+   paralela; usa `media_assets` con etiqueta `cotizacion`.
+4. **SANDBOX no finge un envío real.** El PDF se genera y queda en
+   `sandbox_outbox` con aviso en la UI.
+5. **La conversión captura datos de factura, no la emite todavía.** Se guardan
+   en `factura_datos`; la factura interna (registro + PDF) queda como siguiente
+   paso para no inventar numeración fiscal.
+6. **La orden sigue naciendo con clic humano.** Ni la confirmación del cliente
+   ni el envío crean la orden.
+
+### Bloqueos / preguntas al cliente
+
+1. ¿La factura interna se emite automáticamente al convertir o se genera desde
+   Facturas? Hoy solo se capturan los datos.
+2. ¿La orden debe sumar los extras cobrables al total de cartera? Hoy viven en
+   `orden_extras` y `v_orden_total`, pero la cartera usa `orders.total`.
+3. Datos de la reunión: flota 2×7, stock 3.500, política de cobro, meta y costos.
+
+### Próximo paso exacto
+
+Emitir la factura interna desde el popout de conversión: numeración
+`HORM-FAC-AAAA-0001`, PDF con `factura_pdf`, archivo en la carpeta del cliente y
+registro en `client_invoices`; después conectar la cartera a `v_orden_total`.
+
+### Archivos tocados
+
+- `db/migrations/081_cotizacion_eventos.sql`
+- `db/migrations/082_cotizacion_forma_pago.sql`
+- `db/migrations/083_cotizacion_factura_datos.sql`
+- `services/core-api/app/routers/cotizaciones.py`
+- `services/core-api/app/services/factura_pdf.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v81_cotizaciones.py`
+- `docs/COTIZACIONES.md`, `docs/MANUAL_DASHBOARD_JULIO.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/cotizaciones_v622_2026-11-13.txt`

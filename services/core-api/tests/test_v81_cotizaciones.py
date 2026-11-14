@@ -276,5 +276,38 @@ def test_panel_tiene_cotizaciones_en_la_columna_izquierda() -> None:
     assert 'data-role-btn="cotizaciones"' in html
     assert 'data-view="cotizaciones"' in html
     assert 'id="dlg-cotizacion"' in html
+    assert 'id="cot-telefono"' in html
+    assert 'value="__nuevo__"' in html
+    assert 'id="dlg-cot-convertir"' in html
     assert "cotizaciones: 'Cotizaciones y ventas'" in html
     assert "cotizaciones: ['cotizaciones']" in html
+
+
+def test_pdf_de_cotizacion_es_pdf_real() -> None:
+    from app.services.factura_pdf import generar_pdf
+
+    pdf = generar_pdf(
+        {
+            "tipo_documento": "COTIZACION",
+            "numero": "HORM-COT-2026-0001",
+            "fecha": date(2026, 11, 13),
+            "referencia": "Cotizacion HORM-COT-2026-0001",
+            "cliente_nombre": "Cliente Prueba",
+            "cliente_ruc": "0999999999001",
+            "cliente_ciudad": "El Coca",
+            "resistencia": "FC-210",
+            "volumen_m3": "7.00",
+            "precio_m3": "118.00",
+            "precio_estado": "PROVISIONAL",
+            "forma_pago": "POR DEFINIR",
+            "validez": "2026-11-28",
+            "subtotal": "826.00",
+            "iva_pct": "15.00",
+            "iva_monto": "123.90",
+            "total": "949.90",
+            "empresa": {"company_name": "HORMINOR", "ruc": "2290000000001"},
+            "extras": [{"descripcion": "Flete", "monto": "20.00", "cobrable": True}],
+        }
+    )
+    assert pdf.startswith(b"%PDF")
+    assert len(pdf) > 3000

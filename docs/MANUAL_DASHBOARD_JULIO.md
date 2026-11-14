@@ -273,8 +273,9 @@ rayado es programado/teórico. No se mezclan.
    firma de Julio.
 6. **Meta y punto de equilibrio:** la estructura está lista, pero faltan la meta
    mensual y los costos fijos/variables de la reunión con Julio y Contadora.
-7. **Cotizaciones:** falta PDF, envío por WhatsApp y que la factura sume los
-   extras de `orden_extras`. La bandeja, aceptación y conversión ya funcionan.
+7. **Cotizaciones:** el PDF y el envío ya funcionan (SANDBOX/Evolution). Falta
+   emitir la factura interna desde el popout y que sume los extras de
+   `orden_extras`. La bandeja, aceptación y conversión ya funcionan.
 
 ---
 
@@ -285,35 +286,54 @@ orden: solo asigna la etiqueta `VENTA` al cliente. La conversión es un botón
 aparte.
 
 **Crear una cotización:**
-1. Columna izquierda → **Cotizaciones**.
-2. **Nueva cotización**.
-3. Cliente, obra, resistencia y volumen.
-4. El precio se llena con la lista de Superadmin. Si dice `PROVISIONAL`, no es
+1. Columna izquierda → **Cotizaciones** → **Nueva cotización**.
+2. **Cliente:** elige uno existente o **+ Nuevo cliente**. Si es nuevo, pide
+   nombre, **teléfono WhatsApp**, RUC/cédula, provincia, ciudad y dirección.
+3. **Teléfono para enviar:** se llena solo con el cliente; si falta, escríbelo.
+   Sin teléfono no se puede enviar el PDF.
+4. Obra, resistencia, volumen y validez.
+5. El precio se llena con la lista de Superadmin. Si dice `PROVISIONAL`, no es
    un precio oficial: Julio debe cambiarlo en Superadmin.
-5. Extras: un solo rubro global, descripción libre. Si **no** es cobrable, es
+6. Extras: un solo rubro global, descripción libre. Si **no** es cobrable, es
    costo interno y no se imprime al cliente.
-6. Guardar borrador.
+7. Guardar borrador.
+
+**La forma de pago ya no se pregunta en la cotización.** Se define al
+**Convertir a cliente**, porque ahí nace la orden.
 
 **Buscador:** el campo de la bandeja busca por **nombre, apellido, fecha,
 teléfono o número de cotización**. También por obra, cédula/RUC o razón social.
 La fecha se escribe `2026-11-13`, `13/11/2026` o `2026-11`.
 
+**Botones de una cotización:**
+- **Editar:** solo en `BORRADOR`.
+- **Enviar por WhatsApp:** genera el PDF, lo archiva en la carpeta del cliente y
+  lo envía. En SANDBOX queda encolado y el sistema lo avisa. Pasa a `ENVIADA`.
+- **Convertir a cliente:** abre el popout de pago y factura.
+
 **Cuando el cliente responde:**
-1. La cotización debe estar **`ENVIADA`**. Usa **“Marcar enviada”** mientras
-   llega el PDF/WhatsApp.
-2. Si el cliente escribe **“confirmo”**, “de acuerdo”, “sí” o “aprobado”, el
-   sistema la marca **`ACEPTADA`**, le pone la etiqueta `VENTA` al cliente,
-   avisa a Secretaría y le responde. **No crea la orden.**
+1. La cotización debe estar **`ENVIADA`**.
+2. Si escribe **“confirmo”**, “de acuerdo”, “sí” o “aprobado”, el sistema la
+   marca **`ACEPTADA`**, le pone la etiqueta `VENTA` al cliente, avisa a
+   Secretaría y le responde. **No crea la orden.**
 3. Si pide **descuento, otro precio u otro volumen**, se registra como
-   `NEGOCIACION`, se avisa a Julio/Secretaría y **no se cambia el precio solo**.
+   `NEGOCIACION`, se avisa y **no se cambia el precio solo**.
 4. Si dice **“no me interesa”**, se registra `RECHAZO` y se avisa. La
    cotización no se borra.
-5. Si hay **varias cotizaciones abiertas**, el sistema pregunta cuál confirma;
-   no adivina.
-6. La orden se crea recién con **“Convertir a orden”**, con un clic humano.
+5. Si hay **varias cotizaciones abiertas**, el sistema pregunta cuál confirma.
+6. Si el mensaje no es del tema, sigue el flujo normal de viajes.
+
+**Convertir a cliente (popout):**
+- Forma de pago: efectivo, transferencia, abono o fiado.
+- Si es abono: monto y método.
+- Datos de factura interna: razón social, RUC/cédula, dirección, email, fecha de
+  emisión y vencimiento.
+- Crea la orden y guarda esos datos en la cotización. La factura interna se
+  emite después; no se inventan datos fiscales.
 
 **Estados:**
 - `BORRADOR`: se puede editar.
+- `ENVIADA`: el PDF salió o quedó en SANDBOX.
 - `ACEPTADA`: el cliente aprobó; se asignó `VENTA`.
 - `CONVERTIDA`: ya generó una orden.
 - `VENCIDA`: pasó la fecha de validez; se re-emite, no se “revive”.
@@ -324,8 +344,8 @@ Superadmin. Julio (Superadmin) lo tiene por defecto; Secretaría y los demás
 perfiles lo reciben cuando Julio lo apruebe.
 
 **Límite actual:** la orden conserva su total base; los extras cobrables quedan
-en `orden_extras` y la vista `v_orden_total` los suma. La factura todavía no los
-incluye. PDF y envío por WhatsApp quedan para la siguiente fase.
+en `orden_extras` y la vista `v_orden_total` los suma. La factura interna
+todavía no se genera desde el popout; los datos quedan guardados para emitirla.
 
 ## 10. Preguntas que el manual debe responder cuando esté cerrado
 

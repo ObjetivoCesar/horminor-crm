@@ -87,8 +87,17 @@ scripts de candado.
   Confirmación explícita → `ACEPTADA` + etiqueta `VENTA` + evento + aviso, sin
   crear orden. Negociación/rechazo/pregunta → evento + aviso, sin cambiar el
   precio. Varias abiertas → pregunta cuál.
-- `pytest` → **404 passed**. Evidencia:
-  `.agents/evidencias/cotizaciones_v621_2026-11-13.txt`.
+- **Alta de cliente y teléfono** desde la cotización (`+ Nuevo cliente`); el
+  teléfono es obligatorio para enviar el PDF y actualiza la ficha.
+- **Forma de pago fuera de la cotización** (migración 082): se define al
+  convertir.
+- **Enviar por WhatsApp:** PDF generado, archivado en `media_assets` y enviado
+  por Evolution o encolado en SANDBOX. La cotización pasa a `ENVIADA`.
+- **Convertir a cliente:** popout con forma de pago, abono y datos de factura;
+  crea la orden y guarda `factura_datos` (migración 083).
+- `pytest` → **405 passed**. Evidencia:
+  `.agents/evidencias/cotizaciones_v621_2026-11-13.txt` y
+  `.agents/evidencias/cotizaciones_v622_2026-11-13.txt`.
 - Manual actualizado: `docs/MANUAL_DASHBOARD_JULIO.md` §9.
 
 ### 2026-11-13 — Meta comercial y punto de equilibrio

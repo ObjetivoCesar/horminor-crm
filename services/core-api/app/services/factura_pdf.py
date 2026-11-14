@@ -86,6 +86,8 @@ def generar_pdf(datos: dict[str, Any]) -> bytes:
     """Devuelve los bytes del PDF. ``datos`` ya viene validado por el caller."""
     empresa = datos.get("empresa") or {}
     ficticia = bool(datos.get("es_ficticia"))
+    tipo_documento = str(datos.get("tipo_documento") or "FACTURA INTERNA").upper()
+    es_cotizacion = "COTIZACION" in tipo_documento
     imagen = Image.new("RGB", (ANCHO, ALTO), BLANCO)
     draw = ImageDraw.Draw(imagen)
 
@@ -101,8 +103,8 @@ def generar_pdf(datos: dict[str, Any]) -> bytes:
     )
     draw.text(
         (ANCHO - MARGEN, 46),
-        "FACTURA INTERNA",
-        font=_fuente(34, True),
+        tipo_documento,
+        font=_fuente(30, True),
         fill=AMARILLO,
         anchor="ra",
     )
@@ -134,11 +136,22 @@ def generar_pdf(datos: dict[str, Any]) -> bytes:
 
     draw.text(
         (MARGEN, y),
-        "NO ES UN COMPROBANTE ELECTRONICO DEL SRI",
+        "COTIZACION COMERCIAL - NO ES UN COMPROBANTE ELECTRONICO DEL SRI"
+        if es_cotizacion
+        else "NO ES UN COMPROBANTE ELECTRONICO DEL SRI",
         font=_fuente(18, True),
         fill=GRIS,
     )
-    y += 44
+    y += 32
+    if datos.get("precio_estado") == "PROVISIONAL":
+        draw.text(
+            (MARGEN, y),
+            "PRECIO PROVISIONAL - NO ES UNA OFERTA OFICIAL",
+            font=_fuente(18, True),
+            fill=ROJO,
+        )
+        y += 26
+    y += 12
 
     # Emisor y cliente
     col_derecha = 690
@@ -187,9 +200,10 @@ def generar_pdf(datos: dict[str, Any]) -> bytes:
     y = _linea(draw, y)
 
     # Referencia de la venta
+    referencia = datos.get("referencia") or f"Orden #{_texto(datos.get('orden_numero'))}"
     draw.text(
         (MARGEN, y),
-        f"Orden #{_texto(datos.get('orden_numero'))}",
+        _texto(referencia),
         font=_fuente(20, True),
         fill=NEGRO,
     )
@@ -200,7 +214,17 @@ def generar_pdf(datos: dict[str, Any]) -> bytes:
         fill=GRIS,
         anchor="ra",
     )
-    y += 40
+    if datos.get("validez"):
+        draw.text(
+            (ANCHO - MARGEN, y + 26),
+            f"Validez: {_texto(datos.get('validez'))}",
+            font=_fuente(18),
+            fill=GRIS,
+            anchor="ra",
+        )
+        y += 58
+    else:
+        y += 40
 
     # Tabla
     ancho_tabla = ANCHO - 2 * MARGEN
@@ -238,6 +262,23 @@ def generar_pdf(datos: dict[str, Any]) -> bytes:
         anchor="ra",
     )
     y += 62
+    for extra in (datos.get("extras") or []):
+        if not extra.get("cobrable"):
+            continue
+        draw.text(
+            (MARGEN + 18, y + 8),
+            f"Extra: {_texto(extra.get('descripcion'))}",
+            font=_fuente(20),
+            fill=NEGRO,
+        )
+        draw.text(
+            (ANCHO - MARGEN - 18, y + 8),
+            _money(extra.get("monto")),
+            font=_fuente(20),
+            fill=NEGRO,
+            anchor="ra",
+        )
+        y += 32
     y = _linea(draw, y)
 
     # Totales
@@ -270,7 +311,9 @@ def generar_pdf(datos: dict[str, Any]) -> bytes:
     draw.line((MARGEN, pie_y, ANCHO - MARGEN, pie_y), fill=GRIS_CLARO, width=2)
     draw.text(
         (MARGEN, pie_y + 18),
-        "Documento interno generado por Horminor. No sustituye la factura electronica del SRI.",
+        "Cotizacion comercial generada por Horminor. No sustituye la factura electronica del SRI."
+        if es_cotizacion
+        else "Documento interno generado por Horminor. No sustituye la factura electronica del SRI.",
         font=_fuente(16),
         fill=GRIS,
     )

@@ -3993,20 +3993,31 @@ tbody tr:last-child td { border-bottom: 0; }
   <div class="dialog-body">
     <input type="hidden" id="cot-id">
     <div class="field-row">
-      <div><label class="field">Cliente *</label><select id="cot-cliente"></select></div>
+      <div><label class="field">Cliente *</label><select id="cot-cliente" onchange="cotClienteCambio()"></select></div>
+      <div><label class="field">Teléfono para enviar *</label><input type="text" id="cot-telefono" placeholder="099… o +593…"></div>
       <div><label class="field">Obra / dirección *</label><input type="text" id="cot-obra" placeholder="Sector, vía, referencia"></div>
       <div><label class="field">Resistencia *</label><select id="cot-resistencia" onchange="cotizarPrecioReceta()"></select></div>
     </div>
     <div class="field-row" style="margin-top:10px">
       <div><label class="field">Volumen (m³) *</label><input type="number" id="cot-volumen" step="0.5" min="0.5" placeholder="10"></div>
       <div><label class="field">Precio por m³</label><input type="number" id="cot-precio" step="0.01" min="0" placeholder="Precio de lista"></div>
-      <div><label class="field">Forma de pago</label><select id="cot-pago">
-        <option value="FIADO">Crédito / Fiado</option>
-        <option value="EFECTIVO">Efectivo</option>
-        <option value="TRANSFERENCIA">Transferencia</option>
-        <option value="ABONO">Abono</option>
-      </select></div>
       <div><label class="field">Validez (días)</label><input type="number" id="cot-validez" min="1" max="90" value="15"></div>
+    </div>
+
+    <div id="cot-nuevo-cliente" hidden style="margin-top:10px;padding:12px;border:var(--border-subtle);border-radius:12px;background:var(--surface-row-pill)">
+      <div class="spread"><strong>Nuevo cliente</strong><span class="small muted">Se crea en la carpeta de clientes</span></div>
+      <div class="field-row" style="margin-top:8px">
+        <div><label class="field">Nombre / razón social *</label><input type="text" id="cot-nc-nombre" placeholder="Constructora o persona"></div>
+        <div><label class="field">Teléfono WhatsApp *</label><input type="text" id="cot-nc-telefono" placeholder="099…"></div>
+        <div><label class="field">RUC / cédula</label><input type="text" id="cot-nc-ruc"></div>
+      </div>
+      <div class="field-row" style="margin-top:8px">
+        <div><label class="field">Provincia</label><input type="text" id="cot-nc-provincia" placeholder="Orellana"></div>
+        <div><label class="field">Ciudad</label><input type="text" id="cot-nc-ciudad" placeholder="El Coca"></div>
+        <div><label class="field">Dirección de obra</label><input type="text" id="cot-nc-direccion"></div>
+      </div>
+      <button class="btn small" type="button" data-mutacion="1" onclick="crearClienteRapido()">Crear cliente y usarlo</button>
+      <div id="cot-nc-resultado"></div>
     </div>
     <div class="field-row" style="margin-top:10px">
       <label class="row small"><input type="checkbox" id="cot-equipo" checked style="width:auto"> Incluye equipo</label>
@@ -4026,6 +4037,42 @@ tbody tr:last-child td { border-bottom: 0; }
   <div class="dialog-foot">
     <button class="btn ghost" onclick="document.getElementById('dlg-cotizacion').close()">Cancelar</button>
     <button class="btn bank" data-mutacion="1" onclick="guardarCotizacion()">Guardar borrador</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-cot-convertir" class="wide">
+  <div class="dialog-head"><h2>Convertir a cliente y orden</h2><button class="btn small ghost" onclick="document.getElementById('dlg-cot-convertir').close()">Cerrar</button></div>
+  <div class="dialog-body">
+    <input type="hidden" id="cot-conv-id">
+    <div id="cot-conv-resumen" class="notice info"></div>
+    <h3 style="margin:14px 0 6px">Forma de pago de la orden</h3>
+    <div class="field-row">
+      <div><label class="field">Forma de pago *</label><select id="cot-conv-pago" onchange="cotConvertirPagoCambio()">
+        <option value="FIADO">Crédito / Fiado</option>
+        <option value="EFECTIVO">Efectivo</option>
+        <option value="TRANSFERENCIA">Transferencia</option>
+        <option value="ABONO">Abono</option>
+      </select></div>
+      <div id="cot-conv-abono-monto-wrap" hidden><label class="field">Monto del abono (USD)</label><input type="number" id="cot-conv-abono-monto" step="0.01" min="0" placeholder="0.00"></div>
+      <div id="cot-conv-abono-metodo-wrap" hidden><label class="field">Método del abono</label><select id="cot-conv-abono-metodo"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option></select></div>
+    </div>
+    <h3 style="margin:16px 0 6px">Datos para la factura interna</h3>
+    <p class="small muted" style="margin-top:0">No es comprobante electrónico del SRI. Se guarda en la carpeta del cliente.</p>
+    <div class="field-row">
+      <div><label class="field">Razón social / nombre</label><input type="text" id="cot-conv-razon"></div>
+      <div><label class="field">RUC / cédula</label><input type="text" id="cot-conv-ruc"></div>
+      <div><label class="field">Email (opcional)</label><input type="email" id="cot-conv-email"></div>
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <div><label class="field">Dirección</label><input type="text" id="cot-conv-direccion"></div>
+      <div><label class="field">Fecha de emisión</label><input type="date" id="cot-conv-fecha"></div>
+      <div><label class="field">Vencimiento (si es fiado)</label><input type="date" id="cot-conv-vencimiento"></div>
+    </div>
+    <div id="cot-conv-resultado"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn ghost" onclick="document.getElementById('dlg-cot-convertir').close()">Cancelar</button>
+    <button class="btn bank" data-mutacion="1" onclick="convertirCotizacionCliente()">Crear orden</button>
   </div>
 </dialog>
 
@@ -5192,14 +5239,13 @@ function renderCotDetalle(cot) {
   const estado = String(cot.estado || '');
   const botones = [];
   if (estado === 'BORRADOR') {
-    botones.push(`<button class="btn small" onclick="abrirCotizacion('${esc(cot.id)}')">Editar borrador</button>`);
-    botones.push(`<button class="btn small" onclick="marcarEnviadaCotizacion('${esc(cot.id)}')">Marcar enviada</button>`);
+    botones.push(`<button class="btn small" onclick="abrirCotizacion('${esc(cot.id)}')">Editar</button>`);
   }
   if (estado === 'BORRADOR' || estado === 'ENVIADA') {
-    botones.push(`<button class="btn small bank" onclick="aceptarCotizacion('${esc(cot.id)}')">Aceptar</button>`);
+    botones.push(`<button class="btn small" onclick="enviarCotizacionWhatsApp('${esc(cot.id)}')">Enviar por WhatsApp</button>`);
   }
-  if (estado === 'ACEPTADA') {
-    botones.push(`<button class="btn small bank" onclick="convertirCotizacion('${esc(cot.id)}')">Convertir a orden</button>`);
+  if (estado === 'ENVIADA' || estado === 'ACEPTADA') {
+    botones.push(`<button class="btn small bank" onclick="abrirConvertirCotizacion('${esc(cot.id)}')">Convertir a cliente</button>`);
   }
   host.innerHTML = `
     <div class="spread">
@@ -5213,7 +5259,7 @@ function renderCotDetalle(cot) {
     <div class="field-row" style="margin-top:14px">
       <div><span class="small muted">Volumen</span><strong>${num(cot.volumen_m3)} m³ ${esc(cot.resistencia || '')}</strong></div>
       <div><span class="small muted">Precio/m³</span><strong>${money(Number(cot.precio_m3 || 0))}</strong> <span class="badge neutral">${esc(cot.precio_estado || '')}</span></div>
-      <div><span class="small muted">Forma de pago</span><strong>${esc(cot.forma_pago)}</strong></div>
+      <div><span class="small muted">Forma de pago</span><strong>${cot.forma_pago === 'POR_DEFINIR' ? 'Se define al convertir' : esc(cot.forma_pago)}</strong></div>
       <div><span class="small muted">Validez</span><strong>${esc(cot.valida_hasta || '—')}</strong></div>
     </div>
     <div class="grid two" style="margin-top:14px">
@@ -5246,12 +5292,65 @@ function llenarSelectsCot() {
   const recetas = (state.opciones && state.opciones.recetas) || [];
   const cliente = $('#cot-cliente');
   if (cliente) {
-    cliente.innerHTML = '<option value="">Selecciona un cliente</option>' + (state.cotizacion ? '' : '') +
-      clientes.map(c => `<option value="${esc(c.cliente_id || c.id)}">${esc(c.nombre)}</option>`).join('');
+    cliente.innerHTML = '<option value="">Selecciona un cliente</option>'
+      + '<option value="__nuevo__">+ Nuevo cliente</option>'
+      + clientes.map(c => `<option value="${esc(c.cliente_id || c.id)}">${esc(c.nombre)}</option>`).join('');
   }
   const resistencia = $('#cot-resistencia');
   if (resistencia) {
     resistencia.innerHTML = recetas.map(r => `<option value="${esc(r.resistencia)}">${esc(r.resistencia)} · $${num(r.precio_m3)}/m³</option>`).join('') || '<option value="">Sin recetas</option>';
+  }
+}
+
+function cotClienteCambio() {
+  const seleccion = ($('#cot-cliente') || {}).value || '';
+  const nuevo = seleccion === '__nuevo__';
+  const bloque = $('#cot-nuevo-cliente');
+  if (bloque) bloque.hidden = !nuevo;
+  const telefono = $('#cot-telefono');
+  if (!nuevo && telefono) {
+    const cliente = (state.clientes || []).find(c => String(c.cliente_id || c.id) === String(seleccion));
+    telefono.value = cliente ? (cliente.telefono || '') : '';
+  }
+  if (nuevo && telefono) telefono.value = '';
+}
+
+async function crearClienteRapido() {
+  const nombre = (($('#cot-nc-nombre') || {}).value || '').trim();
+  const telefono = (($('#cot-nc-telefono') || {}).value || '').trim();
+  if (!nombre || !telefono) {
+    $('#cot-nc-resultado').innerHTML = '<div class="notice bad">Nombre y teléfono son obligatorios.</div>';
+    return;
+  }
+  try {
+    const creado = await api('/api/v1/clients', {
+      method: 'POST',
+      body: {
+        nombre,
+        telefono_whatsapp: telefono,
+        ruc: (($('#cot-nc-ruc') || {}).value || '').trim() || null,
+        provincia: (($('#cot-nc-provincia') || {}).value || '').trim() || null,
+        ciudad: (($('#cot-nc-ciudad') || {}).value || '').trim() || null,
+        direccion_obra: (($('#cot-nc-direccion') || {}).value || '').trim() || null,
+        estado: 'ACTIVO'
+      }
+    });
+    state.clientes = state.clientes || [];
+    state.clientes.push({
+      cliente_id: creado.id,
+      nombre: creado.nombre,
+      telefono: creado.telefono_whatsapp || telefono,
+      ruc: creado.ruc,
+      provincia: creado.provincia,
+      ciudad: creado.ciudad
+    });
+    llenarSelectsCot();
+    $('#cot-cliente').value = creado.id;
+    $('#cot-telefono').value = creado.telefono_whatsapp || telefono;
+    $('#cot-nuevo-cliente').hidden = true;
+    $('#cot-nc-resultado').innerHTML = '<div class="notice ok">Cliente creado y seleccionado.</div>';
+  } catch (e) {
+    $('#cot-nc-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
   }
 }
 
@@ -5311,7 +5410,8 @@ function abrirCotizacion(id) {
   set('#cot-acceso', '');
   set('#cot-notas', '');
   set('#cot-validez', 15);
-  set('#cot-pago', 'FIADO');
+  set('#cot-telefono', '');
+  const nuevoCliente = $('#cot-nuevo-cliente'); if (nuevoCliente) nuevoCliente.hidden = true;
   const equipo = $('#cot-equipo'); if (equipo) equipo.checked = true;
   const bombeo = $('#cot-bombeo'); if (bombeo) bombeo.checked = true;
   const titulo = $('#cot-dialog-titulo');
@@ -5321,13 +5421,13 @@ function abrirCotizacion(id) {
       state.cotizacion = cot;
       set('#cot-id', cot.id);
       const cliente = $('#cot-cliente'); if (cliente) cliente.value = cot.cliente_id;
+      cotClienteCambio();
       set('#cot-obra', cot.obra_direccion);
       set('#cot-volumen', cot.volumen_m3);
       set('#cot-precio', cot.precio_m3);
       set('#cot-acceso', cot.acceso_notas || '');
       set('#cot-notas', cot.notas || '');
       set('#cot-validez', cot.validez_dias || 15);
-      set('#cot-pago', cot.forma_pago);
       const res = $('#cot-resistencia'); if (res) res.value = cot.resistencia || '';
       if (equipo) equipo.checked = cot.incluye_equipo !== false;
       if (bombeo) bombeo.checked = cot.incluye_bombeo !== false;
@@ -5349,13 +5449,13 @@ async function guardarCotizacion() {
     const v = ($('#' + id) || {}).value;
     return v === '' || v === undefined || v === null ? null : Number(v);
   };
+  const telefono = (($('#cot-telefono') || {}).value || '').trim();
   const body = {
     cliente_id: ($('#cot-cliente') || {}).value || '',
     obra_direccion: (($('#cot-obra') || {}).value || '').trim(),
     volumen_m3: num('cot-volumen'),
     resistencia: ($('#cot-resistencia') || {}).value || '',
     precio_m3: num('cot-precio'),
-    forma_pago: ($('#cot-pago') || {}).value || 'FIADO',
     incluye_equipo: !!($('#cot-equipo') || {}).checked,
     incluye_bombeo: !!($('#cot-bombeo') || {}).checked,
     acceso_notas: (($('#cot-acceso') || {}).value || '').trim() || null,
@@ -5363,8 +5463,12 @@ async function guardarCotizacion() {
     extras: leerExtrasCot(),
     notas: (($('#cot-notas') || {}).value || '').trim() || null
   };
-  if (!body.cliente_id || !body.obra_direccion || !body.volumen_m3) {
-    $('#cot-resultado').innerHTML = '<div class="notice bad">Cliente, obra y volumen son obligatorios.</div>';
+  if (!body.cliente_id || body.cliente_id === '__nuevo__' || !body.obra_direccion || !body.volumen_m3) {
+    $('#cot-resultado').innerHTML = '<div class="notice bad">Cliente, obra y volumen son obligatorios. Si el cliente es nuevo, créalo primero.</div>';
+    return;
+  }
+  if (!telefono) {
+    $('#cot-resultado').innerHTML = '<div class="notice bad">El teléfono es obligatorio para enviar el PDF por WhatsApp.</div>';
     return;
   }
   const id = ($('#cot-id') || {}).value;
@@ -5373,6 +5477,16 @@ async function guardarCotizacion() {
       method: id ? 'PUT' : 'POST',
       body
     });
+    try {
+      await api('/api/v1/clients/' + encodeURIComponent(body.cliente_id), {
+        method: 'PUT',
+        body: { telefono_whatsapp: telefono }
+      });
+      const cliente = (state.clientes || []).find(c => String(c.cliente_id || c.id) === String(body.cliente_id));
+      if (cliente) cliente.telefono = telefono;
+    } catch (e) {
+      toast('Cotización guardada; no se pudo actualizar el teléfono: ' + e.message, 'bad');
+    }
     document.getElementById('dlg-cotizacion').close();
     await cargarCotizaciones();
     await seleccionarCotizacion(cot.id);
@@ -5382,15 +5496,32 @@ async function guardarCotizacion() {
   }
 }
 
-async function marcarEnviadaCotizacion(id) {
+async function enviarCotizacionWhatsApp(id) {
   try {
-    const cot = await api('/api/v1/cotizaciones/' + encodeURIComponent(id) + '/marcar-enviada', {method: 'POST', body: {}});
-    state.cotizacion = cot;
-    renderCotDetalle(cot);
+    const r = await api('/api/v1/cotizaciones/' + encodeURIComponent(id) + '/enviar', {method: 'POST', body: {}});
+    state.cotizacion = r.cotizacion;
+    renderCotDetalle(r.cotizacion);
     await cargarCotizaciones();
-    toast('Cotización marcada como enviada', 'ok');
+    toast(r.modo === 'SANDBOX'
+      ? 'PDF generado y encolado en SANDBOX (no sale WhatsApp real)'
+      : 'PDF enviado por WhatsApp', 'ok');
   } catch (e) {
-    toast('No se pudo marcar enviada: ' + e.message, 'bad');
+    if (String(e.message).includes('TELEFONO_REQUERIDO')) {
+      const tel = prompt('El cliente no tiene teléfono. Escribe el número para enviar el PDF:');
+      if (!tel || !tel.trim()) return;
+      try {
+        const cot = state.cotizacion && state.cotizacion.id === id ? state.cotizacion : await api('/api/v1/cotizaciones/' + encodeURIComponent(id));
+        await api('/api/v1/clients/' + encodeURIComponent(cot.cliente_id), {
+          method: 'PUT',
+          body: { telefono_whatsapp: tel.trim() }
+        });
+        await enviarCotizacionWhatsApp(id);
+      } catch (err) {
+        toast('No se pudo guardar el teléfono: ' + err.message, 'bad');
+      }
+      return;
+    }
+    toast('No se pudo enviar: ' + e.message, 'bad');
   }
 }
 
@@ -5407,15 +5538,74 @@ async function aceptarCotizacion(id) {
   }
 }
 
-async function convertirCotizacion(id) {
-  if (!confirm('¿Convertir esta cotización en orden? Se creará la orden y sus viajes.')) return;
+function cotConvertirPagoCambio() {
+  const pago = (($('#cot-conv-pago') || {}).value || 'FIADO').toUpperCase();
+  const abono = pago === 'ABONO';
+  const monto = $('#cot-conv-abono-monto-wrap');
+  const metodo = $('#cot-conv-abono-metodo-wrap');
+  if (monto) monto.hidden = !abono;
+  if (metodo) metodo.hidden = !abono;
+}
+
+async function abrirConvertirCotizacion(id) {
   try {
-    const r = await api('/api/v1/cotizaciones/' + encodeURIComponent(id) + '/convertir', {method: 'POST', body: {}});
+    const cot = (state.cotizacion && state.cotizacion.id === id)
+      ? state.cotizacion
+      : await api('/api/v1/cotizaciones/' + encodeURIComponent(id));
+    state.cotizacion = cot;
+    const cliente = (state.clientes || []).find(c => String(c.cliente_id || c.id) === String(cot.cliente_id)) || {};
+    const factura = cot.factura_datos || {};
+    const set = (sel, valor) => { const el = $(sel); if (el) el.value = valor ?? ''; };
+    set('#cot-conv-id', cot.id);
+    $('#cot-conv-resumen').textContent = `${cot.numero} · ${cot.cliente_nombre} · ${money(Number(cot.total || 0))} · ${num(cot.volumen_m3)} m³ ${cot.resistencia || ''}`;
+    set('#cot-conv-pago', 'FIADO');
+    set('#cot-conv-abono-monto', '');
+    set('#cot-conv-abono-metodo', 'EFECTIVO');
+    set('#cot-conv-razon', factura.razon_social || cot.cliente_nombre || cliente.nombre);
+    set('#cot-conv-ruc', factura.ruc || cliente.ruc);
+    set('#cot-conv-email', factura.email);
+    set('#cot-conv-direccion', factura.direccion || cliente.direccion_obra || '');
+    const ahora = new Date();
+    const fechaLocal = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+    set('#cot-conv-fecha', fechaLocal);
+    set('#cot-conv-vencimiento', factura.fecha_vencimiento || '');
+    cotConvertirPagoCambio();
+    const resultado = $('#cot-conv-resultado'); if (resultado) resultado.innerHTML = '';
+    const dlg = document.getElementById('dlg-cot-convertir');
+    if (dlg && !dlg.open) dlg.showModal();
+  } catch (e) {
+    toast('No se pudo abrir la conversión: ' + e.message, 'bad');
+  }
+}
+
+async function convertirCotizacionCliente() {
+  const id = ($('#cot-conv-id') || {}).value;
+  const pago = (($('#cot-conv-pago') || {}).value || '').toUpperCase();
+  const num = sel => {
+    const v = ($(sel) || {}).value;
+    return v === '' || v === undefined || v === null ? null : Number(v);
+  };
+  const body = {
+    forma_pago: pago,
+    abono_inicial_monto: pago === 'ABONO' ? num('#cot-conv-abono-monto') : null,
+    abono_inicial_metodo: pago === 'ABONO' ? (($('#cot-conv-abono-metodo') || {}).value || null) : null,
+    factura: {
+      razon_social: (($('#cot-conv-razon') || {}).value || '').trim() || null,
+      ruc: (($('#cot-conv-ruc') || {}).value || '').trim() || null,
+      email: (($('#cot-conv-email') || {}).value || '').trim() || null,
+      direccion: (($('#cot-conv-direccion') || {}).value || '').trim() || null,
+      fecha_emision: (($('#cot-conv-fecha') || {}).value || null),
+      fecha_vencimiento: (($('#cot-conv-vencimiento') || {}).value || null)
+    }
+  };
+  try {
+    const r = await api('/api/v1/cotizaciones/' + encodeURIComponent(id) + '/convertir', {method: 'POST', body});
+    document.getElementById('dlg-cot-convertir').close();
     await cargarCotizaciones();
     await seleccionarCotizacion(id);
-    toast('Orden #' + (r.orden && r.orden.orden_numero ? r.orden.orden_numero : 'creada'), 'ok');
+    toast('Orden #' + (r.orden && r.orden.orden_numero ? r.orden.orden_numero : 'creada') + ' y datos de factura guardados', 'ok');
   } catch (e) {
-    toast('No se pudo convertir: ' + e.message, 'bad');
+    $('#cot-conv-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
   }
 }
 
