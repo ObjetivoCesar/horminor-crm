@@ -355,8 +355,10 @@ avisa.
   (migración **082**). La cotización queda `POR_DEFINIR`.
 - **Cliente y teléfono:** el formulario permite **+ Nuevo cliente** (nombre,
   teléfono, RUC/cédula, provincia, ciudad, dirección) y pide el teléfono para
-  enviar el PDF. Si el cliente existente no tiene teléfono, se puede capturar
-  ahí y se actualiza su ficha.
+  enviar el PDF. Al **Guardar borrador** con “+ Nuevo cliente”, el cliente se
+  crea automáticamente; también existe “Crear cliente y usarlo” para crearlo
+  antes. Si el cliente existente no tiene teléfono, se captura ahí y se
+  actualiza su ficha.
 - **Botones de la cotización:** `Editar`, `Enviar por WhatsApp`,
   `Convertir a cliente`.
 - **Enviar por WhatsApp:** `POST /api/v1/cotizaciones/{id}/enviar` genera el PDF,

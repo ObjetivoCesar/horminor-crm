@@ -4534,3 +4534,42 @@ registro en `client_invoices`; después conectar la cartera a `v_orden_total`.
 - `docs/COTIZACIONES.md`, `docs/MANUAL_DASHBOARD_JULIO.md`
 - `.agents/ESTADO.md`, `.agents/BITACORA.md`
 - Evidencia: `.agents/evidencias/cotizaciones_v622_2026-11-13.txt`
+
+
+## 2026-11-13 — Cotizaciones: cliente nuevo se crea al guardar
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** corregir el error “Cliente, obra y volumen son obligatorios. Si el
+cliente es nuevo, créalo primero” cuando el usuario ya llenó el formulario de
+nuevo cliente.
+
+### Hecho
+
+- `guardarCotizacion()` ahora valida obra y volumen, y si el cliente es
+  “+ Nuevo cliente” llama a `crearClienteRapido()` automáticamente. Si el
+  nombre y el teléfono están completos, crea el cliente, lo selecciona y
+  continúa guardando la cotización.
+- Si faltan nombre o teléfono, muestra un error específico; no un mensaje
+  genérico.
+- El botón “Crear cliente y usarlo” sigue disponible para crearlo antes.
+- Manual y `docs/COTIZACIONES.md` actualizados.
+
+### Evidencia (real, ejecutada)
+
+| Prueba | Resultado |
+|---|---|
+| UI: `+ Nuevo cliente` + nombre/teléfono/obra/volumen + **Guardar borrador** sin pulsar “Crear” | `HORM-COT-2026-0001` creada; cliente “Abelito Prueba” creado y seleccionado |
+| `pytest /app/tests` | **405 passed**, exit 0 |
+| Limpieza | cotización y cliente de prueba borrados; 0 cotizaciones / 6 clientes |
+
+### Decisión
+
+- **Guardar la cotización crea el cliente si hace falta.** El usuario ya
+  escribió los datos; obligarlo a pulsar otro botón era una fricción
+  innecesaria. Alternativa descartada: bloquear el guardado hasta crear el
+  cliente, que fue justo lo que confundió.
+
+### Próximo paso exacto
+
+Probar el flujo con un cliente real y luego emitir la factura interna desde el
+popout de conversión.

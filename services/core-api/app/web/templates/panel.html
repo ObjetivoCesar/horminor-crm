@@ -5320,7 +5320,7 @@ async function crearClienteRapido() {
   const telefono = (($('#cot-nc-telefono') || {}).value || '').trim();
   if (!nombre || !telefono) {
     $('#cot-nc-resultado').innerHTML = '<div class="notice bad">Nombre y teléfono son obligatorios.</div>';
-    return;
+    return null;
   }
   try {
     const creado = await api('/api/v1/clients', {
@@ -5349,8 +5349,10 @@ async function crearClienteRapido() {
     $('#cot-telefono').value = creado.telefono_whatsapp || telefono;
     $('#cot-nuevo-cliente').hidden = true;
     $('#cot-nc-resultado').innerHTML = '<div class="notice ok">Cliente creado y seleccionado.</div>';
+    return creado.id;
   } catch (e) {
     $('#cot-nc-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
+    return null;
   }
 }
 
@@ -5449,7 +5451,7 @@ async function guardarCotizacion() {
     const v = ($('#' + id) || {}).value;
     return v === '' || v === undefined || v === null ? null : Number(v);
   };
-  const telefono = (($('#cot-telefono') || {}).value || '').trim();
+  let telefono = (($('#cot-telefono') || {}).value || '').trim();
   const body = {
     cliente_id: ($('#cot-cliente') || {}).value || '',
     obra_direccion: (($('#cot-obra') || {}).value || '').trim(),
@@ -5463,8 +5465,21 @@ async function guardarCotizacion() {
     extras: leerExtrasCot(),
     notas: (($('#cot-notas') || {}).value || '').trim() || null
   };
-  if (!body.cliente_id || body.cliente_id === '__nuevo__' || !body.obra_direccion || !body.volumen_m3) {
-    $('#cot-resultado').innerHTML = '<div class="notice bad">Cliente, obra y volumen son obligatorios. Si el cliente es nuevo, créalo primero.</div>';
+  if (!body.obra_direccion || !body.volumen_m3) {
+    $('#cot-resultado').innerHTML = '<div class="notice bad">Obra y volumen son obligatorios.</div>';
+    return;
+  }
+  if (body.cliente_id === '__nuevo__') {
+    const nuevoId = await crearClienteRapido();
+    if (!nuevoId) {
+      $('#cot-resultado').innerHTML = '<div class="notice bad">Completa el nombre y el teléfono del nuevo cliente para crearlo.</div>';
+      return;
+    }
+    body.cliente_id = nuevoId;
+    telefono = (($('#cot-telefono') || {}).value || '').trim();
+  }
+  if (!body.cliente_id) {
+    $('#cot-resultado').innerHTML = '<div class="notice bad">Selecciona un cliente.</div>';
     return;
   }
   if (!telefono) {

@@ -289,6 +289,8 @@ aparte.
 1. Columna izquierda → **Cotizaciones** → **Nueva cotización**.
 2. **Cliente:** elige uno existente o **+ Nuevo cliente**. Si es nuevo, pide
    nombre, **teléfono WhatsApp**, RUC/cédula, provincia, ciudad y dirección.
+   Puedes pulsar **“Crear cliente y usarlo”** o simplemente **Guardar
+   borrador**: el cliente se crea solo con los datos del formulario.
 3. **Teléfono para enviar:** se llena solo con el cliente; si falta, escríbelo.
    Sin teléfono no se puede enviar el PDF.
 4. Obra, resistencia, volumen y validez.
