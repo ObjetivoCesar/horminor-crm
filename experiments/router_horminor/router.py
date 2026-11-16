@@ -451,6 +451,23 @@ def conciliar(
     _fusionar_avisos(borrador)
     borrador.datos_contexto = _datos_contexto(hechos)
     _elegir_destinatario(borrador, hechos, texto)
+    for encargo in borrador.encargos:
+        if encargo.canal != "WHATSAPP" and not encargo.preparar_comunicacion:
+            continue
+        base = plano(encargo.titulo + " " + encargo.que_hacer)
+        if any(
+            marca in base
+            for marca in (
+                "sin autorizacion",
+                "no enviar",
+                "no enviarlo",
+                "sin enviar",
+                "no lo envies",
+                "no enviarlo",
+            )
+        ):
+            encargo.requiere_autorizacion = True
+            encargo.autorizado = False
     borrador.resumen = resumen_conversacional(borrador)
     return borrador
 

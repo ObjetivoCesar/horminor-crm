@@ -40,7 +40,11 @@ padding:9px 14px;font:inherit;cursor:pointer}
 button.primary{background:var(--ok);color:#161616;border-color:var(--ok);font-weight:600}
 button.ghost{padding:5px 9px;font-size:12px}
 button:disabled{opacity:.5;cursor:default}
-.resumen{font-size:16px;margin:0 0 12px}
+.resumen{font-size:16px;margin:0}
+.burbuja{background:#1b2230;border-left:3px solid var(--ok);border-radius:0 12px 12px 0;
+padding:14px 16px;margin:0 0 14px;font-size:16px;line-height:1.55}
+.quien{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ok);
+margin-bottom:6px}
 .encargo{border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;display:grid;gap:6px}
 .encargo h3{margin:0;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pill{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
@@ -66,7 +70,7 @@ overflow:auto;font-size:12px;max-height:360px}
     </div>
   </section>
   <section class="card" id="resultado" style="display:none">
-    <p class="resumen" id="resumen"></p>
+    <div class="burbuja"><div class="quien">Cerebro</div><p class="resumen" id="resumen"></p></div>
     <div id="encargos"></div>
     <div id="preguntas" class="preguntas"></div>
     <div id="notas" class="detalle"></div>

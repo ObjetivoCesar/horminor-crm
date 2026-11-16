@@ -1,14 +1,14 @@
 {
- "router": "router-1.3",
- "fecha": "2026-11-16T12:54:22",
+ "router": "router-1.4",
+ "fecha": "2026-11-16T12:59:11",
  "archivos": {
   "model.py": "1b2fc130447ad6f2ad73674b5762b568db693bfcf852c702d8879a6ff84f818e",
   "prompts.py": "0291228630a065fe8d76210b18ceaab8574e303064912eaf97e8f41272708190",
-  "router.py": "e48e931b484d4bc96cd5cb56cfafbcebb6cea810a3d90733775ab5e7267a1ac9",
+  "router.py": "996a3cd24d3746c4751526f9d2c3803bf9d7e82cfd2b67444c5e15b0e9418415",
   "correccion.py": "fa0fcb6e11ce91e834a85ced149a05a5a905173279ed595287d5cde3b420e7b3",
   "confirmacion.py": "e226f67a67ef90a4cc3d9fbe7e11261e962bc780068e29639802096691a175cd",
   "cli.py": "dfd7a090898c935e8ac3282c64c623cc097c6332869b10478912b98eeb0354cd",
-  "lab.py": "e2b255dcfc5b602cd7811900179c8cae3667393094638ec1c97bafb9cd658e1d",
+  "lab.py": "26ecb326352575ce54e5ca2efbf98cb0195be66cf60c16c2e55d004844b5996d",
   "tests_core.py": "e65c078142c65bb8e11e15436c6e686f08030aab178642b18a96e2d40c2e65da",
   "evidencia_escenarios.py": "d7e432930d5226f0e97d89ad616a70170112c32862279e81549bc8ba7adf54cc",
   "caso_diaz_sur.py": "e29aefb934855abdf091b27e022d9e4014a2dabb68fb7428dc0ae6ff15fcb9b7"
