@@ -6691,3 +6691,76 @@ auditoría externa y volver con la alternativa elegida. **No implementar antes.*
 - `docs/ALTERNATIVAS_SOLUCION_CEREBRO.md` (nuevo)
 - `docs/auditoria_cerebro/` (nuevo: índice, prompt, código, DDL, JSON, inventario)
 - `.agents/evidencias/auditoria_p1_p7/p1_p7_registros.json` (nuevo)
+
+
+## 2026-11-16 - Laboratorio: el dictado persiste y una prueba compleja revela fusiones
+
+### Objetivo
+
+Que Julio pueda pegar un dictado, refrescar sin perderlo, ver un aviso si el
+campo esta vacio, y comprobar con un dictado complejo que el router separa
+encargos y pide aclaraciones en vez de inventar datos.
+
+### Hecho
+
+1. **Prueba real con el dictado de Las Palmeras** (5 encargos, 5 conflictos).
+   Resultado tras corregir: 5 encargos separados (organizar informacion,
+   revisar acceso, planificar sin despachar, preparar mensaje, revisar
+   transporte) y 5 preguntas concretas con opciones (volumen 36/40/42,
+   resistencia FC-210/FC-280, autoridad de Roberto, identidad del proyecto,
+   anticipo confirmado o solo comprobante).
+2. **Aclaracion respondible.** Un solo mensaje de Julio responde las cinco
+   dudas; el borrador se actualiza, las preguntas se retiran y queda un
+   registro `ACLARACION` con antes/despues.
+3. **Asignacion propuesta.** Las tareas sin area dicha se asignan por tipo de
+   trabajo (planta vs secretaria) y se marcan como sugeridas; ya no se le
+   devuelve la decision a Julio.
+4. **Laboratorio corregido.** El dictado se guarda en `localStorage` (no se
+   pierde con F5); campo vacio muestra aviso visible; "Poner ejemplo" rellena
+   e interpreta en un clic; el HTML se sirve sin cache (`no-store`).
+5. **Se deja de fusionar** encargos de distinto tipo (documento, mensaje,
+   produccion, transporte) en una sola tarea.
+
+### Evidencia (real, ejecutada)
+
+| Comprobacion | Resultado |
+|---|---|
+| `python -m experiments.router_horminor.tests_core` | 21/21 pruebas del router |
+| `POST /api/dictar` con el dictado de Las Palmeras | HTTP 200, 5 encargos, 5 preguntas |
+| `POST /api/responder` con las aclaraciones | actualiza volumen 42, FC-210, anticipo confirmado, autoridad y proyecto; registro en `errores.jsonl` |
+| `POST /api/responder` con "Si, confirmo" | plan con 5 tareas, correspondencia sin problemas, nada creado |
+| Navegador en `localhost:8055` | dictado sobrevive a recarga; boton Interpretar con campo vacio muestra el aviso; "Poner ejemplo" pinta el mensaje y los encargos |
+| `py_compile` de `lab.py`, `router.py`, `correccion.py` | sin errores |
+
+### Decisiones tomadas
+
+1. **Las dudas del dictado son preguntas, no notas.** Se convierten en
+   preguntas con opciones y se pueden responder en un mensaje. Alternativa
+   descartada: dejarlas como notas para que Julio las lea y decida aparte.
+2. **Proponer el area en vez de preguntarla.** Si el dictado no nombra area, se
+   propone por tipo de trabajo y se marca como sugerencia. Alternativa
+   descartada: `POR_DEFINIR` y devolverle la pregunta.
+3. **El laboratorio es de desarrollo.** Julio no lo usara como producto; sirve
+   para provocar fallos y dejar traza. La integracion al panel sigue pendiente.
+
+### Bloqueos / preguntas al cliente
+
+1. Falta el resto de las 10 pruebas complejas; cada una debe pasar por
+   dictado, aclaraciones y confirmacion.
+2. Sigue pendiente autorizar el arreglo en produccion de `dictado_revocado`
+   (coincidencia por subcadena "mejor no") que hoy devuelve 0 acciones.
+
+### Proximo paso exacto
+
+Recibir las aclaraciones de Las Palmeras o la segunda prueba compleja,
+procesarla en el laboratorio y registrar aclaraciones y correcciones hasta
+cerrar las 10.
+
+### Archivos tocados
+
+- `experiments/router_horminor/router.py`
+- `experiments/router_horminor/correccion.py`
+- `experiments/router_horminor/conversacion.py`
+- `experiments/router_horminor/lab.py`
+- `experiments/router_horminor/tests_core.py`
+- `experiments/router_horminor/VERSION.json`
