@@ -6960,3 +6960,55 @@ de caer en `SIN_VENCIMIENTO`, con sus pruebas.
 - `docs/CONTINUIDAD_CEREBRO.md` (v1.6)
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
+
+
+## 2026-11-16 - Traspaso: siguiente conversacion y demostracion desde el panel
+
+### Objetivo
+
+Dejar constancia del traspaso antes de abrir otra conversacion y del criterio
+para la siguiente entrega.
+
+### Hecho
+
+1. **Cerebro cerrado:** no se hacen mas cambios al motor ni al router
+   `router-1.7`. Gato sigue desconectado.
+2. **Siguiente conversacion:** se retoma el ERP por el proximo pendiente
+   documentado (C4: `fecha_vencimiento` en ordenes y facturas).
+3. **Criterio de entrega:** lo que se construya debe poder **verse desde el
+   panel principal**, porque Julio tiene que mostrarlo. No se desarrollan
+   interfaces nuevas para el Cerebro.
+4. **Bitacora al dia:** el cierre anterior quedo en `a61e066`; esta entrada solo
+   agrega el traspaso.
+
+### Evidencia (real, ejecutada)
+
+| Comprobacion | Resultado |
+|---|---|
+| Commit del cierre | `a61e066` |
+| Commit de la correccion aceptada | `c43c5c7` |
+| Suite del CRM | 623/623 |
+| Manual Vivo y continuidad | 13/13 |
+| Codigo tocado en esta entrada | Ninguno |
+
+### Decisiones tomadas
+
+1. **No abrir mas frentes del Cerebro.** Queda cerrado en su fase experimental.
+2. **La proxima entrega se demuestra en el panel principal**, no en un
+   laboratorio aparte.
+3. **Sin interfaces nuevas** para el Cerebro.
+
+### Bloqueos / preguntas al cliente
+
+1. Falta confirmar si la siguiente conversacion arranca con C4 o con otro modulo
+   del ERP.
+
+### Proximo paso exacto
+
+Abrir la nueva conversacion con el contexto de `docs/CONTINUIDAD_CEREBRO.md`
+v1.6 y `.agents/ESTADO.md`, y comenzar C4 (`fecha_vencimiento` en ordenes y
+facturas) de forma que se vea en el panel principal.
+
+### Archivos tocados
+
+- `.agents/BITACORA.md`
