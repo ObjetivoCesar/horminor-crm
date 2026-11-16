@@ -468,7 +468,15 @@ async def crear(
     zona: str = ZONA_DEFECTO,
     adjuntar_factura: bool = False,
     factura_de: str | None = None,
+    confirmado_por: str | None = None,
+    clave_externa: str | None = None,
 ) -> Resultado:
+    """Crea la fila del recordatorio.
+
+    Nace en BORRADOR y espera la ratificacion en el chat. Si ``confirmado_por``
+    viene con el id de un humano, la ratificacion ya ocurrio en la pantalla que
+    mostro el mensaje y el destino exactos: la fila nace PENDIENTE.
+    """
     if getattr(actor, "rol", "") not in ROLES_ESCRITURA:
         return Resultado(
             "recordatorio_crear",
@@ -536,7 +544,9 @@ async def crear(
             )
 
     conversacion = conversacion_id or getattr(actor, "conversacion_id", None)
-    clave = _clave_idempotencia(actor_id, conversacion, telefono, cuerpo, programado)
+    clave = (clave_externa or "").strip() or _clave_idempotencia(
+        actor_id, conversacion, telefono, cuerpo, programado
+    )
 
     cifras = cifras_de(cuerpo)
     if cifras:
@@ -558,14 +568,17 @@ async def crear(
         INSERT INTO gato_recordatorios (
             creado_por, rol_actor, conversacion_id, cliente_id,
             destinatario_nombre, telefono, mensaje, programado_at, zona,
-            estado, origen_destino, clave_idempotencia, media_id
+            estado, origen_destino, clave_idempotencia, media_id,
+            confirmado_por, confirmado_at
         )
         VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7, $8, $9,
-                'BORRADOR', $10, $11, $12::uuid)
+                $13, $10, $11, $12::uuid,
+                $14::text,
+                CASE WHEN $14::text IS NULL THEN NULL ELSE now() END)
         ON CONFLICT (clave_idempotencia) WHERE clave_idempotencia IS NOT NULL
         DO NOTHING
         RETURNING id, destinatario_nombre, telefono, mensaje, programado_at,
-                  origen_destino
+                  origen_destino, estado
         """,
         actor_id,
         getattr(actor, "rol", ""),
@@ -579,13 +592,15 @@ async def crear(
         origen,
         clave,
         media_id,
+        "PENDIENTE" if confirmado_por else "BORRADOR",
+        confirmado_por,
     )
 
     if fila is None:
         fila = await biblio.pool.fetchrow(
             """
             SELECT id, destinatario_nombre, telefono, mensaje, programado_at,
-                   origen_destino
+                   origen_destino, estado
               FROM gato_recordatorios
              WHERE clave_idempotencia = $1
             """,
@@ -597,16 +612,23 @@ async def crear(
             )
 
     etiqueta = _etiqueta(fila["destinatario_nombre"], fila["telefono"])
-    nota = _ratificacion(
-        etiqueta=etiqueta,
-        telefono=fila["telefono"],
-        origen=fila["origen_destino"],
-        mensaje=fila["mensaje"],
-        programado=fila["programado_at"],
-        zona=zona_obj,
-        adjunto=factura_numero,
-        adjunto_ficticio=factura_ficticia,
-    ) + _aviso_modo(getattr(actor, "modo_envio", ""))
+    if confirmado_por:
+        nota = (
+            f"Recordatorio confirmado para {etiqueta} el "
+            f"{_ahora_texto(fila['programado_at'], zona_obj)} ({zona_obj}): "
+            f"«{fila['mensaje']}»."
+        ) + _aviso_modo(getattr(actor, "modo_envio", ""))
+    else:
+        nota = _ratificacion(
+            etiqueta=etiqueta,
+            telefono=fila["telefono"],
+            origen=fila["origen_destino"],
+            mensaje=fila["mensaje"],
+            programado=fila["programado_at"],
+            zona=zona_obj,
+            adjunto=factura_numero,
+            adjunto_ficticio=factura_ficticia,
+        ) + _aviso_modo(getattr(actor, "modo_envio", ""))
     return Resultado(
         "recordatorio_crear",
         "OK",
@@ -619,7 +641,7 @@ async def crear(
             "adjunto": factura_numero,
             "programado_at": fila["programado_at"].astimezone(timezone.utc).isoformat(),
             "programado_local": _ahora_texto(fila["programado_at"], zona_obj),
-            "estado": "BORRADOR",
+            "estado": fila["estado"],
         },
         fuente=["gato_recordatorios"],
         filtros={"telefono": fila["telefono"]},

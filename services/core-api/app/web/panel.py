@@ -15,9 +15,21 @@ from fastapi.responses import HTMLResponse
 router = APIRouter(tags=["panel"])
 
 _RUTA = Path(__file__).resolve().parent / "templates" / "panel.html"
+_RUTA_CEREBRO = Path(__file__).resolve().parent / "templates" / "cerebro_lab.html"
 
 
 @router.get("/panel", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def panel() -> HTMLResponse:
     return HTMLResponse(_RUTA.read_text(encoding="utf-8"))
+
+
+@router.get("/panel/cerebro", response_class=HTMLResponse)
+async def panel_cerebro() -> HTMLResponse:
+    """Laboratorio del Cerebro: dictar texto o subir audio y ver el borrador.
+
+    La página no decide nada: llama a ``/api/v1/voz/transcribir`` y a
+    ``/api/v1/cerebro/interpretar``, que son los mismos endpoints que usará el
+    panel definitivo.
+    """
+    return HTMLResponse(_RUTA_CEREBRO.read_text(encoding="utf-8"))

@@ -29,6 +29,8 @@ MODULOS: tuple[str, ...] = (
     "clientes_cartera",
     "finanzas_balance_auditoria",
     "superadmin_config",
+    "voz",
+    "cerebro",
 )
 
 ROLES_BASE: tuple[str, ...] = (

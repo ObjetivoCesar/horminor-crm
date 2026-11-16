@@ -500,6 +500,13 @@ main {
   letter-spacing: 0.1em;
 }
 
+/* La tarjeta del Sabueso debe quedar por encima de las tarjetas que vienen
+   despues: cada .card abre su propio contexto de apilamiento por el
+   backdrop-filter, asi que el z-index del desplegable no basta. */
+.card.card-buscar-clientes {
+  z-index: 6;
+}
+
 /* Corona de luz: tarjeta destacada, ahora una línea superior fina */
 .card.kpi { overflow: hidden; }
 .card.kpi::before {
@@ -673,10 +680,15 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
   box-shadow: 0 24px 50px -20px rgba(0,0,0,.7); overflow: auto; max-height: 320px;
 }
 .sabueso-item { display: block; width: 100%; text-align: left; padding: 9px 12px; border: 0; border-bottom: 1px solid rgba(148,163,184,.12); background: transparent; color: var(--text-pure); cursor: pointer; }
-.sabueso-item:hover { background: var(--surface-row-pill-hover); }
+.sabueso-item:hover, .sabueso-item:focus-visible { background: var(--surface-row-pill-hover); outline: none; }
+.sabueso-item:focus-visible { box-shadow: inset 2px 0 0 var(--accent-cat-amber); }
 .sabueso-item strong { display: block; font-size: 12.5px; }
 .sabueso-item span { display: block; font-size: 10.5px; color: var(--text-muted); }
 .sabueso-item em { display: block; font-style: normal; font-size: 10.5px; color: var(--accent-cat-amber); margin-top: 2px; }
+.sabueso-fila { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.sabueso-saldo { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--text-muted); }
+.sabueso-saldo.debe { color: var(--accent-cat-amber); }
+.sabueso-pista { font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); opacity: .8; }
 .paginacion { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: var(--border-subtle); }
 .paginacion .btn { font-size: 11px; }
 .tabs-cliente { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
@@ -1653,6 +1665,59 @@ details summary { cursor: pointer; color: var(--text-muted); font-size: 12.5px; 
 main { padding: 96px 24px 64px; }
 .view { max-width: 1480px; }
 
+/* Aviso persistente de tareas internas: no es un popout que se pueda cerrar.
+   Sigue visible mientras haya tareas abiertas y se puede abrir desde aqui. */
+.aviso-internas {
+  position: sticky;
+  top: 84px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 1480px;
+  margin: 0 auto 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  border-left: 4px solid var(--accent-cat-amber-bright, #F59E0B);
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.10);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.aviso-internas[hidden] { display: none !important; }
+.aviso-internas .aviso-ico { font-size: 18px; line-height: 1; }
+.aviso-internas .aviso-txt { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.aviso-internas .aviso-txt strong { font-size: 13px; color: var(--text-pure); }
+.aviso-internas .aviso-txt span { font-size: 11.5px; color: var(--muted); }
+.aviso-internas.vencida {
+  border-color: rgba(239, 68, 68, 0.45);
+  border-left-color: #EF4444;
+  background: rgba(239, 68, 68, 0.10);
+}
+
+/* Ficha y estado de cada tarea interna dentro del diálogo. */
+.chip-tarea {
+  display: inline-block; margin-right: 4px; padding: 1px 7px;
+  border-radius: 999px; border: var(--border-subtle);
+  font-size: 9.5px; letter-spacing: .06em; color: var(--text-muted);
+}
+.chip-tarea.urgente, .chip-tarea.vencida {
+  color: #FCA5A5; border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.12);
+}
+.chip-tarea.ok { color: #34D399; border-color: rgba(16, 185, 129, 0.4); }
+.chip-tarea.warn { color: #FBBF24; border-color: rgba(245, 158, 11, 0.4); }
+.tarea-interna.urgente { border-left: 3px solid #EF4444; }
+.acciones-tarea { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.ficha-tarea {
+  margin-top: 8px; padding: 10px 12px; display: grid; gap: 6px;
+  border: var(--border-subtle); border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.ficha-tarea > div { display: flex; gap: 10px; font-size: 12px; }
+.ficha-tarea span { color: var(--text-muted); min-width: 150px; }
+.ficha-tarea strong { color: var(--text-pure); font-weight: 600; }
+
 /* ----------------------------------------------------------- Dashboard top */
 .dash-welcome {
   display: flex;
@@ -2615,6 +2680,10 @@ tbody tr:last-child td { border-bottom: 0; }
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/></svg>
         Banca y Mercado
       </button>
+      <button data-modulo="cerebro" onclick="location.href='/panel/cerebro'" title="Laboratorio de voz: dicta y revisa el borrador antes de ejecutar">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/><path d="M8 21h8"/></svg>
+        Cerebro · voz <span style="opacity:.55;font-size:10px;letter-spacing:.08em">BETA</span>
+      </button>
       <button data-role-btn="superadmin" onclick="setView('superadmin')">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
         Superadmin y WhatsApp
@@ -2679,6 +2748,15 @@ tbody tr:last-child td { border-bottom: 0; }
 </header>
 
 <main>
+  <div class="aviso-internas" id="aviso-internas" role="status" hidden>
+    <span class="aviso-ico" aria-hidden="true">📋</span>
+    <div class="aviso-txt">
+      <strong id="aviso-internas-titulo">Tareas internas pendientes</strong>
+      <span id="aviso-internas-detalle"></span>
+    </div>
+    <button class="btn small" type="button" onclick="abrirTareas()">Ver tareas</button>
+  </div>
+
   <!-- ===================== DASHBOARD JULIO ===================== -->
   <section class="view active" data-view="dashboard">
     <div class="dash2-head">
@@ -3228,14 +3306,16 @@ tbody tr:last-child td { border-bottom: 0; }
       </div>
     </div>
 
-    <div class="card" style="margin-top:16px" data-modulo="clientes_cartera">
+    <div class="card card-buscar-clientes" style="margin-top:16px" data-modulo="clientes_cartera">
       <div class="spread clientes-toolbar" style="align-items:flex-end;gap:10px">
         <div style="flex:1;min-width:220px;position:relative">
           <label class="field">Buscar por nombre, apellido, “7m3”, “FC-210”, obra, ciudad o #orden</label>
           <input type="search" id="buscar-cliente" autocomplete="off"
                  placeholder="Ej: baca reyes, 7m3, FC-210, Loreto, #56…"
-                 oninput="onBuscarClientes(this.value)">
-          <div id="sabueso-sugerencias" class="search-results sabueso-sugerencias" hidden></div>
+                 aria-controls="sabueso-sugerencias" aria-expanded="false"
+                 oninput="onBuscarClientes(this.value)"
+                 onkeydown="onBuscarClientesTecla(event)">
+          <div id="sabueso-sugerencias" class="search-results sabueso-sugerencias" role="listbox" aria-label="Sugerencias de clientes" hidden onkeydown="navSugerenciasClientes(event)"></div>
         </div>
         <div class="clientes-toolbar-acciones">
           <button class="btn small ghost btn-filtros" type="button" id="btn-toggle-filtros"
@@ -3571,6 +3651,16 @@ tbody tr:last-child td { border-bottom: 0; }
   <div class="dialog-foot">
     <button class="btn ghost" onclick="document.getElementById('dlg-cliente').close()">Cancelar</button>
     <button class="btn" onclick="crearCliente()">Guardar cliente</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-tareas">
+  <div class="dialog-head"><h2>Tareas pendientes</h2><button class="btn small ghost" onclick="cerrarTareas()">Cerrar</button></div>
+  <div class="dialog-body">
+    <div class="notif-list" id="tareas-lista" style="max-height:none"></div>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn" onclick="cerrarTareas()">Entendido</button>
   </div>
 </dialog>
 
@@ -4023,6 +4113,28 @@ tbody tr:last-child td { border-bottom: 0; }
       <label class="row small"><input type="checkbox" id="cot-equipo" checked style="width:auto"> Incluye equipo</label>
       <label class="row small"><input type="checkbox" id="cot-bombeo" checked style="width:auto"> Incluye bombeo</label>
     </div>
+
+    <div style="margin-top:12px;padding:12px;border:var(--border-subtle);border-radius:12px;background:var(--surface-row-pill)">
+      <div class="spread">
+        <strong style="font-size:12px">Ubicación de la obra</strong>
+        <span class="badge neutral" id="cot-ubicacion-estado">Sin pin</span>
+      </div>
+      <p class="small muted" style="margin:4px 0 8px">Escribe la referencia o pega el enlace de Google Maps. El pin exacto lo comparte el cliente por WhatsApp o lo tomas con el GPS de este equipo.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <input type="text" id="cot-ubicacion" style="flex:1;min-width:200px" placeholder="Sector, vía, referencia o enlace de Maps" oninput="onUbicacionTextoCot(this.value)">
+        <button class="btn small ghost" type="button" onclick="usarMiUbicacionCot()">Usar mi ubicación</button>
+      </div>
+      <input type="hidden" id="cot-ubicacion-lat">
+      <input type="hidden" id="cot-ubicacion-lng">
+      <input type="hidden" id="cot-ubicacion-origen">
+      <div class="row" style="margin-top:8px;gap:10px;flex-wrap:wrap;align-items:center">
+        <span class="small muted" id="cot-ubicacion-pin">Pin: pendiente</span>
+        <a class="small" id="cot-ubicacion-mapa" href="#" target="_blank" rel="noopener" hidden>Abrir en Maps</a>
+        <button class="btn small ghost" type="button" onclick="limpiarUbicacionCot()">Quitar pin</button>
+        <button class="btn small ghost" type="button" data-mutacion="1" id="cot-btn-pedir-ubicacion" onclick="pedirUbicacionCot()">Pedir por WhatsApp</button>
+      </div>
+    </div>
+
     <label class="field" style="margin-top:10px">Acceso / notas de obra</label>
     <input type="text" id="cot-acceso" placeholder="Retro para abrir paso, permiso municipal…">
     <div class="spread" style="margin-top:12px">
@@ -4087,7 +4199,7 @@ const state = {
   ordenes:[], detalle:{}, inventario:[], donutMode:0, catalogo:null,
   proveedores:[], inventarioOverview:null, agenda:[], agendaY:null, agendaM:null,
   reglasPago:{}, agendaParams:null, perfil:null, perfiles:[], operacionConfig:null,
-  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], operacion:null, cotizaciones:[], cotizacion:null, cotExtras:[], notifs:[], cargando:false,
+  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], operacion:null, cotizaciones:[], cotizacion:null, cotExtras:[], notifs:[], tareas:[], cargando:false,
   clientesBusqueda:[], cliGrupo:'TODOS', cliPagina:1, cliPaginas:1, cliTotal:0,
   cliResumen:null, cliFiltrosMeta:{ciudades:[],resistencias:[]}, cliTimer:null, cliSeq:0,
   carpetaTab:'ordenes', ordenExpandida:null,
@@ -4248,7 +4360,9 @@ const MODULOS_PANEL = {
   planta_kardex: 'Planta, flota y kardex',
   clientes_cartera: 'Clientes y cartera',
   finanzas_balance_auditoria: 'Finanzas, balance y auditoría',
-  superadmin_config: 'Superadmin y configuración'
+  superadmin_config: 'Superadmin y configuración',
+  voz: 'Voz: dictar por audio',
+  cerebro: 'Cerebro: borradores desde audio'
 };
 
 const MODULO_POR_VISTA = {
@@ -4412,6 +4526,10 @@ async function irAOrden(nombreCliente) {
 /* ----------------------------- NOTIFICACIONES ----------------------------- */
 function construirNotifs() {
   const n = [];
+  (state.tareas || []).forEach(t => n.push({
+    ico:'📲', kind:'warn', t:'Recordatorio: ' + (t.destinatario || t.telefono),
+    s: (t.mensaje || '') + ' · ' + (t.programado_local || '')
+  }));
   (state.inventario || []).filter(i => i.estado === 'CRITICO').forEach(i => n.push({
     ico:'📦', kind:'bad', t:'Stock crítico: ' + i.nombre,
     s: num(i.stock_actual) + ' ' + i.unidad + ' · mínimo ' + num(i.stock_minimo)
@@ -4434,6 +4552,11 @@ function construirNotifs() {
     ico:'🧾', kind:'warn', t:'Cierre de caja pendiente',
     s:'Fecha ' + state.cierre.fecha + ' · efectivo esperado ' + money(state.cierre.efectivo_sistema)
   });
+  (state.tareasInternas || []).forEach(t => n.push({
+    ico:'📋', kind: (t.requiere_escalamiento || t.prioridad === 'URGENTE') ? 'warn' : 'ok',
+    t:'Tarea interna · ' + (t.asignado_a || t.asignado_rol || 'Secretaría'),
+    s: (t.instruccion || '') + ' · ' + (t.estado || '') + (t.acusada_en ? ' · acusada' : ' · sin acuse')
+  }));
   if (!n.length) n.push({ico:'✅', kind:'ok', t:'Sin alertas activas', s:'Bodega, flota y cartera dentro de umbral.'});
   return n;
 }
@@ -4456,6 +4579,255 @@ function toggleNotif(force) {
   p.hidden = !abrir;
   if (btn) btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
   if (abrir) renderNotificaciones();
+}
+
+/* ----------------------------- TAREAS / RECORDATORIOS ----------------------------- */
+async function cargarTareas() {
+  try {
+    const datos = await api('/api/v1/cerebro/tareas/pendientes');
+    state.tareas = (datos && datos.tareas) || [];
+    state.tareasInternas = (datos && datos.internas) || [];
+  } catch (e) {
+    state.tareas = [];
+    state.tareasInternas = [];
+  }
+  renderNotificaciones();
+  renderAvisoInternas();
+  renderTareasDialog();
+  mostrarPopoutTareas();
+}
+
+function renderAvisoInternas() {
+  const caja = document.getElementById('aviso-internas');
+  if (!caja) return;
+  const abiertas = (state.tareasInternas || []).filter(t => t.estado !== 'REGISTRADA');
+  caja.hidden = abiertas.length === 0;
+  if (!abiertas.length) return;
+  const urgentes = abiertas.filter(t => t.prioridad === 'URGENTE').length;
+  const sinAcuse = abiertas.filter(t => !t.acusada_en).length;
+  const vencidas = abiertas.filter(t => t.vencida || t.requiere_escalamiento).length;
+  const masVieja = Math.max.apply(null, abiertas.map(t => Number(t.minutos_abierta || 0)));
+  const titulo = document.getElementById('aviso-internas-titulo');
+  const detalle = document.getElementById('aviso-internas-detalle');
+  if (titulo) {
+    titulo.textContent = abiertas.length === 1
+      ? 'Tienes 1 tarea interna pendiente'
+      : 'Tienes ' + abiertas.length + ' tareas internas pendientes';
+  }
+  if (detalle) {
+    detalle.textContent =
+      (vencidas ? vencidas + ' vencida(s). ' : '') +
+      (urgentes ? urgentes + ' urgente(s). ' : '') +
+      sinAcuse + ' sin recepción confirmada. La más antigua lleva ' + masVieja + ' min.';
+  }
+  caja.classList.toggle('vencida', vencidas > 0);
+}
+
+function abrirTareas() {
+  renderTareasDialog();
+  const dlg = document.getElementById('dlg-tareas');
+  if (dlg && !dlg.open && dlg.showModal) dlg.showModal();
+}
+
+const ETIQUETA_ESTADO_TAREA = {
+  NOTIFICADA: 'Aviso dejado',
+  RESUELTA: 'Trabajo realizado',
+  JUSTIFICADA: 'Cierre con justificación',
+  REGISTRADA: 'Resultado registrado'
+};
+function etiquetaTarea(estado) {
+  return ETIQUETA_ESTADO_TAREA[estado] || estado || '';
+}
+
+function chipInterno(texto, clase) {
+  return '<span class="chip-tarea ' + (clase || '') + '">' + esc(texto) + '</span>';
+}
+
+function plazoCorto(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('es-EC', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return iso; }
+}
+
+function fichaHtml(t) {
+  const f = (t.metadatos && t.metadatos.ficha) || {};
+  const filas = [];
+  if (f.tipo) filas.push(['Tipo', f.tipo]);
+  if (f.accion) filas.push(['Acción solicitada', f.accion]);
+  if (f.cliente) filas.push(['Cliente', f.cliente]);
+  if (f.monto_usd) filas.push(['Importe de referencia', 'USD ' + f.monto_usd]);
+  if (f.volumen_m3) filas.push(['Volumen', f.volumen_m3 + ' m³']);
+  if (f.telefono_referencia) filas.push(['Teléfono de referencia', f.telefono_referencia]);
+  if (f.plazo_dicho) filas.push(['Plazo dicho', f.plazo_dicho]);
+  if (f.resultado_esperado) filas.push(['Resultado esperado', f.resultado_esperado]);
+  const faltan = (f.datos_faltantes || []).map(d => d.dicho).join('; ');
+  if (faltan) filas.push(['Sin confirmar', faltan]);
+  if (!filas.length) return '<div class="ficha-tarea"><em>Sin ficha: la instrucción es informal.</em></div>';
+  return '<div class="ficha-tarea">' + filas.map(([k, v]) =>
+    '<div><span>' + esc(k) + '</span><strong>' + esc(v) + '</strong></div>').join('') + '</div>';
+}
+
+function renderTareasDialog() {
+  const lista = document.getElementById('tareas-lista');
+  if (!lista) return;
+  const piezas = [];
+  (state.tareas || []).forEach(t => {
+    piezas.push(`
+      <div class="notif-item"><span class="ni-ico warn">📲</span>
+        <div><strong>${esc(t.destinatario || t.telefono)}</strong>
+          <span>${esc(t.mensaje || '')}</span>
+          <span>${esc(t.programado_local || '')} · ${esc(t.estado || '')}</span></div></div>`);
+  });
+  (state.tareasInternas || []).forEach(t => {
+    const abierta = t.estado === 'NOTIFICADA';
+    const resuelta = t.estado === 'RESUELTA' || t.estado === 'JUSTIFICADA';
+    const reloj = t.minutos_hasta_resolucion != null
+      ? `Resuelta en ${t.minutos_hasta_resolucion} min`
+      : `Abierta hace ${t.minutos_abierta == null ? '—' : t.minutos_abierta} min`;
+    const chips = [];
+    if (t.prioridad === 'URGENTE') chips.push(chipInterno('URGENTE', 'urgente'));
+    if (t.vencida && !t.resuelta_en) chips.push(chipInterno('VENCIDA', 'vencida'));
+    if (t.escalada_en) chips.push(chipInterno('ESCALADA', 'vencida'));
+    if (t.acusada_en) chips.push(chipInterno('RECEPCIÓN CONFIRMADA', 'ok'));
+    else if (t.vista_en) chips.push(chipInterno('CONSULTADA, SIN CONFIRMAR', 'warn'));
+    else chips.push(chipInterno('SIN CONFIRMAR RECEPCIÓN', 'warn'));
+
+    const botones = [];
+    botones.push(`<button class="btn small ghost" onclick="verTareaInterna('${esc(t.id)}')" title="Abre la ficha de la tarea y registra que la consultaste">Ver la tarea</button>`);
+    if (!t.acusada_en) {
+      botones.push(`<button class="btn small" onclick="acusarTareaInterna('${esc(t.id)}')" title="Confirma que recibiste el encargo; no cambia el estado de la tarea">Confirmar que recibí la tarea</button>`);
+    }
+    if (abierta) {
+      botones.push(`<button class="btn small" onclick="resolverTareaInterna('${esc(t.id)}','RESUELTA')" title="El trabajo se hizo; pide una nota">Trabajo realizado</button>`);
+      botones.push(`<button class="btn small ghost" onclick="resolverTareaInterna('${esc(t.id)}','JUSTIFICADA')" title="No hacía falta o no se pudo; pide el motivo">Cerrar con justificación</button>`);
+    }
+    if (resuelta) {
+      botones.push(`<button class="btn small" onclick="registrarTareaInterna('${esc(t.id)}')" title="Deja constancia con referencia o comprobante">Registrar resultado</button>`);
+    }
+    if (!resuelta && !t.escalada_en && (t.requiere_escalamiento || t.prioridad === 'URGENTE')) {
+      botones.push(`<button class="btn small ghost" onclick="escalarTareaInterna('${esc(t.id)}')" title="Avisa a un supervisor que la tarea sigue sin resolverse">Elevar al supervisor</button>`);
+    }
+
+    piezas.push(`
+      <div class="notif-item tarea-interna${t.prioridad === 'URGENTE' ? ' urgente' : ''}">
+        <span class="ni-ico ${t.requiere_escalamiento ? 'danger' : 'warn'}">📋</span>
+        <div>
+          <strong>Tarea interna · ${esc(t.asignado_a || t.asignado_rol || 'Secretaría')}</strong>
+          <span>${chips.join(' ')}</span>
+          <span>${esc(t.instruccion || '')}</span>
+          <div class="ficha-oculta" id="ficha-${esc(t.id)}" hidden>${fichaHtml(t)}</div>
+          <span>${esc(etiquetaTarea(t.estado))} · ${esc(reloj)} · plazo ${esc(plazoCorto(t.plazo_en))}</span>
+          ${t.resolucion_nota ? `<span>Nota: ${esc(t.resolucion_nota)}</span>` : ''}
+          <div class="acciones-tarea">${botones.join('')}</div>
+        </div>
+      </div>`);
+  });
+  lista.innerHTML = piezas.join('');
+}
+
+function verTareaInterna(id) {
+  const caja = document.getElementById('ficha-' + id);
+  if (caja) caja.hidden = !caja.hidden;
+  try {
+    api(`/api/v1/cerebro/tareas-internas/${id}/vista`, { method: 'POST' }).then(datos => {
+      const t = (state.tareasInternas || []).find(x => x.id === id);
+      if (t && datos && datos.vista_en) t.vista_en = datos.vista_en;
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+async function acusarTareaInterna(id) {
+  try {
+    await api(`/api/v1/cerebro/tareas-internas/${id}/acusar`, { method: 'POST' });
+    await cargarTareas();
+  } catch (e) {
+    window.alert(e.message || 'No se pudo acusar recibo.');
+  }
+}
+
+async function escalarTareaInterna(id) {
+  const motivo = window.prompt('Motivo de la escalada (queda en el historial):', '');
+  if (motivo === null) return;
+  if (motivo.trim().length < 3) {
+    window.alert('Escribe un motivo breve.');
+    return;
+  }
+  try {
+    await api(`/api/v1/cerebro/tareas-internas/${id}/escalar`, {
+      method: 'POST',
+      body: { motivo: motivo.trim() },
+    });
+    await cargarTareas();
+  } catch (e) {
+    window.alert(e.message || 'No se pudo escalar la tarea.');
+  }
+}
+
+function idsTareasVisibles() {
+  return (state.tareas || []).map(t => t.id)
+    .concat((state.tareasInternas || []).map(t => t.id));
+}
+
+function mostrarPopoutTareas() {
+  const ids = idsTareasVisibles();
+  if (!ids.length) return;
+  let vistas = [];
+  try {
+    vistas = JSON.parse(localStorage.getItem('horminor.tareas.vistas') || '[]');
+  } catch (e) { vistas = []; }
+  const nuevas = ids.filter(id => !vistas.includes(id));
+  if (!nuevas.length) return;
+  renderTareasDialog();
+  const dlg = document.getElementById('dlg-tareas');
+  if (dlg && !dlg.open && dlg.showModal) dlg.showModal();
+}
+
+async function resolverTareaInterna(id, resolucion) {
+  const pregunta = resolucion === 'JUSTIFICADA'
+    ? '¿Por qué no hacía falta o no se pudo?'
+    : '¿Qué se hizo?';
+  const nota = window.prompt(pregunta, '');
+  if (nota === null) return;
+  if (nota.trim().length < 3) {
+    window.alert('Escribe una nota breve: queda en el historial y es la evidencia.');
+    return;
+  }
+  try {
+    await api(`/api/v1/cerebro/tareas-internas/${id}/resolver`, {
+      method: 'POST',
+      body: { resolucion: resolucion, nota: nota.trim() },
+    });
+    await cargarTareas();
+  } catch (e) {
+    window.alert(e.message || 'No se pudo resolver la tarea.');
+  }
+}
+
+async function registrarTareaInterna(id) {
+  const nota = window.prompt('Metadatos del registro: referencia, comprobante o comentario.', '');
+  if (nota === null) return;
+  if (nota.trim().length < 3) {
+    window.alert('El registro necesita metadatos: no se cierra sin ellos.');
+    return;
+  }
+  try {
+    await api(`/api/v1/cerebro/tareas-internas/${id}/registrar`, {
+      method: 'POST',
+      body: { nota: nota.trim(), metadatos: { nota: nota.trim() } },
+    });
+    await cargarTareas();
+  } catch (e) {
+    window.alert(e.message || 'No se pudo registrar la tarea.');
+  }
+}
+
+function cerrarTareas() {
+  const ids = idsTareasVisibles();
+  try { localStorage.setItem('horminor.tareas.vistas', JSON.stringify(ids)); } catch (e) {}
+  const dlg = document.getElementById('dlg-tareas');
+  if (dlg && dlg.open) dlg.close();
 }
 
 /* ----------------------------- DASHBOARD ----------------------------- */
@@ -5247,6 +5619,26 @@ function renderCotDetalle(cot) {
   if (estado === 'ENVIADA' || estado === 'ACEPTADA') {
     botones.push(`<button class="btn small bank" onclick="abrirConvertirCotizacion('${esc(cot.id)}')">Convertir a cliente</button>`);
   }
+  if (estado === 'BORRADOR' || estado === 'ENVIADA' || estado === 'ACEPTADA') {
+    botones.push(`<button class="btn small ghost" onclick="pedirUbicacionCotId('${esc(cot.id)}')">Pedir ubicación</button>`);
+  }
+  const tienePin = cot.ubicacion_lat != null && cot.ubicacion_lng != null;
+  const pinTexto = tienePin
+    ? `${Number(cot.ubicacion_lat).toFixed(7)}, ${Number(cot.ubicacion_lng).toFixed(7)}`
+    : null;
+  const origenTexto = COT_ORIGEN_UBICACION[String(cot.ubicacion_origen || '').toUpperCase()] || null;
+  const bloqueUbicacion = `
+    <div style="margin-top:14px;padding:12px;border:var(--border-subtle);border-radius:12px;background:var(--surface-row-pill)">
+      <div class="spread">
+        <strong style="font-size:12px">Ubicación de la obra</strong>
+        <span class="badge ${tienePin ? 'ok' : 'warn'}">${tienePin ? esc(origenTexto || 'CON PIN') : 'PENDIENTE'}</span>
+      </div>
+      <p class="small muted" style="margin:6px 0 0">${esc(cot.ubicacion_texto || 'Sin referencia escrita.')}</p>
+      <p class="small" style="margin:4px 0 0">${tienePin ? '📍 ' + esc(pinTexto) : 'El cliente aún no comparte el pin de la obra.'}</p>
+      ${cot.ubicacion_maps_url ? `<a class="small" href="${esc(cot.ubicacion_maps_url)}" target="_blank" rel="noopener">Abrir en Google Maps</a>` : ''}
+      ${cot.ubicacion_solicitada_at ? `<p class="small muted" style="margin:6px 0 0">Pin pedido: ${esc(String(cot.ubicacion_solicitada_at).slice(0, 16).replace('T', ' '))}</p>` : ''}
+      ${cot.ubicacion_recibida_at ? `<p class="small muted" style="margin:2px 0 0">Pin recibido: ${esc(String(cot.ubicacion_recibida_at).slice(0, 16).replace('T', ' '))}</p>` : ''}
+    </div>`;
   host.innerHTML = `
     <div class="spread">
       <div>
@@ -5268,6 +5660,7 @@ function renderCotDetalle(cot) {
       <div><span class="small muted">Total</span><strong style="font-size:1.2rem">${money(Number(cot.total || 0))}</strong></div>
       <div><span class="small muted">Incluye</span><strong>${cot.incluye_equipo ? 'Equipo' : '—'} · ${cot.incluye_bombeo ? 'Bombeo' : '—'}</strong></div>
     </div>
+    ${bloqueUbicacion}
     <div class="table-wrap" style="margin-top:14px">
       ${extras.length ? `<table class="tabla-editor"><thead><tr><th>Extra</th><th>Monto</th><th>¿Cobrable?</th></tr></thead><tbody>${extras.map(e => `<tr>
         <td>${esc(e.descripcion)}</td><td>${e.monto == null ? 'SIN MONTO' : money(Number(e.monto))}</td><td>${e.cobrable ? 'Sí' : 'No (interno)'}</td>
@@ -5400,6 +5793,149 @@ function leerExtrasCot() {
   }).filter(e => e.descripcion);
 }
 
+/* ----------------------------- UBICACION DE LA OBRA (v8.2) ----------------------------- */
+const COT_ORIGEN_UBICACION = { MANUAL: 'Manual', GPS: 'GPS', WHATSAPP: 'WhatsApp', MAPA: 'Mapa' };
+
+function _parsearPinTexto(texto) {
+  const t = String(texto || '');
+  const patrones = [
+    /!3d(-?\d{1,3}(?:\.\d+)?)!4d(-?\d{1,3}(?:\.\d+)?)/,
+    /@(-?\d{1,3}(?:\.\d+)?),\s*(-?\d{1,3}(?:\.\d+)?)/,
+    /[?&](?:q|query|ll|center|destination)=(-?\d{1,3}(?:\.\d+)?),\s*(-?\d{1,3}(?:\.\d+)?)/,
+    /(?:^|[\s(])(-?\d{1,3}\.\d{4,})\s*,\s*(-?\d{1,3}\.\d{4,})(?=$|[\s)])/,
+  ];
+  for (const patron of patrones) {
+    const m = t.match(patron);
+    if (!m) continue;
+    const lat = Number(m[1]), lng = Number(m[2]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)
+        && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat, lng };
+    }
+  }
+  return null;
+}
+
+function _ubicacionCotActual() {
+  const val = sel => (($(sel) || {}).value || '').trim();
+  const latCruda = val('#cot-ubicacion-lat');
+  const lngCruda = val('#cot-ubicacion-lng');
+  const lat = latCruda === '' ? null : Number(latCruda);
+  const lng = lngCruda === '' ? null : Number(lngCruda);
+  const pinValido = lat !== null && lng !== null && Number.isFinite(lat) && Number.isFinite(lng);
+  return {
+    texto: val('#cot-ubicacion'),
+    lat: pinValido ? lat : null,
+    lng: pinValido ? lng : null,
+    origen: val('#cot-ubicacion-origen').toUpperCase() || null,
+  };
+}
+
+function pintarUbicacionCot() {
+  const u = _ubicacionCotActual();
+  const estado = $('#cot-ubicacion-estado');
+  const pin = $('#cot-ubicacion-pin');
+  const mapa = $('#cot-ubicacion-mapa');
+  const tienePin = u.lat !== null;
+  if (estado) {
+    estado.textContent = tienePin
+      ? (COT_ORIGEN_UBICACION[u.origen] || 'Con pin')
+      : (u.texto ? 'Solo referencia' : 'Sin pin');
+    estado.className = 'badge ' + (tienePin ? 'ok' : (u.texto ? 'neutral' : 'warn'));
+  }
+  if (pin) pin.textContent = tienePin ? `Pin: ${u.lat.toFixed(7)}, ${u.lng.toFixed(7)}` : 'Pin: pendiente';
+  if (mapa) {
+    if (tienePin) {
+      mapa.href = `https://www.google.com/maps?q=${u.lat},${u.lng}`;
+      mapa.hidden = false;
+    } else {
+      mapa.href = '#';
+      mapa.hidden = true;
+    }
+  }
+}
+
+function onUbicacionTextoCot(valor) {
+  const pin = _parsearPinTexto(valor);
+  if (pin) {
+    const lat = $('#cot-ubicacion-lat'); if (lat) lat.value = pin.lat.toFixed(7);
+    const lng = $('#cot-ubicacion-lng'); if (lng) lng.value = pin.lng.toFixed(7);
+    const origen = $('#cot-ubicacion-origen'); if (origen) origen.value = 'MAPA';
+  }
+  pintarUbicacionCot();
+}
+
+function limpiarUbicacionCot() {
+  ['#cot-ubicacion-lat', '#cot-ubicacion-lng', '#cot-ubicacion-origen'].forEach(sel => {
+    const el = $(sel); if (el) el.value = '';
+  });
+  pintarUbicacionCot();
+}
+
+function usarMiUbicacionCot() {
+  if (!navigator.geolocation) {
+    toast('Este navegador no permite tomar la ubicación', 'bad');
+    return;
+  }
+  const estado = $('#cot-ubicacion-estado');
+  if (estado) estado.textContent = 'Pidiendo permiso…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = $('#cot-ubicacion-lat'); if (lat) lat.value = Number(pos.coords.latitude).toFixed(7);
+    const lng = $('#cot-ubicacion-lng'); if (lng) lng.value = Number(pos.coords.longitude).toFixed(7);
+    const origen = $('#cot-ubicacion-origen'); if (origen) origen.value = 'GPS';
+    pintarUbicacionCot();
+    const precision = pos.coords.accuracy ? ` · precisión ±${Math.round(pos.coords.accuracy)} m` : '';
+    toast('Ubicación GPS registrada' + precision, 'ok');
+  }, err => {
+    pintarUbicacionCot();
+    const motivos = {
+      1: 'El navegador no tiene permiso de ubicación para este sitio',
+      2: 'El equipo no pudo obtener la señal GPS',
+      3: 'La señal GPS tardó demasiado; intenta otra vez',
+    };
+    toast((err && motivos[err.code]) || 'No se pudo obtener la ubicación', 'bad');
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
+
+async function pedirUbicacionCot() {
+  const id = (($('#cot-id') || {}).value || '').trim();
+  if (!id) {
+    toast('Guarda el borrador y vuelve a abrirlo para pedir el pin por WhatsApp', 'bad');
+    return;
+  }
+  await pedirUbicacionCotId(id);
+}
+
+async function pedirUbicacionCotId(id) {
+  try {
+    const r = await api('/api/v1/cotizaciones/' + encodeURIComponent(id) + '/pedir-ubicacion', { method: 'POST', body: {} });
+    state.cotizacion = r.cotizacion;
+    renderCotDetalle(r.cotizacion);
+    if (r.enviado) toast('Pedido de ubicación enviado por WhatsApp', 'ok');
+    else if (r.modo === 'SANDBOX') toast('Pedido encolado en SANDBOX (no sale WhatsApp real)', 'ok');
+    else toast('No se pudo enviar el WhatsApp; el pedido quedó registrado', 'bad');
+  } catch (e) {
+    if (String(e.message).includes('TELEFONO_REQUERIDO')) {
+      const tel = prompt('El cliente no tiene teléfono. Escribe el número para pedir el pin:');
+      if (!tel || !tel.trim()) return;
+      try {
+        const cot = state.cotizacion && String(state.cotizacion.id) === String(id)
+          ? state.cotizacion
+          : await api('/api/v1/cotizaciones/' + encodeURIComponent(id));
+        await api('/api/v1/clients/' + encodeURIComponent(cot.cliente_id), {
+          method: 'PUT',
+          body: { telefono_whatsapp: tel.trim() }
+        });
+        await pedirUbicacionCotId(id);
+      } catch (err) {
+        toast('No se pudo guardar el teléfono: ' + err.message, 'bad');
+      }
+      return;
+    }
+    toast('No se pudo pedir la ubicación: ' + e.message, 'bad');
+  }
+}
+
 function abrirCotizacion(id) {
   llenarSelectsCot();
   state.cotExtras = [];
@@ -5413,6 +5949,11 @@ function abrirCotizacion(id) {
   set('#cot-notas', '');
   set('#cot-validez', 15);
   set('#cot-telefono', '');
+  set('#cot-ubicacion', '');
+  set('#cot-ubicacion-lat', '');
+  set('#cot-ubicacion-lng', '');
+  set('#cot-ubicacion-origen', '');
+  pintarUbicacionCot();
   const nuevoCliente = $('#cot-nuevo-cliente'); if (nuevoCliente) nuevoCliente.hidden = true;
   const equipo = $('#cot-equipo'); if (equipo) equipo.checked = true;
   const bombeo = $('#cot-bombeo'); if (bombeo) bombeo.checked = true;
@@ -5428,6 +5969,11 @@ function abrirCotizacion(id) {
       set('#cot-volumen', cot.volumen_m3);
       set('#cot-precio', cot.precio_m3);
       set('#cot-acceso', cot.acceso_notas || '');
+      set('#cot-ubicacion', cot.ubicacion_texto || '');
+      set('#cot-ubicacion-lat', cot.ubicacion_lat ?? '');
+      set('#cot-ubicacion-lng', cot.ubicacion_lng ?? '');
+      set('#cot-ubicacion-origen', cot.ubicacion_origen || '');
+      pintarUbicacionCot();
       set('#cot-notas', cot.notas || '');
       set('#cot-validez', cot.validez_dias || 15);
       const res = $('#cot-resistencia'); if (res) res.value = cot.resistencia || '';
@@ -5452,6 +5998,7 @@ async function guardarCotizacion() {
     return v === '' || v === undefined || v === null ? null : Number(v);
   };
   let telefono = (($('#cot-telefono') || {}).value || '').trim();
+  const ubicacion = _ubicacionCotActual();
   const body = {
     cliente_id: ($('#cot-cliente') || {}).value || '',
     obra_direccion: (($('#cot-obra') || {}).value || '').trim(),
@@ -5463,7 +6010,13 @@ async function guardarCotizacion() {
     acceso_notas: (($('#cot-acceso') || {}).value || '').trim() || null,
     validez_dias: num('cot-validez'),
     extras: leerExtrasCot(),
-    notas: (($('#cot-notas') || {}).value || '').trim() || null
+    notas: (($('#cot-notas') || {}).value || '').trim() || null,
+    ubicacion_texto: ubicacion.texto || null,
+    ubicacion_lat: ubicacion.lat,
+    ubicacion_lng: ubicacion.lng,
+    ubicacion_origen: ubicacion.lat !== null
+      ? (ubicacion.origen || 'MAPA')
+      : (ubicacion.texto ? 'MANUAL' : null)
   };
   if (!body.obra_direccion || !body.volumen_m3) {
     $('#cot-resultado').innerHTML = '<div class="notice bad">Obra y volumen son obligatorios.</div>';
@@ -5864,20 +6417,79 @@ function renderSugerenciasClientes() {
   const host = $('#sabueso-sugerencias');
   if (!host) return;
   const q = _valorFiltro('#buscar-cliente');
-  if (q.length < 2) { host.hidden = true; host.innerHTML = ''; return; }
+  const buscador = $('#buscar-cliente');
+  if (q.length < 2) { host.hidden = true; host.innerHTML = ''; if (buscador) buscador.setAttribute('aria-expanded', 'false'); return; }
   const lista = (state.clientesBusqueda || []).slice(0, 6);
-  if (!lista.length) { host.hidden = true; host.innerHTML = ''; return; }
-  host.innerHTML = lista.map(c => `<button type="button" class="sabueso-item" onclick="elegirSugerenciaCliente('${esc(c.cliente_id)}')">
-    <strong>${esc(c.nombre)}</strong>
-    <span>${esc(c.constructora || 'Sin constructora')} · ${esc(c.ciudad || c.provincia || 'sin ciudad')} · ${money(c.saldo_pendiente)}</span>
-    ${c.match_hint ? `<em>${esc(c.match_hint)}</em>` : ''}
-  </button>`).join('');
+  if (!lista.length) { host.hidden = true; host.innerHTML = ''; if (buscador) buscador.setAttribute('aria-expanded', 'false'); return; }
+  host.innerHTML = lista.map(c => {
+    const saldo = Number(c.saldo_pendiente || 0);
+    const ciudad = c.ciudad || c.provincia || 'sin ciudad';
+    const ficha = [
+      c.constructora || 'Sin constructora',
+      '📍 ' + ciudad,
+      c.telefono ? '☎ ' + c.telefono : null,
+      c.ruc ? 'RUC ' + c.ruc : null,
+    ].filter(Boolean).map(esc).join(' · ');
+    const actividad = [
+      c.total_ordenes ? `${c.total_ordenes} orden${Number(c.total_ordenes) === 1 ? '' : 'es'}` : null,
+      c.total_m3 ? `${num(c.total_m3)} m³` : null,
+      c.es_prospecto ? 'prospecto' : null,
+    ].filter(Boolean).map(esc).join(' · ');
+    return `<button type="button" class="sabueso-item" role="option" aria-selected="false"
+      onclick="elegirSugerenciaCliente('${esc(c.cliente_id)}')">
+      <span class="sabueso-fila"><strong>${esc(c.nombre)}</strong>
+        <span class="sabueso-saldo ${saldo > 0 ? 'debe' : ''}">${money(saldo)}</span></span>
+      <span>${ficha}</span>
+      ${actividad ? `<span>${actividad}</span>` : ''}
+      ${c.match_hint ? `<em>${esc(c.match_hint)}</em>` : ''}
+    </button>`;
+  }).join('');
   host.hidden = false;
+  if (buscador) buscador.setAttribute('aria-expanded', 'true');
 }
 
 function ocultarSugerenciasClientes() {
   const host = $('#sabueso-sugerencias');
   if (host) { host.hidden = true; host.innerHTML = ''; }
+  const buscador = $('#buscar-cliente');
+  if (buscador) buscador.setAttribute('aria-expanded', 'false');
+}
+
+// Enter abre la ficha del primer resultado: el Sabueso deja de exigir ratón.
+function onBuscarClientesTecla(e) {
+  const host = $('#sabueso-sugerencias');
+  const items = host && !host.hidden ? host.querySelectorAll('.sabueso-item') : [];
+  if (e.key === 'Enter' && items.length) {
+    e.preventDefault();
+    items[0].click();
+  } else if (e.key === 'ArrowDown' && items.length) {
+    e.preventDefault();
+    items[0].focus();
+  } else if (e.key === 'Escape' && items.length) {
+    e.preventDefault();
+    ocultarSugerenciasClientes();
+  }
+}
+
+function navSugerenciasClientes(e) {
+  const host = $('#sabueso-sugerencias');
+  const items = host ? Array.from(host.querySelectorAll('.sabueso-item')) : [];
+  const indice = items.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    (items[indice + 1] || items[0]).focus();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (indice <= 0) $('#buscar-cliente').focus();
+    else items[indice - 1].focus();
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    ocultarSugerenciasClientes();
+    const buscador = $('#buscar-cliente');
+    if (buscador) buscador.focus();
+  } else if (e.key === 'Tab') {
+    ocultarSugerenciasClientes();
+  }
 }
 
 function elegirSugerenciaCliente(id) {
@@ -8560,6 +9172,8 @@ cargarPerfilesUI().finally(() => {
   if (!state.view || !puedeVista(state.view)) setView(_primerVistaPermitida());
   else setView(state.view);
 });
+cargarTareas();
+setInterval(cargarTareas, 60000);
 cargarSalud();
 setInterval(cargarSalud, 60000);
 </script>

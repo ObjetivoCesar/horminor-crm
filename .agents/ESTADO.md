@@ -1,14 +1,22 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-13**.
+> Última actualización: **2026-11-16** (verificación de prioridad 1; sin cambios
+> de código).
 > Base v6.17: Custodio v4.4.0 + HTTP, agenda única `HorminorAgenda`,
 > compras/caja chica, perfiles ACL, Superadmin por Action Cards, Carpetas de
 > Clientes con buscador Sabueso, bancos con color de marca, **facturas
-> internas adjuntas al cliente** (PDF o foto) consultables por Gato y
-> **recordatorios por WhatsApp con ratificación, adjuntos y redacción propia**.
-> 24 migraciones, 37 tablas, 7 vistas, 30 cuentas; **376 tests** y los 2
-> candados en verde. Siguiente foco: UI de recordatorios y login pre-VPS.
+> internas adjuntas al cliente** (PDF o foto) consultables por Gato,
+> **recordatorios por WhatsApp con ratificación, adjuntos y redacción propia**
+> y **ubicación de la obra en la cotización** (texto, GPS y pin de WhatsApp).
+> 37 migraciones, 57 tablas, 11 vistas, 30 cuentas; **586 tests** y los 2
+> candados en verde. Siguiente foco: conservar y verificar lo construido; el
+> Cerebro sigue como inteligencia interna (sin conectar a Gato).
+>
+> **Continuidad y arquitectura:** `docs/CONTINUIDAD_CEREBRO.md` — el Cerebro no
+> será un módulo visible; Gato será la interfaz; flujo interno y flujo comercial
+> externo separados por permisos, herramientas y fuentes. **Manual Vivo:**
+> `docs/HORMINOR_MANUAL_FUNCIONAL.md`.
 
 ## Hitos
 
@@ -24,6 +32,8 @@
 | 5b | VPS + GitHub + Evolution API | OK **Primera subida** (2026-11-12) | Repo `ObjetivoCesar/horminor-crm` (commit `a94a618`), deploy key read-only, VPS `/opt/horminor`, `core-api` en `127.0.0.1:8012`, Caddy `horminor.178.238.238.158.sslip.io` (solo `/health` y webhook), 21 migraciones, instancia Evolution `horminor` creada y webhook configurado; `docs/DESPLIEGUE_VPS_HORMINOR.md` | Escanear QR, probar texto con teléfono real, rotar API key y cargar backups |
 | 4n | v6.13.1 - Memoria de Gato + descarga de factura | OK **Cerrado** (2026-11-12) | Migración 074 (`gato_turnos`); `conversacion_id` en el endpoint y en el widget; historial de 8 turnos al LLM; búsqueda de clientes sin puntuación ("ing reyes" → "Ing. Reyes"); enlace `?download=1` en la factura; pytest (**342 tests**) | Validar el hilo con el uso real de Julio/Secretaría |
 | 4o | v6.17 - Gato secretaria: ratificación, adjuntos y redacción | 🟢 **Desplegado y probado en VPS** (2026-11-13) | Migraciones 075–078; envío real de `PRUEBA-0002.pdf` y de un mensaje redactado al 0967491847; candado de cifras (`cifras_de`/`_cifras_permitidas`); 4 clientes ficticios con factura en el VPS; `pytest` **376**. Doc `docs/GATO_SECRETARIA.md` v1.3 | C8 número vivo, C9 UI en el panel, C11 acuse de entrega, C12 test de integración |
+| 4p | v8.2 - Ubicación de la obra en la cotización + Sabueso | 🟢 **Cerrado** (2026-11-14) | Migración 084 (`ubicacion_*`, CHECKs, `UBICACION_SOLICITADA/RECIBIDA`); `/pedir-ubicacion`, pin por WhatsApp end-to-end, GPS del navegador, bloque en el PDF; `.card-buscar-clientes` desatasca el Sabueso; `pytest` **423** y Hito 3 en verde. Evidencia `.agents/evidencias/ubicacion_v82_2026-11-14.txt` | Probar en un teléfono real; el residuo de prueba ya se limpió |
+| 4q | v8.3 - Cerebro y Voz: de audio a borrador | 🟡 **En curso** (2026-11-15) | Fases 0–2: servicios extraídos, migraciones **085/086**, ingesta, **Groq/Whisper** con palabras y tiempos, mapa de alineación, hechos citados, compilador con invariantes, sobre, extractor y endpoints `/voz` y `/cerebro`; laboratorio en **`/panel/cerebro`** con pestañas texto/audio; caso Joaquín (teléfono en grupos, hora ≠ fecha, identidad preguntada); caso Juan Carlos (tarea de WhatsApp en `gato_recordatorios`, abono suprimido sin comprobante); caso Díaz Sur (dos contactos `contacto.2.*`, resistencia ≠ precio, plazo/descuento/planta móvil, 16 hechos, pregunta a cuál ingeniero); normalizador une guiones y «27 mil»; **popout de tareas + campanita** en `/panel` con `GET /cerebro/tareas/pendientes`; `pytest` **534** y Hito 3 en verde; **correcciones humanas con bóveda** (migración **087**, `cerebro_correcciones` append-only y `v_cerebro_vocabulario`), lectura en voz alta («Lo que entendí») con botón **Corregir** que rehace el borrador como versión nueva (sin borrar la anterior), pista de vocabulario en el prompt, **guarda de dinero** (sin frase en pasado no se registra abono: se pregunta) e **informe semanal de errores** (`scripts/informe_cerebro_errores.py`). **Tareas internas con reloj** (migraciones **088/089**, `cerebro_tareas_internas` + eventos append-only, `v_cerebro_tareas_internas`): una instrucción sin teléfono («que revisen en secretaría…») nace **NOTIFICADA**, se **resuelve o justifica** con nota y se **registra con metadatos**; el panel la muestra con **aviso fijo arriba** (no depende de un popout que se pueda cerrar o minimizar, ni de `localStorage`), campanita y botones; **aviso, vista y acuse** separados, **prioridad y plazo**, **escalada** y **ficha determinística** de la tarea; `TENTATIVO` para dudas («300 y pico») que no se vuelven datos definitivos; **intención antes que teléfono** (delegar ≠ enviar); **retiro** de vocabulario aprendido equivocado; **revocación completa** del dictado y **negación de instrucción citada** (F y L: ni se ejecuta ni se delega); y mide minutos entre eventos. **Manual Vivo** (`docs/HORMINOR_MANUAL_FUNCIONAL.md`) con mapa funcional, índice por término técnico/visible/sinónimo, nombres visibles y skill `orminorth-manual-funcional`; los nombres técnicos no cambian, cambian las etiquetas. Evidencias `cerebro_joaquin_2026-11-15.txt`, `cerebro_juan_carlos_2026-11-15.txt`, `cerebro_diaz_sur_2026-11-15.txt`, `panel_cola_tareas_2026-11-15.jpeg`, `cerebro_guarda_dinero_2026-11-15.txt`, `cerebro_tareas_internas_2026-11-15.txt`, `cerebro_informe_errores_2026-11-15.md` y `cerebro_lab_correccion_2026-11-15.jpeg` | Ejecutar `crear_cliente`/`crear_cotizacion_borrador` al confirmar, persistir `contacto.*` en `client_facts`, fase WhatsApp conversacional (contrato en `docs/CONTRATO_WHATSAPP_CEREBRO.md`), bóveda de audios con consentimiento LOPDP y audio humano real |
 | 4m | v6.13 - Facturas internas adjuntas al cliente | OK **Cerrado** (2026-11-12) | Migración 073 (`client_invoices`); factura ficticia `PRUEBA-0001` (orden #55, **$43.424,00**) con PDF; pestaña **Facturas** en el expediente; `GET/POST /api/v1/clients/{id}/facturas`; Gato `cliente_facturas` con marca **FICTICIA** y SRI fuera de alcance; `evidencias/facturas_v613_2026-11-12.txt` y `panel_v613_facturas_2026-11-12.jpeg`; pytest (**338 tests**) | Validar formato con Julio; definir numeración y datos fiscales reales |
 | 4l | v6.12 - Logos de bancos con color de marca | OK **Cerrado** (2026-11-12) | Tres placas SVG 96x96: Pichincha amarillo `#FFD100`, Guayaquil rosado `#C7007E`, Internacional naranja `#F39200`; isotipos oficiales, símbolo Pichincha a 56/96; `.banco-logo` de 46 px sin caja blanca; evidencias/panel_v612_bancos_dark_2026-11-12.png, _light_ y logos_zoom; pytest (**296 tests**) | Nada bloqueante. Aceptado por Dirección; si pide el lockup completo, placas 92x40 |
 | 4k | v6.11 - Banco activo + detalle de cuenta | OK **Cerrado** (2026-11-12) | Migracion 072 (`bank_accounts`, hijas `1102.01-03`, `saldo_informado`); tarjetas seleccionables en amarillo; detalle con saldo contable/informado, prestamos y movimientos; `PUT /api/v1/dashboard/bancos/{slug}`; evidencias/panel_v611_banca_2026-11-12.jpeg; pytest_v611_2026-11-12.txt (**296 tests**) | Cargar cuentas y saldos reales; asignar pagos a la cuenta hija del banco |
@@ -54,7 +64,172 @@ orden del candado del Hito 3 (16 mÂ³) y clientes de fixture con provincia
 Orellana/SucumbÃ­os para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
 
-## Evidencia de la Ãºltima sesiÃ³n
+## Evidencia de la última sesión
+
+### 2026-11-16 - Verificación de prioridad 1 (sin tocar código)
+
+- **Contenedores:** `core-api` healthy, `core-api-clone`, `postgres` y `redis`
+  arriba. `/health` → `ok`, base en 1,38 ms.
+- **Migraciones:** «Sin migraciones pendientes»; **085–090** aplicadas (090 el
+  15/11 a las 23:00). La base tiene **37 migraciones, 57 tablas y 11 vistas**,
+  igual que esta ficha.
+- **Suite:** **586 passed**, 1 warning, **exit 0**.
+- **Candados:** Hito 3 → `[CANDADO CERRADO EN SANDBOX]`; Hito 1 →
+  `[CANDADO CERRADO]`.
+- **Código corriendo = código en disco:** SHA-256 idéntico en `main.py`,
+  `compilador.py`, `revision.py`, `panel.html` y `pipeline.py`. `app/` no está
+  montado: se copia en el build, así que la imagen vigente salió de este árbol.
+- **Panel:** `/panel` 200 y `/panel/cerebro` 200.
+- **Centinela:** `WARN`, `SANDBOX`, `DETERMINISTIC_FALLBACK`; 12 chequeos
+  (**9 OK / 2 WARN / 1 NO_CONFIGURADO**). WARN: caja del 15/11 sin cierre y un
+  `ERROR` en 24 h; NO_CONFIGURADO: umbral de merma de cemento.
+- **Hallazgo:** `scripts/hito3_lock_test.py` limpia **al inicio**, no al final:
+  deja órdenes demo y un `ERROR` (`M1_WHATSAPP`, reclamo del «Cliente Prueba
+  Hito 3») que hace que el Centinela reporte WARN hasta la corrida siguiente. No
+  se corrigió: cambiar un candado cerrado exige aprobación y volver a correr la
+  suite.
+- **Punto de restauración:** se versionó el trabajo acumulado desde el commit
+  `7fade4a` (2026-11-13), que no incluía v8.2 ni el Cerebro (084–090).
+- Evidencia: `.agents/evidencias/verificacion_prioridad1_2026-11-16.txt`.
+
+### 2026-11-15 - Caso Joaquín: teléfono, hora y conflicto de identidad
+
+- El tip de Julio quedó implementado: un `09…` de 10 dígitos dictado en grupos
+  (`0965 555 555`) se une a `0965555555`. Si el LLM no lo captura, el backend
+  lo propone como `INFERIDO` y el compilador pregunta «¿El teléfono del cliente
+  es…?». Un hecho inferido nunca resuelve identidad por sí solo.
+- «A las 6 de la mañana» ya no produce `fecha_entrega = hoy`: se guarda
+  `cotizacion.hora_entrega = 06:00` y la fecha tentativa queda nula. El
+  compilador revisa otra vez que la cita sostenga una fecha.
+- El caso real reveló que el teléfono ya estaba registrado a nombre de otro
+  cliente de prueba (`Palo Velez`): ahora se pregunta «¿Es el mismo cliente?»
+  en vez de registrar el abono en la ficha equivocada.
+- `pytest` → **497 passed**; Hito 3 → `[CANDADO CERRADO EN SANDBOX]`.
+- Evidencia: `.agents/evidencias/cerebro_joaquin_2026-11-15.txt`.
+
+### 2026-11-14 - Laboratorio del Cerebro en el panel (prueba manual)
+
+- `GET /panel/cerebro` sirve una página de pruebas (texto o audio) y el sidebar
+  gana **«Cerebro · voz BETA»**, visible solo con el módulo `cerebro`.
+- Prueba desde la UI: 12 hechos con cita, 4 acciones, 1 con doble confirmación,
+  3.2 s, cero errores de consola; `pytest` **482 passed**.
+- Se dejaron `voz.enabled` y `cerebro.enabled` en `true` para la prueba local.
+- Evidencia: `.agents/evidencias/lab_cerebro_2026-11-14.txt`.
+
+### 2026-11-14 - Cerebro y Voz: de audio a borrador (Groq + DeepSeek)
+
+- `app/voz/proveedores/groq.py`: Whisper con `verbose_json`, palabras y tiempos;
+  confianza por segmento (`exp(avg_logprob)`) como proxy, no calibrada.
+- `app/cerebro/sobre.py`, `extractor.py`, `router.py`: texto o transcripción →
+  sobre validado → borrador persistido. Migración **086** agrega
+  `texto_directo` para el texto pegado.
+- Prueba en vivo: audio sintético de 11,8 s → transcripción (el STT confundió la
+  cédula) → el LLM intentó completarla → el verificador **la descartó** con nota
+  «el numero 1710034065 no coincide con el audio»; el borrador siguió sin
+  cédula y con 3 acciones.
+- Bug corregido en `httpx` 0.28: `data` como lista de tuplas producía un stream
+  síncrono; se usa diccionario con lista en `timestamp_granularities[]`.
+- `pytest` → **482 passed** (7 de Groq y 5 del extractor). Evidencia:
+  `.agents/evidencias/fase2_audio_groq_2026-11-14.txt` y
+  `caso_voz_draft_2026-11-14.json`.
+
+### 2026-11-14 — Cerebro y Voz, Fase 2: hechos citados y compilador
+
+- `app/cerebro/hechos.py`: `HechoCitado` con cita, texto que sostiene, span,
+  ventana, hablante, confianza y `checksum_valido`; `validar_hecho` rechaza
+  valores que no están en la cita.
+- `app/cerebro/compilador.py`: hechos → borrador con invariantes. Caso A:
+  4 acciones ordenadas (cliente → cotización → abono → envío); Caso B: abono +
+  traslado con dependencia y doble confirmación; Caso C: `SIN_ACCIONES`.
+- Reglas probadas: cédula inválida pregunta; precio `PROVISIONAL` bloquea envío
+  fuera de SANDBOX; precio de otro rol se ignora; faltantes → máximo 3
+  preguntas; saldo de caja insuficiente bloquea el traslado; rol sin caja no
+  puede registrar dinero.
+- `pytest` → **469 passed** (14 nuevos). Evidencia:
+  `.agents/evidencias/fase2_hechos_compilador_2026-11-14.txt`.
+
+### 2026-11-14 — Cerebro y Voz, Fase 2: mapa de alineación
+
+- `normalizar_con_mapa` devuelve cada token con su span en el texto crudo y su
+  tipo (`NUMERO`, `UNIDAD`, `MONEDA`, `ALIAS`…).
+- `localizar_palabras`, `alinear_con_palabras` y `alinear_secuencias` atan los
+  datos a las palabras del STT, su ventana de milisegundos y su confianza.
+- Una cédula dictada en dos tramos queda como un solo dato; los conectores
+  («que más») no bajan la confianza. Sin palabras del STT, el dato queda sin
+  ventana y no se puede confirmar con un clic.
+- `normalizar_texto` mantiene su contrato y ahora une los tramos en el texto.
+- `pytest` → **455 passed** (10 nuevos); `/health` → 200.
+- Evidencia: `.agents/evidencias/fase2_alineacion_2026-11-14.txt`.
+
+### 2026-11-14 — Cerebro y Voz, Fase 1: migración 085 e ingesta de audio
+
+- Migración **085** aplicada: `voz_ingestas`, `voz_ingesta_media_links`,
+  `voz_trabajos_stt`, `voz_transcripciones`, `cerebro_extracciones`,
+  `cerebro_borradores`, `cerebro_ejecuciones`, `client_facts`,
+  `client_fact_supersedes` y `whatsapp_mineria_cursores`; settings
+  (`voz.enabled=false`, topes en `null`), módulos ACL `voz`/`cerebro` y
+  `fecha/hora_entrega_tentativa` en cotizaciones.
+- `app/voz/ingesta.py`: valida MIME/tamaño, hashea, guarda en
+  `inbox_voz/<fecha>/`, crea ingesta y trabajo, y **reutiliza** la ingesta si
+  el mismo audio se reenvía (nuevo intento, sin duplicar el binario).
+- `app/voz/stt.py`: protocolo `ProveedorSTT` con degradación
+  `DEGRADADO_SIN_CREDENCIAL`; nunca inventa texto.
+- `POST /api/v1/voz/transcribir` y `GET /api/v1/voz/ingestas/{id}` con ACL
+  `voz` y feature flag apagado por defecto; `voz`/`cerebro` aparecen en el
+  checklist de Superadmin.
+- Verificado en vivo: 201 con `DEGRADADO_SIN_CREDENCIAL`, un solo archivo,
+  tres intentos auditados; el trigger append-only rechaza el `UPDATE`.
+- `pytest` → **445 passed**; Hito 3 → `[CANDADO CERRADO EN SANDBOX]`.
+- Evidencia: `.agents/evidencias/fase1_voz_2026-11-14.txt`.
+
+### 2026-11-14 — Cerebro y Voz: diseño canónico, Fase 0 y normalizador es-EC
+
+- `docs/CEREBRO_VOZ_DISENO.md` v1.0: separa `app/voz/` de `app/cerebro/`,
+  define 9 tablas, 9 acciones y 4 fases; corrige 16 puntos del diseño externo
+  (tipos UUID, inmutabilidad, reintentos, roles reales, `obra_direccion`,
+  `resistencia` como código, cuotas no inventadas).
+- Decisiones resueltas: fecha tentativa en `cotizaciones` (`date` + `time`),
+  precio desde la receta sin autoenvío, minería bloqueada hasta persistir
+  entrantes de WhatsApp.
+- **Fase 0 cerrada:** `services/cotizaciones.py` y `services/clients.py`
+  concentran el alta; el panel y el Cerebro usan el mismo camino. Verificado en
+  vivo: alta de cliente con cédula, cotización 6 m³ ($814,20) y PUT a 7 m³
+  ($949,90); datos de prueba borrados.
+- `app/voz/normalizador_ec.py`: números hablados, cédulas en tramos con
+  conector, teléfonos, `m3`, moneda y ciudades. **No corrige dígitos**: marca
+  `checksum_valido=false` y el borrador pide corroboración.
+- `pytest` → **439 passed** (16 nuevos). Evidencia:
+  `.agents/evidencias/voz_normalizador_2026-11-14.txt` y
+  `fase0_servicios_2026-11-14.txt`.
+- Plan de ejecución: `.agents/tareas/2026-11-14_CEREBRO_VOZ.md`.
+
+### 2026-11-14 — Cotizaciones v8.2: ubicación de la obra y Sabueso sobre las tarjetas
+
+- **Migración 084** aplicada: `ubicacion_texto`, `ubicacion_lat/lng`,
+  `ubicacion_origen`, `ubicacion_solicitada_at`, `ubicacion_recibida_at`;
+  CHECKs de origen y rango; `cotizacion_eventos` acepta
+  `UBICACION_SOLICITADA` y `UBICACION_RECIBIDA`; plantilla
+  `cotizaciones.pedir_ubicacion` en `system_settings`.
+- **Tres vías**: texto libre (`MANUAL`), **Usar mi ubicación** (`GPS`) y pin del
+  cliente por WhatsApp (`WHATSAPP`); enlace de mapa pegado (`MAPA`). Sin dato
+  queda `NULL` y el PDF imprime `Pin: PENDIENTE`.
+- `POST /api/v1/cotizaciones/{id}/pedir-ubicacion` envía la plantilla al
+  teléfono del cliente, sella el pedido y deja `UBICACION_SOLICITADA`; la
+  compuerta `_gate_ubicacion` de M1 adjunta el pin a la cotización abierta más
+  reciente sin pin, sella `ubicacion_recibida_at` y responde al cliente.
+- Un `PUT` parcial no borra el pin (`model_fields_set` + `CASE WHEN`); la
+  referencia escrita por el asesor **no** se pisa con el nombre del pin.
+- **PDF** con bloque **UBICACION DE LA OBRA** (Dirección, Referencia, Pin con
+  origen, Mapa) y recorte a 92 caracteres por línea.
+- **Sabueso**: `.card` crea contexto de apilamiento por `backdrop-filter`; la
+  tarjeta del buscador lleva `.card-buscar-clientes` (`z-index: 6`) y el
+  desplegable se dibuja por encima de la tarjeta siguiente. Ficha con nombre,
+  constructora, ciudad, teléfono y RUC; navegación con Enter y flechas.
+- `pytest` → **423 passed** (18 del archivo `test_v82_ubicacion.py`); Hito 3 →
+  `[CANDADO CERRADO EN SANDBOX]`.
+- Evidencia: `.agents/evidencias/ubicacion_v82_2026-11-14.txt`,
+  `cotizacion_v82_pdf_2026-11-14.png`, `sabueso_zindex_v82_2026-11-14.png`.
+- Manual actualizado: `docs/COTIZACIONES.md` v8.2 (§3.1, §3.7, §8, §12.3).
 
 ### 2026-11-13 — Dashboard C0–C3: capacidad declarada, MRP y cobranza única
 
@@ -312,16 +487,22 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **C4:** capturar `fecha_vencimiento` en los formularios de orden y factura;
+1. **Cerebro Fase 2 (cierre):** confirmación y ejecución de acciones con
+   `lock_version` (reutilizando `services/*` y Custodio) y UI de borrador en el
+   panel.
+2. **Audio real:** probar 5–10 audios humanos con ruido de planta, medir CER de
+   dígitos y decidir si hace falta convertir `ogg/opus`.
+3. **C4:** capturar `fecha_vencimiento` en los formularios de orden y factura;
    hoy todo cae en `SIN_VENCIMIENTO`.
-2. **Cotizaciones Q4:** PDF cliente/interno y envío por WhatsApp con archivo en
-   la carpeta del cliente. Después Q5 (Gato).
-3. **Factura con extras:** conectar la factura/cartera a `v_orden_total` para
+4. **Ubicación v8.2:** probar en un teléfono real el botón **Usar mi ubicación**
+   y el pin enviado por WhatsApp. El residuo de prueba ya se limpió.
+5. **Cotizaciones Q5 (Gato):** crear borrador, consultar y enviar con “sí”.
+6. **Factura con extras:** conectar la factura/cartera a `v_orden_total` para
    que sume `orden_extras`.
-4. **Validar el dashboard C5/C6 y Cotizaciones con Julio**: 4 ventanas, presets
+7. **Validar el dashboard C5/C6 y Cotizaciones con Julio**: 4 ventanas, presets
    de cobranza, meta/equilibrio y manual.
-5. **Migración 081** (contratos de obra cierta y horas extra) y **C9: UI de
-   recordatorios en el panel**.
+8. **Contratos de obra cierta y horas extra** (siguiente migración libre) y
+   **C9: UI de recordatorios en el panel**.
 
 ## Decisiones de arquitectura vigentes
 
@@ -377,6 +558,9 @@ scripts de candado.
 | 48 | **Extras: un solo rubro global con descripcion libre** | Julio cobra o absorbe cualquier cosa ajena a Horminor sin taxonomias que se queden cortas |
 | 49 | **La cotizacion no crea orden** | Una venta aceptada que no se despacha no debe producir una orden fantasma |
 | 50 | **Cada modulo tiene diseno, skill y tareas** | Sin las tres piezas se redisenya lo ya decidido |
+| 51 | **La ubicacion no se estima: NULL y `PENDIENTE`** | El mixer necesita el punto real. Guardar texto, GPS o pin de WhatsApp con `ubicacion_origen`; sin coordenadas el PDF dice `PENDIENTE` en vez de inventar una posicion |
+| 52 | **La referencia escrita manda sobre el nombre del pin** | El asesor escribe «junto al tanque»; el nombre del pin suele ser generico. El pin solo rellena cuando no hay texto, y un `PUT` parcial no borra lo recibido por WhatsApp |
+| 53 | **La tarjeta que aloja un desplegable sube su `z-index`** | `backdrop-filter` crea contexto de apilamiento y el `z-index` del hijo no puede salir de la tarjeta; se corrige en el contenedor (`.card-buscar-clientes`), no subiendo el hijo |
 
 ## Riesgos abiertos
 

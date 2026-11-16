@@ -17,6 +17,7 @@ from .asistente.router import router as asistente_router
 from .db import create_pool, run_migrations
 from .http_gate import custodio_router, payments_router
 from .http_gate.panel import router as panel_api_router
+from .cerebro.router import router as cerebro_router
 from .m1_whatsapp.router import router as whatsapp_router
 from .m1_whatsapp.runtime import WhatsAppRuntime, construir_runtime
 from .m2_planta import ErrorPlanta
@@ -34,6 +35,7 @@ from .routers import (
 )
 from .services.ordenes import OrdenInvalidaError
 from .settings import get_settings
+from .voz.router import router as voz_router
 from .superadmin.operacion import router as operacion_router
 from .superadmin.router import router as superadmin_router
 from .superadmin.store import PostgresConfigStore
@@ -140,6 +142,8 @@ app.include_router(chat_clientes.router)
 app.include_router(facturas.router)
 app.include_router(orders.router)
 app.include_router(cotizaciones.router)
+app.include_router(voz_router)
+app.include_router(cerebro_router)
 app.include_router(whatsapp_router)
 app.include_router(superadmin_router)
 app.include_router(operacion_router)

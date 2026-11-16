@@ -35,6 +35,8 @@ decorativa: son reglas operativas.
 1. `.agents/ESTADO.md` → qué está hecho, qué está bloqueado, próximo paso.
 2. Últimas 3 entradas de `.agents/BITACORA.md` → qué pasó la última vez.
 3. Según la tarea:
+   - **retomar el proyecto o abrir una conversación nueva** → `docs/CONTINUIDAD_CEREBRO.md` (estado, arquitectura y prioridades)
+   - explicar una función o un botón → `docs/HORMINOR_MANUAL_FUNCIONAL.md`
    - diseñar o tocar un módulo → `.agents/MAPA_MODULOS.md` y `.agents/tareas/PENDIENTES.md`
    - levantar/verificar el entorno → `.agents/skills/orminorth-entorno/SKILL.md`
    - correr o interpretar un Test de Candado → `.agents/skills/orminorth-candado/SKILL.md`
@@ -63,6 +65,11 @@ decorativa: son reglas operativas.
    resumen. No pegues 200 líneas de log en el chat.
 9. **Secretos fuera del repo.** `.env` está en `.gitignore`. Nunca escribas
    claves reales en documentación, ejemplos ni bitácora.
+10. **Toda función de negocio se explica.** Si agregas o cambias una función que
+    ve el usuario, actualiza `docs/HORMINOR_MANUAL_FUNCIONAL.md` (término,
+    comportamiento, usuarios afectados, componente y fecha) y su índice. No se
+    considera terminada una funcionalidad sin esa explicación. El manual es la
+    única fuente oficial de definiciones; no crees glosarios paralelos.
 
 ## 4. Cierre de sesión (obligatorio)
 
@@ -118,10 +125,12 @@ docker compose stop
 | `services/core-api/app/web/` | Panel HTML en `/panel` (3 vistas, sin build) + `/static` (Poppins y logo Horminor) |
 | `services/core-api/app/services/ordenes.py` | Alta de orden: M0 + M2 |
 | `services/core-api/app/asistente/` | Gato: prompt interno, bibliotecario de solo lectura y router |
+| `services/core-api/app/voz/` | Captura: ingesta de audio, STT (Groq/Whisper) y normalizador es-EC |
+| `services/core-api/app/cerebro/` | Cerebro: hechos citados, compilador, correcciones, guarda de dinero y borradores |
 | `services/core-api/app/custodio/` | Gate contable: 14 intents, 9 consultas, ledger, testigo y catálogo |
 | `services/core-api/app/http_gate/` | Router HTTP, tokens de servicio y ventanilla de pagos |
 | `services/core-api/app/routers/` | HTTP: health, catálogo, órdenes |
-| `services/core-api/tests/` | pytest (342 tests) |
+| `services/core-api/tests/` | pytest (586 tests) |
 | `scripts/hito1_lock_test.py` | Test de Candado del Hito 1 |
 | `scripts/hito3_lock_test.py` | Test de Candado del Hito 3 |
 | `scripts/custodio_v43_check.py` | Check de integración del Custodio en el clon, con `ROLLBACK` |
@@ -129,6 +138,8 @@ docker compose stop
 | `scripts/backup_db.sh` | Backup diario verificado con retención 14/6 |
 | `docs/OPERACION_BACKUPS.md` | Cron, retención y restauración de prueba |
 | `docs/` | Decisiones pendientes y modelo de datos |
+| `docs/CONTINUIDAD_CEREBRO.md` | **Continuidad**: estado, arquitectura Cerebro–Gato, flujos interno/externo y prioridades |
+| `docs/HORMINOR_MANUAL_FUNCIONAL.md` | **Manual Vivo**: qué hace cada función, con nombres visibles, ejemplos e índice |
 | `.agents/` | Memoria, procesos, skills y evidencias |
 
 ## 7. Skills disponibles
@@ -139,6 +150,7 @@ docker compose stop
 | `orminorth-candado` | Hay que ejecutar o interpretar un Test de Candado |
 | `orminorth-diag-centinela` | El Centinela reporta WARN/CRÍTICO o hay que leer su JSON |
 | `orminorth-bitacora` | Hay que registrar una sesión o actualizar el estado |
+| `orminorth-manual-funcional` | Hay que explicar qué hace una función, qué significa un estado o qué pasa al presionar un botón |
 | `bibliotecario-datos` | Hay que consultar datos de negocio, crear una consulta nombrada, auditar una cifra o diseñar una migración |
 
 ## 8. Lo que este proyecto NO tiene todavía

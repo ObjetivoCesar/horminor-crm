@@ -56,6 +56,9 @@ services:
       - ./db:/app/db:ro
       - ./scripts:/app/scripts:ro
       - ./services/core-api/tests:/app/tests:ro
+      - ./docs:/app/docs:ro
+      - ./.agents:/app/.agents:ro
+      - ./AGENTS.md:/app/AGENTS.md:ro
       - orminorth-media:/app/media_sandbox
 
 volumes:

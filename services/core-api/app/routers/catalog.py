@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from ..panel_acl import exigir_modulo
+from ..services.clients import crear_cliente as crear_cliente_svc
 
 router = APIRouter(prefix="/api/v1", tags=["catalogo"])
 
@@ -31,6 +32,7 @@ class ClienteCreate(BaseModel):
     credit_limit_usd: float | None = Field(default=None, ge=0)
     notas: str | None = None
     estado: str = "ACTIVO"
+    cedula: str | None = None
 
 
 @router.get("/clients")
@@ -65,30 +67,20 @@ async def listar_clientes(
 async def crear_cliente(request: Request, body: ClienteCreate):
     await exigir_modulo(request, "clientes_cartera", mutacion=True)
     pool = _pool(request)
-    try:
-        row = await pool.fetchrow(
-            """
-            INSERT INTO clients
-                (nombre, constructora, ruc, telefono_whatsapp, provincia,
-                 ciudad, direccion_obra, credit_limit_usd, notas, estado)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id::text, nombre, constructora, ruc, provincia, ciudad,
-                      direccion_obra, credit_limit_usd, notas, estado
-            """,
-            body.nombre,
-            body.constructora,
-            body.ruc,
-            body.telefono_whatsapp,
-            body.provincia,
-            body.ciudad,
-            body.direccion_obra,
-            body.credit_limit_usd,
-            body.notas,
-            body.estado,
-        )
-    except asyncpg.UniqueViolationError as exc:
-        raise HTTPException(status_code=409, detail="telefono_whatsapp ya registrado") from exc
-    return dict(row)
+    return await crear_cliente_svc(
+        pool,
+        nombre=body.nombre,
+        constructora=body.constructora,
+        ruc=body.ruc,
+        telefono_whatsapp=body.telefono_whatsapp,
+        provincia=body.provincia,
+        ciudad=body.ciudad,
+        direccion_obra=body.direccion_obra,
+        credit_limit_usd=body.credit_limit_usd,
+        notas=body.notas,
+        estado=body.estado,
+        cedula=body.cedula,
+    )
 
 
 @router.get("/orders")

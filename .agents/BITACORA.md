@@ -4573,3 +4573,1774 @@ nuevo cliente.
 
 Probar el flujo con un cliente real y luego emitir la factura interna desde el
 popout de conversión.
+
+## 2026-11-14 — Cotizaciones v8.2: ubicación de la obra y Sabueso sobre las tarjetas
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** que la cotización guarde y muestre la **ubicación de la obra** por
+tres vías (texto manual, GPS del navegador y pin que el cliente manda por
+WhatsApp) y que el desplegable del buscador Sabueso deje de quedar debajo de las
+tarjetas siguientes.
+
+### Hecho
+
+1. Migración **084**: seis columnas `ubicacion_*` en `cotizaciones`, CHECK de
+   origen (`MANUAL`, `GPS`, `WHATSAPP`, `MAPA`) y de rango (lat/lng nulos o
+   dentro de rango). `cotizacion_eventos` acepta `UBICACION_SOLICITADA` y
+   `UBICACION_RECIBIDA` (se reemplazó el CHECK de 081 por
+   `cotizacion_eventos_tipo_check_ext`). Plantilla
+   `cotizaciones.pedir_ubicacion` en `system_settings`.
+2. Contrato de la API: `CotizacionIn` gana los cuatro campos de ubicación;
+   `_calcular` valida `UBICACION_INCOMPLETA`, `UBICACION_ORIGEN_REQUERIDO` y
+   `UBICACION_SIN_PIN`; el detalle expone `ubicacion_maps_url`.
+3. `POST /api/v1/cotizaciones/{id}/pedir-ubicacion`: envía la plantilla al
+   teléfono del cliente, sella `ubicacion_solicitada_at` y deja
+   `UBICACION_SOLICITADA`. El texto no vive en el código.
+4. M1: el webhook lee `locationMessage` y `liveLocationMessage` (descarta pines
+   sin coordenadas); `_gate_ubicacion` adjunta el pin a la cotización abierta
+   más reciente sin pin, sella `ubicacion_recibida_at`, responde al cliente y
+   deja `UBICACION_RECIBIDA`. También en `MemoriaRepositorio` (tests).
+5. Panel: bloque de ubicación en el diálogo de cotización (texto, **Usar mi
+   ubicación**, **Quitar pin**, **Pedir por WhatsApp**) y el pin/mapa/fechas en
+   el detalle.
+6. PDF: bloque **UBICACION DE LA OBRA** con Dirección, Referencia, Pin (con
+   origen) y Mapa; `Pin: PENDIENTE` si no hay coordenadas; recorte a 92
+   caracteres por línea para no desbordar.
+7. **Sabueso:** causa raíz encontrada — `.card` con `backdrop-filter: blur(12px)`
+   crea un contexto de apilamiento por tarjeta, así que el `z-index: 80` del
+   desplegable no podía salir de su tarjeta. Se agregó
+   `.card.card-buscar-clientes { z-index: 6 }`. El desplegable muestra la ficha
+   (nombre, constructora, ciudad, teléfono, RUC) y se navega con Enter/flechas.
+8. **Hallazgo corregido durante la verificación:** el nombre del pin de
+   WhatsApp (`Obra La Joya`) pisaba la referencia escrita por el asesor. Ahora
+   la referencia manda y el nombre solo rellena cuando no hay texto
+   (`COALESCE(c.ubicacion_texto, $4)` en Postgres y la misma regla en memoria).
+9. Un `PUT` parcial no borra el pin recibido (`model_fields_set` + `CASE WHEN`).
+
+### Evidencia (real, ejecutada)
+
+| Comando / prueba | Resultado |
+|---|---|
+| `python scripts/db_migrate.py` | `+ 084_cotizacion_ubicacion.sql`; `schema_migrations` con 084 al 2026-11-14 09:15:47 |
+| `pytest /app/tests` | **423 passed**, exit 0 |
+| `pytest /app/tests/test_v82_ubicacion.py` | **18 passed**, exit 0 |
+| `scripts/hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]`, exit 0 |
+| Pin por WhatsApp end-to-end (sanbox) | `origen WHATSAPP`, `recibida_at` 09:36:48, eventos `UBICACION_SOLICITADA` / `ENVIO` / `UBICACION_RECIBIDA`; ack en `sandbox_outbox` |
+| Referencia manual + pin | texto «Km 3 via Loreto…» conservado; `maps_url` y `Pin: … (WHATSAPP)` en el PDF |
+| PDF renderizado a PNG | bloque de ubicación completo, sin desbordes |
+| Sabueso (`palo`) | a y=526 `elementFromPoint` → `span.sabueso-saldo` con la clase y `div.card.clientes-col` sin ella; `z-index` 6 vs `auto`; consola sin mensajes |
+| Limpieza | cotizaciones 0003/0004/0005, eventos, versiones, `media_assets`, PDFs y outbox de la prueba borrados |
+
+Evidencia completa en `.agents/evidencias/ubicacion_v82_2026-11-14.txt`,
+`cotizacion_v82_pdf_2026-11-14.png` y `sabueso_zindex_v82_2026-11-14.png`.
+
+### Decisiones tomadas
+
+1. **La ubicación no se estima.** Texto, GPS o pin real con `ubicacion_origen`;
+   sin coordenadas queda `NULL` y el PDF imprime `PENDIENTE`. Alternativa
+   descartada: geocodificar la dirección escrita, que inventaría un punto que
+   nadie confirmó.
+2. **La referencia escrita manda sobre el nombre del pin.** El asesor describe
+   el acceso; el nombre del pin suele ser genérico. Alternativa descartada:
+   dejar que el pin sobrescriba, que borraba información útil (se detectó en
+   vivo y se corrigió en esta misma sesión).
+3. **El pin se adjunta a la cotización abierta más reciente sin pin.** No se
+   reparte entre varias ni se duplica; si el cliente tiene dos abiertas, va a la
+   más nueva. Alternativa descartada: preguntar «¿para cuál?» por cada pin, que
+   agrega fricción sin ambigüedad real en el caso normal.
+4. **El pedido del pin es plantilla editable, no texto en código.** Vive en
+   `cotizaciones.pedir_ubicacion` y Julio la cambia sin tocar Python.
+5. **El arreglo del Sabueso va en la tarjeta, no en el desplegable.** Subir el
+   `z-index` del hijo no funciona con `backdrop-filter`; se corrige el contexto
+   de apilamiento en `.card-buscar-clientes`.
+6. **Ampliar el CHECK de `cotizacion_eventos` en la 084.** Los eventos de
+   ubicación viajan por la misma bitácora; se reemplaza el CHECK de 081 con
+   nombre nuevo y no se edita la migración aplicada.
+
+### Bloqueos / preguntas al cliente
+
+1. **Residuo de prueba:** queda `HORM-COT-2026-0001` («Abelito Prueba», PDF
+   incluido) de la sesión del 2026-11-13. La entrada de esa fecha decía «0
+   cotizaciones»; el dato existe. No se borró por no tocar trabajo ajeno:
+   confirmar si se elimina junto con su PDF.
+2. Probar el GPS del navegador y el pin de WhatsApp **en un teléfono real**;
+   en local se verificó con la geolocalización simulada y `/whatsapp/simulate`.
+
+### Próximo paso exacto
+
+Abrir `/panel` → **Cotizaciones** → editar una cotización, pulsar **Usar mi
+ubicación** desde el teléfono de Julio y luego **Pedir por WhatsApp**; confirmar
+que el pin del cliente llega a `ubicacion_recibida_at` y que el PDF muestra
+`Pin: lat, lng (WHATSAPP)`.
+
+### Archivos tocados
+
+- `db/migrations/084_cotizacion_ubicacion.sql`
+- `services/core-api/app/routers/cotizaciones.py`
+- `services/core-api/app/services/factura_pdf.py`
+- `services/core-api/app/m1_whatsapp/{models,webhook,repositorio,pipeline,router}.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v82_ubicacion.py`
+- `docs/COTIZACIONES.md`, `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencias: `.agents/evidencias/ubicacion_v82_2026-11-14.txt`,
+  `cotizacion_v82_pdf_2026-11-14.png`, `sabueso_zindex_v82_2026-11-14.png`
+
+
+## 2026-11-14 — Limpieza de la cotización de prueba 0001
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** cerrar el residuo detectado al documentar v8.2: `HORM-COT-2026-0001`
+(«Abelito Prueba») seguía en la base aunque la entrada del 2026-11-13 decía
+«0 cotizaciones».
+
+### Hecho
+
+1. Se borraron el PDF archivado, la fila de `media_assets`, la cotización
+   (con sus eventos y versiones) y el cliente de prueba «Abelito Prueba».
+2. Decisión de Dirección en esta sesión: los datos actuales son ficticios y se
+   reemplazarán tras la entrevista, así que no se conserva el residuo.
+
+### Evidencia (real, ejecutada)
+
+| Consulta | Resultado |
+|---|---|
+| `DELETE FROM cotizaciones WHERE id='132c7db9-…'` | `DELETE 1` |
+| `DELETE FROM media_assets WHERE id='5c881875-…'` | `DELETE 1` |
+| `DELETE FROM clients WHERE id='08023b84-…'` | `DELETE 1` |
+| Conteos finales | cotizaciones **0**, eventos **0**, versiones **0**, clientes **7**, media **1** |
+
+La única media restante es la factura `PRUEBA-0001`, marcada **FICTICIA** y
+documentada como demostración; se conserva hasta la carga de datos reales.
+
+### Próximo paso exacto
+
+Nada pendiente por este residuo. La siguiente sesión parte de una base sin
+cotizaciones de prueba.
+
+
+## 2026-11-14 — Brief para modelo externo: entrada por voz y «Cerebro» de extracción
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** preparar el documento que Dirección llevará a un modelo de IA
+externo para diseñar (sin tocar código) el componente de voz reutilizable y el
+Cerebro de extracción de datos.
+
+### Hecho
+
+1. `docs/BRIEF_CEREBRO_VOZ.md`: brief autosuficiente de 518 líneas con
+   contexto de negocio, arquitectura actual, reglas duras, la petición literal
+   de Dirección, los 3 audios de prueba con sus trampas, 40 preguntas de diseño,
+   12 entregables exigidos y 10 criterios de aceptación adversariales.
+2. Incluye el prompt de arranque literal («trabaja en loop… árbitro
+   adversarial…») con el listón definido: arquitectura defendible ante un
+   ingeniero staff y una auditoría que intenta romperla.
+3. No se modificó código de la aplicación: es un documento de diseño.
+
+### Evidencia (real, ejecutada)
+
+| Comprobación | Resultado |
+|---|---|
+| Archivo | `docs/BRIEF_CEREBRO_VOZ.md`, **518 líneas / 25.900 bytes** |
+| Placeholders | 0 (`TODO`/`...` solo aparecen en la frase que los prohíbe) |
+| Codificación | UTF-8 correcta al leer con acentos y signos |
+
+### Decisiones tomadas
+
+1. **El brief incluye los 3 audios como vectores de prueba con trampas
+   explícitas** (cédula dictada en dos tramos, «¿cuánto me vas a dar?» dicho por
+   Julio, abono vs depósito, consulta que parece orden). Alternativa descartada:
+   entregar solo la petición, que deja al modelo inventar los criterios.
+2. **Se apoya en lo ya decidido** (Gato sin SQL libre, guarda de cifras,
+   Custodio con idempotencia, append-only) para que el modelo no reinvente el
+   asistente ni proponga text-to-SQL.
+3. **Se pide diseño, no código**, con 12 entregables y un árbitro adversarial;
+   el código real se escribe después con el contexto del repositorio.
+
+### Próximo paso exacto
+
+Copiar §1 del brief como primer mensaje y el resto del documento después; traer
+la respuesta del modelo externo a una sesión con acceso al repositorio para
+contrastarla con el esquema real antes de escribir código.
+
+
+## 2026-11-14 — Cerebro y Voz: diseño canónico y normalizador es-EC
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** aterrizar la respuesta del modelo externo en el repositorio y
+empezar la pieza ejecutable que no depende de credenciales ni de decisiones de
+negocio.
+
+### Hecho
+
+1. `docs/CEREBRO_VOZ_DISENO.md` v1.0: separa `app/voz/` de `app/cerebro/`,
+   define 9 tablas, 9 acciones y 4 fases, y **corrige 16 puntos** de la ronda 2
+   del modelo externo (columnas reales de `system_settings`, tipos UUID,
+   `media_assets.cliente_id NOT NULL`, `obra_direccion` NOT NULL,
+   `resistencia` como código, roles reales, cuotas no inventadas, payload de
+   borrador inmutable, dedup de hechos con fecha, reintentos).
+2. Tres decisiones resueltas para no bloquear: fecha tentativa en
+   `cotizaciones` (`date` + `time`, sin hora inventada), precio precargado desde
+   la receta **sin autoenvío**, y minería de WhatsApp bloqueada hasta que M1
+   persista entrantes.
+3. `app/voz/normalizador_ec.py`: normalización determinística de números
+   hablados, cédulas en tramos con conector, teléfonos, m3, moneda y ciudades.
+   No corrige dígitos: marca `checksum_valido=false`.
+4. `.agents/tareas/2026-11-14_CEREBRO_VOZ.md`: plan por fases con criterios de
+   salida y comandos.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `pytest test_v85_voz_normalizador.py` | **16 passed**, exit 0 |
+| `pytest /app/tests` | **439 passed**, exit 0 |
+| `docker compose up -d --build core-api` | contenedor healthy |
+
+Evidencia completa: `.agents/evidencias/voz_normalizador_2026-11-14.txt`.
+
+### Decisiones tomadas
+
+1. **El normalizador es nuestro, no del proveedor.** Un LLM no debe decidir
+   dónde termina una cédula; el conector («que más») y la longitud lo resuelven
+   en Python. Alternativa descartada: pedirle al STT que entregue números ya
+   normalizados, que cambia según el proveedor.
+2. **Advertir sin corregir.** Si el dígito verificador no cuadra, el dato queda
+   marcado y el borrador pregunta. Alternativa descartada: ajustar el último
+   dígito, que inventaría una identidad.
+3. **No aplicar la migración 085 en esta sesión.** Se escribirá junto con
+   `app/voz/ingesta.py`; una migración aplicada no se edita y el diseño aún
+   necesita la prueba de la Fase 0.
+4. **Cuotas de gasto en `null`.** Fijar 5 USD/día sin que Dirección lo decida
+   sería política inventada.
+
+### Bloqueos / preguntas al cliente
+
+1. Tope diario real de gasto de voz y minería.
+2. Política de retención y consentimiento del audio.
+3. Proveedor STT autorizado (Deepgram vs Whisper).
+4. Los cinco precios de receta están `PROVISIONAL`: el envío fuera de SANDBOX
+   seguirá bloqueado hasta que Julio los marque `OFICIAL`.
+
+### Próximo paso exacto
+
+Fase 0: extraer `services/cotizaciones.py` y `services/clients.py` de los
+routers sin cambiar comportamiento, con la suite en verde; después la migración
+085 y `app/voz/ingesta.py`.
+
+### Archivos tocados
+
+- `services/core-api/app/voz/__init__.py`
+- `services/core-api/app/voz/normalizador_ec.py`
+- `services/core-api/tests/test_v85_voz_normalizador.py`
+- `docs/CEREBRO_VOZ_DISENO.md`
+- `.agents/tareas/2026-11-14_CEREBRO_VOZ.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/voz_normalizador_2026-11-14.txt`
+
+
+## 2026-11-14 — Cerebro y Voz, Fase 0: servicios de cotizaciones y clientes
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** que el Cerebro y el panel creen cotizaciones y clientes por el
+mismo camino, sin duplicar numeración, IVA ni versiones.
+
+### Hecho
+
+1. `services/cotizaciones.py`: `calcular`, `crear_cotizacion_borrador`,
+   `snapshot`, `hash_snapshot`, `insertar_version` y `siguiente_numero`.
+   El `POST /api/v1/cotizaciones` solo delega; el `PUT` reutiliza las mismas
+   piezas.
+2. `services/clients.py`: alta con choque de `telefono_whatsapp` y `cedula`
+   resuelto en 409. El contrato de `POST /clients` gana `cedula` opcional.
+3. Verificación en vivo: cliente con cédula, cotización 6 m³ → **$814,20**
+   (708 + 15 %), PUT a 7 m³ → **$949,90** (826 + 15 %), versión 2.
+4. Datos de prueba borrados: 0 cotizaciones en la base.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `pytest /app/tests` | **439 passed**, exit 0 |
+| `POST /clients` + `POST /cotizaciones` + `PUT` | 201 / 201 / 200, totales correctos |
+| Limpieza | cotizaciones **0**, clientes **7**, versiones **0** |
+
+Evidencia: `.agents/evidencias/fase0_servicios_2026-11-14.txt`.
+
+### Decisiones tomadas
+
+1. **Un solo camino de alta.** El Cerebro llamará a `crear_cotizacion_borrador`;
+   nunca hará `INSERT` propio. Alternativa descartada: copiar el SQL en
+   `app/cerebro/`, que duplicaría numeración e IVA.
+2. **`cedula` en el alta de cliente.** La columna ya existía y el Cerebro la
+   necesita para no crear duplicados; el campo es opcional y no cambia el
+   comportamiento anterior.
+3. **Los alias `_snapshot`/`_hash` se conservan en el router** para no romper
+   pruebas ni integraciones que los usan.
+
+### Próximo paso exacto
+
+Fase 1: escribir `db/migrations/085_voz_cerebro.sql` con las 16 correcciones de
+`docs/CEREBRO_VOZ_DISENO.md` §2, aplicarla y construir `app/voz/ingesta.py` y
+`app/voz/stt.py` con degradación sin credenciales.
+
+### Archivos tocados
+
+- `services/core-api/app/services/cotizaciones.py` (nuevo)
+- `services/core-api/app/services/clients.py` (nuevo)
+- `services/core-api/app/routers/cotizaciones.py`
+- `services/core-api/app/routers/catalog.py`
+- `.agents/tareas/2026-11-14_CEREBRO_VOZ.md`, `docs/CEREBRO_VOZ_DISENO.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/fase0_servicios_2026-11-14.txt`
+
+
+## 2026-11-14 — Cerebro y Voz, Fase 1: migración 085 e ingesta de audio
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** crear la base de datos de voz/cerebro y el componente de ingesta
+que guarda el audio aunque no haya proveedor de transcripción.
+
+### Hecho
+
+1. Migración **085** aplicada: 10 tablas (`voz_ingestas`,
+   `voz_ingesta_media_links`, `voz_trabajos_stt`, `voz_transcripciones`,
+   `cerebro_extracciones`, `cerebro_borradores`, `cerebro_ejecuciones`,
+   `client_facts`, `client_fact_supersedes`, `whatsapp_mineria_cursores`), los
+   settings `voz.*`/`cerebro.*`/`whatsapp.mineria_usd_dia`, los módulos ACL
+   `voz`/`cerebro` y las columnas `fecha/hora_entrega_tentativa`.
+2. `app/voz/ingesta.py`: valida MIME y tamaño, calcula SHA-256, guarda en
+   `inbox_voz/<fecha>/` (Bunny o sandbox) y registra ingesta + trabajo.
+   Reenviar el mismo audio reutiliza la ingesta y crea un intento nuevo.
+3. `app/voz/stt.py`: protocolo `ProveedorSTT` con dos caminos honestos:
+   `SinProveedor` (DEGRADADO_SIN_CREDENCIAL) y `AdaptadorPendiente` (FALLIDO).
+4. `POST /api/v1/voz/transcribir` y `GET /api/v1/voz/ingestas/{id}` con ACL
+   `voz`; `voz` y `cerebro` se agregaron al checklist de Superadmin.
+5. Hallazgo corregido: `normalizar_modulos` descartaba cualquier clave fuera de
+   `MODULOS`, así que los módulos nuevos no se leían aunque estuvieran en la
+   base. Se agregaron a la tupla.
+
+### Evidencia (real, ejecutada)
+
+| Comando / prueba | Resultado |
+|---|---|
+| `python scripts/db_migrate.py` | `+ 085_voz_cerebro.sql` |
+| `pytest /app/tests` | **445 passed**, exit 0 |
+| `hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]` |
+| `POST /voz/transcribir` (ogg 4 KB) | 201, `DEGRADADO_SIN_CREDENCIAL`, audio guardado |
+| Reenvío del mismo audio | mismo `ingesta_id`, `reutilizada: true`, intento nuevo |
+| `UPDATE voz_ingestas` | rechazado por el trigger append-only |
+| Limpieza | 0 ingestas, 0 trabajos, `voz.enabled=false` |
+
+Evidencia completa: `.agents/evidencias/fase1_voz_2026-11-14.txt`.
+
+### Decisiones tomadas
+
+1. **`duracion_ms` nullable.** El cliente puede no informarla y no se va a
+   inventar; se guarda si llega y el STT la completa en la transcripción.
+2. **El reintento es un trabajo nuevo**, no un `UPDATE` del anterior. La
+   ingesta se reutiliza por hash para no duplicar el binario.
+3. **Los interruptores nacen apagados.** `voz.enabled` y `cerebro.enabled` en
+   `false` hasta que exista proveedor y Dirección lo active.
+4. **Los topes de gasto van en `null`.** No se fija una política económica sin
+   aprobación.
+5. **El audio se guarda en `inbox_voz/` y no en `media_assets`.** La tabla de
+   media exige `cliente_id`; el vínculo se hace al resolver el cliente.
+
+### Bloqueos / preguntas al cliente
+
+1. Tope diario real de voz y minería.
+2. Proveedor STT autorizado y política de retención/consentimiento.
+3. Los cinco precios de receta siguen `PROVISIONAL`.
+
+### Próximo paso exacto
+
+Fase 2: `app/cerebro/sobre.py` (contrato del sobre), `extractor.py` (LLM con
+validación y verificador de cifras) y `borradores.py` (creación, corrección y
+confirmación con `lock_version`), más la tarjeta de borrador en el panel.
+
+### Archivos tocados
+
+- `db/migrations/085_voz_cerebro.sql`
+- `services/core-api/app/voz/{__init__,normalizador_ec,stt,ingesta,router}.py`
+- `services/core-api/app/panel_acl.py` (módulos `voz`/`cerebro`)
+- `services/core-api/app/main.py` (router de voz)
+- `services/core-api/app/web/templates/panel.html` (etiquetas ACL)
+- `services/core-api/tests/test_v85_voz_{normalizador,ingesta}.py`
+- `docs/CEREBRO_VOZ_DISENO.md`, `.agents/tareas/2026-11-14_CEREBRO_VOZ.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/fase1_voz_2026-11-14.txt`
+
+
+## 2026-11-14 — Brief profundo del Cerebro para modelo externo
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** preparar una segunda conversación con el modelo externo centrada
+en la **profundidad** del Cerebro (evidencia, medición, fallos, flujo humano y
+privacidad), no en agregar alcance.
+
+### Hecho
+
+1. `docs/BRIEF_CEREBRO_PROFUNDO.md`: contexto mínimo, propuesta actual para
+   criticar, los 3 audios crudos, tabla de material en bruto que se puede
+   conseguir y seis piezas profundas (P1–P6).
+2. Incluye el prompt de Dirección **literal** y exige responder primero las
+   cuatro preguntas (profesional de primer nivel, material raw, métodos,
+   evidencia externa) y después la petición.
+3. No se tocó código.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Archivo | `docs/BRIEF_CEREBRO_PROFUNDO.md` |
+| Prompt literal | incluido en §1, con la petición remitida a §6 |
+| Código modificado | ninguno |
+
+### Próximo paso exacto
+
+Copiar §1 como primer mensaje y §2–§10 después; traer la respuesta a una sesión
+con repositorio para contrastarla con el esquema real antes de implementar la
+Fase 2.
+
+
+## 2026-11-14 — Revisión profunda del Cerebro y diseño v1.1
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** auditar la respuesta profunda del modelo externo y quedarse solo
+con lo que se sostiene contra el sistema real.
+
+### Hecho
+
+1. Auditoría de la respuesta: se aceptaron seis piezas (AST de hechos +
+   compilador, gold set con `dev/held-out`, modo sombra con reconciliación,
+   redacción de PII, orden de degradación y umbrales por costo) y se corrigieron
+   ocho afirmaciones.
+2. `docs/CEREBRO_VOZ_DISENO.md` pasa a **v1.1** con §1.1 (adoptado), §3.1
+   (hecho citado → compilador) y §7.1 (medición y cotas estadísticas).
+3. `.agents/tareas/2026-11-14_CEREBRO_VOZ.md` actualiza la Fase 2: alineación
+   del normalizador, AST/compilador, harness de evaluación, modo sombra y PII.
+
+### Correcciones a la respuesta externa
+
+| Afirmación | Realidad |
+|---|---|
+| «Falta extraer `services/cotizaciones.py`» | Ya se extrajo en la Fase 0 |
+| «Aprobar `fecha_entrega_tentativa` en la 085» | La 085 ya está aplicada con `fecha` y `hora` |
+| «Decidir precio ausente» | Resuelto: se precarga de la receta y se bloquea el envío si es `PROVISIONAL` |
+| Topes `5.00` y `2.00` USD | Son inventados; en la base están en `null` |
+| «`VOZ_CUOTA_USD_DIA_LIVE` / `WA_MINERIA_USD_DIA`» | Las claves reales son `voz.cuota_usd_dia` y `whatsapp.mineria_usd_dia` |
+| Estado `SOMBRA_SOLO_LECTURA` | No existe en el CHECK de `cerebro_borradores`; requiere migración |
+| κ ≥ 0.85 con 20 audios | El intervalo es demasiado ancho; además κ sufre la paradoja de prevalencia |
+| «100 % de montos» con 60 audios | Con 0 errores la cota superior es ~5 %; para 1 % hacen falta ~300 |
+
+Además, la respuesta no resuelve el problema de **alineación**: los offsets del
+texto normalizado no existen en la transcripción cruda ni en los tiempos del
+STT porque el normalizador reescribe palabras. Sin un mapa
+`normalizado → crudo → tokens`, el «dato sostenido» es una intención.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Código modificado | ninguno |
+| Documentos | `docs/CEREBRO_VOZ_DISENO.md` v1.1 y tarea de Fase 2 actualizada |
+| Base de datos | sin cambios (0 ingestas, `voz.enabled=false`) |
+
+### Decisiones tomadas
+
+1. **La alineación es el primer trabajo de la Fase 2.** Sin ella no se acepta
+   ningún sobre como «sostenido».
+2. **Las cotas mandan sobre los porcentajes.** Un 100 % con n pequeño no es
+   evidencia; se reporta el límite superior.
+3. **La restricción «VENDEDOR solo sus clientes» no se implementa** hasta que
+   exista el modelo de asignación de cartera.
+4. **El modo sombra no se improvisa:** o se agrega un estado/columna en la 086
+   o se maneja con un flag separado; no se fuerza el CHECK existente.
+
+### Próximo paso exacto
+
+Fase 2, primer ítem: extender `normalizar_ec` para devolver el mapa de
+alineación con spans crudos y tiempos STT, con tests que prueben que cada
+dígito normalizado apunta a su palabra original.
+
+### Archivos tocados
+
+- `docs/CEREBRO_VOZ_DISENO.md` (v1.1)
+- `.agents/tareas/2026-11-14_CEREBRO_VOZ.md`
+- `.agents/BITACORA.md`
+
+
+## 2026-11-14 — Cerebro y Voz, Fase 2: mapa de alineación
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** que cada dato normalizado se pueda citar (caracteres crudos,
+palabras del STT y milisegundos), requisito del «dato sostenido» del Cerebro.
+
+### Hecho
+
+1. `normalizar_ec` pasa a trabajar con **segmentos con origen crudo** en lugar
+   de reemplazos de texto. Cada token de salida guarda `crudo_inicio` y
+   `crudo_fin`.
+2. Nuevas piezas: `TokenNormalizado`, `TextoNormalizado`, `PalabraSTT`,
+   `PalabraAlineada`, `SecuenciaAlineada`, `normalizar_con_mapa`,
+   `localizar_palabras`, `alinear_con_palabras`, `alinear_secuencias` y
+   `normalizar_alineado`.
+3. La cédula dictada en dos tramos se une también en el **texto normalizado**;
+   el dato resultante apunta a las dos palabras de valor y **excluye los
+   conectores** del cálculo de confianza.
+4. `normalizar_texto` mantiene su contrato y delega en el mapa; la ingesta no
+   cambia.
+
+### Evidencia (real, ejecutada)
+
+| Comando / prueba | Resultado |
+|---|---|
+| `pytest /app/tests` | **455 passed**, exit 0 |
+| Tests de voz (alineación + normalizador + ingesta) | **32 passed** |
+| `GET /health` | 200, `db: ok` |
+| Demo real | `cedula 1102561531`; secuencia `CEDULA`, palabras `(0,3)`, 300–1400 ms, confianza **0.96** (no 0.40) |
+
+Evidencia completa: `.agents/evidencias/fase2_alineacion_2026-11-14.txt`.
+
+### Decisiones tomadas
+
+1. **Los tramos se unen en el texto normalizado**, no solo al extraer. El
+   extractor debe ver `1102561531`, no dos grupos separados por «que más».
+2. **La confianza del dato ignora los conectores.** «que» y «mas» no forman
+   parte del número; si bajaran la confianza, cualquier cédula dictada con
+   pausas parecería dudosa.
+3. **Sin palabras del STT no hay ventana.** El dato queda sin `start_ms` y no
+   se puede confirmar con un clic; es preferible a inventar el instante.
+4. **Si un reemplazo no cae en bordes de segmento, no se aplica.** Mejor no
+   normalizar que perder el origen del dato.
+
+### Próximo paso exacto
+
+Fase 2: `app/cerebro/hechos.py` con el AST de hechos citados (valor, cita,
+span, ventana, hablante, confianza) y `compilador.py` que los convierte en
+acciones aplicando los invariantes del dominio.
+
+### Archivos tocados
+
+- `services/core-api/app/voz/normalizador_ec.py`
+- `services/core-api/app/voz/__init__.py`
+- `services/core-api/tests/test_v86_voz_alineacion.py`
+- `docs/CEREBRO_VOZ_DISENO.md`, `.agents/tareas/2026-11-14_CEREBRO_VOZ.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/fase2_alineacion_2026-11-14.txt`
+
+
+## 2026-11-14 — Cerebro y Voz, Fase 2: hechos citados y compilador
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** que el LLM no arme el borrador final: que proponga hechos citados
+y que un compilador determinístico decida si se convierten en acciones.
+
+### Hecho
+
+1. `app/cerebro/hechos.py`: `HechoCitado` con valor, cita, texto que lo
+   sostiene, span, ventana, hablante, confianza y `checksum_valido`.
+   `validar_hecho` rechaza un valor que no aparece en la cita.
+2. `app/cerebro/compilador.py`: hechos → `Borrador` con acciones ordenadas,
+   dependencias, roles y bloqueos. Aplica invariantes de dominio: obra,
+   resistencia, precio, `PROVISIONAL` fuera de SANDBOX, saldo de caja, doble
+   confirmación de dinero y máximo 3 preguntas.
+3. Caso A produce cuatro acciones (cliente → cotización → abono → envío); Caso B
+   produce abono + traslado con dependencia; Caso C no produce acciones.
+4. `a_dict()` serializa fechas y `Decimal`; el demo real se ejecutó en el
+   contenedor.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `pytest test_v87_cerebro_compilador.py` | **14 passed** |
+| `pytest /app/tests` | **469 passed**, exit 0 |
+| Demo Caso A | 4 acciones, abono con doble confirmación, envío depende de la cotización |
+| Demo Caso B | abono + traslado, traslado depende de 1 |
+| Demo Caso C | `SIN_ACCIONES` |
+
+Evidencia: `.agents/evidencias/fase2_hechos_compilador_2026-11-14.txt`.
+
+### Decisiones tomadas
+
+1. **El compilador es puro.** No consulta la base ni escribe; recibe el contexto
+   ya resuelto. Así se prueba sin Postgres y se reutiliza desde el panel o M1.
+2. **Sin precio dictado por Julio se usa la lista vigente** con su
+   `precio_estado`; no se inventa un precio. Si lo dicta otro rol, se ignora y
+   se pregunta.
+3. **La referencia del cliente sirve como `obra_direccion`** cuando no hay una
+   dirección formal; es texto y se confirma en el borrador.
+4. **Máximo 3 preguntas por audio**, agrupadas y sin duplicar claves.
+5. **Una acción bloqueada no desaparece:** queda en el borrador con
+   `bloqueada_por` para que el usuario vea qué no se ejecutó y por qué.
+
+### Próximo paso exacto
+
+Fase 2: `app/cerebro/sobre.py` con el contrato JSON del sobre
+(`intenciones_ordenadas`, `hechos`, `campos_faltantes`, `ambiguedades`) y
+`extractor.py` con validación y verificador de cifras.
+
+### Archivos tocados
+
+- `services/core-api/app/cerebro/{__init__,hechos,compilador}.py`
+- `services/core-api/tests/test_v87_cerebro_compilador.py`
+- `docs/CEREBRO_VOZ_DISENO.md`, `.agents/tareas/2026-11-14_CEREBRO_VOZ.md`
+- `.agents/ESTADO.md`, `.agents/BITACORA.md`
+- Evidencia: `.agents/evidencias/fase2_hechos_compilador_2026-11-14.txt`
+
+
+## 2026-11-14 — Cerebro y Voz: audio real con Groq y extractor
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** cerrar el camino audio → transcripción → hechos → borrador con las
+credenciales reales de Groq y DeepSeek.
+
+### Hecho
+
+1. `app/voz/proveedores/groq.py`: adaptador Whisper con `verbose_json` y
+   `timestamp_granularities[]=word/segment`; palabras con tiempos y confianza
+   por segmento (`exp(avg_logprob)`) como proxy.
+2. `app/cerebro/sobre.py`, `extractor.py` y `router.py`: sobre validado,
+   hechos citados y borrador persistido. Endpoints
+   `POST /api/v1/cerebro/interpretar` y `GET /api/v1/cerebro/borradores/{id}`.
+3. Migración **086**: `cerebro_extracciones.texto_directo` y CHECK de fuente
+   ampliado para texto pegado.
+4. Prueba en vivo: audio de 11,8 s → transcripción → borrador. El STT confundió
+   la cédula; el LLM intentó completarla y el verificador la descartó.
+5. Bug de `httpx` 0.28 corregido: `data` como lista de tuplas rompía
+   `AsyncClient`; se usa diccionario con lista.
+
+### Evidencia (real, ejecutada)
+
+| Comando / prueba | Resultado |
+|---|---|
+| `pytest /app/tests` | **482 passed**, exit 0 |
+| `pytest test_v88_groq.py` | 7 passed |
+| `pytest test_v89_extractor.py` | 5 passed |
+| Transcripción Groq | `COMPLETADO`, 11,8 s, texto con «25 m3», «1000 USD» |
+| Borrador desde audio | `PENDIENTE_CONFIRMACION`, 3 acciones, sin cédula inventada |
+| Nota del verificador | «cliente.cedula: el numero 1710034065 no coincide con el audio» |
+
+Evidencia: `.agents/evidencias/fase2_audio_groq_2026-11-14.txt` y
+`caso_voz_draft_2026-11-14.json`.
+
+### Decisiones tomadas
+
+1. **Groq es el proveedor de voz por defecto**, con `whisper-large-v3`; se puede
+   cambiar a `turbo` por entorno.
+2. **La confianza por palabra es un proxy** (`exp(avg_logprob)` del segmento);
+   no se presenta como probabilidad calibrada.
+3. **El texto pegado es una fuente legítima** y queda registrado en
+   `texto_directo`.
+4. **El verificador manda sobre el LLM**: si la cédula no está en la
+   transcripción, se descarta aunque el modelo «sepa» cuál era.
+
+### Próximo paso exacto
+
+Cerrar la Fase 2 con confirmación/ejecución de acciones (`lock_version`) y la UI
+de borrador; después, 5–10 audios humanos reales para medir CER de dígitos.
+
+### Archivos tocados
+
+- `services/core-api/app/voz/proveedores/{__init__,groq}.py`
+- `services/core-api/app/voz/{stt,ingesta}.py`
+- `services/core-api/app/cerebro/{sobre,extractor,router}.py`
+- `services/core-api/app/cerebro/{hechos,compilador}.py`
+- `services/core-api/app/main.py`, `app/panel_acl.py`
+- `db/migrations/086_cerebro_texto_directo.sql`
+- `services/core-api/tests/test_v{88_groq,89_extractor}.py`
+- `.env.example`
+- Evidencias: `fase2_audio_groq_2026-11-14.txt`, `caso_voz_draft_2026-11-14.json`
+
+
+## 2026-11-14 — Laboratorio del Cerebro en el panel
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** que Julio pueda probar él mismo, en el navegador, el camino
+dictado/audio → hechos → borrador, sin depender de `curl`.
+
+### Hecho
+
+1. `GET /panel/cerebro` sirve `app/web/templates/cerebro_lab.html`: pestañas
+   **Texto dictado** y **Audio**, selector de perfil, y render de estado,
+   intención, texto normalizado, hechos con cita/hablante/ms/confianza,
+   acciones con doble confirmación y dependencias, preguntas, notas y JSON crudo.
+2. El sidebar del panel gana **«Cerebro · voz BETA»**, visible solo con el
+   módulo `cerebro` (`data-modulo`), no con `data-role-btn` para no romper
+   `puedeVista`.
+3. `app/web/panel.py` sirve la página; los endpoints siguen siendo
+   `/api/v1/voz/transcribir` y `/api/v1/cerebro/interpretar`.
+
+### Evidencia (real, ejecutada)
+
+| Comando / prueba | Resultado |
+|---|---|
+| `curl /panel/cerebro` | HTTP 200 |
+| Consola del navegador | 0 errores |
+| Prueba desde la UI (ejemplo) | 3.2 s, 12 hechos, 4 acciones, 1 con doble confirmación |
+| Primer hecho | `cliente.nombre = Jorge Bailón`, cita «Crea un cliente llamado Jorge Bailón», SUPERADMIN |
+| Cotización compilada | 25 m3 · FC-210 · 118.00 · **PROVISIONAL** · 2026-11-21 |
+| Sidebar con Julio | ítem «Cerebro · voz BETA» visible |
+| Sidebar con Secretaría | ítem oculto (`cerebro=false`) |
+| `pytest /app/tests` | **482 passed**, exit 0 |
+
+Evidencia completa: `.agents/evidencias/lab_cerebro_2026-11-14.txt`.
+
+### Decisiones tomadas
+
+1. **Página aparte, no dentro de `panel.html`.** El panel es un HTML de 426 KB;
+   el laboratorio se sirve como documento propio para no arriesgar las vistas
+   cerradas, y se enlaza desde el sidebar.
+2. **La página no escribe negocio.** Solo llama a los endpoints; el rastro queda
+   en `cerebro_extracciones` / `cerebro_borradores` (append-only). Alternativa
+   descartada: un endpoint de conveniencia que creara el cliente «para probar»,
+   porque rompe la regla de confirmación humana.
+3. **Visibilidad por módulo, no por vista.** El ítem usa `data-modulo="cerebro"`
+   porque `puedeVista` solo conoce las vistas históricas y habría ocultado el
+   botón a Julio.
+4. **Interruptores encendidos en local** (`voz.enabled`, `cerebro.enabled`) para
+   la prueba; el SQL de apagado queda en la evidencia.
+
+### Pendiente inmediato
+
+Confirmar y ejecutar acciones con `lock_version` (reutilizando
+`services/cotizaciones.py` y `services/clients.py`) y botones de
+confirmar/corregir en esta misma tarjeta. Después: 5–10 audios humanos reales
+para medir CER de dígitos.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/cerebro_lab.html` (nuevo)
+- `services/core-api/app/web/panel.py` (ruta `/panel/cerebro`)
+- `services/core-api/app/web/templates/panel.html` (ítem del sidebar)
+- `.agents/evidencias/lab_cerebro_2026-11-14.txt` (nuevo)
+
+
+## 2026-11-15 — Laboratorio del Cerebro: primera prueba de audio y tres correcciones
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** probar el camino de audio desde la página `/panel/cerebro` con
+Groq real y corregir lo que saliera.
+
+### Hecho
+
+La prueba con el `.wav` sintético («Jorge Bailón, Sadele 17, 10-03, 40-65,
+quiere 25 m3 de FC-210 en la joya, y ya me dio mil dólares de abono») destapó
+tres defectos reales:
+
+1. **Cita no normalizada.** El LLM citó `mil dólares de abono`; el texto
+   normalizado dice `1000 USD`, así que `pago.monto = 1000` se descartaba.
+   Ahora se normaliza la cita y se busca de nuevo antes de descartar el hecho.
+2. **`pago.forma = "abono"` como método de pago.** El abono habría entrado a
+   caja con un método que el esquema no acepta. Se agregó lista blanca
+   (`FORMAS_PAGO = EFECTIVO, TRANSFERENCIA`); si el dictado no dice cómo entró
+   el dinero, se pregunta y el borrador queda en `REQUIERE_ACLARACION`.
+3. **La forma del abono contaminaba la cotización.** Se quitó el atajo
+   `pago.forma` → `cotizacion.forma_pago`; la cotización usa solo su propia
+   clave con lista `EFECTIVO/TRANSFERENCIA/ABONO/FIADO` o `POR_DEFINIR`.
+
+También `POST /api/v1/voz/transcribir` devuelve `texto_crudo` y `duracion_ms`,
+que la página necesitaba (mostraba `NaN s` y no enseñaba la transcripción).
+
+### Evidencia (real, ejecutada)
+
+| Comprobación | Resultado |
+|---|---|
+| UI, pestaña Audio, mismo `.wav` | `REQUIERE_ACLARACION`, 11.0 s, crudo visible |
+| Hechos | nombre · 25 m3 · FC-210 · La Joya · **pago.monto = 1000** · pago.forma = abono |
+| Acciones | crear cliente · cotización (POR_DEFINIR) · abono (POR_DEFINIR) |
+| Pregunta nueva | «¿El abono entró en efectivo o por transferencia?» |
+| Nota del verificador | «cliente.cedula: el numero 1710034065 no coincide con el audio» |
+| `pytest` completo | **485 passed**, exit 0 |
+| `pytest` compilador + extractor | 23 passed |
+
+Evidencia: `.agents/evidencias/lab_cerebro_2026-11-14.txt`.
+
+### Decisiones tomadas
+
+1. **La cita se compara en forma normalizada.** El LLM cita lo que escuchó y el
+   texto guardado está normalizado; rechazar por esa diferencia tiraba datos
+   buenos. Alternativa descartada: pedirle al LLM que cite el texto exacto
+   (ya se le pide, no lo cumple siempre).
+2. **Sin forma de pago no se adivina.** Antes se asumía `EFECTIVO`; mover dinero
+   a la caja equivocada es peor que preguntar una vez.
+3. **`ABONO` es condición de la cotización, no método de pago.**
+4. **La pregunta de dinero va primera** en la lista (`preguntas.insert(0, …)`)
+   para que no la recorte el tope de 3.
+
+### Bloqueos
+
+Ninguno nuevo. Sigue pendiente: confirmar/ejecutar acciones y audios humanos
+reales con ruido de planta.
+
+### Archivos tocados
+
+- `services/core-api/app/cerebro/{compilador,extractor}.py`
+- `services/core-api/app/voz/ingesta.py`
+- `services/core-api/app/web/templates/cerebro_lab.html`
+- `services/core-api/tests/test_v87_cerebro_compilador.py`
+- `services/core-api/tests/test_v89_extractor.py`
+
+
+## 2026-11-15 — Micrófono bloqueado en `/panel/cerebro`: diagnóstico y ayuda en pantalla
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Objetivo:** que la grabación desde el navegador no quede como un error seco
+cuando el sitio tiene el micrófono denegado.
+
+### Diagnóstico
+
+No es el backend. En la pestaña real:
+
+```
+window.isSecureContext        true
+navigator.mediaDevices        presente
+navigator.permissions.query   state = "denied"
+getUserMedia                  NotAllowedError: Permission denied
+cabeceras del servidor        sin Permissions-Policy / Feature-Policy
+```
+
+El navegador tiene el permiso **denegado a nivel de sitio** (o la app que
+muestra la página no implementa el diálogo de permiso). Ninguna cabecera ni
+endpoint del proyecto puede concederlo.
+
+### Hecho
+
+1. La pestaña **Audio** detecta el estado del permiso al cargar y avisa antes de
+   que el usuario pulse «Grabar».
+2. Si `getUserMedia` falla, se explica por nombre de error
+   (`NotAllowedError`, `SecurityError`, `NotFoundError`, `NotReadableError`,
+   `AbortError`) en un bloque con los pasos concretos: candado del navegador →
+   Micrófono → Permitir, recarga, privacidad de Windows y «abrir en Chrome o
+   Edge si es una vista previa de app».
+3. Botón **Reintentar permiso** que vuelve a pedir acceso sin recargar.
+4. El mensaje de error ya no dice «no se pudo»: recuerda que arrastrar una nota
+   de voz funciona igual.
+
+### Evidencia (real, ejecutada)
+
+| Comprobación | Resultado |
+|---|---|
+| Consola de la página | 0 errores |
+| Al cargar la pestaña Audio | bloque de ayuda visible: «Este sitio tiene el micrófono bloqueado en el navegador» |
+| Al pulsar «Grabar» | detalle: «El micrófono está bloqueado para este sitio…» + «Sin micrófono. Puedes arrastrar una nota de voz y se transcribe igual» |
+| Subida de archivo (mismo `.wav`) | «Archivo listo: caso_voz.wav (509 KB)» y botón habilitado |
+| `GET /panel/cerebro` | HTTP 200 |
+
+### Decisión
+
+El camino de audio **no depende del micrófono**: la página acepta un archivo
+(la nota de voz del teléfono o la grabadora de Windows) y ese flujo ya está
+probado de punta a punta. Grabar desde la página es comodidad, no requisito.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/cerebro_lab.html`
+
+
+
+## 2026-11-15 — Caso Joaquín: teléfono dictado en grupos, hora ≠ fecha e identidad
+
+**Agente:** OpenCode (DeepSeek V4.1 Flash)
+**Duración:** sesión de prueba en vivo con Julio
+**Objetivo:** que el Cerebro entienda el dictado real de una cotización con
+teléfono, hora de inicio de fundición y abono, sin inventar ni escribir nada.
+
+### Hecho
+
+1. **Teléfono en grupos.** `normalizar_con_mapa` une los grupos de dígitos
+   separados por espacio solo cuando el número completo es un teléfono o una
+   cédula («09… 0409» → un solo número). Las cantidades sueltas («10 20 30») no
+   se unen. La cédula dictada en tres grupos se conserva aunque el verificador
+   no cuadre: se marca para preguntar, no se corrige.
+2. **Tip de Julio (teléfono no capturado).** Si el LLM no emite
+   `cliente.telefono`, el backend propone el único `09…` del audio como hecho
+   `INFERIDO` y el compilador obliga a confirmarlo («¿El teléfono del cliente
+   es…?», Sí/No). Un hecho inferido sirve para preguntar, nunca para resolver
+   identidad por sí solo.
+3. **Hora ≠ fecha.** Se agregó `cotizacion.hora_entrega` (tipo `HORA`,
+   `HH:MM`). «A las 6 de la mañana» ya no se convierte en `fecha_entrega = hoy`:
+   se guarda como hora tentativa y la fecha queda nula. El compilador revisa
+   otra vez que la cita sostenga una fecha antes de usarla.
+4. **Conflicto de identidad.** El caso real reveló que el teléfono dictado ya
+   estaba registrado en `clients` a nombre de un cliente de prueba distinto.
+   Antes el borrador lo resolvía en silencio y el abono habría caído en la ficha
+   equivocada; ahora se pregunta «¿Es el mismo cliente?» y no se proponen
+   acciones hasta responder.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **497 passed**, 1 warning, exit 0 |
+| `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]` |
+| `POST /api/v1/cerebro/interpretar` con el texto del caso Joaquín | hechos: nombre, 10 m3, obra, hora 06:00, abono 500, teléfono, enviar; **sin fecha inventada**; pregunta `cliente.identidad`; cero acciones |
+| Normalizador: `normalizar_texto("Hay que enviarle al 0965 555 555")` | `Hay que enviarle al 0965555555`; una secuencia `TELEFONO` |
+
+Detalle en `.agents/evidencias/cerebro_joaquin_2026-11-15.txt`.
+
+### Decisiones tomadas
+
+1. **`INFERIDO` es un estado de hecho, no un valor inventado.** El número está
+   en el audio; lo que se infiere es que sea el teléfono del cliente, y por eso
+   exige confirmación. Alternativa descartada: dejar el teléfono en `NULL` y
+   preguntar sin proponer, que obliga a dictarlo otra vez.
+2. **`HORA` es un tipo propio y `hora_entrega` una clave propia.** Así el
+   compilador no tiene que adivinar si un texto es fecha u hora. Alternativa
+   descartada: guardar la hora dentro de `fecha_entrega` como texto libre.
+3. **El teléfono o la cédula no resuelven identidad si el nombre no encaja.**
+   Se comparan tokens sin tildes («Olmedo» encaja con «Joaquín Olmedo», «Palo
+   Velez» no). Alternativa descartada: confiar siempre en el teléfono y avisar
+   después, que escribe dinero en la ficha equivocada.
+
+### Bloqueos / preguntas al cliente
+
+1. El registro de prueba `Palo Velez` quedó con el teléfono dictado en la base
+   local. Es residuo de pruebas, no un cliente real; no se tocó porque el
+   historial es append-only y la limpieza requiere decisión de Julio.
+2. Siguen pendientes de Dirección los topes de gasto de voz/WhatsApp, la
+   retención y consentimiento de audio (LOPDP) y las recetas `PROVISIONAL`.
+
+### Próximo paso exacto
+
+Implementar confirmar/ejecutar del borrador con `lock_version` usando
+`services/clients.py` y `services/cotizaciones.py`, sin escribir desde el LLM,
+y recién después probar el caso Joaquín de punta a punta con el audio real.
+
+### Archivos tocados
+
+- `services/core-api/app/voz/normalizador_ec.py`
+- `services/core-api/app/cerebro/tiempo.py` (nuevo)
+- `services/core-api/app/cerebro/hechos.py`
+- `services/core-api/app/cerebro/sobre.py`
+- `services/core-api/app/cerebro/extractor.py`
+- `services/core-api/app/cerebro/compilador.py`
+- `services/core-api/tests/test_v85_voz_normalizador.py`
+- `services/core-api/tests/test_v87_cerebro_compilador.py`
+- `services/core-api/tests/test_v89_extractor.py`
+- `docs/CEREBRO_VOZ_DISENO.md`
+- `.agents/ESTADO.md`
+- `.agents/evidencias/cerebro_joaquin_2026-11-15.txt`
+
+## 2026-11-15 - Caso Juan Carlos: el Cerebro ya genera tareas y no registra dinero sin comprobante
+
+### Objetivo
+
+Que un dictado que ordena «envíale un recordatorio al …» produzca una tarea
+ejecutable, conectada al sistema de recordatorios de Gato, y que una
+transferencia que todavía no llegó no se registre como abono ni como traslado
+de caja.
+
+### Hecho
+
+1. **Hechos nuevos, separados por sujeto.** `contacto.nombre/rol/telefono`
+   (maestro, encargado, ingeniero), `pago.recibido` (BOOLEANO),
+   `pago.cuenta_destino`, y `tarea.destinatario/telefono/mensaje/cuando/
+   adjuntar_factura`. El prompt (`cerebro-v2`) prohíbe mandar el teléfono del
+   maestro a `cliente.telefono` y prohíbe usar `traslado.cuenta_banco` para una
+   transferencia del cliente.
+2. **Compilador con invariantes nuevas.** Si `pago.recibido = false`, no se
+   propone `registrar_abono_cliente`; si `pago.forma = TRANSFERENCIA`, no se
+   propone `registrar_traslado_caja_banco`. `crear_tarea_recordatorio` se arma
+   solo con hechos `tarea.*`, con el mensaje dictado sin agregarle cifras.
+   Resistencia «210» se completa a `FC-210` contra el catálogo.
+3. **Ejecución conectada.** `POST /api/v1/cerebro/borradores/{id}/confirmar`
+   ejecuta una acción confirmada. Para tareas llama a
+   `asistente.recordatorios.crear` con `confirmado_por`: la fila nace
+   `PENDIENTE` en `gato_recordatorios` (sin el segundo «sí» de Gato) y el
+   despachador la envía a su hora. Las demás acciones responden 501; no se
+   simula una escritura.
+4. **Idempotencia.** La clave del recordatorio se deriva de
+   `cerebro:<borrador>:<orden>`; dos clics devuelven `repetido: true` y no
+   crean otra fila. `cerebro_ejecuciones` guarda cada intento.
+5. **Laboratorio.** La tarjeta de la acción tiene «Confirmar y programar» y
+   muestra el resultado (o el error) en la misma página.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **505 passed**, 1 warning, exit 0 |
+| `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]` |
+| `POST /api/v1/cerebro/interpretar` con el texto del caso | 13 hechos, **0 preguntas**, 3 acciones: `crear_cliente`, `crear_cotizacion_borrador` (FC-210, 118.00, hora 10:00, sin fecha inventada) y `crear_tarea_recordatorio` (destino dictado, mensaje exacto) |
+| `POST /api/v1/cerebro/borradores/a52b…/confirmar` `{"accion_orden":3}` | `estado OK`, `gato_recordatorios` en **PENDIENTE**, `origen_destino DICTADO`, `confirmado_por` = usuario del panel |
+| Segundo POST idéntico | `repetido: true`; `count(*)` de ese teléfono sigue en **1** |
+
+Detalle en `.agents/evidencias/cerebro_juan_carlos_2026-11-15.txt`.
+
+### Decisiones tomadas
+
+1. **La confirmación de la pantalla es la ratificación.** No se duplica el
+   «sí» entre Cerebro y Gato: el endpoint pasa `confirmado_por` y la fila nace
+   `PENDIENTE`. Alternativa descartada: dejar también `BORRADOR` y exigir un
+   segundo «sí» en el chat de Gato, que entrena a la gente a confirmar dos veces
+   sin leer.
+2. **Dinero no recibido no se registra.** `pago.recibido = false` suprime el
+   abono y una nota explica por qué. Alternativa descartada: registrar el abono
+   «porque lo dijo» y corregirlo después; eso ensucia la caja y el saldo.
+3. **Una transferencia del cliente no es un traslado de caja.** La cuenta
+   destino se guarda como `pago.cuenta_destino`, informativa. El traslado
+   interno queda solo para efectivo.
+4. **La tarea sin hora se propone «ahora», marcada.** `programado_inferido =
+   true` aparece en los parámetros que el humano confirma. Alternativa
+   descartada: bloquear el borrador con una pregunta de hora, que no aporta
+   nada cuando el dictado dice «esto tienes que enviarle».
+5. **Roles de la tarea alineados a `ROLES_ESCRITURA`** (SUPERADMIN,
+   SECRETARIA). El Cerebro no propone una tarea que el servicio de Gato luego
+   rechace por ACL.
+
+### Bloqueos / preguntas al cliente
+
+1. Las tareas internas sin WhatsApp («que revisen en secretaría cómo estamos
+   con los despachos») no tienen tabla propia: `gato_recordatorios` exige
+   teléfono. Se propone migración 087 con una tabla de tareas internas, o
+   tratarlas como recordatorio al teléfono de Secretaría. **Decisión de Julio.**
+2. Solo `crear_tarea_recordatorio` tiene ejecutor conectado. `crear_cliente`,
+   `crear_cotizacion_borrador` y las acciones de dinero siguen respondiendo 501
+   desde el Cerebro; se ejecutan por el panel mientras se conectan una por una.
+3. Siguen pendientes de Dirección los topes de gasto de voz/WhatsApp, la
+   retención y consentimiento de audio (LOPDP) y las recetas `PROVISIONAL`.
+
+### Próximo paso exacto
+
+Conectar `crear_cliente` y `crear_cotizacion_borrador` al endpoint de
+confirmación usando `services/clients.py` y `services/cotizaciones.py` (con
+`lock_version` y una fila de `cerebro_ejecuciones` por acción), persistir
+`contacto.*` como `client_facts` de categoría `DATO_CONTACTO` cuando el cliente
+exista, y decidir con Julio si las tareas internas van a la migración 087 o al
+teléfono de Secretaría.
+
+### Archivos tocados
+
+- `services/core-api/app/cerebro/compilador.py`
+- `services/core-api/app/cerebro/extractor.py`
+- `services/core-api/app/cerebro/__init__.py`
+- `services/core-api/app/cerebro/router.py`
+- `services/core-api/app/asistente/recordatorios.py`
+- `services/core-api/app/web/templates/cerebro_lab.html`
+- `services/core-api/tests/test_v87_cerebro_compilador.py`
+- `docs/CEREBRO_VOZ_DISENO.md`
+- `.agents/ESTADO.md`
+- `.agents/evidencias/cerebro_juan_carlos_2026-11-15.txt`
+
+## 2026-11-15 - Díaz Sur: dos contactos, condiciones y popout de tareas
+
+### Objetivo
+
+Procesar un contrato con dos ingenieros de contacto, descuento, planta móvil y
+una transferencia pendiente; y que la tarea confirmada avise en el panel con un
+popout, no solo con la campanita.
+
+### Hecho
+
+1. **Normalizador.** Se unen teléfonos con guiones (`0963-444-444`) y se
+   resuelve «27 mil» dicho con dígitos (`27000`, no `27 1000`). «27 mil 500»
+   queda en `27500`. Sin regresión en los números hablados.
+2. **Varios contactos.** `contacto.*` para el primero, `contacto.2.*` y
+   `contacto.3.*` para los siguientes. El compilador usa el único contacto con
+   teléfono, o pregunta a cuál enviar si hay varios. Nunca pasa un teléfono de
+   contacto a `cliente.telefono`.
+3. **Condiciones del contrato.** `resistencia` (240) no es `precio_m3`;
+   `plazo_entrega` («en un mes»), `descuento_pct` (13), `dias_trabajo` y
+   `operacion.planta_movil` se capturan como hechos. El compilador los resume
+   en `notas` de la cotización sin inventar fecha ni aplicar el descuento.
+4. **Hora del recordatorio.** Si el LLM no extrae `tarea.cuando` pero la frase
+   dice «a las 18:00», el backend la toma de esa oración. `validar_hecho`
+   acepta `HH:MM` explícito. Un recordatorio no sale «ahora» si se fijó hora.
+5. **Popout de tareas.** `GET /api/v1/cerebro/tareas/pendientes` lista los
+   recordatorios `PENDIENTE`/`ENVIANDO`. `/panel` abre un diálogo «Tareas
+   pendientes» al entrar si hay tareas nuevas; «Entendido» guarda los ids en
+   `localStorage` y no repite el aviso. La campanita también las lista.
+   `/panel/cerebro` muestra el popout al confirmar una tarea.
+
+### Evidencia (real, ejecutada)
+
+| Comando / prueba | Resultado |
+|---|---|
+| `docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto` | **515 passed**, 1 warning, exit 0 |
+| `docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]` |
+| Normalizador: `0963-444-444` y `27 mil dólares` | un `TELEFONO` y `27000 USD` |
+| `POST /cerebro/interpretar` (Díaz Sur) | 16 hechos, 2 preguntas (obra y destinatario), 1 acción `crear_cliente`; **sin abono ni traslado**; 240 es resistencia, no precio |
+| Recordatorio suelto a las 18:00 | `PENDIENTE_CONFIRMACION`, 0 preguntas, `cuando = 18:00`, sin pedir cliente |
+| `POST /borradores/{id}/confirmar` | fila `PENDIENTE` en `gato_recordatorios` para el 16/11 18:00 |
+| `GET /cerebro/tareas/pendientes` | 1 tarea para `0965555555` a las 18:00 |
+| Navegador `/panel` | popout «Tareas pendientes» visible; «Entendido» lo cierra y no reaparece al recargar |
+
+Evidencia: `.agents/evidencias/cerebro_diaz_sur_2026-11-15.txt` y
+`.agents/evidencias/panel_cola_tareas_2026-11-15.jpeg`.
+
+### Decisiones tomadas
+
+1. **No se crea tabla de notificaciones.** `gato_recordatorios` sigue siendo la
+   única cola; el panel la lee con un endpoint directo. Alternativa descartada:
+   tabla `notificaciones` paralela, que obliga a mantener dos estados.
+2. **Varios contactos se indexan, no se concatenan.** `contacto.2.*` conserva
+   nombre, rol y teléfono separados. Alternativa descartada: una sola cadena
+   con los dos nombres, que no se puede usar como destino.
+3. **Si hay dos contactos y no se dice a quién, se pregunta.** No se elige al
+   «responsable del contrato» por cuenta propia. Alternativa descartada:
+   asumir que el recordatorio va al primero.
+4. **La resistencia no es precio.** `240` después de «hormigón es de» es
+   `FC-240`; el precio sale del catálogo. Alternativa descartada: aceptar 240
+   como precio oficial dictado por Julio, que habría cotizado a un valor falso.
+5. **La hora se recupera de la frase.** El backend no confía en que el LLM
+   copie siempre `tarea.cuando`; si falta, la busca en la oración del
+   recordatorio.
+6. **El popout se acusa recibo.** «Entendido» guarda los ids en el navegador
+   para no repetir el aviso; la campanita sigue mostrando la tarea pendiente.
+
+### Bloqueos / preguntas al cliente
+
+1. La cotización de Díaz Sur queda bloqueada por `obra_direccion`: el audio no
+   da una dirección, solo «cerca de ahí». Es una pregunta correcta; falta que
+   Julio la complete.
+2. El recordatorio de Díaz Sur espera que Julio diga a cuál de los dos
+   ingenieros se envía. El sistema muestra las dos opciones.
+3. Las tareas internas sin WhatsApp siguen sin tabla. Se decide entre migración
+   087 o teléfono de Secretaría.
+4. `crear_cliente`, `crear_cotizacion_borrador` y las acciones de dinero aún no
+   tienen ejecutor desde el Cerebro (501 a propósito).
+5. El endpoint de tareas no está en `docs/CATALOGO_CONSULTAS.json`; Gato no
+   puede responder «¿qué tareas tengo?» hasta que se agregue la consulta
+   nombrada.
+
+### Próximo paso exacto
+
+Conectar `crear_cliente` y `crear_cotizacion_borrador` al confirmar (con
+`services/clients.py` y `services/cotizaciones.py`), persistir `contacto.*` en
+`client_facts` cuando el cliente exista, y decidir con Julio la tabla de tareas
+internas. Después, cargar la consulta nombrada de tareas pendientes al catálogo
+del Bibliotecario si Gato debe responderla.
+
+### Archivos tocados
+
+- `services/core-api/app/voz/normalizador_ec.py`
+- `services/core-api/app/cerebro/compilador.py`
+- `services/core-api/app/cerebro/extractor.py`
+- `services/core-api/app/cerebro/hechos.py`
+- `services/core-api/app/cerebro/tiempo.py`
+- `services/core-api/app/cerebro/router.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/app/web/templates/cerebro_lab.html`
+- `services/core-api/tests/test_v85_voz_normalizador.py`
+- `services/core-api/tests/test_v87_cerebro_compilador.py`
+- `docs/CEREBRO_VOZ_DISENO.md`
+- `.agents/ESTADO.md`
+- `.agents/evidencias/cerebro_diaz_sur_2026-11-15.txt`
+- `.agents/evidencias/panel_cola_tareas_2026-11-15.jpeg`
+
+## 2026-11-15 - Correcciones humanas, bóveda de errores y guarda de dinero
+
+### Objetivo
+
+Que Julio o la secretaría puedan leer lo que el sistema entendió y corregirlo
+antes de confirmar; que cada corrección quede como memoria (bóveda) y que el
+sistema no registre un abono si el dictado no dice que el dinero entró.
+
+### Hecho
+
+1. **Lectura en voz alta.** `/interpretar` y `/corregir` devuelven `resumen`
+   («Entendí: …») armado solo con hechos utilizables. Si hay monto pero no se
+   sabe si entró, dice «(sin confirmar si ya entró)». En `/panel/cerebro` va en
+   un bloque azul arriba de los hechos, con un botón **Corregir** por hecho.
+2. **Corrección = versión nueva.** `POST /api/v1/cerebro/borradores/{id}/corregir`
+   reconstruye los hechos desde `sobre_json` + texto (sin LLM), reaplica las
+   correcciones de la cadena, recompila, inserta el borrador `version + 1` y
+   marca el anterior `SUPERADO_POR_CORRECCION`. El payload viejo no se toca.
+3. **Migración 087 aplicada.** `cerebro_correcciones` (append-only con trigger
+   `trg_cerebro_correcciones_immutable`), índices y vista
+   `v_cerebro_vocabulario`.
+4. **Aprendizaje.** El extractor pasa los pares corregidos al prompt como
+   `CORRECCIONES CONOCIDAS`. Probado en vivo: tras corregir «Díaz Sur» →
+   «Dualsur», la extracción siguiente ya devolvió `Dualsur` sin corrección.
+5. **Estado humano.** `CORREGIDO_POR_HUMANO` es autoridad: el valor puede no
+   estar en el audio y el hecho nuevo puede no tener cita; no se finge
+   evidencia y no se valida contra la cita.
+6. **Guarda de dinero.** `app/cerebro/dinero.py` exige una frase en pasado
+   («ya me depositó», «nos transfirió») en la cita o en la ventana del texto
+   alrededor de la cifra. Sin eso no se propone `registrar_abono_cliente`: se
+   pregunta «¿Los 27000 USD ya entraron?». Si el LLM afirma
+   `pago.recibido = true` sin esa frase, se degrada a duda. Una corrección
+   humana manda.
+7. **Informe semanal.** `scripts/informe_cerebro_errores.py` genera el markdown
+   para Abelito: transcripción, hechos, acciones, correcciones, ejecuciones,
+   vocabulario y «qué revisar». Solo lee.
+8. **Navegador.** Probado en `/panel/cerebro` con el dictado de Díaz Sur:
+   resumen, 17 hechos, corrección de `cliente.nombre` → «Dualsur Ingeniería»
+   con aviso «ahora es la versión 2» y el hecho en estado `CORREGIDO POR
+   HUMANO`.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **534 passed**, 1 warning |
+| `docker compose run core-api python scripts/db_migrate.py` | `+ 087_cerebro_correcciones.sql` |
+| Cadena 287b3918 → aff5d70d → e62ddbe3 | v3 conserva `Dualsur` y el plazo corregido |
+| `scripts/evidencia_guarda_dinero.py 7a858229…` | 4 casos: sin dato pregunta; `true` sin frase pregunta; corrección humana registra; «todavía no» no registra |
+| `scripts/informe_cerebro_errores.py --dias 7` | informe con el dictado Díaz Sur completo |
+| Navegador | `.agents/evidencias/cerebro_lab_correccion_2026-11-15.jpeg` |
+
+Archivos: `.agents/evidencias/cerebro_guarda_dinero_2026-11-15.txt`,
+`.agents/evidencias/cerebro_informe_errores_2026-11-15.md`,
+`.agents/evidencias/cerebro_lab_correccion_2026-11-15.jpeg`.
+
+### Decisiones tomadas
+
+1. **Corregir no reescribe: versiona.** Upsert del borrador habría roto la
+   auditoría y el payload inmutable de 085. Alternativa descartada: UPDATE en
+   sitio para «dejar limpio» el resultado.
+2. **La corrección no vuelve a llamar al LLM.** Se recompila con el sobre
+   guardado y el texto; así la corrección parte de lo que Julio leyó.
+3. **La cadena de correcciones se reaplica en orden.** Sin eso, corregir el
+   destinatario borraba el nombre ya corregido (se vio en vivo y se corrigió).
+4. **El modelo no puede afirmar dinero recibido.** Un `true` sin frase en
+   pasado se degrada a duda; el dinero exige doble confirmación y evidencia.
+   Alternativa descartada: confiar en `pago.recibido` del LLM.
+5. **La bóveda es de correcciones, no de audios todavía.** Guardar voces exige
+   consentimiento y retención (LOPDP) que Julio aún no definió.
+
+### Bloqueos / preguntas al cliente
+
+1. **Tareas internas sin WhatsApp**: ¿tabla propia (migración 088) o recordatorio
+   al teléfono de Secretaría? Julio decide.
+2. **Bóveda de audios** («baúl»): ¿se guardan las voces para entrenar el
+   reconocimiento? Falta consentimiento y plazo de retención.
+3. `crear_cliente`, `crear_cotizacion_borrador` y las acciones de dinero siguen
+   sin ejecutor desde el Cerebro (501 a propósito).
+4. `contacto.*` se extrae pero todavía no se persiste en `client_facts`.
+5. La cotización de Díaz Sur sigue esperando `obra_direccion` y a cuál ingeniero
+   va el recordatorio.
+
+### Próximo paso exacto
+
+Conectar `crear_cliente` y `crear_cotizacion_borrador` al confirmar, persistir
+`contacto.*` en `client_facts`, y resolver con Julio la tabla de tareas internas
+(088) frente al teléfono de Secretaría antes de tocar el esquema otra vez.
+
+### Archivos tocados
+
+- `services/core-api/app/cerebro/revision.py` (nuevo)
+- `services/core-api/app/cerebro/dinero.py` (nuevo)
+- `services/core-api/app/cerebro/router.py`
+- `services/core-api/app/cerebro/compilador.py`
+- `services/core-api/app/cerebro/extractor.py`
+- `services/core-api/app/cerebro/hechos.py`
+- `services/core-api/app/web/templates/cerebro_lab.html`
+- `services/core-api/tests/test_v90_cerebro_correcciones.py` (nuevo)
+- `services/core-api/tests/test_v87_cerebro_compilador.py`
+- `services/core-api/tests/test_v89_extractor.py`
+- `db/migrations/087_cerebro_correcciones.sql` (nuevo)
+- `scripts/informe_cerebro_errores.py` (nuevo)
+- `scripts/evidencia_guarda_dinero.py` (nuevo)
+- `docs/CEREBRO_VOZ_DISENO.md` (v1.4)
+- `.agents/ESTADO.md`
+- `.agents/evidencias/cerebro_guarda_dinero_2026-11-15.txt`
+- `.agents/evidencias/cerebro_informe_errores_2026-11-15.md`
+- `.agents/evidencias/cerebro_lab_correccion_2026-11-15.jpeg`
+
+## 2026-11-15 - Tareas internas: el seguimiento vive en el CRM
+
+### Objetivo
+
+Que una instrucción dictada a alguien del equipo («que revisen en secretaría cómo
+van los despachos») deje de ser un mensaje suelto y se convierta en una tarea
+con seguimiento: notificada, resuelta o justificada, y registrada con metadatos,
+con la hora de cada paso para saber cuánto tardó de verdad.
+
+### Hecho
+
+1. **Migración 088 aplicada.** `cerebro_tareas_internas` (instrucción, rol y
+   persona asignada, `notificada_en`, `resuelta_en`, `registrada_en`,
+   `resolucion`, `resolucion_nota`, `metadatos`) y
+   `cerebro_tareas_internas_eventos` append-only con trigger. Vista
+   `v_cerebro_tareas_internas` con `minutos_hasta_resolucion`,
+   `minutos_hasta_registro`, `minutos_abierta` y `vencida_24h`.
+2. **Servicio** `app/cerebro/internas.py`: crear (idempotente por
+   `clave_externa`), resolver, registrar, listar y obtener; transiciones
+   `NOTIFICADA → RESUELTA|JUSTIFICADA → REGISTRADA`. Sin nota no se resuelve; sin
+   metadatos no se registra.
+3. **El compilador decide sin LLM.** Teléfono dictado o contacto del cliente con
+   teléfono → `crear_tarea_recordatorio`. Sin teléfono y con área nombrada
+   (SECRETARIA/BODEGA/CONTADORA/VENDEDOR), persona sin teléfono o verbo de
+   encargo → `crear_tarea_interna`. Nunca se inventa un número.
+4. **Prompt v5.** Nueva regla 20: una instrucción al equipo es MUTACIÓN y usa
+   `tarea.mensaje`/`tarea.destinatario` sin teléfono. Probado en vivo: el dictado
+   de despachos ya devuelve `crear_tarea_interna` con la instrucción copiada.
+5. **Migración 089 aplicada.** El CHECK de `cerebro_borradores` no admitía
+   `SIN_ACCIONES` y un dictado sin acciones devolvía 500. Se amplió el CHECK sin
+   tocar la 085.
+6. **Panel.** `GET /cerebro/tareas/pendientes` devuelve `internas`; el popout y
+   la campanita muestran la tarea con **Resolver**, **Justificar** y **Registrar
+   con metadatos**. `POST /cerebro/tareas-internas/{id}/resolver` y
+   `/registrar` cierran el ciclo.
+7. **Informe semanal** con la sección «Tareas internas del periodo», incluidos
+   los minutos que tardó cada una.
+8. **Lectura en voz alta.** El resumen dice «una tarea interna para secretaría» y
+   no convierte un plazo («hoy») en una hora.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **550 passed**, 1 warning |
+| `db_migrate.py` | `+ 088_cerebro_tareas_internas.sql`, `+ 089_cerebro_sin_acciones.sql` |
+| `POST /cerebro/interpretar` con el dictado de despachos | `crear_tarea_interna`, rol SECRETARIA, instrucción copiada |
+| `POST /borradores/{id}/confirmar` | fila en `cerebro_tareas_internas`, estado **NOTIFICADA** |
+| `POST /tareas-internas/{id}/resolver` | **RESUELTA**, nota guardada |
+| `POST /tareas-internas/{id}/registrar` | **REGISTRADA** con metadatos |
+| `scripts/evidencia_tareas_internas.py` | reloj simulado de 47 min → 47 min medidos; saltarse pasos rechazado |
+| Panel `/panel` | popout con la tarea interna y sus botones; resuelta y registrada desde la UI |
+
+Evidencias: `.agents/evidencias/cerebro_tareas_internas_2026-11-15.txt` y
+`.agents/evidencias/cerebro_informe_errores_2026-11-15.md`.
+
+### Decisiones tomadas
+
+1. **Tabla propia, no `gato_recordatorios`.** Una tarea interna no tiene
+   teléfono ni despachador, y su ciclo (notificada → resuelta → registrada) es
+   otro. Alternativa descartada: usar el teléfono de Secretaría y fingir un
+   WhatsApp, que no mide el trabajo ni guarda la nota.
+2. **El reloj arranca al dejar el aviso.** `notificada_en` lo pone el sistema al
+   confirmar el borrador; lo que se mide es la respuesta de la persona, no la
+   buena intención del sistema.
+3. **La nota y los metadatos son obligatorios para cerrar.** Sin ellos no hay
+   evidencia de qué se hizo; el sistema no cierra solo.
+4. **El LLM no decide si es interna o WhatsApp.** Lo decide la presencia de un
+   teléfono y las palabras del dictado; el modelo solo copia la instrucción.
+5. **`SIN_ACCIONES` se guarda.** Un dictado sin nada ejecutable deja constancia
+   de lo que se entendió en vez de reventar con un 500.
+
+### Bloqueos / preguntas al cliente
+
+1. **Bóveda de audios** («baúl» de voces): falta consentimiento y retención
+   (LOPDP). No se guardan voces todavía.
+2. `crear_cliente`, `crear_cotizacion_borrador` y las acciones de dinero siguen
+   sin ejecutor (501 a propósito).
+3. `contacto.*` se extrae pero no se persiste en `client_facts`.
+4. La cotización de Díaz Sur sigue esperando `obra_direccion` y a cuál ingeniero
+   va el recordatorio.
+
+### Próximo paso exacto
+
+Conectar `crear_cliente` y `crear_cotizacion_borrador` al confirmar y persistir
+`contacto.*` en `client_facts`; después, decidir con Julio la bóveda de audios
+(consentimiento y retención) antes de guardar voces.
+
+### Archivos tocados
+
+- `db/migrations/088_cerebro_tareas_internas.sql` (nuevo)
+- `db/migrations/089_cerebro_sin_acciones.sql` (nuevo)
+- `services/core-api/app/cerebro/internas.py` (nuevo)
+- `services/core-api/app/cerebro/compilador.py`
+- `services/core-api/app/cerebro/revision.py`
+- `services/core-api/app/cerebro/extractor.py`
+- `services/core-api/app/cerebro/router.py`
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/app/web/templates/cerebro_lab.html`
+- `services/core-api/tests/test_v91_tareas_internas.py` (nuevo)
+- `scripts/evidencia_tareas_internas.py` (nuevo)
+- `scripts/informe_cerebro_errores.py`
+- `docs/CEREBRO_VOZ_DISENO.md` (v1.5, §3.5)
+- `.agents/ESTADO.md`
+- `AGENTS.md`
+- `.agents/evidencias/cerebro_tareas_internas_2026-11-15.txt`
+- `.agents/evidencias/cerebro_informe_errores_2026-11-15.md`
+
+## 2026-11-15 - El aviso de tareas internas no depende del popout
+
+### Objetivo
+
+Corregir un riesgo señalado por Julio: el popout de tareas puede quedar cerrado
+o minimizado y la persona nunca ve el aviso. La notificación no puede depender
+de una ventana que se pueda perder.
+
+### Hecho
+
+1. **Aviso fijo en el panel.** Franja `#aviso-internas` pegada arriba de las
+   vistas: «Tienes N tareas internas pendientes · la más antigua lleva X min»,
+   con botón **Ver tareas**. Se queda visible mientras haya tareas abiertas, no
+   tiene botón de cerrar y **no** usa `localStorage`.
+2. **Rojo si hay vencidas.** Con más de 24 h sin resolver, la franja pasa a
+   rojo y lo dice.
+3. **El popout queda como refuerzo.** Sigue abriéndose una vez por tarea nueva y
+   se puede abrir desde la franja o la campanita; cerrarlo ya no silencia nada.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **551 passed**, 1 warning |
+| Panel en navegador | franja visible: «Tienes 1 tarea interna pendiente · La más antigua lleva 4 min · Ver tareas» |
+| Clic en «Ver tareas» | abre el diálogo (`dlg-tareas.open = true`) |
+| Cerrar el diálogo | la franja sigue visible (`hidden = false`) |
+
+### Decisión
+
+La fuente de verdad de «hay algo pendiente» es la base y la franja que se
+redibuja cada 60 s; el popout es solo un empujón. Alternativa descartada:
+confiar en que el popout se abre al entrar, que falla en cuanto la persona lo
+cierra o la ventana está minimizada.
+
+### Próximo paso exacto
+
+Revisar con Julio el tamaño y el lugar de la franja en el panel real (y si debe
+sonar o parpadear), antes de conectar `crear_cliente`/`crear_cotizacion_borrador`.
+
+### Archivos tocados
+
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v91_tareas_internas.py`
+- `docs/CEREBRO_VOZ_DISENO.md` (§3.5)
+- `.agents/ESTADO.md`
+- `AGENTS.md`
+
+## 2026-11-15 - Incremento v2: aviso/vista/acuse, ficha, duda explícita e intención
+
+### Objetivo
+
+Cerrar las cinco prioridades que aprobó la auditoría adversarial, sin rehacer lo
+construido: (1) notificaciones con acuse, prioridad y plazo; (2) ficha
+estructurada de la tarea; (3) duda explícita; (4) intención antes que teléfono;
+(5) pruebas F, K y L, más incertidumbre, duplicación y retiro de aprendizaje.
+
+### Hecho
+
+1. **Migración 090.** `vista_en`/`vista_por`, `acusada_en`/`acusada_por`,
+   `prioridad`, `plazo_en`, `escalada_en`/`escalada_por`; vista con `vencida`,
+   `sin_acuse` y `requiere_escalamiento`; tabla append-only
+   `cerebro_vocabulario_retiros` y `v_cerebro_vocabulario` sin los pares
+   retirados.
+2. **Aviso, vista y acuse son actos distintos.** La tarea nace `NOTIFICADA`;
+   abrir el detalle registra `VISTA`; “Acusar recibo” registra `ACUSADA` **sin
+   cambiar el estado**; resolver exige nota; registrar exige metadatos.
+3. **Prioridad y plazo.** `URGENTE` (2 h) / `NORMAL` (24 h), detectados por el
+   dictado; orden por urgencia y vencimiento; `POST /escalar` (SUPERADMIN) sube
+   la prioridad y deja constancia.
+4. **Ficha determinística.** Tipo (verificación, revisión, comunicación,
+   preparación), cliente, monto de referencia, volumen, teléfono de referencia,
+   plazo dicho, datos sin confirmar y resultado esperado. No redacta: la
+   instrucción literal se conserva.
+5. **Duda explícita.** `TENTATIVO` en hechos y sobre; no es utilizable para
+   decidir; el resumen dice «sin confirmar: “300 y pico”»; la cotización no se
+   arma con un volumen dudoso y la pregunta cita la frase.
+6. **Negación.** Guarda determinística: «no le hagan todavía el descuento» deja
+   `descuento_pct = null` y una nota «NO aplicado», aunque el modelo lo extraiga
+   con cita.
+7. **Intención antes que teléfono.** Primero enviar o delegar; el teléfono solo
+   limita la capacidad. Delegar con un número en el dictado **no** crea un
+   WhatsApp. «Envíale un mensaje a secretaría» sin número es tarea interna.
+8. **Retiro de aprendizaje.** `POST /vocabulario/retirar` con motivo; el par deja
+   de usarse como pista y la corrección original no se borra.
+9. **Pruebas nuevas** `test_v92_adversarial.py` (20) y ajustes en v91/v87.
+10. **Documentos**: matriz de brechas, contrato WhatsApp–Cerebro–CRM y resumen de
+    revisión corregido (retención, notificaciones, métricas).
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **571 passed**, 1 warning |
+| `db_migrate.py` | `+ 090_cerebro_acuse_prioridad.sql` (37 migraciones, 57 tablas) |
+| `scripts/evidencia_tareas_internas.py` | normal 24 h / urgente 2 h; VISTA y ACUSADA separadas; estado sigue NOTIFICADA; escalada; `repetido: True`; segunda resolución rechazada; par retirado fuera del vocabulario |
+| Navegador `/panel` | franja «4 pendientes · 3 vencidas · 4 sin acuse»; detalle con ficha; «Acusar recibo» → chip ACUSE OK y contador 3 sin acuse |
+| Suite completa | 571 en verde tras el cambio de `_hecho` (último valor) |
+
+Evidencias: `.agents/evidencias/cerebro_tareas_internas_2026-11-15.txt` y
+`.agents/evidencias/cerebro_informe_errores_2026-11-15.md`.
+
+### Decisiones tomadas
+
+1. **El acuse no cambia el estado.** Recibir un encargo no es hacerlo; por eso
+   `ACUSADA` es una columna y un evento, no un estado de la tarea.
+2. **Resolver implica acuse.** Al resolver se completa `acusada_en` si faltaba:
+   no se puede resolver lo que no se recibió.
+3. **El plazo es política, no dato de negocio.** 2 h urgente / 24 h normal, y
+   `plazo_en` permite fijarlo por tarea; el dictado que da una hora manda.
+4. **La ficha no redacta.** Ordena los hechos y deja la instrucción literal; si
+   no hay datos, la ficha queda vacía en vez de inventar campos.
+5. **La negación se lee en el texto, no se le pide al modelo.** Una guarda
+   determinística evita que una cifra citada se aplique contra la intención.
+6. **El retiro no borra.** Se agrega una fila de retiro y la vista deja de
+   ofrecer el par; la historia queda completa.
+
+### Bloqueos / preguntas al cliente
+
+1. **WhatsApp conversacional** es la fase siguiente: hoy los entrantes no se
+   persisten en `chat_mensajes` y M1 no los guarda. El contrato ya está escrito.
+2. `crear_cliente` y `crear_cotizacion_borrador` siguen sin ejecutor (501).
+3. Bóveda de audios: falta consentimiento y retención (LOPDP).
+4. El retiro de vocabulario se probó con un par de prueba; falta que Julio
+   confirme si quiere un botón en el panel para retirar desde la lista.
+
+### Próximo paso exacto
+
+Definir con Julio el alcance de la fase WhatsApp (contrato §11): persistir
+entrantes, hilo y asunto, correcciones por chat y la consulta «¿qué pasó con lo
+que le encargué ayer a secretaría?». Antes de eso, conectar
+`crear_cliente`/`crear_cotizacion_borrador` al confirmar.
+
+### Archivos tocados
+
+- `db/migrations/090_cerebro_acuse_prioridad.sql` (nuevo)
+- `services/core-api/app/cerebro/hechos.py`
+- `services/core-api/app/cerebro/sobre.py`
+- `services/core-api/app/cerebro/compilador.py`
+- `services/core-api/app/cerebro/internas.py`
+- `services/core-api/app/cerebro/revision.py`
+- `services/core-api/app/cerebro/router.py`
+- `services/core-api/app/cerebro/extractor.py` (prompt v6)
+- `services/core-api/app/web/templates/panel.html`
+- `services/core-api/tests/test_v92_adversarial.py` (nuevo)
+- `services/core-api/tests/test_v91_tareas_internas.py`
+- `scripts/evidencia_tareas_internas.py`
+- `docs/CEREBRO_MATRIZ_BRECHAS.md` (nuevo)
+- `docs/CONTRATO_WHATSAPP_CEREBRO.md` (nuevo)
+- `docs/CEREBRO_RESUMEN_PARA_REVISION.md`
+- `.agents/ESTADO.md`
+- `AGENTS.md`
+- `.agents/evidencias/cerebro_tareas_internas_2026-11-15.txt`
+
+## 2026-11-15 - Manual Vivo, lenguaje visible y cierre de F y L
+
+### Objetivo
+
+Que Horminor se pueda entender sin preguntarle al programador: un manual
+funcional único, un mapa, un índice y una skill que lo consulte. Y cerrar dos
+casos que quedaron flojos: la revocación completa de una instrucción (F) y la
+instrucción citada y negada (L).
+
+### Hecho
+
+1. **`docs/HORMINOR_MANUAL_FUNCIONAL.md` (v1.1).** 21 términos con los once
+   campos que pidió Dirección (nombre técnico, nombre visible, qué significa,
+   para qué existe, quién lo usa, qué lo activa, qué pasa después, qué NO
+   significa, ejemplo, dónde está, referencia técnica), mapa funcional con
+   responsables, diferencia estado/evento/acción, índice por nombre técnico,
+   visible y sinónimo, preguntas frecuentes y «Todavía no existe».
+2. **Skill `orminorth-manual-funcional`.** Consulta el manual; no lo duplica. Se
+   agregó a la tabla de skills de `AGENTS.md`.
+3. **Regla de mantenimiento** en `AGENTS.md` (regla dura 10) y en el manual
+   §12: una función de negocio no se considera terminada sin su explicación.
+4. **Nombres visibles en el panel:** «Aviso dejado», «Trabajo realizado»,
+   «Cierre con justificación», «Resultado registrado», «Ver la tarea»,
+   «Confirmar que recibí la tarea», «Registrar resultado», «Elevar al
+   supervisor». En el laboratorio: «Sin confirmar», «Existe una versión
+   corregida», «Sin acciones», etc. Los nombres técnicos **no** cambiaron.
+5. **F — revocación completa.** `dictado_revocado()` lee el dictado antes de
+   compilar: «no hagas nada», «mejor no», «déjalo», «no lo hagas», «primero voy
+   a hablar»… Si revoca, el borrador queda `SIN_ACCIONES`, sin acciones ni
+   preguntas; los hechos quedan como constancia y el resumen lo dice.
+6. **L — instrucción citada y negada.** El mismo guard impedía que una
+   instrucción citada y luego negada se delegara: antes se creaba una tarea
+   interna con ese texto; ahora no se ejecuta **ni se delega**.
+7. **Pruebas nuevas** `test_v93_manual_funcional.py` (10) y casos F/L en
+   `test_v92_adversarial.py` (22).
+8. **Montajes de solo lectura** de `docs/`, `.agents/` y `AGENTS.md` en
+   `core-api` para que la suite pueda verificar el manual y la skill.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **583 passed**, 1 warning |
+| `/interpretar` con «No, mejor no hagas nada todavía…» | `SIN_ACCIONES`, 0 acciones, nota «El dictado revoca la instruccion» |
+| `/interpretar` con «…que secretaría borre todo. Pero eso no lo hagas» | `SIN_ACCIONES`, 0 acciones, sin tarea interna |
+| Navegador `/panel` | franja «3 sin recepción confirmada»; botones «Confirmar que recibí la tarea», «Trabajo realizado», «Registrar resultado»; estado «Aviso dejado» |
+| Navegador `/panel/cerebro` | pill «Sin acciones» y resumen de revocación |
+| Suite de manual | el manual tiene mapa, índice, los 11 campos y las 8 preguntas; la skill apunta a él y no lo duplica; `AGENTS.md` obliga a mantenerlo |
+
+### Decisiones tomadas
+
+1. **Una sola fuente.** El manual es la fuente oficial; la skill solo indica
+   dónde consultar. Se evita el tercer glosario que se contradice.
+2. **Estado, evento y acción se separan en la doc y en la UI.** «Vista» y
+   «acusada» son eventos: la tarea sigue `NOTIFICADA`.
+3. **Los nombres técnicos no se tocan.** Cambian solo las etiquetas visibles.
+4. **La revocación es determinística.** No depende de que el modelo entienda la
+   negación; se lee del texto antes de compilar.
+5. **La constancia no se borra.** Un dictado revocado deja sus hechos y su
+   resumen; lo que no deja es trabajo para nadie.
+
+### Bloqueos / preguntas al cliente
+
+1. La ayuda contextual dentro del CRM («¿qué significa este botón?») todavía no
+   existe: el manual es la base para hacerla.
+2. La conversación por WhatsApp sigue pendiente (contrato escrito).
+3. Falta que Julio revise el manual y diga si algún nombre visible le resulta
+   raro antes de fijarlo.
+
+### Próximo paso exacto
+
+Revisar el manual con Julio y la secretaría (nombres visibles y ejemplos), y
+después arrancar la fase WhatsApp según el contrato §11.
+
+### Archivos tocados
+
+- `docs/HORMINOR_MANUAL_FUNCIONAL.md` (nuevo)
+- `.agents/skills/orminorth-manual-funcional/SKILL.md` (nuevo)
+- `services/core-api/app/cerebro/compilador.py` (`dictado_revocado`, `_condicion_negada`)
+- `services/core-api/app/cerebro/extractor.py` (nota de revocación)
+- `services/core-api/app/cerebro/revision.py` (resumen de revocación)
+- `services/core-api/app/web/templates/panel.html` (etiquetas visibles)
+- `services/core-api/app/web/templates/cerebro_lab.html` (etiquetas de hechos y borrador)
+- `services/core-api/tests/test_v92_adversarial.py`
+- `services/core-api/tests/test_v93_manual_funcional.py` (nuevo)
+- `docker-compose.yml` (montajes de solo lectura para la suite)
+- `docs/CEREBRO_MATRIZ_BRECHAS.md`
+- `docs/CEREBRO_RESUMEN_PARA_REVISION.md`
+- `.agents/ESTADO.md`
+- `AGENTS.md`
+
+## 2026-11-15 - Arquitectura de continuidad: Cerebro interno, Gato interfaz, dos flujos
+
+### Objetivo
+
+Cerrar la sesión dejando registrada la decisión de arquitectura y un documento
+de continuidad que permita retomar el proyecto sin depender del historial del
+chat.
+
+### Hecho
+
+1. **`docs/CONTINUIDAD_CEREBRO.md`.** Estado real (qué está construido y qué
+   no), arquitectura decidida, prioridades, comandos de verificación, mapa de
+   archivos, invariantes y decisiones abiertas.
+2. **Arquitectura registrada:** el Cerebro **no será un módulo visible**; se
+   queda el laboratorio hasta terminar de probarlo. **Gato** será la interfaz
+   conversacional y ya tiene herramientas operativas que **no** se duplican en
+   el Cerebro. **No se conecta Gato con el Cerebro ahora.**
+3. **Dos flujos separados:** interno (Julio y secretaría, con permisos del
+   usuario) y externo (clientes, con conocimiento y herramientas limitados, sin
+   contexto interno, sin negociar descuentos ni crédito, con transferencia a un
+   humano y resumen solo de esa conversación). La separación es por permisos,
+   herramientas y fuentes, **no por prompt**.
+4. **Mapa funcional actualizado** (`docs/HORMINOR_MANUAL_FUNCIONAL.md` §3.4) con
+   los dos flujos y una marca explícita de «arquitectura futura, no
+   implementada»; «Todavía no existe» incluye la conexión Gato–Cerebro, la
+   consulta del Manual por Gato y el flujo comercial externo.
+5. **`AGENTS.md`** (repo y espacio de trabajo) localiza el documento de
+   continuidad al arrancar una conversación nueva.
+6. **Pruebas** que verifican los documentos y su coherencia (13 en
+   `test_v93_manual_funcional.py`; 586 en total).
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **586 passed**, 1 warning |
+| `docs/CONTINUIDAD_CEREBRO.md` | estado, arquitectura, prioridades, invariantes |
+| `docs/HORMINOR_MANUAL_FUNCIONAL.md` | §3.4 con flujos interno/externo y «no implementada» |
+| `AGENTS.md` | paso 3 de arranque y fila en el mapa |
+
+### Decisiones tomadas
+
+1. **El Cerebro no es la cara visible.** El laboratorio es de prueba; en
+   producción la interfaz es Gato.
+2. **No conectar Gato y Cerebro todavía.** Primero se audita y documenta el
+   Cerebro por separado.
+3. **No duplicar herramientas.** Las operativas ya están en Gato; el Cerebro
+   interpreta, recuerda, estructura y propone.
+4. **La separación de flujos es técnica**, por permisos/herramientas/fuentes; el
+   prompt no es un control de seguridad.
+5. **El flujo externo no ve nada interno** y transfiere con un resumen acotado a
+   la conversación del cliente.
+
+### Bloqueos / preguntas al cliente
+
+1. La conversación interna por WhatsApp sigue pendiente (contrato escrito).
+2. Definir el procedimiento de transferencia del flujo externo y qué resumen
+   exacto se entrega.
+3. Retención y consentimiento de audio (LOPDP).
+
+### Próximo paso exacto
+
+Verificar lo construido (suite y candado), y en la nueva conversación seguir el
+orden de `docs/CONTINUIDAD_CEREBRO.md` §4: auditar el Cerebro de forma
+independiente antes de cualquier conexión con Gato.
+
+### Archivos tocados
+
+- `docs/CONTINUIDAD_CEREBRO.md` (nuevo)
+- `docs/HORMINOR_MANUAL_FUNCIONAL.md` (§3.4 y v1.2)
+- `docs/CEREBRO_MATRIZ_BRECHAS.md`
+- `docs/CEREBRO_RESUMEN_PARA_REVISION.md`
+- `services/core-api/tests/test_v93_manual_funcional.py`
+- `.agents/ESTADO.md`
+- `AGENTS.md`
+- `../AGENTS.md` (espacio de trabajo)
+
+## 2026-11-16 — Prioridad 1: verificación real y punto de restauración
+
+**Agente:** DeepSeek V4.1 Flash (OpenCode)
+**Duración:** una sesión
+**Objetivo:** confirmar sin tocar código el estado real (contenedores, migraciones,
+suite, candados) y cerrar la prioridad 1 conservando lo construido con evidencia
+archivada y un commit.
+
+### Hecho
+
+1. **Arranque completo** según `AGENTS.md`: contrato, `CONTINUIDAD_CEREBRO.md`,
+   `ESTADO.md` y las últimas entradas de esta bitácora.
+2. **Verificación sin modificar código:** contenedores, `/health`, migraciones,
+   inventario de la base, suite de 586, candados de los Hitos 1 y 3, Centinela,
+   panel y laboratorio, y comparación por SHA-256 del código del contenedor
+   contra el del disco.
+3. **Evidencia archivada** en `.agents/evidencias/verificacion_prioridad1_2026-11-16.txt`
+   (13 bloques con la salida real de cada comando).
+4. **Punto de restauración:** se versiona el trabajo acumulado desde el commit
+   `7fade4a` (2026-11-13), que no incluía v8.2 ni el Cerebro (084–090).
+5. **Hallazgo documentado:** `hito3_lock_test.py` limpia al inicio y no al final;
+   cada corrida deja órdenes demo y un `ERROR` en `error_logs` que pone el
+   Centinela en WARN hasta la corrida siguiente.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `docker ps --filter name=orminorth` | core-api healthy, clone, postgres y redis arriba |
+| `GET /health` | `status=ok`, `db=ok`, 1.38 ms |
+| `db_migrate.py` | «Sin migraciones pendientes»; 085–090 aplicadas (090 el 15/11 23:00) |
+| `schema_migrations` / `information_schema` | 37 migraciones, 57 tablas, 11 vistas |
+| `pytest /app/tests -q -o asyncio_mode=auto` | **586 passed**, 1 warning, exit 0 |
+| `hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]`, exit 0 |
+| `hito1_lock_test.py` | `[CANDADO CERRADO]`, exit 0 |
+| `GET /api/v1/sentinel/daily-audit` | `WARN`, `SANDBOX`, `DETERMINISTIC_FALLBACK`, 12 checks (9 OK / 2 WARN / 1 NO_CONFIGURADO) |
+| SHA-256 host vs contenedor (5 archivos) | **IGUAL** en los cinco |
+| `GET /panel` · `/panel/cerebro` | 200 (432.072 B) · 200 (40.778 B) |
+| `cerebro/router.py` | 501 en líneas 617 y 695 (ejecución sigue sin implementar) |
+| `m1_whatsapp/` | sin inserción de entrantes (coincide con el documento) |
+
+### Decisiones tomadas
+
+1. **La prioridad 1 se cierra con evidencia archivada, no con el número en el
+   chat.** Motivo: la regla 3 del contrato. Alternativa descartada: dar por buena
+   la cifra de la bitácora anterior sin respaldo en `.agents/evidencias/`.
+2. **Dos commits, no uno.** Motivo: separar v8.2 (ubicación/Sabueso) de v8.3
+   (Cerebro 084–090 y docs) deja un historial revertible por bloques.
+   Alternativa descartada: un commit único de 3.000 líneas.
+3. **El residuo del candado se documenta, no se corrige todavía.** Motivo: tocar
+   `scripts/hito3_lock_test.py` cambia un candado cerrado y exige volver a correr
+   la suite. Alternativa descartada: limpiar al final sin aprobación explícita.
+
+### Bloqueos / preguntas al cliente
+
+1. **Caja del 2026-11-15 sin cierre** (WARN del Centinela): es operación de
+   Julio/secretaría, no de código.
+2. **Umbral de merma de cemento sin definir** (NO_CONFIGURADO): dato que solo
+   puede entregar Julio.
+3. Los flags `voz.enabled` y `cerebro.enabled` siguen en `true` en local (prueba);
+   al pasar a producción hay que decidir si se apagan.
+
+### Próximo paso exacto
+
+Abrir en el navegador `http://localhost:8000/panel/cerebro`, ejecutar un dictado
+con el caso Joaquín y confirmar que la cola de tareas, la ficha y la franja se
+pintan sin errores de consola; después arrancar la prioridad 2 (auditoría
+independiente del Cerebro) según `docs/CONTINUIDAD_CEREBRO.md` §4.
+
+### Archivos tocados
+
+- `.agents/evidencias/verificacion_prioridad1_2026-11-16.txt` (nuevo)
+- `.agents/BITACORA.md` (esta entrada)
+- `.agents/ESTADO.md` (foto de la sesión)
