@@ -1,10 +1,10 @@
 {
- "router": "router-1.2",
- "fecha": "2026-11-16T12:40:25",
+ "router": "router-1.3",
+ "fecha": "2026-11-16T12:54:22",
  "archivos": {
   "model.py": "1b2fc130447ad6f2ad73674b5762b568db693bfcf852c702d8879a6ff84f818e",
   "prompts.py": "0291228630a065fe8d76210b18ceaab8574e303064912eaf97e8f41272708190",
-  "router.py": "a0041e93290d11459426e30fd767ac8cd8a37b07fcba3e076ddcb26dac2f43b8",
+  "router.py": "e48e931b484d4bc96cd5cb56cfafbcebb6cea810a3d90733775ab5e7267a1ac9",
   "correccion.py": "fa0fcb6e11ce91e834a85ced149a05a5a905173279ed595287d5cde3b420e7b3",
   "confirmacion.py": "e226f67a67ef90a4cc3d9fbe7e11261e962bc780068e29639802096691a175cd",
   "cli.py": "dfd7a090898c935e8ac3282c64c623cc097c6332869b10478912b98eeb0354cd",

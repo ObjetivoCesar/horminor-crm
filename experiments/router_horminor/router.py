@@ -253,6 +253,13 @@ def conciliar(
             continue
         encargo.citas = citas_validas
 
+        if encargo.autorizado and not _texto_autoriza(encargo.citas):
+            encargo.autorizado = False
+            borrador.notas.append(
+                f"{encargo.id}: se mencionó un envío, pero no una autorización "
+                "explícita; no se autoriza ejecutar."
+            )
+
         # Datos: hechos cuya cita se solapa con la del encargo
         for hecho in hechos:
             cita = getattr(hecho, "cita", None)
@@ -276,6 +283,7 @@ def conciliar(
         borrador.encargos.append(encargo)
 
     _quitar_verificaciones_inventadas(borrador)
+    _fusionar_encargos_similares(borrador)
 
     # 2. Observaciones de C
     for obs in observaciones:
@@ -393,8 +401,9 @@ def conciliar(
 
         # CONDICION / DEPENDENCIA / PROHIBICION de una operación
         if obs.tipo in ("CONDICION", "DEPENDENCIA"):
+            citas_obs = plano(" ".join(obs.citas))
             marca_real = any(
-                m in plano(obs.texto or "")
+                m in citas_obs
                 for m in (
                     "hasta que",
                     "antes de",
@@ -463,6 +472,90 @@ _AUTORIZACION_EXPLICITA = (
 )
 
 
+_STOP_ENCARGO = {
+    "para",
+    "desde",
+    "sobre",
+    "entre",
+    "cuando",
+    "donde",
+    "este",
+    "esta",
+    "estos",
+    "estas",
+    "cliente",
+    "contrato",
+    "preparar",
+    "prepara",
+    "envio",
+    "enviar",
+    "listo",
+    "mensaje",
+    "autorizacion",
+}
+
+
+def _tokens_encargo(encargo: Encargo) -> set[str]:
+    texto = plano(encargo.titulo + " " + encargo.que_hacer)
+    return {
+        p
+        for p in re.findall(r"[a-z0-9]+", texto)
+        if len(p) > 3 and p not in _STOP_ENCARGO
+    }
+
+
+def _tipo_trabajo(encargo: Encargo) -> str:
+    base = plano(encargo.titulo + " " + encargo.que_hacer)
+    if "recordatorio" in base or "mensaje" in base:
+        return "COMUNICACION"
+    if "documento" in base or "contrato" in base:
+        return "DOCUMENTOS"
+    if any(p in base for p in ("planta", "movil", "despacho", "produccion", "operacion")):
+        return "OPERACION"
+    return "OTRO"
+
+
+def _fusionar_encargos_similares(borrador: BorradorRouter) -> None:
+    """Dos facetas del mismo trabajo no deben ser dos tareas."""
+    especiales = {"planta", "movil", "despacho", "despachos", "produccion"}
+    for encargo in list(borrador.encargos):
+        if encargo not in borrador.encargos:
+            continue
+        for otro in list(borrador.encargos):
+            if otro is encargo or otro.id == encargo.id:
+                continue
+            if otro.responsable != encargo.responsable:
+                continue
+            if otro.origen != encargo.origen:
+                continue
+            tipo_a = _tipo_trabajo(encargo)
+            tipo_b = _tipo_trabajo(otro)
+            if tipo_a != tipo_b and "OTRO" not in (tipo_a, tipo_b):
+                continue
+            comunes = _tokens_encargo(encargo) & _tokens_encargo(otro)
+            if len(comunes) < 2:
+                continue
+            if len(comunes) < 3 and not (comunes & especiales):
+                continue
+            if otro.que_hacer not in encargo.que_hacer:
+                encargo.que_hacer = (
+                    encargo.que_hacer.rstrip(". ") + ". Además, " + otro.que_hacer
+                )
+            for item in otro.por_investigar:
+                if item not in encargo.por_investigar:
+                    encargo.por_investigar.append(item)
+            for cond in otro.condiciones:
+                if cond not in encargo.condiciones:
+                    encargo.condiciones.append(cond)
+            encargo.datos.update(otro.datos)
+            if otro.resultado_esperado and not encargo.resultado_esperado:
+                encargo.resultado_esperado = otro.resultado_esperado
+            borrador.encargos.remove(otro)
+            borrador.notas.append(
+                f"{otro.id}: se integró en {encargo.id} por ser el mismo trabajo"
+            )
+
+
 def _quitar_verificaciones_inventadas(borrador: BorradorRouter) -> None:
     """Un pago anunciado no es una orden de verificarlo."""
     patrones = (
@@ -492,9 +585,14 @@ def _quitar_verificaciones_inventadas(borrador: BorradorRouter) -> None:
         )
 
 
+def _texto_autoriza(citas: list[str]) -> bool:
+    texto = plano(" ".join(citas))
+    return any(marca in texto for marca in _AUTORIZACION_EXPLICITA)
+
+
 def _autorizacion_explicita(obs: ObservacionOut) -> bool:
-    """«Hay que enviarle» no es autorización; «envíalo» sí."""
-    texto = plano(" ".join([obs.texto or "", *obs.citas]))
+    """«Hay que enviarle» no es autorización; «envíalo» sí. Solo la cita cuenta."""
+    texto = plano(" ".join(obs.citas))
     return any(marca in texto for marca in _AUTORIZACION_EXPLICITA)
 
 
@@ -529,9 +627,9 @@ def _datos_contexto(hechos: list[Any]) -> dict[str, Any]:
 
 
 def _reparar_monto(valor: Any, cita: str | None) -> Any:
-    """«27 1000 USD» (mil convertido a 1000) no es 271.000: es 27.000."""
+    """«27 1000 USD» (mil convertido a 1000) es 27.000, no 271.000 ni 27.100."""
     coincidencia = re.search(r"(\d{1,3})\s+1000\b", plano(cita or ""))
-    if coincidencia and str(valor) == coincidencia.group(1) + "1000":
+    if coincidencia:
         return int(coincidencia.group(1)) * 1000
     return valor
 
@@ -725,7 +823,11 @@ def resumen_conversacional(borrador: BorradorRouter) -> str:
     if monto is not None and recibido is False:
         texto += f"El pago de {_monto(monto)} USD todavía no está confirmado. "
     if borrador.preguntas:
-        texto += "Antes de confirmar: " + " ".join(borrador.preguntas)
+        texto += (
+            f"¿Confirmas estos {len(borrador.encargos)} encargos? "
+            "Antes de ejecutar necesito que me aclares: "
+            + " ".join(borrador.preguntas)
+        )
     else:
-        texto += "¿Confirmas?"
+        texto += f"¿Confirmas estos {len(borrador.encargos)} encargos?"
     return texto
