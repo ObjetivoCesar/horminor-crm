@@ -1,6 +1,6 @@
 {
  "router": "router-1.7",
- "fecha": "2026-11-16T13:44:29",
+ "fecha": "2026-11-16T14:07:02",
  "archivos": {
   "model.py": "1b2fc130447ad6f2ad73674b5762b568db693bfcf852c702d8879a6ff84f818e",
   "prompts.py": "0291228630a065fe8d76210b18ceaab8574e303064912eaf97e8f41272708190",
@@ -8,7 +8,7 @@
   "correccion.py": "dc7a36e3385b3f1d0b1ef92e5f6d6ed8f2d792027d10fbc1df3e08aaa7193c7b",
   "confirmacion.py": "e226f67a67ef90a4cc3d9fbe7e11261e962bc780068e29639802096691a175cd",
   "cli.py": "dfd7a090898c935e8ac3282c64c623cc097c6332869b10478912b98eeb0354cd",
-  "lab.py": "c022f9072eed9823b5fd2cc479fd844a8b9ef38fb19317f08eb8f0294fa1c324",
+  "lab.py": "a44366f73835de4a6232e8d5161c0e7d4388ca6be3d4de2332fbd54111afb4b3",
   "tests_core.py": "686a66bf33ee9ec60e46535321eabdcb4384f805c462b03f671b4693bde8203c",
   "evidencia_escenarios.py": "d7e432930d5226f0e97d89ad616a70170112c32862279e81549bc8ba7adf54cc",
   "caso_diaz_sur.py": "e29aefb934855abdf091b27e022d9e4014a2dabb68fb7428dc0ae6ff15fcb9b7",
