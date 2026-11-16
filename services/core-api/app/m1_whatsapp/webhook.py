@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from .models import IncomingMessage, MediaAttachment
+from .models import IncomingMessage, MediaAttachment, UbicacionCompartida
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +53,38 @@ def _texto_del_mensaje(mensaje: dict[str, Any]) -> str:
         if isinstance(valor, str) and valor.strip():
             return valor.strip()
     return ""
+
+
+def _ubicacion_del_mensaje(mensaje: dict[str, Any]) -> UbicacionCompartida | None:
+    """Lee un pin de ubicacion (fijo o en vivo) de WhatsApp/Evolution.
+
+    Evolution entrega ``degreesLatitude``/``degreesLongitude`` y algunos
+    despliegues ``latitude``/``longitude``. Si el par no viene completo, no se
+    inventa: se devuelve ``None`` y el mensaje sigue su curso normal.
+    """
+    if not isinstance(mensaje, dict):
+        return None
+    for clave, en_vivo in (("locationMessage", False), ("liveLocationMessage", True)):
+        bloque = mensaje.get(clave)
+        if not isinstance(bloque, dict):
+            continue
+        latitud = bloque.get("degreesLatitude", bloque.get("latitude"))
+        longitud = bloque.get("degreesLongitude", bloque.get("longitude"))
+        try:
+            lat = float(latitud)
+            lng = float(longitud)
+        except (TypeError, ValueError):
+            continue
+        ubicacion = UbicacionCompartida(
+            latitud=lat,
+            longitud=lng,
+            nombre=bloque.get("name") or bloque.get("caption"),
+            direccion=bloque.get("address"),
+            en_vivo=en_vivo,
+        )
+        if ubicacion.valida:
+            return ubicacion
+    return None
 
 
 def _media_del_mensaje(
@@ -154,7 +186,8 @@ def _normalizar_uno(datos: Any) -> IncomingMessage | None:
 
     texto = _texto_del_mensaje(mensaje)
     media = _media_del_mensaje(mensaje, datos)
-    if not texto and not media:
+    ubicacion = _ubicacion_del_mensaje(mensaje)
+    if not texto and not media and ubicacion is None:
         return None
 
     mensaje_id = str(
@@ -178,6 +211,7 @@ def _normalizar_uno(datos: Any) -> IncomingMessage | None:
         media=media,
         nombre_contacto=datos.get("pushName") or datos.get("senderName"),
         es_grupo=es_grupo,
+        ubicacion=ubicacion,
     )
 
 

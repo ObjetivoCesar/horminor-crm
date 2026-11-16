@@ -212,6 +212,56 @@ class MediaAttachment:
 
 
 @dataclass(frozen=True)
+class UbicacionCompartida:
+    """Pin de ubicacion que el cliente manda por WhatsApp.
+
+    No se estima ni se completa: si WhatsApp no entrego latitud y longitud,
+    el mensaje no trae ubicacion y el flujo sigue como antes.
+    """
+
+    latitud: float
+    longitud: float
+    nombre: str | None = None
+    direccion: str | None = None
+    en_vivo: bool = False
+
+    @property
+    def valida(self) -> bool:
+        return -90 <= self.latitud <= 90 and -180 <= self.longitud <= 180
+
+    @property
+    def maps_url(self) -> str:
+        return f"https://www.google.com/maps?q={self.latitud},{self.longitud}"
+
+    def a_dict(self) -> dict[str, Any]:
+        return {
+            "latitud": self.latitud,
+            "longitud": self.longitud,
+            "nombre": self.nombre,
+            "direccion": self.direccion,
+            "en_vivo": self.en_vivo,
+        }
+
+    @classmethod
+    def desde_dict(cls, datos: dict[str, Any]) -> "UbicacionCompartida | None":
+        if not isinstance(datos, dict):
+            return None
+        try:
+            latitud = float(datos["latitud"])
+            longitud = float(datos["longitud"])
+        except (KeyError, TypeError, ValueError):
+            return None
+        ubicacion = cls(
+            latitud=latitud,
+            longitud=longitud,
+            nombre=datos.get("nombre"),
+            direccion=datos.get("direccion"),
+            en_vivo=bool(datos.get("en_vivo", False)),
+        )
+        return ubicacion if ubicacion.valida else None
+
+
+@dataclass(frozen=True)
 class IncomingMessage:
     """Mensaje normalizado, independiente del formato de Evolution API."""
 
@@ -222,6 +272,7 @@ class IncomingMessage:
     media: tuple[MediaAttachment, ...] = ()
     nombre_contacto: str | None = None
     es_grupo: bool = False
+    ubicacion: UbicacionCompartida | None = None
 
     @property
     def telefono_normalizado(self) -> str:
@@ -245,6 +296,7 @@ class IncomingMessage:
                 "media": [m.a_dict() for m in self.media],
                 "nombre_contacto": self.nombre_contacto,
                 "es_grupo": self.es_grupo,
+                "ubicacion": self.ubicacion.a_dict() if self.ubicacion else None,
             },
             ensure_ascii=False,
         )
@@ -267,6 +319,7 @@ class IncomingMessage:
             ),
             nombre_contacto=datos.get("nombre_contacto"),
             es_grupo=bool(datos.get("es_grupo", False)),
+            ubicacion=UbicacionCompartida.desde_dict(datos.get("ubicacion") or {}),
         )
 
 
@@ -296,6 +349,14 @@ class MessageBatch:
     @property
     def media(self) -> tuple[MediaAttachment, ...]:
         return tuple(a for m in self.mensajes for a in m.media)
+
+    @property
+    def ubicacion(self) -> UbicacionCompartida | None:
+        """Primer pin compartido en el lote, si lo hubo."""
+        for mensaje in self.mensajes:
+            if mensaje.ubicacion is not None:
+                return mensaje.ubicacion
+        return None
 
     @property
     def recibido_at(self) -> datetime:

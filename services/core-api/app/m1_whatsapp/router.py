@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from ..auth import verificar_clave
 from ..settings import Settings, get_settings
-from .models import IncomingMessage, MediaAttachment
+from .models import IncomingMessage, MediaAttachment, UbicacionCompartida
 from .runtime import WhatsAppRuntime
 from .webhook import normalizar_evento
 
@@ -45,12 +45,21 @@ class MediaSimulada(BaseModel):
     transcripcion: str | None = None
 
 
+class UbicacionSimulada(BaseModel):
+    latitud: float
+    longitud: float
+    nombre: str | None = None
+    direccion: str | None = None
+    en_vivo: bool = False
+
+
 class MensajeSimulado(BaseModel):
     telefono: str = Field(min_length=5)
     texto: str = ""
     mensaje_id: str | None = None
     nombre_contacto: str | None = None
     media: list[MediaSimulada] = Field(default_factory=list)
+    ubicacion: UbicacionSimulada | None = None
 
 
 @router.post("/webhook")
@@ -103,6 +112,17 @@ async def simular(request: Request, body: MensajeSimulado) -> dict[str, Any]:
             for m in body.media
         ),
         nombre_contacto=body.nombre_contacto,
+        ubicacion=(
+            UbicacionCompartida(
+                latitud=body.ubicacion.latitud,
+                longitud=body.ubicacion.longitud,
+                nombre=body.ubicacion.nombre,
+                direccion=body.ubicacion.direccion,
+                en_vivo=body.ubicacion.en_vivo,
+            )
+            if body.ubicacion
+            else None
+        ),
     )
     await runtime.accumulator.agregar(mensaje)
     return {

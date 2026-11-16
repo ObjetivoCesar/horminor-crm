@@ -108,6 +108,19 @@ class RepositorioWhatsApp(Protocol):
         """Ultimas salidas simuladas, para la UI del Superadmin."""
         ...
 
+    async def guardar_ubicacion_cotizacion(
+        self,
+        cliente_id: str,
+        *,
+        latitud: float,
+        longitud: float,
+        texto: str | None = None,
+        whatsapp_msg_id: str | None = None,
+        actor: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Adjunta el pin compartido a la cotizacion abierta del cliente."""
+        ...
+
 
 _SQL_BUSCAR = """
 SELECT d.id::text                AS dispatch_id,
@@ -432,6 +445,82 @@ class PostgresRepositorio:
                     tipo,
                 )
 
+    async def guardar_ubicacion_cotizacion(
+        self,
+        cliente_id: str,
+        *,
+        latitud: float,
+        longitud: float,
+        texto: str | None = None,
+        whatsapp_msg_id: str | None = None,
+        actor: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Adjunta el pin compartido a la cotizacion abierta del cliente.
+
+        Elige la cotizacion abierta mas reciente que aun no tenga pin. Si el
+        cliente tiene varias abiertas, el pin va a la mas nueva: no se reparte
+        ni se duplica. Regresa ``None`` cuando no hay cotizacion abierta.
+        """
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                fila = await conn.fetchrow(
+                    """
+                    WITH objetivo AS (
+                        SELECT id
+                          FROM cotizaciones
+                         WHERE cliente_id = $1::uuid
+                           AND estado IN ('BORRADOR', 'ENVIADA', 'ACEPTADA')
+                         ORDER BY (ubicacion_lat IS NULL) DESC,
+                                  created_at DESC
+                         LIMIT 1
+                    )
+                    UPDATE cotizaciones c
+                       SET ubicacion_lat = $2,
+                           ubicacion_lng = $3,
+                           -- La referencia escrita por el asesor manda: el nombre
+                           -- del pin solo rellena cuando no hay texto previo.
+                           ubicacion_texto = COALESCE(c.ubicacion_texto, $4),
+                           ubicacion_origen = 'WHATSAPP',
+                           ubicacion_recibida_at = now(),
+                           updated_at = now()
+                      FROM objetivo o
+                     WHERE c.id = o.id
+                    RETURNING c.id::text AS id, c.numero
+                    """,
+                    cliente_id,
+                    latitud,
+                    longitud,
+                    texto,
+                )
+                if fila is None:
+                    return None
+                await conn.execute(
+                    """
+                    INSERT INTO cotizacion_eventos
+                        (cotizacion_id, tipo, canal, mensaje, whatsapp_msg_id, actor, payload)
+                    VALUES ($1::uuid, 'UBICACION_RECIBIDA', 'WHATSAPP', $2, $3, $4, $5::jsonb)
+                    """,
+                    fila["id"],
+                    "El cliente compartio la ubicacion de la obra por WhatsApp.",
+                    whatsapp_msg_id,
+                    actor,
+                    json.dumps(
+                        {"latitud": latitud, "longitud": longitud},
+                        ensure_ascii=False,
+                    ),
+                )
+                await conn.execute(
+                    """
+                    UPDATE cotizaciones
+                       SET ultima_respuesta_at = now(),
+                           ultima_respuesta_tipo = 'UBICACION',
+                           updated_at = now()
+                     WHERE id = $1::uuid
+                    """,
+                    fila["id"],
+                )
+                return dict(fila)
+
     async def confirmar_cotizacion(
         self,
         cotizacion_id: str,
@@ -499,6 +588,8 @@ class MemoriaRepositorio:
     actualizaciones: list[str] = field(default_factory=list)
     recetas: list[dict[str, Any]] = field(default_factory=list)
     outbox: list[dict[str, Any]] = field(default_factory=list)
+    cotizaciones: list[dict[str, Any]] = field(default_factory=list)
+    ubicaciones: list[dict[str, Any]] = field(default_factory=list)
 
     async def buscar_viaje(
         self,
@@ -615,3 +706,43 @@ class MemoriaRepositorio:
 
     async def listar_outbox(self, limite: int = 50) -> list[dict[str, Any]]:
         return [dict(item) for item in self.outbox[: max(1, int(limite))]]
+
+    async def guardar_ubicacion_cotizacion(
+        self,
+        cliente_id: str,
+        *,
+        latitud: float,
+        longitud: float,
+        texto: str | None = None,
+        whatsapp_msg_id: str | None = None,
+        actor: str | None = None,
+    ) -> dict[str, Any] | None:
+        abiertas = [
+            c
+            for c in self.cotizaciones
+            if c.get("cliente_id") == cliente_id
+            and c.get("estado", "ENVIADA") in ("BORRADOR", "ENVIADA", "ACEPTADA")
+        ]
+        if not abiertas:
+            return None
+        abiertas.sort(key=lambda c: (c.get("ubicacion_lat") is not None, c.get("orden", 0)))
+        objetivo = abiertas[0]
+        objetivo["ubicacion_lat"] = latitud
+        objetivo["ubicacion_lng"] = longitud
+        # La referencia escrita por el asesor manda: el nombre del pin solo
+        # rellena cuando la cotizacion no tiene texto previo.
+        if texto and not objetivo.get("ubicacion_texto"):
+            objetivo["ubicacion_texto"] = texto
+        objetivo["ubicacion_origen"] = "WHATSAPP"
+        self.ubicaciones.append(
+            {
+                "cliente_id": cliente_id,
+                "cotizacion_id": objetivo.get("id"),
+                "latitud": latitud,
+                "longitud": longitud,
+                "texto": texto,
+                "whatsapp_msg_id": whatsapp_msg_id,
+                "actor": actor,
+            }
+        )
+        return {"id": objetivo.get("id"), "numero": objetivo.get("numero")}

@@ -250,10 +250,15 @@ class WhatsAppPipeline:
                 lote, identidad.mixer_codigo, resultado
             )
         else:
-            if identidad.rol is Rol.CLIENTE and await self._gate_cotizacion(
-                lote, identidad.cliente_id, resultado
-            ):
-                return resultado
+            if identidad.rol is Rol.CLIENTE:
+                if await self._gate_ubicacion(
+                    lote, identidad.cliente_id, resultado
+                ):
+                    return resultado
+                if await self._gate_cotizacion(
+                    lote, identidad.cliente_id, resultado
+                ):
+                    return resultado
             await self._gate_cliente(
                 lote, identidad.cliente_id, resultado
             )
@@ -323,6 +328,66 @@ class WhatsAppPipeline:
             resultado.acciones.append("AVISO_CLIENTE_SIN_TELEFONO")
 
     # -- Gate #2 ----------------------------------------------------------
+    async def _gate_ubicacion(
+        self,
+        lote: MessageBatch,
+        cliente_id: str | None,
+        resultado: ResultadoLote,
+    ) -> bool:
+        """Guarda el pin que el cliente comparte para la cotizacion abierta.
+
+        No interpreta el mapa ni estima distancias: solo persiste la latitud y
+        la longitud que WhatsApp entrego. Si no hay cotizacion abierta, el lote
+        sigue su curso normal y no se inventa una cotizacion.
+        """
+        ubicacion = lote.ubicacion
+        if ubicacion is None or not cliente_id:
+            return False
+        guardar = getattr(self.repo, "guardar_ubicacion_cotizacion", None)
+        if guardar is None:
+            return False
+
+        referencia = ubicacion.nombre or ubicacion.direccion
+        guardada = await guardar(
+            cliente_id,
+            latitud=ubicacion.latitud,
+            longitud=ubicacion.longitud,
+            texto=referencia,
+            whatsapp_msg_id=lote.ultimo_id,
+            actor=lote.telefono,
+        )
+        resultado.compuerta = "COTIZACION_UBICACION"
+        if not guardada:
+            resultado.acciones.append("UBICACION_SIN_COTIZACION_ABIERTA")
+            return False
+
+        numero = guardada.get("numero") if hasattr(guardada, "get") else None
+        respuesta = (
+            f"Gracias. La ubicacion quedo registrada"
+            + (f" en la cotizacion {numero}" if numero else "")
+            + ". Secretaria confirma el acceso antes del despacho."
+        )
+        enviado = await self.notifier.enviar_texto(lote.telefono, respuesta)
+        resultado.respuesta = respuesta
+        resultado.acciones.append(
+            "UBICACION_GUARDADA" if enviado else "UBICACION_GUARDADA_SIN_AVISO"
+        )
+        await self.alerter.alertar(
+            codigo="COTIZACION_UBICACION",
+            mensaje=(
+                "Cliente compartio la ubicacion de la obra"
+                + (f" para la cotizacion {numero}" if numero else "")
+                + ". Revisar el pin en Cotizaciones."
+            ),
+            contexto={
+                "cotizacion": numero,
+                "cliente_id": cliente_id,
+                "latitud": ubicacion.latitud,
+                "longitud": ubicacion.longitud,
+            },
+        )
+        return True
+
     async def _gate_cotizacion(
         self,
         lote: MessageBatch,

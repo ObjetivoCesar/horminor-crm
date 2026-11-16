@@ -1,10 +1,12 @@
-# Cotizaciones — v6.22
+# Cotizaciones — v8.2
 
-> **Estado:** migraciones **080–083** aplicadas; API de alta, edición,
+> **Estado:** migraciones **080–084** aplicadas; API de alta, edición,
 > aceptación, envío y conversión; PDF de cotización generado y archivado; envío
 > por WhatsApp (SANDBOX/Evolution); buscador por nombre, apellido, fecha,
 > teléfono y número; vista **Cotizaciones** con permiso ACL aprobable desde
-> Superadmin. Gato (Q5) y la factura interna desde el popout quedan pendientes.
+> Superadmin; **ubicación de la obra** (texto, GPS del navegador y pin de
+> WhatsApp) guardada y impresa en el PDF. Gato (Q5) y la factura interna desde
+> el popout quedan pendientes.
 > Los precios, extras y condiciones los define Julio; el sistema no inventa
 > ninguno. El texto legal del contrato sigue sujeto a revisión
 > (`docs/CONTRATOS.md`).
@@ -68,6 +70,11 @@ Decisiones cerradas con Julio:
 | `incluye_bombeo` | boolean | `true` |
 | `acceso_notas` | text | “retro para abrir paso”, etc. |
 | `forma_pago` | text | `EFECTIVO`, `TRANSFERENCIA`, `ABONO`, `FIADO` |
+| `ubicacion_texto` | text | referencia escrita (sector, vía, enlace); `NULL` = pendiente |
+| `ubicacion_lat` / `ubicacion_lng` | numeric(10,7) | pin real; ambos `NULL` o ambos dentro de rango |
+| `ubicacion_origen` | text | `MANUAL`, `GPS`, `WHATSAPP`, `MAPA` |
+| `ubicacion_solicitada_at` | timestamptz | último pedido del pin por WhatsApp |
+| `ubicacion_recibida_at` | timestamptz | cuándo llegó el pin |
 | `valida_hasta` | date | `fecha_emision + validez_dias` (15 por defecto) |
 | `estado` | text | `BORRADOR`, `ENVIADA`, `ACEPTADA`, `RECHAZADA`, `VENCIDA`, `CONVERTIDA` |
 | `version` | integer | empieza en 1 |
@@ -170,6 +177,7 @@ Regla dura:
 | `cotizaciones.validez_dias` | `15` | modificable por Julio |
 | `cotizaciones.excedente_alerta_pct` | `NULL` | umbral para avisar si el despacho excede mucho lo pactado |
 | `cotizaciones.envio` | `{"canal":"WHATSAPP","archivar_en_cliente":true}` | envío y carpeta |
+| `cotizaciones.pedir_ubicacion` | texto del pedido del pin | mensaje editable por Julio; no se escribe en el código |
 
 No hay `categorias_extras`: el rubro es uno solo.
 
@@ -243,7 +251,8 @@ inventa un flujo nuevo.
 
 ## 8. PDF
 
-**Copia del cliente:** número, fecha, cliente, obra, volumen, resistencia,
+**Copia del cliente:** número, fecha, cliente, obra, **ubicación de la obra**
+(dirección, referencia, pin y enlace de mapa), volumen, resistencia,
 precio/m³, equipo y bombeo incluidos, extras cobrables, subtotal, IVA, total,
 validez (15 días), forma de pago y firma.
 
@@ -307,7 +316,8 @@ y luego hay que refactorizar.
 | `POST /api/v1/cotizaciones/{id}/convertir` | crea orden con `crear_orden` y copia extras cobrables |
 | Vista **Cotizaciones** | columna izquierda, bandeja + detalle + formulario |
 | ACL | módulo `cotizaciones`; Superadmin lo aprueba por perfil |
-| PDF / WhatsApp / Gato | pendientes (Q4/Q5) |
+| PDF / WhatsApp | implementados (Q4); ubicación de la obra incluida en v8.2 |
+| Gato | pendiente (Q5) |
 
 **Límite conocido:** la orden conserva su total base; los extras cobrables viven
 en `orden_extras` y la vista `v_orden_total` los suma. La factura/cartera que
@@ -375,3 +385,52 @@ avisa.
   después; el dato queda capturado y no se inventa.
 - **Regla:** la confirmación del cliente o la conversión ponen `VENTA`; la orden
   sigue naciendo con un clic humano.
+
+### 12.3 Ubicación de la obra (v8.2, migración 084)
+
+El mixer necesita llegar. La obra se describe primero con texto libre y, si el
+cliente comparte su pin o el asesor usa el GPS, se guardan coordenadas reales.
+**Sin dato queda `NULL`**: el PDF imprime `Pin: PENDIENTE` en vez de inventar
+una posición.
+
+| Vía | Cómo entra | `ubicacion_origen` |
+|---|---|---|
+| Manual | campo “Ubicación / referencia” del formulario | `MANUAL` |
+| GPS del navegador | botón **Usar mi ubicación** (`navigator.geolocation`) | `GPS` |
+| Pin del cliente | el cliente responde con ubicación por WhatsApp | `WHATSAPP` |
+| Enlace pegado | coordenadas extraídas de un enlace de Google Maps | `MAPA` |
+
+**Pedir el pin por WhatsApp:** `POST /api/v1/cotizaciones/{id}/pedir-ubicacion`
+envía el texto de `system_settings.cotizaciones.pedir_ubicacion` al teléfono del
+cliente, sella `ubicacion_solicitada_at` y registra el evento
+`UBICACION_SOLICITADA`. Si el envío falla, el pedido queda con
+`canal = PANEL`: no se finge un mensaje entregado.
+
+**Recepción del pin:** M1 reconoce `locationMessage` y `liveLocationMessage`.
+La compuerta `_gate_ubicacion` adjunta el pin a la cotización abierta más
+reciente del cliente que aún no tenga pin, sella `ubicacion_recibida_at`,
+registra `UBICACION_RECIBIDA` y responde al cliente. Si el cliente tiene varias
+abiertas, el pin va a la más nueva: no se reparte ni se duplica.
+
+**La referencia escrita manda.** El nombre del pin solo rellena cuando la
+cotización no tiene `ubicacion_texto`; nunca pisa lo que el asesor escribió.
+
+**Edición parcial:** un `PUT` sin campos de ubicación no borra el pin que llegó
+por WhatsApp (`model_fields_set` + `CASE WHEN` en el `UPDATE`). Borrarlo exige
+el botón **Quitar pin** o enviar coordenadas nulas de forma explícita.
+
+**Validaciones:** `UBICACION_INCOMPLETA` (una sola coordenada),
+`UBICACION_ORIGEN_REQUERIDO` (hay pin y no hay origen) y `UBICACION_SIN_PIN`
+(origen `WHATSAPP` sin coordenadas). La base además limita el rango
+(`lat` −90…90, `lng` −180…180) y los orígenes permitidos.
+
+**PDF:** bloque **UBICACION DE LA OBRA** con Dirección, Referencia, Pin
+(`lat, lng` + origen) y Mapa (`https://www.google.com/maps?q=lat,lng`). El
+bloque se recorta a 92 caracteres por línea para no desbordar la hoja.
+
+**Buscador Sabueso (Carpetas de Clientes):** el desplegable quedaba debajo de la
+tarjeta siguiente porque `.card` crea un contexto de apilamiento con
+`backdrop-filter`. La tarjeta del buscador lleva `.card-buscar-clientes`
+(`z-index: 6`), de modo que sus sugerencias se dibujan por encima. El
+desplegable muestra la ficha (nombre, constructora, ciudad, teléfono, RUC) y se
+navega con Enter y flechas sin abrir “Filtros”.

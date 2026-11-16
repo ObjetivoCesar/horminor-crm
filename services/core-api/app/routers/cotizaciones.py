@@ -32,14 +32,23 @@ from ..m1_whatsapp.repositorio import PostgresRepositorio
 from ..panel_acl import exigir_modulo
 from ..sandbox import SandboxNotifier
 from ..services import media as media_svc
+from ..services.cotizaciones import (
+    DOS_DECIMALES as _DOS_DECIMALES,
+    calcular as _calcular,
+    coordenada as _coordenada,
+    crear_cotizacion_borrador,
+    d as _d,
+    fecha as _fecha,
+    hash_snapshot as _hash,
+    insertar_version as _insertar_version,
+    money as _money,
+    snapshot as _snapshot,
+)
 from ..services.factura_pdf import generar_pdf
 from ..services.ordenes import NuevaOrden, OrdenInvalidaError, crear_orden
 from .chat_clientes import _cliente, _config_bunny, _settings
 
 router = APIRouter(prefix="/api/v1/cotizaciones", tags=["cotizaciones"])
-
-_DOS_DECIMALES = Decimal("0.01")
-
 
 def _pool(request: Request) -> asyncpg.Pool:
     pool = getattr(request.app.state, "pool", None)
@@ -48,30 +57,27 @@ def _pool(request: Request) -> asyncpg.Pool:
     return pool
 
 
-def _d(valor: Any, por_defecto: str = "0") -> Decimal:
-    if valor is None or valor == "":
-        return Decimal(por_defecto)
-    return Decimal(str(valor))
+def _campo(fila: Any, nombre: str, defecto: Any = None) -> Any:
+    """Lee un campo sin romper si el driver entrega un mapping incompleto."""
+    try:
+        return fila[nombre]
+    except (KeyError, IndexError, TypeError):
+        return defecto
 
 
-def _money(valor: Any) -> str | None:
-    if valor is None:
+def _maps_url(lat: Any, lng: Any) -> str | None:
+    """Enlace de Google Maps con el pin real. Sin pin no hay enlace."""
+    latitud = _coordenada(lat)
+    longitud = _coordenada(lng)
+    if latitud is None or longitud is None:
         return None
-    return str(_d(valor).quantize(_DOS_DECIMALES, rounding=ROUND_HALF_UP))
+    return f"https://www.google.com/maps?q={latitud},{longitud}"
 
 
 def _normalizar_busqueda(texto: str) -> str:
     """Minusculas sin tildes, para buscar nombres y apellidos como el Sabueso."""
     normal = unicodedata.normalize("NFKD", texto or "")
     return "".join(c for c in normal if not unicodedata.combining(c)).lower().strip()
-
-
-def _fecha(valor: Any) -> str | None:
-    if valor is None:
-        return None
-    if hasattr(valor, "isoformat"):
-        return valor.isoformat()
-    return str(valor)
 
 
 def _fecha_local(valor: Any) -> str | None:
@@ -88,40 +94,6 @@ def _uuid(valor: str, campo: str) -> uuid.UUID:
         return uuid.UUID(str(valor))
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=f"{campo} invalido") from exc
-
-
-def _snapshot(cot: dict[str, Any], extras: list[dict[str, Any]]) -> dict[str, Any]:
-    return {
-        "numero": cot.get("numero"),
-        "cliente_id": str(cot.get("cliente_id")),
-        "obra_direccion": cot.get("obra_direccion"),
-        "volumen_m3": _money(cot.get("volumen_m3")),
-        "resistencia": cot.get("resistencia"),
-        "precio_m3": _money(cot.get("precio_m3")),
-        "precio_estado": cot.get("precio_estado"),
-        "incluye_equipo": bool(cot.get("incluye_equipo", True)),
-        "incluye_bombeo": bool(cot.get("incluye_bombeo", True)),
-        "forma_pago": cot.get("forma_pago"),
-        "valida_hasta": _fecha(cot.get("valida_hasta")),
-        "subtotal": _money(cot.get("subtotal")),
-        "iva_pct": _money(cot.get("iva_pct")),
-        "iva_monto": _money(cot.get("iva_monto")),
-        "total": _money(cot.get("total")),
-        "extras": [
-            {
-                "descripcion": e.get("descripcion"),
-                "monto": _money(e.get("monto")),
-                "cobrable": bool(e.get("cobrable")),
-                "nota": e.get("nota"),
-            }
-            for e in extras
-        ],
-    }
-
-
-def _hash(snapshot: dict[str, Any]) -> str:
-    crudo = json.dumps(snapshot, sort_keys=True, ensure_ascii=False, default=str)
-    return hashlib.sha256(crudo.encode("utf-8")).hexdigest()
 
 
 class ExtraIn(BaseModel):
@@ -148,6 +120,13 @@ class CotizacionIn(BaseModel):
     extras: list[ExtraIn] = Field(default_factory=list)
     notas: str | None = Field(default=None, max_length=1000)
     creado_por: str | None = Field(default=None, max_length=120)
+    # Ubicacion de la obra: texto libre y/o pin real. Sin dato queda NULL.
+    ubicacion_texto: str | None = Field(default=None, max_length=500)
+    ubicacion_lat: Decimal | None = Field(default=None, ge=-90, le=90)
+    ubicacion_lng: Decimal | None = Field(default=None, ge=-180, le=180)
+    ubicacion_origen: str | None = Field(
+        default=None, pattern="^(MANUAL|GPS|WHATSAPP|MAPA)$"
+    )
 
 
 class AceptarIn(BaseModel):
@@ -175,7 +154,7 @@ class ConvertirIn(BaseModel):
 
 
 def _resumen(fila: asyncpg.Record) -> dict[str, Any]:
-    return {
+    resumen = {
         "id": str(fila["id"]),
         "numero": fila["numero"],
         "cliente_id": str(fila["cliente_id"]),
@@ -196,6 +175,38 @@ def _resumen(fila: asyncpg.Record) -> dict[str, Any]:
         "orden_id": str(fila["orden_id"]) if fila["orden_id"] else None,
         "created_at": _fecha_local(fila["created_at"]),
     }
+    lat = _campo(fila, "ubicacion_lat")
+    lng = _campo(fila, "ubicacion_lng")
+    resumen.update(
+        {
+            "ubicacion_texto": _campo(fila, "ubicacion_texto"),
+            "ubicacion_lat": _coordenada(lat),
+            "ubicacion_lng": _coordenada(lng),
+            "ubicacion_origen": _campo(fila, "ubicacion_origen"),
+            "ubicacion_maps_url": _maps_url(lat, lng),
+            "ubicacion_solicitada_at": _fecha(_campo(fila, "ubicacion_solicitada_at")),
+            "ubicacion_recibida_at": _fecha(_campo(fila, "ubicacion_recibida_at")),
+        }
+    )
+    return resumen
+
+
+async def _notifier(pool: asyncpg.Pool) -> tuple[Any, bool]:
+    """Notificador de WhatsApp activo (Evolution real o SANDBOX)."""
+    evolution = dict(await setting(pool, "integraciones.evolution", {}) or {})
+    sandbox = bool(evolution.get("sandbox", True)) or not (
+        evolution.get("url") and evolution.get("instancia") and evolution.get("api_key")
+    )
+    if sandbox:
+        return SandboxNotifier(PostgresRepositorio(pool)), True
+    return (
+        EvolutionNotifier(
+            base_url=evolution.get("url"),
+            instancia=evolution.get("instancia"),
+            api_key=evolution.get("api_key"),
+        ),
+        False,
+    )
 
 
 async def _archivar_pdf(
@@ -310,98 +321,6 @@ async def _detalle(pool: asyncpg.Pool, cotizacion_id: str) -> dict[str, Any]:
     return data
 
 
-async def _calcular(
-    pool: asyncpg.Pool,
-    body: CotizacionIn,
-) -> dict[str, Any]:
-    cliente = await pool.fetchrow(
-        "SELECT id, nombre FROM clients WHERE id = $1",
-        _uuid(body.cliente_id, "cliente_id"),
-    )
-    if cliente is None:
-        raise HTTPException(status_code=422, detail="cliente no encontrado")
-    receta = await pool.fetchrow(
-        "SELECT precio_m3, iva_pct, precio_estado FROM concrete_recipes WHERE resistencia = $1",
-        body.resistencia.strip().upper(),
-    )
-    if receta is None:
-        raise HTTPException(status_code=422, detail="resistencia no registrada")
-
-    precio = body.precio_m3 if body.precio_m3 is not None else receta["precio_m3"]
-    if precio is None:
-        raise HTTPException(
-            status_code=422,
-            detail="PRECIO_REQUERIDO: la receta no tiene precio; Julio debe cargarlo en Superadmin.",
-        )
-    precio = _d(precio)
-    if precio < 0:
-        raise HTTPException(status_code=422, detail="precio_m3 no puede ser negativo")
-
-    extras = [e.model_dump() for e in body.extras]
-    subtotal = _d(body.volumen_m3) * precio
-    for extra in extras:
-        if extra.get("cobrable") and extra.get("monto") is not None:
-            subtotal += _d(extra["monto"])
-    subtotal = subtotal.quantize(_DOS_DECIMALES, rounding=ROUND_HALF_UP)
-    iva_pct = _d(receta["iva_pct"])
-    iva_monto = (subtotal * iva_pct / Decimal("100")).quantize(
-        _DOS_DECIMALES, rounding=ROUND_HALF_UP
-    )
-    total = (subtotal + iva_monto).quantize(_DOS_DECIMALES, rounding=ROUND_HALF_UP)
-
-    validez = body.validez_dias
-    if validez is None:
-        validez = int(_d(await setting(pool, "cotizaciones.validez_dias", 15), "15"))
-    valida_hasta = date.today() + timedelta(days=max(1, validez))
-
-    return {
-        "cliente_id": cliente["id"],
-        "cliente_nombre": cliente["nombre"],
-        "obra_direccion": body.obra_direccion.strip(),
-        "volumen_m3": _d(body.volumen_m3),
-        "resistencia": body.resistencia.strip().upper(),
-        "precio_m3": precio,
-        "precio_estado": receta["precio_estado"] or "PROVISIONAL",
-        "incluye_equipo": body.incluye_equipo,
-        "incluye_bombeo": body.incluye_bombeo,
-        "acceso_notas": body.acceso_notas,
-        "forma_pago": body.forma_pago.upper(),
-        "valida_hasta": valida_hasta,
-        "subtotal": subtotal,
-        "iva_pct": iva_pct,
-        "iva_monto": iva_monto,
-        "total": total,
-        "extras": extras,
-        "notas": body.notas,
-        "creado_por": body.creado_por,
-    }
-
-
-async def _insertar_version(
-    conn: asyncpg.Connection,
-    cotizacion_id: uuid.UUID,
-    numero: str,
-    version: int,
-    snapshot: dict[str, Any],
-) -> None:
-    await conn.execute(
-        """
-        INSERT INTO cotizacion_versiones (cotizacion_id, version, snapshot, hash)
-        VALUES ($1, $2, $3::jsonb, $4)
-        """,
-        cotizacion_id,
-        version,
-        json.dumps(snapshot, ensure_ascii=False, default=str),
-        _hash(snapshot),
-    )
-
-
-async def _siguiente_numero(conn: asyncpg.Connection) -> str:
-    fila = await conn.fetchrow("SELECT nextval('cotizaciones_numero_seq') AS n")
-    anio = datetime.now().year
-    return f"HORM-COT-{anio}-{int(fila['n']):04d}"
-
-
 @router.get("")
 async def listar(
     request: Request,
@@ -477,58 +396,8 @@ async def obtener(request: Request, cotizacion_id: str) -> dict[str, Any]:
 async def crear(request: Request, body: CotizacionIn) -> dict[str, Any]:
     await exigir_modulo(request, "cotizaciones", mutacion=True)
     pool = _pool(request)
-    datos = await _calcular(pool, body)
-    async with pool.acquire() as conn:
-        async with conn.transaction():
-            numero = await _siguiente_numero(conn)
-            cot = await conn.fetchrow(
-                """
-                INSERT INTO cotizaciones (
-                    numero, cliente_id, obra_direccion, volumen_m3, resistencia,
-                    precio_m3, precio_estado, incluye_equipo, incluye_bombeo,
-                    acceso_notas, forma_pago, valida_hasta, subtotal, iva_pct,
-                    iva_monto, total, creado_por, notas
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-                    $13, $14, $15, $16, $17, $18
-                ) RETURNING *
-                """,
-                numero,
-                datos["cliente_id"],
-                datos["obra_direccion"],
-                datos["volumen_m3"],
-                datos["resistencia"],
-                datos["precio_m3"],
-                datos["precio_estado"],
-                datos["incluye_equipo"],
-                datos["incluye_bombeo"],
-                datos["acceso_notas"],
-                datos["forma_pago"],
-                datos["valida_hasta"],
-                datos["subtotal"],
-                datos["iva_pct"],
-                datos["iva_monto"],
-                datos["total"],
-                datos["creado_por"],
-                datos["notas"],
-            )
-            for indice, extra in enumerate(datos["extras"]):
-                await conn.execute(
-                    """
-                    INSERT INTO cotizacion_extras
-                        (cotizacion_id, descripcion, monto, cobrable, nota, orden)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    """,
-                    cot["id"],
-                    extra["descripcion"],
-                    extra.get("monto"),
-                    bool(extra.get("cobrable")),
-                    extra.get("nota"),
-                    indice,
-                )
-            snapshot = _snapshot(dict(cot), datos["extras"])
-            await _insertar_version(conn, cot["id"], numero, 1, snapshot)
-    return await _detalle(pool, str(cot["id"]))
+    cotizacion_id = await crear_cotizacion_borrador(pool, body)
+    return await _detalle(pool, cotizacion_id)
 
 
 @router.put("/{cotizacion_id}")
@@ -550,6 +419,12 @@ async def actualizar(
         )
     datos = await _calcular(pool, body)
     version = int(actual["version"]) + 1
+    # Solo se toca la ubicacion si el cliente la envio: un PUT parcial no debe
+    # borrar el pin que el cliente compartio por WhatsApp.
+    toca_ubicacion = bool(
+        {"ubicacion_texto", "ubicacion_lat", "ubicacion_lng", "ubicacion_origen"}
+        & body.model_fields_set
+    )
     async with pool.acquire() as conn:
         async with conn.transaction():
             await conn.execute(
@@ -560,7 +435,12 @@ async def actualizar(
                        incluye_equipo = $8, incluye_bombeo = $9, acceso_notas = $10,
                        forma_pago = $11, valida_hasta = $12, subtotal = $13,
                        iva_pct = $14, iva_monto = $15, total = $16, notas = $17,
-                       version = $18, updated_at = now()
+                       version = $18,
+                       ubicacion_texto = CASE WHEN $23::boolean THEN $19 ELSE ubicacion_texto END,
+                       ubicacion_lat = CASE WHEN $23::boolean THEN $20 ELSE ubicacion_lat END,
+                       ubicacion_lng = CASE WHEN $23::boolean THEN $21 ELSE ubicacion_lng END,
+                       ubicacion_origen = CASE WHEN $23::boolean THEN $22 ELSE ubicacion_origen END,
+                       updated_at = now()
                  WHERE id = $1
                 """,
                 actual["id"],
@@ -581,6 +461,11 @@ async def actualizar(
                 datos["total"],
                 datos["notas"],
                 version,
+                datos["ubicacion_texto"],
+                datos["ubicacion_lat"],
+                datos["ubicacion_lng"],
+                datos["ubicacion_origen"],
+                toca_ubicacion,
             )
             await conn.execute(
                 "DELETE FROM cotizacion_extras WHERE cotizacion_id = $1", actual["id"]
@@ -648,6 +533,16 @@ async def enviar(request: Request, cotizacion_id: str) -> dict[str, Any]:
             "numero": fila["numero"],
             "fecha": date.today(),
             "referencia": f"Cotizacion {fila['numero']}",
+            "obra_direccion": fila["obra_direccion"],
+            "ubicacion": {
+                "texto": _campo(fila, "ubicacion_texto"),
+                "lat": _coordenada(_campo(fila, "ubicacion_lat")),
+                "lng": _coordenada(_campo(fila, "ubicacion_lng")),
+                "origen": _campo(fila, "ubicacion_origen"),
+                "maps_url": _maps_url(
+                    _campo(fila, "ubicacion_lat"), _campo(fila, "ubicacion_lng")
+                ),
+            },
             "cliente_nombre": fila["cliente_nombre"],
             "cliente_ruc": fila["ruc"],
             "cliente_ciudad": fila["ciudad"],
@@ -688,19 +583,7 @@ async def enviar(request: Request, cotizacion_id: str) -> dict[str, Any]:
     except BunnyError as exc:
         raise HTTPException(status_code=502, detail=f"Bunny.net rechazo el PDF: {exc}") from exc
 
-    evolution = dict(await setting(pool, "integraciones.evolution", {}) or {})
-    sandbox = bool(evolution.get("sandbox", True)) or not (
-        evolution.get("url") and evolution.get("instancia") and evolution.get("api_key")
-    )
-    notifier = (
-        SandboxNotifier(PostgresRepositorio(pool))
-        if sandbox
-        else EvolutionNotifier(
-            base_url=evolution.get("url"),
-            instancia=evolution.get("instancia"),
-            api_key=evolution.get("api_key"),
-        )
-    )
+    notifier, sandbox = await _notifier(pool)
     texto = (
         f"Cotizacion {fila['numero']} de "
         f"{empresa.get('trade_name') or 'Horminor'}. "
@@ -789,6 +672,82 @@ async def marcar_enviada(request: Request, cotizacion_id: str) -> dict[str, Any]
                 fila["id"],
             )
     return await _detalle(pool, cotizacion_id)
+
+
+@router.post("/{cotizacion_id}/pedir-ubicacion")
+async def pedir_ubicacion(request: Request, cotizacion_id: str) -> dict[str, Any]:
+    """Pide el pin de la obra por WhatsApp y deja constancia del pedido.
+
+    El texto vive en ``system_settings`` (``cotizaciones.pedir_ubicacion``):
+    Julio lo edita en caliente y no se escribe negocio en el codigo.
+    """
+    await exigir_modulo(request, "cotizaciones", mutacion=True)
+    pool = _pool(request)
+    fila = await pool.fetchrow(
+        """
+        SELECT c.id, c.numero, c.estado, cl.telefono_whatsapp
+          FROM cotizaciones c
+          JOIN clients cl ON cl.id = c.cliente_id
+         WHERE c.id = $1
+        """,
+        _uuid(cotizacion_id, "cotizacion_id"),
+    )
+    if fila is None:
+        raise HTTPException(status_code=404, detail="cotizacion no encontrada")
+    if fila["estado"] in ("CONVERTIDA", "RECHAZADA", "VENCIDA"):
+        raise HTTPException(
+            status_code=422,
+            detail=f"cotizacion en estado {fila['estado']} no pide ubicacion",
+        )
+    telefono = str(fila["telefono_whatsapp"] or "").strip()
+    if not telefono:
+        raise HTTPException(
+            status_code=422,
+            detail="TELEFONO_REQUERIDO: agrega el telefono del cliente antes de pedir el pin",
+        )
+    plantilla = dict(await setting(pool, "cotizaciones.pedir_ubicacion", {}) or {})
+    texto = str(plantilla.get("texto") or "").strip()
+    if not texto:
+        raise HTTPException(
+            status_code=503,
+            detail="PLANTILLA_UBICACION_NO_CONFIGURADA: revisa cotizaciones.pedir_ubicacion",
+        )
+    notifier, sandbox = await _notifier(pool)
+    try:
+        enviado = await notifier.enviar_texto(telefono, texto)
+    except Exception:
+        enviado = False
+    canal = "WHATSAPP" if enviado else "PANEL"
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                """
+                UPDATE cotizaciones
+                   SET ubicacion_solicitada_at = now(), updated_at = now()
+                 WHERE id = $1
+                """,
+                fila["id"],
+            )
+            await conn.execute(
+                """
+                INSERT INTO cotizacion_eventos
+                    (cotizacion_id, tipo, canal, mensaje, actor, payload)
+                VALUES ($1, 'UBICACION_SOLICITADA', $2, $3, 'panel', $4::jsonb)
+                """,
+                fila["id"],
+                canal,
+                f"Se pidio la ubicacion de la obra a {telefono}.",
+                json.dumps(
+                    {"enviado": enviado, "sandbox": sandbox, "telefono": telefono},
+                    ensure_ascii=False,
+                ),
+            )
+    return {
+        "cotizacion": await _detalle(pool, cotizacion_id),
+        "enviado": enviado,
+        "modo": "SANDBOX" if sandbox else "EVOLUTION",
+        "mensaje": texto,
+    }
 
 
 @router.post("/{cotizacion_id}/aceptar")

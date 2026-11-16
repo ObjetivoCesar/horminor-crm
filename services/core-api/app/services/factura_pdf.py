@@ -82,6 +82,14 @@ def _linea(draw: ImageDraw.ImageDraw, y: int, color: tuple[int, int, int] = GRIS
     return y + 26
 
 
+def _recortar(valor: Any, limite: int = 92) -> str:
+    """Una linea del PDF no debe salirse del margen derecho."""
+    texto = _texto(valor)
+    if len(texto) <= limite:
+        return texto
+    return texto[: limite - 3].rstrip() + "..."
+
+
 def generar_pdf(datos: dict[str, Any]) -> bytes:
     """Devuelve los bytes del PDF. ``datos`` ya viene validado por el caller."""
     empresa = datos.get("empresa") or {}
@@ -198,6 +206,37 @@ def generar_pdf(datos: dict[str, Any]) -> bytes:
     )
     y += 46
     y = _linea(draw, y)
+
+    # Ubicacion de la obra: el mixer necesita llegar. Sin pin, el PDF lo dice.
+    if es_cotizacion:
+        ubicacion = datos.get("ubicacion") or {}
+        lineas_ubicacion = [f"Direccion: {_texto(datos.get('obra_direccion'))}"]
+        referencia_ubicacion = str(ubicacion.get("texto") or "").strip()
+        if referencia_ubicacion and referencia_ubicacion != str(
+            datos.get("obra_direccion") or ""
+        ).strip():
+            lineas_ubicacion.append(f"Referencia: {referencia_ubicacion}")
+        if ubicacion.get("lat") is not None and ubicacion.get("lng") is not None:
+            lineas_ubicacion.append(
+                f"Pin: {ubicacion.get('lat')}, {ubicacion.get('lng')} "
+                f"({_texto(ubicacion.get('origen'))})"
+            )
+            if ubicacion.get("maps_url"):
+                lineas_ubicacion.append(f"Mapa: {ubicacion.get('maps_url')}")
+        else:
+            lineas_ubicacion.append("Pin: PENDIENTE")
+        draw.text((MARGEN, y), "UBICACION DE LA OBRA", font=_fuente(16, True), fill=GRIS)
+        y += 26
+        for linea_ubicacion in lineas_ubicacion:
+            draw.text(
+                (MARGEN, y),
+                _recortar(linea_ubicacion),
+                font=_fuente(19),
+                fill=GRIS,
+            )
+            y += 26
+        y += 12
+        y = _linea(draw, y)
 
     # Referencia de la venta
     referencia = datos.get("referencia") or f"Orden #{_texto(datos.get('orden_numero'))}"
