@@ -5,8 +5,8 @@
 > qué se decidió, qué NO se debe hacer todavía y cuál es el siguiente paso.
 >
 > **Fecha:** 2026-11-16 · **Corte:** Cerebro fases 0–2 + incremento v2 +
-> conservación de instrucciones + encargos independientes ·
-> **Suites:** 610 pruebas en verde · **Migraciones:** 085–092.
+> conservación + encargos independientes + lenguaje natural y audio ·
+> **Suites:** 620 pruebas en verde · **Migraciones:** 085–092.
 >
 > **Documentos hermanos.**
 > - Explicación funcional: `docs/HORMINOR_MANUAL_FUNCIONAL.md`
@@ -29,6 +29,9 @@
 | Condiciones conservadas con cita (plazo, entrega contra pago, expediente) | Funciona | migración 091; `cerebro_conservacion_2026-11-16.txt` |
 | Recordatorio con mensaje autorizado y envío inmediato confirmado | Funciona | `test_v94_conservacion.py`; guardas 422 |
 | Varios encargos en un dictado, con corrección, cancelación y confirmación por separado | Funciona | migración 092; `test_v95_encargos.py`; `cerebro_encargos_2026-11-16.txt` |
+| Separación de encargos en lenguaje natural (sin ordinales) | Funciona | prompt v7 + `test_v96_natural.py` |
+| Duda acotada al dato («creo» → solo el volumen) | Funciona | `extractor._ajustar_incertidumbre`; `test_v96_natural.py` |
+| Cadena de audio real (STT → encargos → acciones) | Funciona con voz sintética | `cerebro_audio_natural_2026-11-16.txt` |
 | Guarda de dinero y doble confirmación | Funciona | `cerebro_guarda_dinero_2026-11-15.txt` |
 | Revocación completa y negación de instrucción citada | Funciona | `test_v92_adversarial.py`; en vivo |
 | Panel: franja persistente, ficha de tarea, etiquetas visibles | Funciona | navegador verificado |
@@ -138,7 +141,7 @@ docker ps --filter name=orminorth --format "{{.Names}}  {{.Status}}"
 # migraciones (deben estar 085 a 090 aplicadas)
 docker compose run --rm --no-deps core-api python scripts/db_migrate.py
 
-# suite completa (hoy 610)
+# suite completa (hoy 620)
 docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto
 
 # candado del Hito 3
@@ -177,8 +180,9 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 | `services/core-api/app/web/templates/cerebro_lab.html` | laboratorio (uso interno de prueba) |
 | `services/core-api/app/web/templates/panel.html` | franja, campanita, tareas y etiquetas visibles |
 | `db/migrations/085…092` | esquema de voz, cerebro, correcciones, tareas, acuse, condiciones y encargos |
-| `services/core-api/tests/` | 610 pruebas; `test_v92` adversarial, `test_v93` manual, `test_v94` conservación y `test_v95` encargos |
+| `services/core-api/tests/` | 620 pruebas; `test_v92` adversarial, `test_v93` manual, `test_v94` conservación, `test_v95` encargos y `test_v96` lenguaje natural |
 | `services/core-api/app/cerebro/encargos.py` | segmentación del dictado en asuntos independientes |
+| `docs/WHATSAPP_INTERNO_IMPLEMENTACION.md` | secuencia técnica del WhatsApp interno (futuro, no implementado) |
 | `scripts/evidencia_*.py` | evidencia reproducible |
 | `docs/HORMINOR_MANUAL_FUNCIONAL.md` | **Manual Vivo** (fuente única de definiciones) |
 | `docs/CEREBRO_MATRIZ_BRECHAS.md` | brechas y estado real por requisito |
@@ -219,3 +223,4 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 | v1 | 2026-11-15 | Documento de continuidad: estado, arquitectura Cerebro/Gato, dos flujos, prioridades y reglas. |
 | v1.1 | 2026-11-16 | Conservación de condiciones (migración 091), mensaje autorizado del recordatorio; 601 pruebas. Se registra que la confirmación por el mismo chat de WhatsApp es futura. |
 | v1.2 | 2026-11-16 | Encargos independientes (migración 092): corregir, cancelar y confirmar por asunto; 610 pruebas. La conversación por hilos sigue siendo de la siguiente fase. |
+| v1.3 | 2026-11-16 | Separación de encargos en lenguaje natural (prompt v7), duda acotada al dato y cadena de audio con STT real; 620 pruebas. Se agrega la secuencia técnica del WhatsApp interno como documento futuro. |

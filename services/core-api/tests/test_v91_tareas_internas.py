@@ -213,7 +213,9 @@ def test_el_prompt_ensena_a_extraer_la_instruccion_interna() -> None:
     from app.cerebro.extractor import PROMPT, VERSION_PROMPT
 
     assert "tarea interna" in PROMPT
-    assert VERSION_PROMPT == "cerebro-v6"
+    assert VERSION_PROMPT == "cerebro-v7"
+    # Un audio puede traer varias instrucciones sin ordinales.
+    assert "encargo" in PROMPT
 
 
 def test_el_resumen_habla_de_tarea_interna_y_no_inventa_hora() -> None:

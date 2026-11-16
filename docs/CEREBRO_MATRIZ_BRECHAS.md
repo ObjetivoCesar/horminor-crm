@@ -267,3 +267,39 @@ Evidencia: `.agents/evidencias/cerebro_encargos_2026-11-16.txt`
 de un dictado. Sostener «cancela el segundo» en **otro** audio exige conversación
 persistida con asuntos e hilos; eso pertenece a la fase conversacional y no se
 simuló aquí.
+
+---
+
+## 8. Incremento 2026-11-16 — lenguaje natural, duda acotada y audio
+
+> **Origen.** Cierre del laboratorio: dictado espontáneo **sin ordinales**, con
+> tres asuntos y una duda («creo que eran treinta metros de hormigón de 240»).
+> Corte anterior: 092 y 610 pruebas; ahora **620** (sin migración nueva).
+
+**Línea base.** El detector solo cortaba por «primero/segundo/tercero». Con el
+dictado natural produjo **un** encargo con acciones mezcladas y el resumen
+perdía dos instrucciones.
+
+| # | Cambio | Estado | Dónde |
+|---|---|---|---|
+| 1 | El extractor numera cada encargo por cambio de asunto, destinatario o acción | **VERIFICADO** | prompt `cerebro-v7`, `HechoIn.encargo` |
+| 2 | Validación y renumeración; ordinales como respaldo determinístico | **VERIFICADO** | `encargos.asignar` |
+| 3 | Si no se separó y hay varias instrucciones, se pregunta | **VERIFICADO** | `encargo.division` en `compilar` |
+| 4 | La duda se ata al dato más cercano, no a la frase | **VERIFICADO** | `extractor._ajustar_incertidumbre` |
+| 5 | La duda también se marca si el modelo no la captó | **VERIFICADO** | mismo módulo |
+| 6 | Nombres visibles: «Acciones ejecutadas» ≠ «Trabajo realizado» | **VERIFICADO** | `ETIQUETA_BORRADOR`, `internas.crear` |
+| 7 | Cadena de audio real (STT Groq → hechos → encargos) | **VERIFICADO con voz sintética** | `.agents/evidencias/cerebro_audio_natural_2026-11-16.*` |
+
+**Resultado del caso natural.** Tres encargos (secretaría / Mauricio / colegio
+Central), cero mezcla; 30 m³ TENTATIVO con pregunta; 240 EXTRAIDO sin pregunta
+redundante; sin teléfono ni fecha inventados.
+
+**Limitaciones declaradas (versión base del laboratorio).**
+1. La segmentación natural depende del extractor; si mañana el modelo agrupa mal,
+   la guarda pregunta en lugar de ejecutar, pero no corrige la agrupación sola.
+2. La validación del audio se hizo con **voz sintética es-MX**, no con una
+   grabación humana ni ruido de planta. Falta medir CER con audios reales.
+3. El encargo vive dentro de un dictado: sostener asuntos entre mensajes exige
+   el hilo conversacional (siguiente fase).
+4. Un audio muy largo con más de 5 asuntos no se segmenta en más tramos; se
+   pregunta.

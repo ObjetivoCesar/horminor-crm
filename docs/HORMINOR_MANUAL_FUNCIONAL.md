@@ -253,7 +253,7 @@ El detalle completo y las prioridades están en `docs/CONTINUIDAD_CEREBRO.md`.
 | **Qué significa** | Cada instrucción independiente dentro de un mismo dictado. Un audio con «primero… segundo… tercero…» son tres encargos, cada uno con sus datos, sus preguntas y su estado. |
 | **Para qué existe** | Que un asunto no contamine a otro: antes, «secretaría» de un encargo convertía el recordatorio externo de otro en tarea interna, y dos mensajes se pisaban. |
 | **Quién lo utiliza** | Julio y secretaría al revisar la propuesta. |
-| **Qué lo activa** | El dictado se corta por conectores ordinales («primero, segundo, tercero, por último, finalmente») y cada hecho se asigna al tramo donde está su cita. |
+| **Qué lo activa** | El extractor numera cada instrucción independiente (cambia de asunto, destinatario o acción) aunque no haya ordinales. Si no las separó y el dictado trae varias, el compilador pregunta antes de proponer. Los ordinales («primero, segundo») siguen siendo el respaldo determinístico. |
 | **Qué sucede después** | Cada encargo se compila con su propio texto. Se puede corregir, cancelar o confirmar uno sin tocar los demás. |
 | **Qué NO significa** | No es un hilo de conversación ni un expediente: es un asunto dentro de un dictado. |
 | **Ejemplo** | «Tres cosas: revisar medidas, recordatorio a Mauricio, revisar despachos» → encargos 1, 2 y 3. |
@@ -275,6 +275,22 @@ El detalle completo y las prioridades están en `docs/CONTINUIDAD_CEREBRO.md`.
 | **Ejemplo** | Cancelar el recordatorio a Mauricio deja intactas la revisión de medidas y la de despachos. |
 | **Dónde se encuentra** | Laboratorio, lista de encargos. |
 | **Referencia técnica** | `router.cancelar_encargo`, `recordatorios.cancelar`. |
+
+### Término: Duda asociada al dato
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | estado `TENTATIVO` acotado por cercanía (`_ajustar_incertidumbre`) |
+| **Nombre para el usuario** | Sin confirmar |
+| **Qué significa** | Cuando Julio duda («creo», «me parece», «más o menos»), la duda se ata al dato más cercano, no a la frase completa. «Creo que eran treinta metros de hormigón de 240» deja el volumen sin confirmar y la resistencia como dato firme. |
+| **Para qué existe** | No convertir un dato firme en pregunta redundante ni tratar una aproximación como definitiva. |
+| **Quién lo utiliza** | El sistema al interpretar; Julio lo ve en el resumen y en la ficha. |
+| **Qué lo activa** | Una marca de duda en el dictado; se asigna al hecho cuya cita está más cerca y se quita de los demás. Si la duda está antes («creo que…»), se aplica a lo que sigue. |
+| **Qué sucede después** | Solo el dato dudoso se pregunta y se muestra «sin confirmar»; los demás se usan con normalidad. |
+| **Qué NO significa** | No es un error del audio ni una invalidación del dato: es una confirmación pendiente de ese dato concreto. |
+| **Ejemplo** | «El colegio Central, creo que eran 30 m³ de 240» → pregunta por los m³; 240, el cliente y la obra no se preguntan por esa duda. |
+| **Dónde se encuentra** | Resumen «Lo que entendí», tabla de hechos y ficha de la tarea. |
+| **Referencia técnica** | `extractor._ajustar_incertidumbre`, `hechos.es_tentativo`. |
 
 ### Término: Condición conservada
 
@@ -788,13 +804,12 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 `NOTIFICADA` §5 · `pago.recibido` (INFERIDO) §4 · `REGISTRADA` §5 ·
 `REQUIERE_ACLARACION` §7 · `RESUELTA` §5 · `SANDBOX` §6 · `SIN_ACCIONES` §7 ·
 `SUPERADO_POR_CORRECCION` §4 · `TENTATIVO` §4 · `VISTA` §5.
-
 ### Por nombre visible
 
 Aviso dejado §5 · Cancelación de un encargo §4 · Cierre con justificación §5 ·
 Compilador §4 · Condición conservada §4 · Confirmación doble §6 ·
-Dato sin confirmar §4 · Elevada al supervisor §5 · Encargo §4 ·
-Ficha de la tarea §5 · Guarda de «el dinero ya entró» §6 ·
+Dato sin confirmar §4 · Duda asociada al dato §4 · Elevada al supervisor §5 ·
+Encargo §4 · Ficha de la tarea §5 · Guarda de «el dinero ya entró» §6 ·
 Gato §6 · Hecho citado §4 · Ingreso sin confirmar §4 ·
 Mensaje autorizado del recordatorio §4 · Prioridad y plazo §5 ·
 Recepción confirmada §5 · Recordatorio programado §6 · Resultado registrado §5 ·
@@ -804,11 +819,13 @@ Retención de audio §6 · Tarea consultada §5 · Trabajo realizado §5.
 
 «acuse» → Recepción confirmada §5 · «asunto» → Encargo §4 ·
 «avisada» → Aviso dejado §5 · «cita» → Hecho citado §4 ·
-«condición» → Condición conservada §4 · «duda» → Dato sin confirmar §4 ·
-«escalar» → Elevada al supervisor §5 · «expediente» → Condición conservada §4 ·
-«marcar hecho» → Trabajo realizado §5 · «no ha pagado» → Ingreso sin confirmar §4 ·
-«plazo» → Condición conservada §4 · «registrar» → Resultado registrado §5 ·
-«revisada» → Tarea consultada §5 · «tres cosas» → Encargo §4 ·
+«condición» → Condición conservada §4 · «creo» → Duda asociada al dato §4 ·
+«duda» → Dato sin confirmar §4 · «escalar» → Elevada al supervisor §5 ·
+«expediente» → Condición conservada §4 · «marcar hecho» → Trabajo realizado §5 ·
+«me parece» → Duda asociada al dato §4 ·
+«no ha pagado» → Ingreso sin confirmar §4 · «plazo» → Condición conservada §4 ·
+«registrar» → Resultado registrado §5 · «revisada» → Tarea consultada §5 ·
+«sin ordinales» → Encargo §4 · «tres cosas» → Encargo §4 ·
 «vencida» → Prioridad y plazo §5.
 
 ---
@@ -837,3 +854,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v1.2 | 2026-11-15 | Arquitectura futura Cerebro–Gato–módulos y separación de los flujos interno y externo (§3.4); sigue sin implementarse. |
 | v1.3 | 2026-11-16 | Condición conservada, Mensaje autorizado del recordatorio e Ingreso sin confirmar (§4); índice actualizado. Conservación de instrucciones ante el dictado espontáneo del 2026-11-16. |
 | v1.4 | 2026-11-16 | Encargo y Cancelación de un encargo (§4); un dictado con tres asuntos se administra por separado. Índice actualizado. |
+| v1.5 | 2026-11-16 | Duda asociada al dato (§4); separación de encargos en lenguaje natural sin ordinales; etiquetas «Acciones ejecutadas» frente a «Trabajo realizado». |

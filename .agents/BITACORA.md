@@ -6534,3 +6534,93 @@ que solo se ejecuta C. Después, documentar el hilo conversacional mínimo
 - `docs/CONTINUIDAD_CEREBRO.md` (v1.2)
 - `.agents/ESTADO.md`
 - `.agents/evidencias/cerebro_encargos_2026-11-16.txt` (nuevo)
+
+## 2026-11-16 — Cierre del laboratorio: lenguaje natural, duda acotada y audio
+
+**Agente:** DeepSeek V4.1 Flash (OpenCode)
+**Duración:** una sesión
+**Objetivo:** validar la separación de encargos sin ordinales, la duda asociada
+al dato correcto y la cadena con audio; dejar la versión base del laboratorio y
+la secuencia del WhatsApp interno.
+
+### Hecho
+
+1. **Línea base medida.** Con el dictado natural y el detector por ordinales, la
+   interpretación devolvió **un** encargo con acciones mezcladas y perdió dos
+   instrucciones.
+2. **Segmentación por el extractor (prompt cerebro-v7):** cada hecho lleva
+   `encargo`; el modelo numera por cambio de asunto, destinatario o acción.
+   `encargos.asignar` valida, renumera y solo usa ordinales como respaldo.
+3. **Guarda de división:** si no hubo separación y el dictado trae dos
+   `tarea.mensaje` (o dos clientes), se pregunta `encargo.division` antes de
+   proponer.
+4. **Duda acotada:** `_ajustar_incertidumbre` asigna cada marca de duda
+   («creo», «me parece», «parece que»…) al hecho más cercano, con dirección
+   cuando dice «que»; marca el dato si el modelo lo omitió y quita la duda de
+   los demás. Cubre volumen, resistencia, cliente y fecha.
+5. **Nombres visibles:** «Acciones ejecutadas» ≠ «Trabajo realizado»; la nota de
+   `crear_tarea_interna` aclara que quedó NOTIFICADA y que el trabajo no está
+   hecho.
+6. **Audio real de la cadena:** WAV con voz sintética es-MX (Sabina, 18,3 s) →
+   STT Groq/Whisper real → interpretación con 3 encargos y la duda en el volumen.
+7. **Documento de WhatsApp interno** (`docs/WHATSAPP_INTERNO_IMPLEMENTACION.md`):
+   pasos 0–7 con dependencias verificadas y compuertas. No implementado.
+
+### Evidencia (real, ejecutada)
+
+| Comprobación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **620 passed**, 1 warning, exit 0 |
+| `hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]` |
+| Texto natural | 3 encargos; enc 1 interno, enc 2 recordatorio externo, enc 3 cliente + medidas |
+| Duda | 30 m³ `TENTATIVO` con pregunta; 240 `EXTRAIDO` sin pregunta |
+| Datos inventados | ninguno: se pregunta teléfono; no hay fecha |
+| Audio sintético es-MX | STT `COMPLETADO`, 18.279 ms, texto correcto |
+| Interpretación del audio | 3 encargos, 8 hechos, 4 acciones, 4 preguntas |
+| Evidencia | `.agents/evidencias/cerebro_audio_natural_2026-11-16.txt` (+ `.wav` y JSON) |
+
+### Decisiones tomadas
+
+1. **La separación la propone el extractor y la valida el compilador.** Es el
+   único componente que entiende paráfrasis; los ordinales no generalizan.
+   Alternativa descartada: ampliar listas de palabras al detector.
+2. **Si no se puede separar con seguridad, se pregunta.** Alternativa
+   descartada: agrupar a ciegas y confiar en la confirmación posterior.
+3. **La duda pertenece a un dato, no a la frase.** Alternativa descartada:
+   heredar TENTATIVO a todos los hechos de la oración.
+4. **La etiqueta del borrador no afirma trabajo hecho.** Alternativa
+   descartada: «Ejecutado» para todo el borrador.
+5. **La versión base se cierra con limitaciones escritas**, no con una promesa
+   de comprensión perfecta.
+
+### Bloqueos / preguntas al cliente
+
+1. **Audio humano real:** falta una grabación de Julio y ruido de planta para
+   medir CER; la sesión usó voz sintética.
+2. **Teléfonos reales** de Julio y secretaría para el canal interno.
+3. **Segundo factor** para acciones sensibles por WhatsApp (el número no basta).
+4. Retención y consentimiento de audio (LOPDP).
+
+### Próximo paso exacto
+
+Implementar el **Paso 0** de `docs/WHATSAPP_INTERNO_IMPLEMENTACION.md`
+(persistir entrantes de WhatsApp en `chat_mensajes` con idempotencia por
+`whatsapp_msg_id`) y su compuerta: reenviar el mismo mensaje no duplica y el
+adjunto conserva su `media_asset`. Sin conectar Gato.
+
+### Archivos tocados
+
+- `services/core-api/app/cerebro/sobre.py`
+- `services/core-api/app/cerebro/extractor.py` (prompt v7, `_ajustar_incertidumbre`)
+- `services/core-api/app/cerebro/encargos.py`
+- `services/core-api/app/cerebro/compilador.py`
+- `services/core-api/app/cerebro/internas.py`
+- `services/core-api/app/web/templates/cerebro_lab.html`
+- `services/core-api/tests/test_v96_natural.py` (nuevo)
+- `services/core-api/tests/test_v91_tareas_internas.py`, `test_v92_adversarial.py`
+- `docs/WHATSAPP_INTERNO_IMPLEMENTACION.md` (nuevo)
+- `docs/HORMINOR_MANUAL_FUNCIONAL.md` (v1.5)
+- `docs/CEREBRO_MATRIZ_BRECHAS.md` (§8)
+- `docs/CONTINUIDAD_CEREBRO.md` (v1.3)
+- `.agents/ESTADO.md`
+- `.agents/evidencias/cerebro_audio_natural_2026-11-16.*` (nuevos)

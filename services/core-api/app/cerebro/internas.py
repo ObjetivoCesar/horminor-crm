@@ -428,8 +428,10 @@ async def crear(
             "repetido": False,
         },
         nota=(
-            "Tarea interna registrada: queda en el panel para "
-            f"{persona or rol}."
+            "Encargo confirmado. Se creó la tarea y quedó NOTIFICADA en el "
+            f"panel para {persona or rol}: el trabajo todavía no está hecho. "
+            "Se verá como vista y acusada cuando la reciban, y como resuelta "
+            "cuando lo terminen."
         ),
     )
 

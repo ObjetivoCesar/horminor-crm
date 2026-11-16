@@ -458,7 +458,12 @@ def test_el_vocabulario_excluye_los_pares_retirados() -> None:
 def test_el_prompt_v6_ensena_duda_negacion_y_cita() -> None:
     from app.cerebro.extractor import PROMPT, VERSION_PROMPT
 
-    assert VERSION_PROMPT == "cerebro-v6"
+    assert VERSION_PROMPT == "cerebro-v7"
+    # La duda se ata al dato más cercano, no a toda la frase.
+    assert "TENTATIVO" in PROMPT
+    assert "resistencia" in PROMPT
+    # La separación de encargos se pide al extractor, con respaldo determinístico.
+    assert "encargo" in PROMPT
     assert "TENTATIVO" in PROMPT
     assert "NIEGA" in PROMPT
     assert "CITA" in PROMPT

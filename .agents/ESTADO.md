@@ -1,8 +1,8 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-16** (encargos independientes del Cerebro;
-> 610 pruebas y migración 092).
+> Última actualización: **2026-11-16** (lenguaje natural, duda acotada y audio;
+> 620 pruebas).
 > Base v6.17: Custodio v4.4.0 + HTTP, agenda única `HorminorAgenda`,
 > compras/caja chica, perfiles ACL, Superadmin por Action Cards, Carpetas de
 > Clientes con buscador Sabueso, bancos con color de marca, **facturas
@@ -65,6 +65,34 @@ Orellana/SucumbÃ­os para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
 
 ## Evidencia de la última sesión
+
+### 2026-11-16 - Lenguaje natural, duda acotada y audio (v8.6)
+
+- **Caso real auditado (sin ordinales):** «que secretaría revise los despachos…
+  hay que llamar al ingeniero Mauricio… y el colegio Central, creo que eran
+  treinta metros de hormigón de 240, que me confirmen las medidas». Antes: un
+  solo encargo con acciones mezcladas. Ahora: **tres encargos** separados.
+- **Segmentación:** el extractor (prompt **cerebro-v7**) numera cada encargo por
+  cambio de asunto, destinatario o acción; `asignar` valida y renumera; los
+  ordinales quedan como respaldo. Si no separó y hay dos `tarea.mensaje`, el
+  compilador pregunta (`encargo.division`) en vez de agrupar.
+- **Duda acotada:** `_ajustar_incertidumbre` ata la duda al dato más cercano.
+  «Creo que eran 30 m³ de 240» → volumen `TENTATIVO` con pregunta; resistencia
+  `EXTRAIDO` sin pregunta redundante. También cubre cliente y fecha.
+- **Nombres visibles:** «Acciones ejecutadas» (borrador) frente a «Trabajo
+  realizado» (tarea resuelta); la confirmación interna dice que la tarea quedó
+  **NOTIFICADA** y que el trabajo no está hecho.
+- **Audio:** WAV con voz sintética es-MX (Sabina) → STT real de Groq (18,3 s,
+  transcripción correcta) → interpretación con 3 encargos y la duda en el
+  volumen. **No es una grabación humana**; queda pendiente medir con voz real y
+  ruido de planta.
+- **Suite:** **620 passed** (10 nuevas en `test_v96_natural.py`); Hito 3 →
+  `[CANDADO CERRADO EN SANDBOX]`.
+- **Evidencia:** `.agents/evidencias/cerebro_audio_natural_2026-11-16.txt`
+  (+ `.wav`, STT e interpretación en JSON).
+- **Manual Vivo v1.5:** término *Duda asociada al dato*; *Encargo* actualizado.
+- **WhatsApp interno:** `docs/WHATSAPP_INTERNO_IMPLEMENTACION.md` con la
+  secuencia 0–7, dependencias verificadas y compuertas. No implementado.
 
 ### 2026-11-16 - Encargos independientes en un dictado (v8.5)
 

@@ -14,7 +14,7 @@ encargo y todo sigue como antes.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Sequence
 
 from .hechos import HechoCitado
@@ -78,20 +78,21 @@ def texto_de(segmentos: Sequence[Segmento], indice: int) -> str | None:
 def asignar(
     hechos: Sequence[HechoCitado], segmentos: Sequence[Segmento]
 ) -> list[HechoCitado]:
-    """Devuelve los hechos con su encargo según el tramo de su cita."""
+    """Fija el encargo de cada hecho.
+
+    Manda la separación que propuso el extractor (es el único que entiende
+    paráfrasis). Los ordinales son solo el respaldo determinístico: si el
+    modelo dijo que todo es un encargo pero el dictado dice «primero… segundo…»,
+    se corta por posición.
+    """
+    propuestos = sorted({h.encargo for h in hechos})
+    if len(propuestos) > 1:
+        # Se renumera 1..N para que no queden huecos (1 y 3 -> 1 y 2).
+        mapa = {viejo: nuevo for nuevo, viejo in enumerate(propuestos, start=1)}
+        return [replace(h, encargo=mapa[h.encargo]) for h in hechos]
+
     if len(segmentos) <= 1:
-        return [
-            HechoCitado(
-                clave=h.clave,
-                valor=h.valor,
-                estado=h.estado,
-                tipo=h.tipo,
-                evidencia=h.evidencia,
-                checksum_valido=h.checksum_valido,
-                encargo=1,
-            )
-            for h in hechos
-        ]
+        return [replace(h, encargo=1) for h in hechos]
 
     salida: list[HechoCitado] = []
     for hecho in hechos:
@@ -104,15 +105,5 @@ def asignar(
                 if segmento.inicio <= inicio < segmento.fin:
                     encargo = segmento.indice
                     break
-        salida.append(
-            HechoCitado(
-                clave=hecho.clave,
-                valor=hecho.valor,
-                estado=hecho.estado,
-                tipo=hecho.tipo,
-                evidencia=hecho.evidencia,
-                checksum_valido=hecho.checksum_valido,
-                encargo=encargo,
-            )
-        )
+        salida.append(replace(hecho, encargo=encargo))
     return salida

@@ -62,6 +62,10 @@ class HechoIn(BaseModel):
         "CORREGIDO_EN_AUDIO",
     ] = "EXTRAIDO"
     cita: str | None = Field(default=None, max_length=500)
+    # Asunto independiente al que pertenece el hecho. El modelo es el único
+    # que entiende paráfrasis; el compilador valida el número y, si no es
+    # fiable, pide aclaración en vez de agrupar a ciegas.
+    encargo: int | None = Field(default=None, ge=1, le=8)
     hablante: Literal[
         "SUPERADMIN",
         "SECRETARIA",

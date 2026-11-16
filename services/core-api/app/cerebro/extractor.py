@@ -12,6 +12,7 @@ import math
 import os
 import re
 import unicodedata
+from dataclasses import replace
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Sequence
@@ -39,6 +40,7 @@ from .compilador import (
     compilar,
     dictado_revocado,
     normalizar_resistencia,
+    textos_por_encargo,
 )
 from .encargos import asignar, segmentar
 from .hechos import (
@@ -56,7 +58,7 @@ from .tiempo import hora_de_cita, hora_de_recordatorio, sostiene_fecha
 BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/")
 MODELO = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 TIMEOUT = float(os.getenv("DEEPSEEK_TIMEOUT", "40"))
-VERSION_PROMPT = "cerebro-v6"
+VERSION_PROMPT = "cerebro-v7"
 
 CLAVES = (
     "cliente.nombre",
@@ -104,7 +106,7 @@ Devuelve SOLO un objeto JSON, sin markdown ni explicaciones.
 Claves permitidas: {claves}.
 
 Forma:
-{{"intencion":"MUTACION|CONSULTA|MIXTA","hechos":[{{"clave":"...","valor":...,"tipo":"TEXTO|ENTERO|DECIMAL|FECHA|HORA|TELEFONO|CEDULA|BOOLEANO","estado":"EXTRAIDO|NO_DIJO|INAUDIBLE_NO_ENTENDI|BAJA_CONFIANZA_STT","cita":"...","hablante":"SUPERADMIN|SECRETARIA|VENDEDOR|CONTADORA|CHOFER|CLIENTE|TERCERO|NO_DETERMINADO"}}],"faltantes":[],"ambiguedades":[],"preguntas":[]}}
+{{"intencion":"MUTACION|CONSULTA|MIXTA","hechos":[{{"clave":"...","valor":...,"tipo":"TEXTO|ENTERO|DECIMAL|FECHA|HORA|TELEFONO|CEDULA|BOOLEANO","estado":"EXTRAIDO|NO_DIJO|INAUDIBLE_NO_ENTENDI|BAJA_CONFIANZA_STT","cita":"...","hablante":"SUPERADMIN|SECRETARIA|VENDEDOR|CONTADORA|CHOFER|CLIENTE|TERCERO|NO_DETERMINADO","encargo":1}}],"faltantes":[],"ambiguedades":[],"preguntas":[]}}
 
 Reglas duras:
 1. `cita` debe ser una copia EXACTA de un fragmento del TEXTO NORMALIZADO.
@@ -131,6 +133,10 @@ Reglas duras:
 22. Si el hablante DUDA o APROXIMA ("creo que", "300 y pico", "mas o menos", "o el sabado"), emite el hecho con estado TENTATIVO, el valor aproximado en valor y la expresion original en cita. El sistema no lo usa como definitivo: pregunta.
 23. Si el audio CITA palabras de otra persona o un mensaje ("me mandaron decir que...", "te voy a leer un mensaje..."), eso no es una orden de Julio: no generes acciones a partir de la cita. Si ademas dice "eso no lo hagas", no emitas el hecho.
 24. Si el hablante se CORRIGE a si mismo en el mismo audio ("380, bueno, 300 y pico"), emite un solo hecho con el ULTIMO valor y estado CORREGIDO_EN_AUDIO, citando la correccion.
+25. ENCARGOS: un audio puede traer varias instrucciones. Numera cada una en `encargo` (1, 2, 3…) y usa el MISMO numero para todos los hechos de esa instruccion. Cambia de encargo cuando cambia el asunto, el destinatario o la accion pedida, aunque no haya "primero/segundo": "que secretaria revise X. Ah, tambien hay que llamar a Y. Y el colegio Z, que confirmen…" son TRES encargos. Si hay una sola instruccion, todos los hechos van con encargo 1. No repitas un dato en dos encargos.
+26. La duda afecta solo al dato que la sigue o la precede inmediatamente: "creo que eran treinta metros de hormigon de 240" marca TENTATIVO el volumen, NO la resistencia. "creo que el cliente es X" marca TENTATIVO el cliente. "para el viernes, creo" marca TENTATIVO la fecha. No marques TENTATIVO un dato que el hablante afirma con seguridad.
+27. Si el hablante pide CONTACTAR o LLAMAR a alguien por un tema ("hay que llamar al ingeniero Mauricio por lo del pago"), es una tarea dirigida a esa persona: usa tarea.destinatario con su nombre y tarea.mensaje con el tema copiado ("por lo del pago"). No inventes telefono ni hora. No es cotizacion.*.
+28. "Que me confirmen las medidas", "que revisen", "que verifiquen" es una instruccion al equipo: tarea.mensaje con la instruccion copiada y tarea.destinatario con el area si la nombra. No lo conviertas en cotizacion si no pide cotizar.
 """
 
 
@@ -349,7 +355,11 @@ def construir_hechos(
                 estado=item.estado,
                 tipo=item.tipo,
                 evidencia=evidencia,
+                encargo=item.encargo or 1,
             )
+
+        if (item.encargo or 1) != hecho.encargo:
+            hecho = replace(hecho, encargo=item.encargo or 1)
 
         errores = validar_hecho(hecho)
         if (
@@ -371,6 +381,7 @@ def construir_hechos(
                         estado="EXTRAIDO",
                         tipo="HORA",
                         evidencia=hecho.evidencia,
+                        encargo=hecho.encargo,
                     )
                 )
                 notas.append(
@@ -386,7 +397,8 @@ def construir_hechos(
     notas.extend(_inferir_telefono(secuencias, hechos, texto_crudo))
     notas.extend(_completar_cuando_de_tarea(hechos, mapa.texto))
     notas.extend(_degradar_pago_no_declarado(hechos, texto_crudo))
-    # Cada hecho queda en el encargo (tramo) del dictado donde está su cita.
+    notas.extend(_ajustar_incertidumbre(hechos, texto_crudo))
+    # Cada hecho queda en el encargo del dictado donde está su cita.
     return asignar(hechos, segmentar(texto_crudo)), notas
 
 
@@ -410,6 +422,111 @@ _MARCAS_PAGO_NO_RECIBIDO = (
     "queda pendiente",
     "quedo pendiente",
 )
+
+
+# La duda de Julio no es propiedad de la frase entera: pertenece al dato más
+# cercano. «Creo que eran treinta metros de hormigón de 240» duda del volumen,
+# no de la resistencia.
+_MARCAS_DUDA = (
+    "creo que",
+    "creo",
+    "me parece",
+    "parece que",
+    "mas o menos",
+    "tal vez",
+    "quizas",
+    "supongo",
+    "calculo",
+    "aproximadamente",
+    "no estoy seguro",
+    "no estoy segura",
+    "y pico",
+    "como que",
+    "sera",
+)
+
+
+def _ajustar_incertidumbre(
+    hechos: list[HechoCitado], texto_crudo: str
+) -> list[str]:
+    """Ata la duda al dato más cercano y la quita de los demás.
+
+    El hablante dice «creo que eran treinta metros de hormigón de 240»: la
+    duda es del volumen. Si el modelo marca también la resistencia, se
+    degrada; si no marca el volumen, se marca. Sin marcas de duda en el
+    dictado, no se toca lo que dijo el modelo.
+    """
+    plano = _sin_tildes(texto_crudo)
+    marcas: list[int] = []
+    for marca in _MARCAS_DUDA:
+        inicio = plano.find(marca)
+        while inicio >= 0:
+            marcas.append(inicio)
+            inicio = plano.find(marca, inicio + 1)
+    if not marcas:
+        return []
+
+    indices = [i for i, h in enumerate(hechos) if h.evidencia is not None]
+    if not indices:
+        return []
+
+    def distancia(posicion: int, indice: int) -> int:
+        evidencia = hechos[indice].evidencia
+        assert evidencia is not None
+        if evidencia.crudo_inicio <= posicion <= evidencia.crudo_fin:
+            return 0
+        return min(
+            abs(posicion - evidencia.crudo_inicio),
+            abs(posicion - evidencia.crudo_fin),
+        )
+
+    con_duda: set[int] = set()
+    for posicion in marcas:
+        # «creo QUE eran treinta» duda de lo que viene; «el viernes, creo»
+        # duda de lo que acaba de decir.
+        hacia_adelante = (
+            re.match(r"[a-z ]{0,14}\bque\b", plano[posicion : posicion + 24])
+            is not None
+        )
+        candidatos = indices
+        if hacia_adelante:
+            siguientes = [
+                i
+                for i in indices
+                if hechos[i].evidencia is not None
+                and hechos[i].evidencia.crudo_inicio >= posicion - 2
+            ]
+            if siguientes:
+                candidatos = siguientes
+        indice = min(candidatos, key=lambda i: distancia(posicion, i))
+        if distancia(posicion, indice) <= 80:
+            con_duda.add(indice)
+
+    notas: list[str] = []
+    for indice in indices:
+        hecho = hechos[indice]
+        if hecho.estado == "CORREGIDO_POR_HUMANO":
+            continue
+        puede_marcarse = hecho.tipo in (
+            "DECIMAL",
+            "ENTERO",
+            "FECHA",
+            "HORA",
+            "BOOLEANO",
+        ) or hecho.clave.endswith(".nombre")
+        if indice in con_duda and hecho.estado == "EXTRAIDO" and puede_marcarse:
+            hechos[indice] = replace(hecho, estado="TENTATIVO")
+            notas.append(
+                f"{hecho.clave}: el dictado duda de este dato («creo», "
+                "«me parece»); se conserva sin confirmar"
+            )
+        elif indice not in con_duda and hecho.es_tentativo:
+            hechos[indice] = replace(hecho, estado="EXTRAIDO")
+            notas.append(
+                f"{hecho.clave}: la duda del dictado corresponde a otro dato; "
+                "se toma como dicho"
+            )
+    return notas
 
 
 def _degradar_pago_no_declarado(
@@ -499,6 +616,7 @@ def _completar_cuando_de_tarea(
             estado="EXTRAIDO",
             tipo="TEXTO",
             evidencia=evidencia,
+            encargo=referencia.encargo,
         )
     )
     return [
@@ -893,9 +1011,7 @@ async def interpretar(
     )
     notas.extend(notas_compiladas)
     hechos_finales = list(borrador.hechos)
-    textos_por_encargo = {
-        segmento.indice: segmento.texto for segmento in segmentar(mapa.texto)
-    }
+    textos = textos_por_encargo(hechos_finales, mapa.texto)
 
     return {
         "sobre": sobre,
@@ -906,7 +1022,7 @@ async def interpretar(
             hechos_finales,
             texto=mapa.texto,
             condiciones=borrador.condiciones,
-            textos_por_encargo=textos_por_encargo,
+            textos_por_encargo=textos,
         ),
         "cliente": cliente,
         "texto_normalizado": mapa.texto,
@@ -929,6 +1045,7 @@ async def recompilar(
     borrador, notas, _cliente = await _borrador_desde_hechos(
         pool, lista, intencion=intencion, sandbox=sandbox, hoy=hoy, texto=texto
     )
+    textos = textos_por_encargo(list(borrador.hechos), texto)
     return {
         "hechos": list(borrador.hechos),
         "borrador": borrador,
@@ -937,13 +1054,6 @@ async def recompilar(
             list(borrador.hechos),
             texto=texto,
             condiciones=borrador.condiciones,
-            textos_por_encargo=(
-                {
-                    segmento.indice: segmento.texto
-                    for segmento in segmentar(texto or "")
-                }
-                if texto
-                else None
-            ),
+            textos_por_encargo=textos,
         ),
     }

@@ -1393,6 +1393,43 @@ def _compilar_asunto(
     )
 
 
+def _texto_del_grupo(
+    grupo: Sequence[HechoCitado],
+    segmentos: Sequence[Any],
+    indice: int,
+    texto_completo: str | None,
+) -> str:
+    """Texto propio del encargo: su tramo o, si no hay ordinales, sus citas.
+
+    Nunca se usa el dictado completo cuando hay más de un encargo: esa era la
+    vía por la que «secretaría» de un asunto teñía otro.
+    """
+    del_segmento = texto_de(segmentos, indice)
+    if del_segmento:
+        return del_segmento
+    citas = [
+        hecho.evidencia.cita
+        for hecho in grupo
+        if hecho.evidencia is not None and hecho.evidencia.cita
+    ]
+    if citas:
+        return " ".join(dict.fromkeys(citas))
+    return texto_completo or ""
+
+
+def textos_por_encargo(
+    hechos: Sequence[HechoCitado], texto: str | None
+) -> dict[int, str]:
+    segmentos = segmentar(texto or "")
+    grupos: dict[int, list[HechoCitado]] = {}
+    for hecho in hechos:
+        grupos.setdefault(hecho.encargo, []).append(hecho)
+    return {
+        indice: _texto_del_grupo(grupo, segmentos, indice, texto)
+        for indice, grupo in grupos.items()
+    }
+
+
 def compilar(
     hechos: Sequence[HechoCitado],
     contexto: Contexto,
@@ -1475,10 +1512,40 @@ def compilar(
     preguntas: list[Pregunta] = []
     condiciones: list[Condicion] = []
     resumenes: list[EncargoResumen] = []
+    division_dudosa = False
+    if len(grupos) == 1:
+        # Si no hubo separación pero el dictado trae varias instrucciones, no
+        # se agrupan a ciegas: se pregunta antes de proponer nada.
+        mensajes = [
+            h
+            for h in hechos
+            if h.clave == "tarea.mensaje" and h.utilizable
+        ]
+        clientes = {
+            str(h.valor)
+            for h in hechos
+            if h.clave == "cliente.nombre" and h.utilizable
+        }
+        if len(mensajes) > 1 or len(clientes) > 1:
+            division_dudosa = True
+            dichos = [
+                h.evidencia.cita if h.evidencia is not None else str(h.valor)
+                for h in mensajes
+            ]
+            detalle = "; ".join(f"«{d}»" for d in dict.fromkeys(dichos))
+            preguntas.append(
+                Pregunta(
+                    "encargo.division",
+                    "Escuché varias instrucciones mezcladas"
+                    + (f": {detalle}" if detalle else "")
+                    + ". ¿Son encargos distintos o es uno solo?",
+                    ("Son encargos distintos", "Es uno solo"),
+                )
+            )
 
     for indice in sorted(grupos):
         grupo = grupos[indice]
-        texto_grupo = texto_de(segmentos, indice) or contexto.texto
+        texto_grupo = _texto_del_grupo(grupo, segmentos, indice, contexto.texto)
         parcial = _compilar_asunto(
             grupo,
             replace(contexto, texto=texto_grupo),
@@ -1521,6 +1588,8 @@ def compilar(
         estado = "PENDIENTE_CONFIRMACION"
     else:
         estado = "SIN_ACCIONES"
+    if division_dudosa:
+        estado = "REQUIERE_ACLARACION"
 
     return Borrador(
         estado=estado,
