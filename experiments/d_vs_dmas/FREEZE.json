@@ -1,0 +1,30 @@
+{
+ "experimento": "d-vs-dmas-1.0",
+ "contratos": "contracts-1.0",
+ "conciliacion": "reconcile-1.0",
+ "prompts": {
+  "A1": "a1-v1",
+  "A2": "a2-v1",
+  "A3": "a3-v1",
+  "D": "d-v1",
+  "ARB": "arb-v1"
+ },
+ "modelo": "deepseek-chat",
+ "commit": "ef01741",
+ "fecha": "2026-11-16T11:10:42",
+ "archivos": {
+  "prompts.py": "d262945245ae6be886cc6a99826dd3de7663b500f1a434cb1528ea9f3a14e6da",
+  "contracts.py": "01e330e0a3135b7b9b54d764318cb73cddaeebbef89718f72c4e93b614f36f3c",
+  "reconcile.py": "30144618d6ae14bc022fe14a12924c45d92678fa59796bfba14fab76b28f9537",
+  "arms.py": "40aac211330f83d8a49850109b6ae236609eadf00d5b94ae0f23a0151c737e94",
+  "llm.py": "31cea9299fd2bfdc764648a10ca52df19702072d237358ee2b832900e7421ef9",
+  "evaluate.py": "94825cc6adb0ce6ea9e844673db341b1a0a03ba385081bdf49b15527800078e6",
+  "reference.py": "f80e3ee45de0d8543a301f0925c9d98aba4da17256ef0283acbb4c1aec332bbc",
+  "spike.py": "f77f6db572ec544f7b864ccb787caee255e8fc4f42a278ae22296ebbeba58b89"
+ },
+ "corpus": {
+  "corpus_nuevo_40.jsonl": "a4c232d7edcaaae71b5e13001263ef590aee81e1b7b340ea9436b1c022de5f9b",
+  "guia_referencia_preliminar_NO_HUMANA.jsonl": "962b6fd53dc7ec4db1811ea70822f843b67ada3a5e72fff2493eab494321f718",
+  "LEEME_EVALUACION.md": "fca930a42fef0390887a0d2fe3c3df468218c2e2c497f2d3fe7165cd0ebbc9bc"
+ }
+}
