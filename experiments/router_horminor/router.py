@@ -5,9 +5,11 @@ No ejecuta nada. El resultado es una propuesta conversacional para Julio.
 
 from __future__ import annotations
 
+import re
 import sys
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -204,7 +206,7 @@ def _encargo_por_objeto(
     if not objeto:
         return []
     palabras = [p for p in plano(objeto).split() if len(p) > 3]
-    tocados = []
+    puntajes: list[tuple[int, Encargo]] = []
     for encargo in encargos:
         base = plano(
             " ".join(
@@ -216,9 +218,13 @@ def _encargo_por_objeto(
                 ]
             )
         )
-        if any(p in base for p in palabras):
-            tocados.append(encargo)
-    return tocados
+        puntaje = sum(1 for p in palabras if p in base)
+        if puntaje:
+            puntajes.append((puntaje, encargo))
+    if not puntajes:
+        return []
+    maximo = max(p for p, _ in puntajes)
+    return [e for p, e in puntajes if p == maximo]
 
 
 def conciliar(
@@ -269,10 +275,17 @@ def conciliar(
 
         borrador.encargos.append(encargo)
 
+    _quitar_verificaciones_inventadas(borrador)
+
     # 2. Observaciones de C
     for obs in observaciones:
         texto_obs = plano(" ".join([obs.objeto or "", obs.texto or "", " ".join(obs.citas)]))
         if obs.ambiguo:
+            if obs.tipo not in ("PROHIBICION", "CONDICION", "DEPENDENCIA", "AUTORIZACION"):
+                borrador.notas.append(
+                    f"Referencia ambigua no crítica: {obs.texto or obs.objeto or ''}"
+                )
+                continue
             dicho = " ".join([obs.texto or "", obs.objeto or ""])
             palabras = {p for p in plano(dicho).split() if len(p) > 3}
             lo_investiga = any(
@@ -326,6 +339,27 @@ def conciliar(
             continue
 
         if obs.tipo == "CITA_TERCERO":
+            marcadores = (
+                "me dijo",
+                "nos dijo",
+                "nos pidio",
+                "me pidio",
+                "el cliente pide",
+                "el cliente pidio",
+                "solicito",
+                "solicitó",
+                "me mando decir",
+                "dice que",
+                "pidio que",
+                "me conto",
+                "me contó",
+            )
+            dicho = plano(" ".join([obs.texto or "", *obs.citas]))
+            if not any(m in dicho for m in marcadores):
+                borrador.notas.append(
+                    "Una observación de tercero no tenía cita de tercero; se ignora."
+                )
+                continue
             for encargo in objetivos:
                 encargo.origen = "CITA_CLIENTE"
                 borrador.notas.append(
@@ -334,6 +368,12 @@ def conciliar(
             continue
 
         if obs.tipo == "AUTORIZACION" and obs.autoriza_ejecucion:
+            if not _autorizacion_explicita(obs):
+                borrador.notas.append(
+                    "Se mencionó un envío, pero no una autorización explícita: "
+                    "no se autoriza ejecutar."
+                )
+                continue
             for encargo in objetivos:
                 encargo.autorizado = True
                 borrador.notas.append(f"{encargo.id}: ejecución autorizada por Julio")
@@ -345,14 +385,30 @@ def conciliar(
             )
             continue
 
+        if obs.tipo == "RECTIFICACION":
+            borrador.notas.append(
+                f"Rectificación del dictado: {obs.texto or obs.objeto or ''}"
+            )
+            continue
+
         # CONDICION / DEPENDENCIA / PROHIBICION de una operación
-        if obs.tipo in ("CONDICION", "DEPENDENCIA") and not obs.condiciona_operacion:
+        if obs.tipo in ("CONDICION", "DEPENDENCIA"):
             marca_real = any(
                 m in plano(obs.texto or "")
-                for m in ("hasta que", "antes de", "depende", "si ")
+                for m in (
+                    "hasta que",
+                    "antes de",
+                    "depende",
+                    "condicionad",
+                    "sujeto a",
+                    "solo si",
+                    "siempre que",
+                    "a condicion",
+                    "requiere",
+                )
             )
             if not marca_real:
-                # Una descripción no es una condición: no se ensucia la tarea.
+                # Una descripción o una duda no es una condición.
                 continue
         for encargo in objetivos:
             etiqueta = f"{obs.tipo}: {obs.texto or obs.objeto or ''}".strip()
@@ -384,8 +440,177 @@ def conciliar(
             )
 
     _fusionar_avisos(borrador)
+    borrador.datos_contexto = _datos_contexto(hechos)
+    _elegir_destinatario(borrador, hechos, texto)
     borrador.resumen = resumen_conversacional(borrador)
     return borrador
+
+
+_AUTORIZACION_EXPLICITA = (
+    "envialo",
+    "enviale",
+    "mandalo",
+    "mandale",
+    "autorizo",
+    "autoriza",
+    "procede",
+    "hazlo",
+    "de una",
+    "ya mismo",
+    "confirmo el envio",
+    "puedes enviar",
+    "envia ya",
+)
+
+
+def _quitar_verificaciones_inventadas(borrador: BorradorRouter) -> None:
+    """Un pago anunciado no es una orden de verificarlo."""
+    patrones = (
+        "verificar transferencia",
+        "confirmar transferencia",
+        "verificar pago",
+        "confirmar pago",
+        "verificar anticipo",
+        "confirmar anticipo",
+        "verificar deposito",
+        "confirmar deposito",
+    )
+    for encargo in list(borrador.encargos):
+        base = plano(encargo.titulo + " " + encargo.que_hacer)
+        if not any(p in base for p in patrones):
+            continue
+        citas = plano(" ".join(encargo.citas))
+        if re.search(
+            r"\b(verifica|revisa|confirma|confirme|comprueba|avisa|informa|chequea)\b",
+            citas,
+        ):
+            continue
+        borrador.encargos.remove(encargo)
+        borrador.notas.append(
+            f"{encargo.id}: era un dato de contexto (pago anunciado), no un "
+            "encargo de verificarlo"
+        )
+
+
+def _autorizacion_explicita(obs: ObservacionOut) -> bool:
+    """«Hay que enviarle» no es autorización; «envíalo» sí."""
+    texto = plano(" ".join([obs.texto or "", *obs.citas]))
+    return any(marca in texto for marca in _AUTORIZACION_EXPLICITA)
+
+
+_DATOS_CONTRATO = (
+    "cliente.nombre",
+    "cotizacion.volumen_m3",
+    "cotizacion.resistencia",
+    "cotizacion.descuento_pct",
+    "cotizacion.plazo_entrega",
+    "cotizacion.dias_trabajo",
+    "operacion.planta_movil",
+    "pago.monto",
+    "pago.recibido",
+)
+
+
+def _datos_contexto(hechos: list[Any]) -> dict[str, Any]:
+    datos: dict[str, Any] = {}
+    for hecho in hechos:
+        clave = getattr(hecho, "clave", None)
+        valor = getattr(hecho, "valor", None)
+        if clave not in _DATOS_CONTRATO or valor in (None, ""):
+            continue
+        if clave == "pago.monto":
+            cita = getattr(hecho, "cita", None)
+            if not cita:
+                evidencia = getattr(hecho, "evidencia", None)
+                cita = getattr(evidencia, "cita", None)
+            valor = _reparar_monto(valor, cita)
+        datos[clave] = valor
+    return datos
+
+
+def _reparar_monto(valor: Any, cita: str | None) -> Any:
+    """«27 1000 USD» (mil convertido a 1000) no es 271.000: es 27.000."""
+    coincidencia = re.search(r"(\d{1,3})\s+1000\b", plano(cita or ""))
+    if coincidencia and str(valor) == coincidencia.group(1) + "1000":
+        return int(coincidencia.group(1)) * 1000
+    return valor
+
+
+def _contactos_de(hechos: list[Any]) -> list[dict[str, str | None]]:
+    contactos = []
+    for sufijo in ("", ".2", ".3"):
+        nombre = next(
+            (
+                getattr(h, "valor", None)
+                for h in hechos
+                if getattr(h, "clave", "") == f"contacto{sufijo}.nombre"
+            ),
+            None,
+        )
+        rol = next(
+            (
+                getattr(h, "valor", None)
+                for h in hechos
+                if getattr(h, "clave", "") == f"contacto{sufijo}.rol"
+            ),
+            None,
+        )
+        telefono = next(
+            (
+                getattr(h, "valor", None)
+                for h in hechos
+                if getattr(h, "clave", "") == f"contacto{sufijo}.telefono"
+            ),
+            None,
+        )
+        if nombre:
+            contactos.append(
+                {"nombre": str(nombre), "rol": str(rol) if rol else None, "telefono": str(telefono) if telefono else None}
+            )
+    return contactos
+
+
+def _elegir_destinatario(
+    borrador: BorradorRouter, hechos: list[Any], texto: str
+) -> None:
+    """Propone el contacto más probable y pide confirmación si hay varios."""
+    contactos = _contactos_de(hechos)
+    if not contactos:
+        return
+    plano_texto = plano(texto)
+    for encargo in borrador.encargos:
+        es_comunicacion = (
+            encargo.canal == "WHATSAPP"
+            or encargo.preparar_comunicacion
+            or "recordatorio" in plano(encargo.titulo)
+        )
+        if not es_comunicacion:
+            continue
+        actual = plano(encargo.destinatario or "")
+        if any(actual == plano(c["nombre"] or "") for c in contactos):
+            continue
+        posiciones = [
+            (plano_texto.find(plano(c["nombre"] or "")), c) for c in contactos
+        ]
+        posiciones = [(p, c) for p, c in posiciones if p >= 0]
+        if not posiciones:
+            continue
+        elegido = posiciones[0][1]
+        encargo.destinatario = elegido["nombre"]
+        otros = [
+            c["nombre"] for c in contactos if c["nombre"] != elegido["nombre"]
+        ]
+        if otros:
+            borrador.preguntas.append(
+                f"¿El recordatorio va para {elegido['nombre']} o para "
+                + " o ".join(str(o) for o in otros)
+                + "?"
+            )
+            borrador.preguntas = list(dict.fromkeys(borrador.preguntas))
+            borrador.notas.append(
+                f"{encargo.id}: propuse a {elegido['nombre']} por ser el primer "
+                "contacto mencionado; confirma el destinatario."
+            )
 
 
 _AVISO = (
@@ -446,26 +671,48 @@ def _fusionar_avisos(borrador: BorradorRouter) -> None:
         )
 
 
+def _monto(valor: Any) -> str:
+    try:
+        return f"{int(Decimal(str(valor))):,}".replace(",", ".")
+    except (InvalidOperation, ValueError, TypeError):
+        return str(valor)
+
+
 def resumen_conversacional(borrador: BorradorRouter) -> str:
+    datos = borrador.datos_contexto
+    cliente = datos.get("cliente.nombre")
+    volumen = datos.get("cotizacion.volumen_m3")
+    monto = datos.get("pago.monto")
+    recibido = datos.get("pago.recibido")
+
+    intro = "Julio, "
+    if cliente and volumen:
+        intro += (
+            f"entendí que tenemos un contrato de {volumen} m³ con {cliente}. "
+        )
+    elif cliente:
+        intro += f"entendí un encargo para {cliente}. "
+    else:
+        intro += "entendí lo siguiente. "
+
     if not borrador.encargos:
         if borrador.consultas:
-            return "Entendí una consulta: " + "; ".join(borrador.consultas) + "."
-        return "No entendí un encargo concreto en este dictado."
+            return intro + "Es una consulta: " + "; ".join(borrador.consultas) + "."
+        return intro + "No vi un encargo concreto en este dictado."
+
     cuentas = {"SECRETARIA": 0, "JEFE_PLANTA": 0, "JULIO": 0, "POR_DEFINIR": 0}
     for encargo in borrador.encargos:
         cuentas[encargo.responsable] += 1
     partes = []
     if cuentas["SECRETARIA"]:
-        partes.append(
-            f"{cuentas['SECRETARIA']} tarea(s) para secretaría"
-        )
+        partes.append(f"{cuentas['SECRETARIA']} para secretaría")
     if cuentas["JEFE_PLANTA"]:
         partes.append(f"{cuentas['JEFE_PLANTA']} para el jefe de planta")
     if cuentas["JULIO"]:
         partes.append(f"{cuentas['JULIO']} para ti")
     if cuentas["POR_DEFINIR"]:
         partes.append(f"{cuentas['POR_DEFINIR']} por asignar")
-    texto = f"Julio, entendí {len(borrador.encargos)} encargo(s): " + ", ".join(partes) + ". "
+    texto = intro + f"Propongo {len(borrador.encargos)} encargo(s): " + ", ".join(partes) + ". "
     detalle = []
     for encargo in borrador.encargos:
         linea = f"{encargo.id} {encargo.titulo}"
@@ -474,9 +721,11 @@ def resumen_conversacional(borrador: BorradorRouter) -> str:
         if encargo.por_investigar:
             linea += " (con datos por averiguar)"
         detalle.append(linea)
-    texto += " · ".join(detalle) + "."
+    texto += " · ".join(detalle) + ". "
+    if monto is not None and recibido is False:
+        texto += f"El pago de {_monto(monto)} USD todavía no está confirmado. "
     if borrador.preguntas:
-        texto += " Antes de confirmar: " + " ".join(borrador.preguntas)
+        texto += "Antes de confirmar: " + " ".join(borrador.preguntas)
     else:
-        texto += " ¿Confirmas?"
+        texto += "¿Confirmas?"
     return texto

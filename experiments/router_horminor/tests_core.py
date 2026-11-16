@@ -251,6 +251,112 @@ def main() -> None:
     )
     resultados.append(("cancelar un encargo", ok, str([e.id for e in nuevo2.encargos]) if nuevo2 else "error"))
 
+    # 13. Monto «27 1000» no es 271.000
+    from .router import _reparar_monto
+
+    ok = _reparar_monto(271000, "una transferencia de 27 1000 USD") == 27000
+    resultados.append(("monto 27 1000 -> 27.000", ok, "27000"))
+
+    # 14. «Hay que enviarle» no autoriza; «envíalo» sí
+    base_wa = {
+        "titulo": "Preparar mensaje",
+        "que_hacer": "preparar un mensaje al cliente",
+        "responsable": "SECRETARIA",
+        "canal": "WHATSAPP",
+        "preparar_comunicacion": True,
+        "citas": ["hay que enviarle un mensaje al cliente"],
+    }
+    b_sin = conciliar(
+        "hay que enviarle un mensaje al cliente",
+        trabajo=TrabajoOut.model_validate({"encargos": [base_wa]}),
+        hechos=[],
+        observaciones=[
+            ObservacionOut(
+                tipo="AUTORIZACION",
+                autoriza_ejecucion=True,
+                texto="hay que enviarle un mensaje",
+                citas=["hay que enviarle un mensaje al cliente"],
+            )
+        ],
+        revision_ok=True,
+    )
+    ok1 = b_sin.encargos and not b_sin.encargos[0].autorizado
+    b_con = conciliar(
+        "envíalo ahora al cliente",
+        trabajo=TrabajoOut.model_validate(
+            {"encargos": [{**base_wa, "citas": ["envíalo ahora al cliente"]}]}
+        ),
+        hechos=[],
+        observaciones=[
+            ObservacionOut(
+                tipo="AUTORIZACION",
+                autoriza_ejecucion=True,
+                texto="envíalo ahora",
+                citas=["envíalo ahora al cliente"],
+            )
+        ],
+        revision_ok=True,
+    )
+    ok2 = bool(b_con.encargos) and b_con.encargos[0].autorizado
+    resultados.append(("autorización explícita vs mención", ok1 and ok2, f"{ok1} {ok2}"))
+
+    # 15. Un pago anunciado no crea tarea de verificarlo
+    b_pago = conciliar(
+        "Nos van a transferir 27 mil dólares para la firma.",
+        trabajo=TrabajoOut.model_validate(
+            {
+                "encargos": [
+                    {
+                        "titulo": "Verificar transferencia de 27 mil",
+                        "que_hacer": "verificar la transferencia",
+                        "responsable": "SECRETARIA",
+                        "citas": ["Nos van a transferir 27 mil dólares"],
+                    }
+                ]
+            }
+        ),
+        hechos=[],
+        observaciones=[],
+        revision_ok=True,
+    )
+    resultados.append(
+        (
+            "pago anunciado no es tarea de verificación",
+            len(b_pago.encargos) == 0,
+            str(len(b_pago.encargos)),
+        )
+    )
+
+    # 16. Una condición sin marca real no ensucia la tarea
+    b_cond = conciliar(
+        "hay que llevar la planta móvil y despachar desde ahí",
+        trabajo=TrabajoOut.model_validate(
+            {
+                "encargos": [
+                    {
+                        "titulo": "Evaluar planta móvil",
+                        "que_hacer": "evaluar llevar la planta móvil",
+                        "responsable": "JEFE_PLANTA",
+                        "citas": ["hay que llevar la planta móvil"],
+                    }
+                ]
+            }
+        ),
+        hechos=[],
+        observaciones=[
+            ObservacionOut(
+                tipo="CONDICION",
+                condiciona_operacion=True,
+                objeto="planta móvil",
+                texto="hay que llevar la planta móvil y despachar desde ahí",
+                citas=["hay que llevar la planta móvil"],
+            )
+        ],
+        revision_ok=True,
+    )
+    ok = bool(b_cond.encargos) and not b_cond.encargos[0].condiciones
+    resultados.append(("condición falsa no se adjunta", ok, str(b_cond.encargos[0].condiciones if b_cond.encargos else None)))
+
     print()
     for nombre, ok, detalle in resultados:
         print(f"[{'OK' if ok else 'FALLA'}] {nombre} — {detalle}")

@@ -1,0 +1,445 @@
+{
+ "texto": "A ver, acabo de hacer un contrato con la empresa Díaz Sur. Ellos nos van a comprar 380 m3 entregados en un mes. Bueno, se va a trabajar exclusivamente sábados y domingos. Entonces tenemos que ver si podemos utilizar una, o sea, si llevamos, mejor dicho, la planta móvil para preparar cerca de ahí. no sería de gana estar recorriendo desde la planta hasta allá, mejor nos abastecemos ahí, entonces hay que llevar la planta móvil y desde ahí despachar, con eso disminuimos muchísimo el tema de transporte. ya ellos tienen much espacio es un terreno inmenso as que no hay problema por ese lado y ya hemos quedado con eso Tienen un precio especial se les va a hacer un 13 de descuento y todo el hormig es de 240 El responsable de este contrato es el ingeniero Julio Alvarado Meneses. Él tiene un número telefónico de 0963-444-444. pero nosotros nos vamos a estar comunicando constantemente con el jefe de la obra que es el ingeniero Mauricio Santander su número telefónico es el 0985454545 nos van a hacer una transferencia de 27 1000 USD para la firma del contrato Así que hay que enviarle, hay que prepararle los documentos y enviarle un recordatorio pidiéndole que nos haga la transferencia de este monto.",
+ "duracion_ms": 122216,
+ "v07": {
+  "revocado": true,
+  "marcas_encontradas": [
+   "mejor no"
+  ],
+  "hechos": 14,
+  "estado": "SIN_ACCIONES",
+  "acciones": [],
+  "preguntas": [],
+  "notas": [
+   "pago.monto: la cita no esta en el texto normalizado",
+   "pago.forma: la cita no esta en el texto normalizado",
+   "pago.recibido: la cita no esta en el texto normalizado"
+  ]
+ },
+ "router": {
+  "version": 1,
+  "padre": null,
+  "resumen": "Julio, entendí que tenemos un contrato de 380 m³ con Díaz Sur. Propongo 3 encargo(s): 2 para secretaría, 1 para el jefe de planta. E1 Preparar documentos del contrato con Díaz Sur (con datos por averiguar) · E2 Recordatorio de transferencia por firma de contrato (con datos por averiguar) · E3 Evaluar traslado de planta móvil para producción en sitio de Díaz Sur (con datos por averiguar). El pago de 27.000 USD todavía no está confirmado. Antes de confirmar: ¿El recordatorio va para Julio Alvarado Meneses o para Mauricio Santander?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Preparar documentos del contrato con Díaz Sur",
+    "que_hacer": "Preparar los documentos del contrato firmado con la empresa Díaz Sur (380 m3 entregados en un mes, precio especial con descuento del 13%, hormigón a 240) para enviarlos al responsable del contrato, ing. Julio Alvarado Meneses.",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": "Julio Alvarado Meneses",
+    "canal": "NINGUNO",
+    "ambito": "EXTERNO",
+    "resultado_esperado": "Documentos del contrato preparados y listos para enviar",
+    "plazo": null,
+    "datos": {
+     "pago.recibido": false,
+     "tarea.mensaje": "recordatorio pidiéndole que nos haga la transferencia de este monto"
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "documentos exactos que conforman el contrato",
+     "medio de envío (correo o WhatsApp) y dirección/número de contacto"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": false,
+    "preparar_comunicacion": true,
+    "estado": "PROPUESTO",
+    "citas": [
+     "hay que enviarle, hay que prepararle los documentos"
+    ],
+    "origen": "DICTADO"
+   },
+   {
+    "id": "E2",
+    "titulo": "Recordatorio de transferencia por firma de contrato",
+    "que_hacer": "Preparar un recordatorio dirigido al ing. Julio Alvarado Meneses pidiéndole que realice la transferencia del monto acordado para la firma del contrato con Díaz Sur. No enviarlo sin autorización de Julio.",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": "Julio Alvarado Meneses",
+    "canal": "WHATSAPP",
+    "ambito": "EXTERNO",
+    "resultado_esperado": "Recordatorio preparado y enviado tras autorización",
+    "plazo": null,
+    "datos": {
+     "pago.recibido": false,
+     "tarea.mensaje": "recordatorio pidiéndole que nos haga la transferencia de este monto"
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "confirmar que el monto de la transferencia coincide con lo pactado"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": false,
+    "preparar_comunicacion": true,
+    "estado": "PROPUESTO",
+    "citas": [
+     "hay que prepararle los documentos y enviarle un recordatorio pidiéndole que nos haga la transferencia de este monto"
+    ],
+    "origen": "DICTADO"
+   },
+   {
+    "id": "E3",
+    "titulo": "Evaluar traslado de planta móvil para producción en sitio de Díaz Sur",
+    "que_hacer": "Evaluar y coordinar el traslado de la planta móvil al terreno de Díaz Sur para preparar y despachar el hormigón desde ahí, evitando el recorrido desde la planta fija. Considerar que la producción se trabajará exclusivamente sábados y domingos.",
+    "responsable": "JEFE_PLANTA",
+    "responsable_sugerido": true,
+    "destinatario": null,
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Confirmación de factibilidad y plan de traslado/operación de la planta móvil en sitio",
+    "plazo": null,
+    "datos": {
+     "cotizacion.dias_trabajo": "sábados y domingos",
+     "operacion.planta_movil": true
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "factibilidad técnica y logística del traslado de la planta móvil",
+     "requerimientos de energía, agua y espacio en el terreno",
+     "disponibilidad de operarios para fines de semana",
+     "volumen exacto a producir por fin de semana"
+    ],
+    "requiere_autorizacion": false,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "hay que llevar la planta móvil y desde ahí despachar, con eso disminuimos muchísimo el tema de transporte",
+     "se va a trabajar exclusivamente sábados y domingos"
+    ],
+    "origen": "DICTADO"
+   }
+  ],
+  "informacion_sin_encargo": [
+   "Contrato con Díaz Sur: 380 m3 entregados en un mes, trabajo exclusivamente sábados y domingos",
+   "Precio especial con 13% de descuento; hormigón a 240",
+   "Responsable del contrato: ing. Julio Alvarado Meneses, teléfono 0963444444",
+   "Jefe de obra de Díaz Sur: ing. Mauricio Santander, teléfono 0985454545",
+   "Díaz Sur dispone de un terreno inmenso, sin problema de espacio",
+   "Se espera transferencia de 27 000 USD para la firma del contrato"
+  ],
+  "consultas": [],
+  "constancias": [],
+  "decisiones_julio": [
+   "Se firmó contrato con Díaz Sur por 380 m3 entregados en un mes",
+   "Se otorga precio especial con 13% de descuento y hormigón a 240",
+   "Se decide evaluar llevar la planta móvil al sitio para abastecer desde ahí",
+   "El ing. Julio Alvarado Meneses es el responsable del contrato"
+  ],
+  "preguntas": [
+   "¿El recordatorio va para Julio Alvarado Meneses o para Mauricio Santander?"
+  ],
+  "notas": [
+   "Se mencionó un envío, pero no una autorización explícita: no se autoriza ejecutar.",
+   "Referencia ambigua no crítica: ya hemos quedado con eso Tienen un precio especial se les va a hacer un 13 de descuento",
+   "Referencia ambigua no crítica: El responsable de este contrato es el ingeniero Julio Alvarado Meneses... pero nosotros nos vamos a estar comunicando constantemente con el jefe de la obra que es el ingeniero Mauricio Santander",
+   "E1: propuse a Julio Alvarado Meneses por ser el primer contacto mencionado; confirma el destinatario.",
+   "E2: propuse a Julio Alvarado Meneses por ser el primer contacto mencionado; confirma el destinatario."
+  ],
+  "datos_contexto": {
+   "cliente.nombre": "Díaz Sur",
+   "cotizacion.volumen_m3": 380,
+   "cotizacion.plazo_entrega": "un mes",
+   "cotizacion.dias_trabajo": "sábados y domingos",
+   "operacion.planta_movil": true,
+   "cotizacion.descuento_pct": 13,
+   "cotizacion.resistencia": "240",
+   "pago.monto": 27000,
+   "pago.recibido": false
+  }
+ },
+ "correccion": {
+  "frase": "No, el recordatorio va para Mauricio, no para Julio Alvarado",
+  "errores": [],
+  "meta": {
+   "via": "llm",
+   "llamada": {
+    "ok": true,
+    "latency_ms": 1176,
+    "usage": {
+     "prompt_tokens": 2041,
+     "completion_tokens": 63,
+     "total_tokens": 2104,
+     "prompt_tokens_details": {
+      "cached_tokens": 256
+     },
+     "prompt_cache_hit_tokens": 256,
+     "prompt_cache_miss_tokens": 1785
+    },
+    "error": null
+   }
+  },
+  "borrador": {
+   "version": 2,
+   "padre": 1,
+   "resumen": "Julio, entendí que tenemos un contrato de 380 m³ con Díaz Sur. Propongo 3 encargo(s): 2 para secretaría, 1 para el jefe de planta. E1 Preparar documentos del contrato con Díaz Sur (con datos por averiguar) · E2 Recordatorio de transferencia por firma de contrato (con datos por averiguar) · E3 Evaluar traslado de planta móvil para producción en sitio de Díaz Sur (con datos por averiguar). El pago de 27.000 USD todavía no está confirmado. Antes de confirmar: ¿El recordatorio va para Julio Alvarado Meneses o para Mauricio Santander?",
+   "encargos": [
+    {
+     "id": "E1",
+     "titulo": "Preparar documentos del contrato con Díaz Sur",
+     "que_hacer": "Preparar los documentos del contrato firmado con la empresa Díaz Sur (380 m3 entregados en un mes, precio especial con descuento del 13%, hormigón a 240) para enviarlos al responsable del contrato, ing. Julio Alvarado Meneses.",
+     "responsable": "SECRETARIA",
+     "responsable_sugerido": true,
+     "destinatario": "Julio Alvarado Meneses",
+     "canal": "NINGUNO",
+     "ambito": "EXTERNO",
+     "resultado_esperado": "Documentos del contrato preparados y listos para enviar",
+     "plazo": null,
+     "datos": {
+      "pago.recibido": false,
+      "tarea.mensaje": "recordatorio pidiéndole que nos haga la transferencia de este monto"
+     },
+     "condiciones": [],
+     "por_investigar": [
+      "documentos exactos que conforman el contrato",
+      "medio de envío (correo o WhatsApp) y dirección/número de contacto"
+     ],
+     "requiere_autorizacion": true,
+     "autorizado": false,
+     "preparar_comunicacion": true,
+     "estado": "PROPUESTO",
+     "citas": [
+      "hay que enviarle, hay que prepararle los documentos"
+     ],
+     "origen": "DICTADO"
+    },
+    {
+     "id": "E2",
+     "titulo": "Recordatorio de transferencia por firma de contrato",
+     "que_hacer": "Preparar un recordatorio dirigido al ing. Julio Alvarado Meneses pidiéndole que realice la transferencia del monto acordado para la firma del contrato con Díaz Sur. No enviarlo sin autorización de Julio.",
+     "responsable": "SECRETARIA",
+     "responsable_sugerido": true,
+     "destinatario": "Mauricio Santander",
+     "canal": "WHATSAPP",
+     "ambito": "EXTERNO",
+     "resultado_esperado": "Recordatorio preparado y enviado tras autorización",
+     "plazo": null,
+     "datos": {
+      "pago.recibido": false,
+      "tarea.mensaje": "recordatorio pidiéndole que nos haga la transferencia de este monto"
+     },
+     "condiciones": [],
+     "por_investigar": [
+      "confirmar que el monto de la transferencia coincide con lo pactado"
+     ],
+     "requiere_autorizacion": true,
+     "autorizado": false,
+     "preparar_comunicacion": true,
+     "estado": "PROPUESTO",
+     "citas": [
+      "hay que prepararle los documentos y enviarle un recordatorio pidiéndole que nos haga la transferencia de este monto"
+     ],
+     "origen": "DICTADO"
+    },
+    {
+     "id": "E3",
+     "titulo": "Evaluar traslado de planta móvil para producción en sitio de Díaz Sur",
+     "que_hacer": "Evaluar y coordinar el traslado de la planta móvil al terreno de Díaz Sur para preparar y despachar el hormigón desde ahí, evitando el recorrido desde la planta fija. Considerar que la producción se trabajará exclusivamente sábados y domingos.",
+     "responsable": "JEFE_PLANTA",
+     "responsable_sugerido": true,
+     "destinatario": null,
+     "canal": "INTERNO",
+     "ambito": "INTERNO",
+     "resultado_esperado": "Confirmación de factibilidad y plan de traslado/operación de la planta móvil en sitio",
+     "plazo": null,
+     "datos": {
+      "cotizacion.dias_trabajo": "sábados y domingos",
+      "operacion.planta_movil": true
+     },
+     "condiciones": [],
+     "por_investigar": [
+      "factibilidad técnica y logística del traslado de la planta móvil",
+      "requerimientos de energía, agua y espacio en el terreno",
+      "disponibilidad de operarios para fines de semana",
+      "volumen exacto a producir por fin de semana"
+     ],
+     "requiere_autorizacion": false,
+     "autorizado": false,
+     "preparar_comunicacion": false,
+     "estado": "PROPUESTO",
+     "citas": [
+      "hay que llevar la planta móvil y desde ahí despachar, con eso disminuimos muchísimo el tema de transporte",
+      "se va a trabajar exclusivamente sábados y domingos"
+     ],
+     "origen": "DICTADO"
+    }
+   ],
+   "informacion_sin_encargo": [
+    "Contrato con Díaz Sur: 380 m3 entregados en un mes, trabajo exclusivamente sábados y domingos",
+    "Precio especial con 13% de descuento; hormigón a 240",
+    "Responsable del contrato: ing. Julio Alvarado Meneses, teléfono 0963444444",
+    "Jefe de obra de Díaz Sur: ing. Mauricio Santander, teléfono 0985454545",
+    "Díaz Sur dispone de un terreno inmenso, sin problema de espacio",
+    "Se espera transferencia de 27 000 USD para la firma del contrato"
+   ],
+   "consultas": [],
+   "constancias": [],
+   "decisiones_julio": [
+    "Se firmó contrato con Díaz Sur por 380 m3 entregados en un mes",
+    "Se otorga precio especial con 13% de descuento y hormigón a 240",
+    "Se decide evaluar llevar la planta móvil al sitio para abastecer desde ahí",
+    "El ing. Julio Alvarado Meneses es el responsable del contrato"
+   ],
+   "preguntas": [
+    "¿El recordatorio va para Julio Alvarado Meneses o para Mauricio Santander?"
+   ],
+   "notas": [
+    "Se mencionó un envío, pero no una autorización explícita: no se autoriza ejecutar.",
+    "Referencia ambigua no crítica: ya hemos quedado con eso Tienen un precio especial se les va a hacer un 13 de descuento",
+    "Referencia ambigua no crítica: El responsable de este contrato es el ingeniero Julio Alvarado Meneses... pero nosotros nos vamos a estar comunicando constantemente con el jefe de la obra que es el ingeniero Mauricio Santander",
+    "E1: propuse a Julio Alvarado Meneses por ser el primer contacto mencionado; confirma el destinatario.",
+    "E2: propuse a Julio Alvarado Meneses por ser el primer contacto mencionado; confirma el destinatario.",
+    "Se actualiza el destinatario del recordatorio (E2) a Mauricio Santander, según la corrección.",
+    "Corrección aplicada a E2"
+   ],
+   "datos_contexto": {
+    "cliente.nombre": "Díaz Sur",
+    "cotizacion.volumen_m3": 380,
+    "cotizacion.plazo_entrega": "un mes",
+    "cotizacion.dias_trabajo": "sábados y domingos",
+    "operacion.planta_movil": true,
+    "cotizacion.descuento_pct": 13,
+    "cotizacion.resistencia": "240",
+    "pago.monto": 27000,
+    "pago.recibido": false
+   }
+  }
+ },
+ "plan": {
+  "confirmados": [
+   "E1",
+   "E2",
+   "E3"
+  ],
+  "tareas": [
+   {
+    "encargo_id": "E1",
+    "titulo": "Preparar documentos del contrato con Díaz Sur",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Documentos del contrato preparados y listos para enviar",
+    "plazo": null,
+    "clave_idempotencia": "c89b7da000df71854ffc565a",
+    "condiciones": [],
+    "datos_por_investigar": [
+     "documentos exactos que conforman el contrato",
+     "medio de envío (correo o WhatsApp) y dirección/número de contacto"
+    ]
+   },
+   {
+    "encargo_id": "E2",
+    "titulo": "Recordatorio de transferencia por firma de contrato",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Recordatorio preparado y enviado tras autorización",
+    "plazo": null,
+    "clave_idempotencia": "94ce05e6554a344da13d35ca",
+    "condiciones": [],
+    "datos_por_investigar": [
+     "confirmar que el monto de la transferencia coincide con lo pactado"
+    ]
+   },
+   {
+    "encargo_id": "E3",
+    "titulo": "Evaluar traslado de planta móvil para producción en sitio de Díaz Sur",
+    "responsable": "JEFE_PLANTA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Confirmación de factibilidad y plan de traslado/operación de la planta móvil en sitio",
+    "plazo": null,
+    "clave_idempotencia": "a91e0acfe83108fab6b0763c",
+    "condiciones": [],
+    "datos_por_investigar": [
+     "factibilidad técnica y logística del traslado de la planta móvil",
+     "requerimientos de energía, agua y espacio en el terreno",
+     "disponibilidad de operarios para fines de semana",
+     "volumen exacto a producir por fin de semana"
+    ]
+   }
+  ],
+  "comunicaciones": [
+   {
+    "encargo_id": "E1",
+    "destinatario": "Julio Alvarado Meneses",
+    "accion": "PREPARAR",
+    "motivo": "solo preparar: falta autorización explícita de envío"
+   },
+   {
+    "encargo_id": "E2",
+    "destinatario": "Mauricio Santander",
+    "accion": "PREPARAR",
+    "motivo": "solo preparar: falta autorización explícita de envío"
+   }
+  ],
+  "operaciones": [
+   {
+    "encargo_id": "E1",
+    "operacion": "OPERACION_CONDICIONADA",
+    "autorizada": false,
+    "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+   },
+   {
+    "encargo_id": "E2",
+    "operacion": "OPERACION_CONDICIONADA",
+    "autorizada": false,
+    "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+   }
+  ],
+  "pendientes": [],
+  "advertencias": []
+ },
+ "correspondencia": [],
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 4235,
+   "usage": {
+    "prompt_tokens": 1048,
+    "completion_tokens": 1083,
+    "total_tokens": 2131,
+    "prompt_tokens_details": {
+     "cached_tokens": 896
+    },
+    "prompt_cache_hit_tokens": 896,
+    "prompt_cache_miss_tokens": 152
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 5429,
+   "usage": {
+    "prompt_tokens": 1198,
+    "completion_tokens": 1000,
+    "total_tokens": 2198,
+    "prompt_tokens_details": {
+     "cached_tokens": 1024
+    },
+    "prompt_cache_hit_tokens": 1024,
+    "prompt_cache_miss_tokens": 174
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 3598,
+   "usage": {
+    "prompt_tokens": 828,
+    "completion_tokens": 651,
+    "total_tokens": 1479,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 188
+   },
+   "error": null
+  }
+ ]
+}

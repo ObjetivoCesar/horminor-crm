@@ -1,0 +1,292 @@
+{
+ "dictado": "Acabo de cerrar un contrato con Constructora Andina para 120 metros cúbicos de hormigón de 210, entregados en dos meses, trabajando solo sábados. Mejor nos organizamos con la planta fija porque el terreno es pequeño. Hay un descuento del 5 por ciento. El responsable es la ingeniera Paredes y el jefe de obra es Torres. Nos van a transferir 8 mil dólares para la firma. Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.",
+ "borrador": {
+  "version": 1,
+  "padre": null,
+  "resumen": "Julio, entendí que tenemos un contrato de 120 m³ con Constructora Andina. Propongo 3 encargo(s): 3 para secretaría. E1 Preparar documentos del contrato con Constructora Andina (condicionado) (con datos por averiguar) · E2 Preparar recordatorio para Torres (sin enviar) (condicionado) (con datos por averiguar) · E3 Verificar transferencia de 8000 USD por la firma del contrato (condicionado) (con datos por averiguar). El pago de 8.000 USD todavía no está confirmado. ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Preparar documentos del contrato con Constructora Andina",
+    "que_hacer": "Preparar los documentos del contrato cerrado con Constructora Andina para el suministro de hormigón de 210, según las condiciones acordadas (volumen, plazo, trabajo solo sábados, planta fija y descuento mencionados).",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": null,
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Documentos del contrato preparados",
+    "plazo": null,
+    "datos": {
+     "cliente.nombre": "Constructora Andina",
+     "cotizacion.volumen_m3": 120,
+     "cotizacion.resistencia": "210",
+     "cotizacion.plazo_entrega": "2 meses",
+     "cotizacion.dias_trabajo": "sábados"
+    },
+    "condiciones": [
+     "PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.",
+     "CONDICION: No enviar el recordatorio hasta que se autorice; queda pendiente de indicación posterior."
+    ],
+    "por_investigar": [
+     "volumen exacto y plazo ya mencionados por Julio, verificar en el contrato",
+     "condiciones exactas del descuento del 5 por 100",
+     "datos completos de la ingeniera Paredes y de Torres"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "CONDICIONADO",
+    "citas": [
+     "Acabo de cerrar un contrato con Constructora Andina para 120 m3 de hormigón de 210, entregados en 2 meses, trabajando solo sábados.",
+     "Preparen los documentos"
+    ],
+    "origen": "DICTADO"
+   },
+   {
+    "id": "E2",
+    "titulo": "Preparar recordatorio para Torres (sin enviar)",
+    "que_hacer": "Preparar un recordatorio dirigido a Torres, jefe de obra de Constructora Andina, y dejarlo listo sin enviarlo hasta que Julio lo autorice.",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": "Torres",
+    "canal": "WHATSAPP",
+    "ambito": "EXTERNO",
+    "resultado_esperado": "Recordatorio preparado y listo para envío",
+    "plazo": null,
+    "datos": {
+     "tarea.destinatario": "Torres",
+     "cotizacion.enviar": false
+    },
+    "condiciones": [
+     "PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.",
+     "CONDICION: No enviar el recordatorio hasta que se autorice; queda pendiente de indicación posterior."
+    ],
+    "por_investigar": [
+     "número de teléfono o canal de contacto de Torres",
+     "contenido exacto que debe llevar el recordatorio"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": false,
+    "preparar_comunicacion": true,
+    "estado": "CONDICIONADO",
+    "citas": [
+     "Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía."
+    ],
+    "origen": "DICTADO"
+   },
+   {
+    "id": "E3",
+    "titulo": "Verificar transferencia de 8000 USD por la firma del contrato",
+    "que_hacer": "Verificar la recepción de la transferencia de 8000 USD correspondiente a la firma del contrato con Constructora Andina y dejar constancia del pago.",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": null,
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Transferencia verificada y registrada",
+    "plazo": null,
+    "datos": {
+     "pago.monto": 8000,
+     "pago.forma": "transferencia",
+     "pago.recibido": false
+    },
+    "condiciones": [
+     "PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.",
+     "CONDICION: No enviar el recordatorio hasta que se autorice; queda pendiente de indicación posterior."
+    ],
+    "por_investigar": [
+     "fecha y referencia de la transferencia",
+     "cuenta de destino y comprobante"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "CONDICIONADO",
+    "citas": [
+     "Nos van a transferir 8000 USD para la firma."
+    ],
+    "origen": "DICTADO"
+   }
+  ],
+  "informacion_sin_encargo": [
+   "Contrato cerrado con Constructora Andina: 120 m3 de hormigón de 210, entregados en 2 meses, trabajando solo sábados.",
+   "Se trabajará con planta fija porque el terreno es pequeño.",
+   "Descuento del 5 por 100 acordado.",
+   "La responsable del cliente es la ingeniera Paredes y el jefe de obra es Torres."
+  ],
+  "consultas": [],
+  "constancias": [
+   "Contrato cerrado con Constructora Andina para 120 m3 de hormigón de 210, entregados en 2 meses, trabajando solo sábados, con planta fija y descuento del 5 por 100."
+  ],
+  "decisiones_julio": [
+   "Cerró el contrato con Constructora Andina.",
+   "Decidió trabajar con planta fija por el tamaño del terreno.",
+   "Ordenó preparar documentos y un recordatorio para Torres, sin enviarlo todavía."
+  ],
+  "preguntas": [],
+  "notas": [
+   "Rectificación del dictado: Mejor nos organizamos con la planta fija porque el terreno es pequeño.",
+   "Se mencionó un envío, pero no una autorización explícita: no se autoriza ejecutar."
+  ],
+  "datos_contexto": {
+   "cliente.nombre": "Constructora Andina",
+   "cotizacion.volumen_m3": 120,
+   "cotizacion.resistencia": "210",
+   "cotizacion.plazo_entrega": "2 meses",
+   "cotizacion.dias_trabajo": "sábados",
+   "operacion.planta_movil": false,
+   "cotizacion.descuento_pct": 5,
+   "pago.monto": 8000,
+   "pago.recibido": false
+  }
+ },
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 4146,
+   "usage": {
+    "prompt_tokens": 862,
+    "completion_tokens": 971,
+    "total_tokens": 1833,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 222
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 4773,
+   "usage": {
+    "prompt_tokens": 1012,
+    "completion_tokens": 878,
+    "total_tokens": 1890,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 372
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 2693,
+   "usage": {
+    "prompt_tokens": 642,
+    "completion_tokens": 393,
+    "total_tokens": 1035,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 258
+   },
+   "error": null
+  }
+ ],
+ "plan": {
+  "confirmados": [
+   "E1",
+   "E2",
+   "E3"
+  ],
+  "tareas": [
+   {
+    "encargo_id": "E1",
+    "titulo": "Preparar documentos del contrato con Constructora Andina",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Documentos del contrato preparados",
+    "plazo": null,
+    "clave_idempotencia": "86cc8fee1c4ed8444748de1b",
+    "condiciones": [
+     "PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.",
+     "CONDICION: No enviar el recordatorio hasta que se autorice; queda pendiente de indicación posterior."
+    ],
+    "datos_por_investigar": [
+     "volumen exacto y plazo ya mencionados por Julio, verificar en el contrato",
+     "condiciones exactas del descuento del 5 por 100",
+     "datos completos de la ingeniera Paredes y de Torres"
+    ]
+   },
+   {
+    "encargo_id": "E2",
+    "titulo": "Preparar recordatorio para Torres (sin enviar)",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Recordatorio preparado y listo para envío",
+    "plazo": null,
+    "clave_idempotencia": "b02869783c0a66e263f762c6",
+    "condiciones": [
+     "PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.",
+     "CONDICION: No enviar el recordatorio hasta que se autorice; queda pendiente de indicación posterior."
+    ],
+    "datos_por_investigar": [
+     "número de teléfono o canal de contacto de Torres",
+     "contenido exacto que debe llevar el recordatorio"
+    ]
+   },
+   {
+    "encargo_id": "E3",
+    "titulo": "Verificar transferencia de 8000 USD por la firma del contrato",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Transferencia verificada y registrada",
+    "plazo": null,
+    "clave_idempotencia": "df27d6b1218de9d3c9b971c3",
+    "condiciones": [
+     "PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.",
+     "CONDICION: No enviar el recordatorio hasta que se autorice; queda pendiente de indicación posterior."
+    ],
+    "datos_por_investigar": [
+     "fecha y referencia de la transferencia",
+     "cuenta de destino y comprobante"
+    ]
+   }
+  ],
+  "comunicaciones": [
+   {
+    "encargo_id": "E2",
+    "destinatario": "Torres",
+    "accion": "PREPARAR",
+    "motivo": "solo preparar: falta autorización explícita de envío"
+   }
+  ],
+  "operaciones": [
+   {
+    "encargo_id": "E1",
+    "operacion": "OPERACION_CONDICIONADA",
+    "autorizada": false,
+    "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+   },
+   {
+    "encargo_id": "E2",
+    "operacion": "OPERACION_CONDICIONADA",
+    "autorizada": false,
+    "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+   },
+   {
+    "encargo_id": "E3",
+    "operacion": "OPERACION_CONDICIONADA",
+    "autorizada": false,
+    "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+   }
+  ],
+  "pendientes": [],
+  "advertencias": [
+   "E1: PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.; CONDICION: No enviar el recordatorio hasta que se autorice; queda pendiente de indicación posterior.",
+   "E2: PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.; CONDICION: No enviar el recordatorio hasta que se autorice; queda pendiente de indicación posterior.",
+   "E3: PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.; CONDICION: No enviar el recordatorio hasta que se autorice; queda pendiente de indicación posterior."
+  ]
+ },
+ "correspondencia": []
+}

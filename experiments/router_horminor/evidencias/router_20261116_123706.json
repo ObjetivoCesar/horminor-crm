@@ -1,0 +1,266 @@
+{
+ "dictado": "Acabo de cerrar un contrato con Constructora Andina para 120 metros cúbicos de hormigón de 210, entregados en dos meses, trabajando solo sábados. Mejor nos organizamos con la planta fija porque el terreno es pequeño. Hay un descuento del 5 por ciento. El responsable es la ingeniera Paredes y el jefe de obra es Torres. Nos van a transferir 8 mil dólares para la firma. Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.",
+ "borrador": {
+  "version": 1,
+  "padre": null,
+  "resumen": "Julio, entendí que tenemos un contrato de 120 m³ con Constructora Andina. Propongo 3 encargo(s): 2 para secretaría, 1 para el jefe de planta. E1 Preparar documentos del contrato con Constructora Andina (con datos por averiguar) · E2 Preparar recordatorio para Torres (sin enviar) (condicionado) (con datos por averiguar) · E3 Organizar producción con planta fija para el contrato (con datos por averiguar). El pago de 8.000 USD todavía no está confirmado. ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Preparar documentos del contrato con Constructora Andina",
+    "que_hacer": "Preparar los documentos del contrato cerrado con Constructora Andina para el suministro de 120 m3 de hormigón de 210, entregados en 2 meses, trabajando solo sábados, con planta fija por terreno pequeño y descuento del 5 por 100.",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": null,
+    "canal": "NINGUNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Documentos del contrato preparados",
+    "plazo": null,
+    "datos": {
+     "cliente.nombre": "Constructora Andina",
+     "cotizacion.volumen_m3": 120,
+     "cotizacion.resistencia": "210",
+     "cotizacion.plazo_entrega": "2 meses",
+     "cotizacion.dias_trabajo": "sábados",
+     "cotizacion.descuento_pct": 5
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "condiciones exactas del descuento del 5 por 100",
+     "datos completos de la ingeniera Paredes y del jefe de obra Torres",
+     "fecha de inicio y calendario de sábados de entrega"
+    ],
+    "requiere_autorizacion": false,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "Acabo de cerrar un contrato con Constructora Andina para 120 m3 de hormigón de 210, entregados en 2 meses, trabajando solo sábados.",
+     "Hay un descuento del 5 por 100.",
+     "Preparen los documentos"
+    ],
+    "origen": "DICTADO"
+   },
+   {
+    "id": "E2",
+    "titulo": "Preparar recordatorio para Torres (sin enviar)",
+    "que_hacer": "Preparar un recordatorio dirigido a Torres, jefe de obra de Constructora Andina, y dejarlo listo sin enviarlo.",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": "Torres",
+    "canal": "WHATSAPP",
+    "ambito": "EXTERNO",
+    "resultado_esperado": "Recordatorio preparado y listo para envío",
+    "plazo": null,
+    "datos": {
+     "tarea.destinatario": "Torres",
+     "cotizacion.enviar": false
+    },
+    "condiciones": [
+     "PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.",
+     "CONDICION: El envío queda condicionado por 'todavía', sin plazo definido."
+    ],
+    "por_investigar": [
+     "número de teléfono de Torres",
+     "contenido exacto a recordar"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": false,
+    "preparar_comunicacion": true,
+    "estado": "CONDICIONADO",
+    "citas": [
+     "Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía."
+    ],
+    "origen": "DICTADO"
+   },
+   {
+    "id": "E3",
+    "titulo": "Organizar producción con planta fija para el contrato",
+    "que_hacer": "Organizar la producción del contrato de Constructora Andina con planta fija, considerando que el terreno es pequeño y que se trabaja solo sábados.",
+    "responsable": "JEFE_PLANTA",
+    "responsable_sugerido": true,
+    "destinatario": null,
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Plan de producción con planta fija definido",
+    "plazo": null,
+    "datos": {
+     "operacion.planta_movil": false
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "capacidad de planta fija para 120 m3 en sábados",
+     "logística de despacho en terreno pequeño"
+    ],
+    "requiere_autorizacion": false,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "Mejor nos organizamos con la planta fija porque el terreno es pequeño."
+    ],
+    "origen": "DICTADO"
+   }
+  ],
+  "informacion_sin_encargo": [
+   "Contrato cerrado con Constructora Andina: 120 m3 de hormigón de 210, entregados en 2 meses, solo sábados.",
+   "Descuento del 5 por 100.",
+   "Responsable: ingeniera Paredes. Jefe de obra: Torres.",
+   "Transferencia de 8000 USD para la firma."
+  ],
+  "consultas": [],
+  "constancias": [],
+  "decisiones_julio": [
+   "Cerró contrato con Constructora Andina para 120 m3 de hormigón de 210, entregados en 2 meses, trabajando solo sábados.",
+   "Decidió organizarse con planta fija porque el terreno es pequeño.",
+   "Aplicó descuento del 5 por 100.",
+   "Indicó que la responsable es la ingeniera Paredes y el jefe de obra es Torres.",
+   "Ordenó preparar documentos y recordatorio para Torres, sin enviarlo todavía."
+  ],
+  "preguntas": [],
+  "notas": [
+   "Rectificación del dictado: Mejor nos organizamos con la planta fija porque el terreno es pequeño.",
+   "Se mencionó un envío, pero no una autorización explícita: no se autoriza ejecutar."
+  ],
+  "datos_contexto": {
+   "cliente.nombre": "Constructora Andina",
+   "cotizacion.volumen_m3": 120,
+   "cotizacion.resistencia": "210",
+   "cotizacion.plazo_entrega": "2 meses",
+   "cotizacion.dias_trabajo": "sábados",
+   "operacion.planta_movil": false,
+   "cotizacion.descuento_pct": 5,
+   "pago.monto": 8000,
+   "pago.recibido": false
+  }
+ },
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 4407,
+   "usage": {
+    "prompt_tokens": 862,
+    "completion_tokens": 1051,
+    "total_tokens": 1913,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 222
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 4382,
+   "usage": {
+    "prompt_tokens": 1012,
+    "completion_tokens": 894,
+    "total_tokens": 1906,
+    "prompt_tokens_details": {
+     "cached_tokens": 768
+    },
+    "prompt_cache_hit_tokens": 768,
+    "prompt_cache_miss_tokens": 244
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 2215,
+   "usage": {
+    "prompt_tokens": 642,
+    "completion_tokens": 391,
+    "total_tokens": 1033,
+    "prompt_tokens_details": {
+     "cached_tokens": 508
+    },
+    "prompt_cache_hit_tokens": 508,
+    "prompt_cache_miss_tokens": 134
+   },
+   "error": null
+  }
+ ],
+ "plan": {
+  "confirmados": [
+   "E1",
+   "E2",
+   "E3"
+  ],
+  "tareas": [
+   {
+    "encargo_id": "E1",
+    "titulo": "Preparar documentos del contrato con Constructora Andina",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Documentos del contrato preparados",
+    "plazo": null,
+    "clave_idempotencia": "86cc8fee1c4ed8444748de1b",
+    "condiciones": [],
+    "datos_por_investigar": [
+     "condiciones exactas del descuento del 5 por 100",
+     "datos completos de la ingeniera Paredes y del jefe de obra Torres",
+     "fecha de inicio y calendario de sábados de entrega"
+    ]
+   },
+   {
+    "encargo_id": "E2",
+    "titulo": "Preparar recordatorio para Torres (sin enviar)",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Recordatorio preparado y listo para envío",
+    "plazo": null,
+    "clave_idempotencia": "b02869783c0a66e263f762c6",
+    "condiciones": [
+     "PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.",
+     "CONDICION: El envío queda condicionado por 'todavía', sin plazo definido."
+    ],
+    "datos_por_investigar": [
+     "número de teléfono de Torres",
+     "contenido exacto a recordar"
+    ]
+   },
+   {
+    "encargo_id": "E3",
+    "titulo": "Organizar producción con planta fija para el contrato",
+    "responsable": "JEFE_PLANTA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Plan de producción con planta fija definido",
+    "plazo": null,
+    "clave_idempotencia": "8ed0d5fc34fbcdfcc25c8321",
+    "condiciones": [],
+    "datos_por_investigar": [
+     "capacidad de planta fija para 120 m3 en sábados",
+     "logística de despacho en terreno pequeño"
+    ]
+   }
+  ],
+  "comunicaciones": [
+   {
+    "encargo_id": "E2",
+    "destinatario": "Torres",
+    "accion": "PREPARAR",
+    "motivo": "solo preparar: falta autorización explícita de envío"
+   }
+  ],
+  "operaciones": [
+   {
+    "encargo_id": "E2",
+    "operacion": "OPERACION_CONDICIONADA",
+    "autorizada": false,
+    "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+   }
+  ],
+  "pendientes": [],
+  "advertencias": [
+   "E2: PROHIBICION: Preparen los documentos y un recordatorio para Torres, pero no lo envíen todavía.; CONDICION: El envío queda condicionado por 'todavía', sin plazo definido."
+  ]
+ },
+ "correspondencia": []
+}

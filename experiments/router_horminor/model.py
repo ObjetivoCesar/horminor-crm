@@ -66,6 +66,7 @@ class BorradorRouter(BaseModel):
     decisiones_julio: list[str] = Field(default_factory=list)
     preguntas: list[str] = Field(default_factory=list)
     notas: list[str] = Field(default_factory=list)
+    datos_contexto: dict[str, Any] = Field(default_factory=dict)
 
     def cambio(self, cambios: list[str], *, padre: int) -> "BorradorRouter":
         return BorradorRouter(
@@ -79,6 +80,7 @@ class BorradorRouter(BaseModel):
             decisiones_julio=list(self.decisiones_julio),
             preguntas=list(self.preguntas),
             notas=[*self.notas, *cambios],
+            datos_contexto=dict(self.datos_contexto),
         )
 
 
