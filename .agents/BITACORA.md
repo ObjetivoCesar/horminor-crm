@@ -6764,3 +6764,72 @@ cerrar las 10.
 - `experiments/router_horminor/lab.py`
 - `experiments/router_horminor/tests_core.py`
 - `experiments/router_horminor/VERSION.json`
+
+
+## 2026-11-16 - Cierre de la fase del router conversacional
+
+### Objetivo
+
+Cerrar la etapa del Cerebro con el router en su version funcional, sin ampliar
+la arquitectura, dejando pruebas, manual, continuidad y backlog en orden.
+
+### Hecho
+
+1. **Version conservada:** `router-1.7`, sin cambios de codigo. Los hashes de
+   `VERSION.json` siguen siendo los del router auditado.
+2. **Pruebas:** 21/21 del router y 620/620 del CRM. Sin regresiones.
+3. **Manual Vivo v1.6:** nueva seccion 3.5 (fase cerrada, solo laboratorio) y
+   cuatro terminos: Router conversacional, Correccion registrada, Aclaracion
+   respondible y Encargo sugerido. Se distingue laboratorio de CRM operativo.
+4. **Continuidad v1.4:** estado de cierre, limites, backlog de Jev y siguiente
+   paso real (defecto de produccion y audio de 122 s).
+5. **Documento de cierre:** `docs/ROUTER_CONVERSACIONAL_CIERRE.md` con
+   componentes, flujo, reglas, correcciones, limitaciones y que no se conecta.
+6. **Backlog registrado sin implementar:** evaluar Jev (TypeSafe AI) como
+   clasificador o verificador de intenciones, responsables, ordenes nuevas y
+   malentendidos. Sin fecha y sin compromiso.
+7. **Historial conservado:** `evidencias/errores.jsonl` y la auditoria de las
+   pruebas manuales quedan intactos.
+
+### Evidencia (real, ejecutada)
+
+| Comprobacion | Resultado |
+|---|---|
+| `python -m experiments.router_horminor.tests_core` | 21/21 pruebas del router |
+| `pytest /app/tests` en `core-api` | 620 passed, 1 warning |
+| `python -m experiments.router_horminor.congelar` | hashes `router-1.7` sin cambios |
+| Documentos | manual v1.6, continuidad v1.4, cierre del router, ESTADO actualizado |
+
+### Decisiones tomadas
+
+1. **No ampliar el router.** Se conserva `router-1.7`; los errores se corrigen
+   con la caja de respuesta y la traza. Alternativa descartada: seguir iterando
+   sobre la arquitectura antes de usar el sistema.
+2. **No integrar al CRM en esta fase.** El laboratorio y `/panel/cerebro` son
+   instrumentos internos; la integracion requiere decision explicita de Julio.
+3. **Jev queda como idea de backlog.** Sin evaluacion, sin fecha y sin tocar el
+   codigo; solo se retoma si las conversaciones reales lo justifican.
+4. **Gato sigue desconectado.** Sin mensajes externos, operaciones financieras
+   ni despachos automaticos.
+
+### Bloqueos / preguntas al cliente
+
+1. Falta autorizar el arreglo de `dictado_revocado` en
+   `app/cerebro/compilador.py` (coincidencia por subcadena «mejor no» dentro de
+   «mejor nos abastecemos»), que hoy devuelve cero acciones en el audio real.
+2. Falta decidir si el router reemplaza al motor del panel. No se hace por
+   iniciativa tecnica.
+
+### Proximo paso exacto
+
+Autorizar el arreglo puntual de `dictado_revocado`, reconstruir `core-api` y
+volver a pasar el audio real de 122 s por `/panel/cerebro` para confirmar que ya
+propone acciones. Despues de eso, continuar con el resto del proyecto.
+
+### Archivos tocados
+
+- `docs/ROUTER_CONVERSACIONAL_CIERRE.md` (nuevo)
+- `docs/HORMINOR_MANUAL_FUNCIONAL.md` (v1.6)
+- `docs/CONTINUIDAD_CEREBRO.md` (v1.4)
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`

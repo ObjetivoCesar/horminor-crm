@@ -176,6 +176,26 @@ FLUJO EXTERNO (clientes por WhatsApp)
 
 El detalle completo y las prioridades están en `docs/CONTINUIDAD_CEREBRO.md`.
 
+### 3.5 Router conversacional: fase cerrada (solo laboratorio)
+
+Entre el 15 y el 16 de noviembre se probó una variante del Cerebro pensada para
+el trabajo diario de Julio: escucha un dictado, lo separa en encargos, propone
+responsable, pide aclaraciones, recibe correcciones y entrega un plan para
+confirmar.
+
+**Esa fase se cierra** con la versión `router-1.7`, conservada tal como está en
+`experiments/router_horminor/`. No se agregan analizadores, reglas, interfaces
+ni cambios de arquitectura. Los errores que aparezcan se corrigen por la vía
+que ya existe: la caja de respuesta y la traza de correcciones.
+
+**Importante:** el router **no está conectado al CRM**. Vive en un laboratorio
+local, no escribe en la base, no crea tareas ni cotizaciones y no envía nada.
+`/panel/cerebro` sigue ejecutando el motor anterior (V07). Ni el laboratorio ni
+`/panel/cerebro` son la experiencia final del usuario.
+
+El detalle técnico, las limitaciones y el backlog están en
+`docs/ROUTER_CONVERSACIONAL_CIERRE.md`.
+
 ---
 
 ## 4. Capítulo 1 — El Cerebro y sus piezas
@@ -403,6 +423,70 @@ El detalle completo y las prioridades están en `docs/CONTINUIDAD_CEREBRO.md`.
 | **Ejemplo** | «No, mejor no hagas nada todavía» → borrador sin acciones. |
 | **Dónde se encuentra** | Interno; se refleja en el resumen y en el borrador. |
 | **Referencia técnica** | `compilador._condicion_negada`, `dictado_revocado`. |
+
+### Término: Router conversacional (laboratorio)
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `experiments/router_horminor/`, versión `router-1.7` |
+| **Nombre para el usuario** | El asistente de Julio (prototipo) |
+| **Qué significa** | La pieza que escucha un dictado, lo separa en encargos, propone responsable, pide aclaraciones y entrega un plan para confirmar. **Solo existe en el laboratorio.** |
+| **Para qué existe** | Probar, sin tocar el CRM ni conectar Gato, si el Cerebro sirve como asistente de dirección: útil, corregible y comprensible. |
+| **Quién lo utiliza** | El equipo técnico, para diagnosticar. Julio solo en pruebas. |
+| **Qué lo activa** | Un dictado escrito en `http://localhost:8055`. |
+| **Qué sucede después** | Devuelve un borrador con encargos, preguntas y un resumen natural. Nada se ejecuta. |
+| **Qué NO significa** | No está conectado al CRM, no crea clientes, tareas ni cotizaciones, no envía mensajes y no autoriza despachos. `/panel/cerebro` no lo ejecuta. |
+| **Ejemplo** | «Que secretaría revise el pago y el jefe de planta prepare el despacho, pero no manden nada hasta confirmar el anticipo» → dos encargos, uno condicionado, y la condición conservada. |
+| **Dónde se encuentra** | Laboratorio interno `:8055`; no es una pantalla del producto. |
+| **Referencia técnica** | `docs/ROUTER_CONVERSACIONAL_CIERRE.md`, `experiments/router_horminor/`. |
+
+### Término: Corrección registrada
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `correccion.py`, `errores.py`, `evidencias/errores.jsonl` |
+| **Nombre para el usuario** | Corrección |
+| **Qué significa** | Un cambio que Julio pide en lenguaje natural sobre un borrador ya propuesto, con el antes y el después guardados. |
+| **Para qué existe** | Que el sistema se equivoque de forma corregible y que cada error deje rastro para mejorar después. |
+| **Quién lo utiliza** | Julio, desde la caja de respuesta; el equipo, al revisar la traza. |
+| **Qué lo activa** | Una frase como «no es Díaz Sur, es DIALSUR» o «cancela el tercer encargo». |
+| **Qué sucede después** | Nace una versión nueva del borrador y se agrega una entrada append-only con el mensaje, los campos cambiados y las versiones. |
+| **Qué NO significa** | No reescribe el pasado ni borra la versión anterior. Tampoco ejecuta el cambio en el CRM. |
+| **Ejemplo** | «Notifícales a los dos» → el destinatario pasa de una persona a dos y el resto del borrador se conserva. |
+| **Dónde se encuentra** | Laboratorio, caja de respuesta e historial de correcciones. |
+| **Referencia técnica** | `correccion._correccion_directa`, `errores.registrar`. |
+
+### Término: Aclaración respondible
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `_aclaraciones`, `_aclaracion_directa`, tipo `ACLARACION` |
+| **Nombre para el usuario** | Duda que se responde |
+| **Qué significa** | Una duda del dictado convertida en pregunta con opciones, que Julio responde en un solo mensaje. |
+| **Para qué existe** | No presentar como confirmado lo que no se sabe, y no obligar a Julio a responder campo por campo. |
+| **Quién lo utiliza** | Julio, al responder; el sistema, al actualizar el borrador. |
+| **Qué lo activa** | Conflictos detectados: dos volúmenes, dos resistencias, autoridad dudosa, identidad del proyecto o anticipo sin confirmar. |
+| **Qué sucede después** | Se actualizan los datos, se retiran las preguntas resueltas y se registra una `ACLARACION` con su antes/después. |
+| **Qué NO significa** | No es una pregunta abierta ni una nota: es una decisión pendiente con opciones concretas. |
+| **Ejemplo** | «¿Qué volumen confirmamos: 36, 40 o 42 m³?» → Julio responde «42» y la duda desaparece. |
+| **Dónde se encuentra** | Resumen del laboratorio y bloque de preguntas. |
+| **Referencia técnica** | `router._aclaraciones`, `correccion._aclaracion_directa`. |
+
+### Término: Encargo sugerido
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `responsable_sugerido` |
+| **Nombre para el usuario** | Responsable propuesto |
+| **Qué significa** | Cuando el dictado no nombra un área, el sistema propone jefe de planta o secretaría según el tipo de trabajo y lo marca como sugerencia. |
+| **Para qué existe** | No devolverle a Julio la decisión de a quién asignar, sin ocultar que fue una propuesta del sistema. |
+| **Quién lo utiliza** | Julio, al revisar; el responsable, al recibir. |
+| **Qué lo activa** | Un encargo sin área explícita. |
+| **Qué sucede después** | Julio lo acepta o lo corrige con una frase. |
+| **Qué NO significa** | No es una asignación definitiva ni una orden ejecutada. |
+| **Ejemplo** | «Revisar el acceso por el puente» → jefe de planta, marcado como sugerido. |
+| **Dónde se encuentra** | Resumen y lista de encargos del laboratorio. |
+| **Referencia técnica** | `router._asignar_por_defecto`. |
 
 ---
 
@@ -749,6 +833,16 @@ Gato **responde consultas** de solo lectura y gestiona recordatorios. El Cerebro
 **interpreta dictados**, propone acciones y delega tareas. Comparten datos, no
 funciones.
 
+**¿El router conversacional ya está dentro del CRM?**
+No. Existe solo en el laboratorio interno `:8055`, con la versión `router-1.7`.
+No crea clientes, tareas ni cotizaciones, y no envía nada. `/panel/cerebro`
+sigue usando el motor anterior.
+
+**¿Qué pasa si el Cerebro se equivoca en un encargo?**
+Julio se lo dice en lenguaje natural y el sistema cambia solo lo corregido,
+dejando el resto intacto. El cambio se guarda con su antes y después para poder
+revisarlo después. Esa es la vía de mejora: corregir, no rediseñar.
+
 **¿Qué significa SANDBOX?**
 Modo de prueba: el flujo es real, pero los envíos y servicios externos se
 simulan. No sale ningún mensaje real ni se toca una cuenta bancaria.
@@ -790,6 +884,13 @@ resuelta, registrada). No mide cuánto trabajó una persona.
   a un humano: definido en la arquitectura, no implementado.
 - El Cerebro como **módulo visible**: el laboratorio es de prueba; en producción
   la cara será Gato.
+- **Router conversacional conectado al CRM**: existe solo en el laboratorio; no
+  crea clientes, tareas, cotizaciones ni recordatorios.
+- **Memoria entre dictados**: cada dictado es un borrador nuevo; mantener el
+  hilo de «cancela el segundo» en otro audio es de otra fase.
+- **Jev (TypeSafe AI)**: idea de backlog para clasificar o verificar intenciones,
+  responsables, órdenes nuevas y malentendidos. No evaluada, sin fecha y sin
+  integración.
 
 ---
 
@@ -802,29 +903,37 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 `encargo` §4 · `ESCALADA` §5 · `EXTRAIDO` §7 ·
 `gato_recordatorios` §6 · `JUSTIFICADA` §5 · `mensaje_por_confirmar` §4 ·
 `NOTIFICADA` §5 · `pago.recibido` (INFERIDO) §4 · `REGISTRADA` §5 ·
-`REQUIERE_ACLARACION` §7 · `RESUELTA` §5 · `SANDBOX` §6 · `SIN_ACCIONES` §7 ·
+`REQUIERE_ACLARACION` §7 · `RESUELTA` §5 · `router-1.7` §3.5 ·
+`SANDBOX` §6 · `SIN_ACCIONES` §7 ·
 `SUPERADO_POR_CORRECCION` §4 · `TENTATIVO` §4 · `VISTA` §5.
 ### Por nombre visible
 
-Aviso dejado §5 · Cancelación de un encargo §4 · Cierre con justificación §5 ·
-Compilador §4 · Condición conservada §4 · Confirmación doble §6 ·
+Aviso dejado §5 · Aclaración respondible §4 · Cancelación de un encargo §4 ·
+Cierre con justificación §5 · Compilador §4 · Condición conservada §4 ·
+Confirmación doble §6 · Corrección registrada §4 ·
 Dato sin confirmar §4 · Duda asociada al dato §4 · Elevada al supervisor §5 ·
-Encargo §4 · Ficha de la tarea §5 · Guarda de «el dinero ya entró» §6 ·
+Encargo §4 · Encargo sugerido §4 · Ficha de la tarea §5 ·
+Guarda de «el dinero ya entró» §6 ·
 Gato §6 · Hecho citado §4 · Ingreso sin confirmar §4 ·
 Mensaje autorizado del recordatorio §4 · Prioridad y plazo §5 ·
 Recepción confirmada §5 · Recordatorio programado §6 · Resultado registrado §5 ·
-Retención de audio §6 · Tarea consultada §5 · Trabajo realizado §5.
+Retención de audio §6 · Router conversacional §4 · Tarea consultada §5 ·
+Trabajo realizado §5.
 
 ### Por sinónimo
 
-«acuse» → Recepción confirmada §5 · «asunto» → Encargo §4 ·
+«acuse» → Recepción confirmada §5 · «asistente» → Router conversacional §4 ·
+«asunto» → Encargo §4 ·
 «avisada» → Aviso dejado §5 · «cita» → Hecho citado §4 ·
-«condición» → Condición conservada §4 · «creo» → Duda asociada al dato §4 ·
+«condición» → Condición conservada §4 · «corregir» → Corrección registrada §4 ·
+«creo» → Duda asociada al dato §4 ·
 «duda» → Dato sin confirmar §4 · «escalar» → Elevada al supervisor §5 ·
 «expediente» → Condición conservada §4 · «marcar hecho» → Trabajo realizado §5 ·
 «me parece» → Duda asociada al dato §4 ·
 «no ha pagado» → Ingreso sin confirmar §4 · «plazo» → Condición conservada §4 ·
-«registrar» → Resultado registrado §5 · «revisada» → Tarea consultada §5 ·
+«pregunta» → Aclaración respondible §4 ·
+«registrar» → Resultado registrado §5 · «responsable» → Encargo sugerido §4 ·
+«revisada» → Tarea consultada §5 ·
 «sin ordinales» → Encargo §4 · «tres cosas» → Encargo §4 ·
 «vencida» → Prioridad y plazo §5.
 
@@ -855,3 +964,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v1.3 | 2026-11-16 | Condición conservada, Mensaje autorizado del recordatorio e Ingreso sin confirmar (§4); índice actualizado. Conservación de instrucciones ante el dictado espontáneo del 2026-11-16. |
 | v1.4 | 2026-11-16 | Encargo y Cancelación de un encargo (§4); un dictado con tres asuntos se administra por separado. Índice actualizado. |
 | v1.5 | 2026-11-16 | Duda asociada al dato (§4); separación de encargos en lenguaje natural sin ordinales; etiquetas «Acciones ejecutadas» frente a «Trabajo realizado». |
+| v1.6 | 2026-11-16 | Cierre de la fase del router conversacional (§3.5): Router conversacional, Corrección registrada, Aclaración respondible y Encargo sugerido (§4); límites del laboratorio frente al CRM; Jev en backlog. |

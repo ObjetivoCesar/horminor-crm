@@ -5,11 +5,14 @@
 > qué se decidió, qué NO se debe hacer todavía y cuál es el siguiente paso.
 >
 > **Fecha:** 2026-11-16 · **Corte:** Cerebro fases 0–2 + incremento v2 +
-> conservación + encargos independientes + lenguaje natural y audio ·
-> **Suites:** 620 pruebas en verde · **Migraciones:** 085–092.
+> conservación + encargos independientes + lenguaje natural y audio +
+> **router conversacional 1.7 cerrado (solo laboratorio)** ·
+> **Suites:** 620 pruebas del CRM + 21 del router en verde · **Migraciones:** 085–092.
 >
 > **Documentos hermanos.**
 > - Explicación funcional: `docs/HORMINOR_MANUAL_FUNCIONAL.md`
+> - Cierre del router: `docs/ROUTER_CONVERSACIONAL_CIERRE.md`
+> - Auditoría de las pruebas manuales: `docs/AUDITORIA_PRUEBAS_MANUALES_2026-11-16.md`
 > - Brechas y auditoría: `docs/CEREBRO_MATRIZ_BRECHAS.md`
 > - Diseño técnico: `docs/CEREBRO_VOZ_DISENO.md`
 > - Contrato de canal: `docs/CONTRATO_WHATSAPP_CEREBRO.md`
@@ -38,6 +41,7 @@
 | Laboratorio `/panel/cerebro` | Funciona | captura `cerebro_lab_correccion_2026-11-15.jpeg` |
 | Informe semanal de errores | Funciona | `cerebro_informe_errores_2026-11-15.md` |
 | Manual Vivo + skill de consulta | Funciona (documento) | `test_v93_manual_funcional.py` |
+| Router conversacional (laboratorio aislado) | **Cerrado, `router-1.7`**; no conectado al CRM | 21/21 `tests_core`; `docs/ROUTER_CONVERSACIONAL_CIERRE.md` |
 
 **No implementado todavía** (y así debe decirse):
 
@@ -55,6 +59,10 @@
 - Ayuda contextual dentro del CRM.
 - Bóveda de audios (consentimiento y retención LOPDP).
 - Conexión Gato ↔ Cerebro.
+- **Router conversacional conectado al CRM**: existe solo en el laboratorio; no
+  crea clientes, tareas ni cotizaciones y no envía nada.
+- **Memoria entre dictados**: cada dictado es un borrador nuevo.
+- **Jev (TypeSafe AI)**: idea de backlog, sin evaluar y sin fecha.
 - Flujo comercial externo de WhatsApp con permisos separados.
 
 ---
@@ -111,6 +119,7 @@
 | Transferencia a humano | **No existe** | Resumen de la conversación del cliente |
 | Ayuda contextual del manual | **No existe** | Gato consulta el Manual Vivo |
 | Permisos por flujo | Roles del panel (`panel_users_acl`) | Permisos, herramientas y fuentes separadas por flujo |
+| Router conversacional | Laboratorio `:8055`, versión `router-1.7`, cerrado | Decidir si reemplaza al motor del panel, solo con pedido explícito |
 
 **Regla:** todo lo de la columna derecha se documenta como futuro. No se presenta
 como existente ni se implementa por adelantado.
@@ -119,14 +128,23 @@ como existente ni se implementa por adelantado.
 
 ## 4. Prioridades para la próxima conversación
 
-1. **Conservar y verificar** lo construido; este documento y la arquitectura quedan registrados.
-2. **Auditar y perfeccionar el Cerebro** de forma independiente (sin conectar Gato).
-3. **Documentar la interfaz futura** Cerebro–Gato–módulos, con la separación de permisos internos y públicos.
-4. **Preparar el flujo conversacional interno** de Julio por WhatsApp, con identidad y autorización.
-5. **Definir por separado** la atención comercial externa y el procedimiento de transferencia a Julio.
+**La fase del router conversacional está cerrada.** La versión `router-1.7` se
+conserva tal como está; no se amplía la arquitectura. Los errores que aparezcan
+se corrigen con la caja de respuesta y la traza existentes.
 
-La funcionalidad de que **Gato consulte el Manual Vivo** queda registrada como
-pendiente, pero **no** es motivo para conectar anticipadamente Gato y Cerebro.
+Las prioridades, en orden:
+
+1. **Arreglar el defecto de producción** que hoy devuelve cero acciones en el
+   audio real: `dictado_revocado` en `app/cerebro/compilador.py` detecta «mejor
+   no» como subcadena de «mejor nos abastecemos». Requiere autorización porque
+   toca el motor en producción.
+2. **Volver a pasar el audio real de 122 s** por el panel y comprobar que ya
+   propone acciones. Esa es la prueba que decide si el motor actual sirve.
+3. **Decidir, solo con pedido explícito**, si el router reemplaza al motor del
+   panel. No se hace por iniciativa técnica.
+
+Lo demás sigue como estaba: sin conectar Gato, sin mensajes externos, sin
+operaciones financieras y sin despachos automáticos.
 
 ---
 
@@ -184,6 +202,8 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 | `services/core-api/app/cerebro/encargos.py` | segmentación del dictado en asuntos independientes |
 | `docs/WHATSAPP_INTERNO_IMPLEMENTACION.md` | secuencia técnica del WhatsApp interno (futuro, no implementado) |
 | `scripts/evidencia_*.py` | evidencia reproducible |
+| `experiments/router_horminor/` | router conversacional cerrado (`router-1.7`); laboratorio, no CRM |
+| `docs/ROUTER_CONVERSACIONAL_CIERRE.md` | qué es, componentes, correcciones, límites y backlog |
 | `docs/HORMINOR_MANUAL_FUNCIONAL.md` | **Manual Vivo** (fuente única de definiciones) |
 | `docs/CEREBRO_MATRIZ_BRECHAS.md` | brechas y estado real por requisito |
 | `docs/CONTRATO_WHATSAPP_CEREBRO.md` | contrato del canal futuro |
@@ -213,6 +233,10 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 - Cómo se transfiere una conversación externa y qué resumen exacto se entrega.
 - Cuándo y cómo Gato consultará el Manual Vivo (sin conectar el Cerebro).
 - Si el retiro de vocabulario tendrá botón en el panel.
+- **Jev (TypeSafe AI)** como posible clasificador o verificador de intenciones,
+  responsables, órdenes nuevas y malentendidos. Idea de backlog: sin fecha, sin
+  compromiso de integración y sin cambios de código. Se retoma solo si las
+  conversaciones reales muestran una necesidad que justifique incorporarlo.
 
 ---
 
@@ -224,3 +248,4 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 | v1.1 | 2026-11-16 | Conservación de condiciones (migración 091), mensaje autorizado del recordatorio; 601 pruebas. Se registra que la confirmación por el mismo chat de WhatsApp es futura. |
 | v1.2 | 2026-11-16 | Encargos independientes (migración 092): corregir, cancelar y confirmar por asunto; 610 pruebas. La conversación por hilos sigue siendo de la siguiente fase. |
 | v1.3 | 2026-11-16 | Separación de encargos en lenguaje natural (prompt v7), duda acotada al dato y cadena de audio con STT real; 620 pruebas. Se agrega la secuencia técnica del WhatsApp interno como documento futuro. |
+| v1.4 | 2026-11-16 | Cierre de la fase del router conversacional (`router-1.7`, laboratorio): estado, límites, correcciones, backlog de Jev y siguiente paso (defecto de producción y audio real). 620 + 21 pruebas en verde. |

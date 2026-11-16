@@ -66,6 +66,25 @@ scripts de candado.
 
 ## Evidencia de la última sesión
 
+### 2026-11-16 - Cierre de la fase del router conversacional (laboratorio)
+
+- **Decisión:** la fase se cierra con `router-1.7`; no se amplía la arquitectura
+  ni se buscan más soluciones. Los errores se corrigen con la caja de respuesta
+  y la traza existentes.
+- **Qué es:** prototipo aislado en `experiments/router_horminor/` (puerto 8055).
+  Interpreta un dictado, separa encargos, propone responsable, pide aclaraciones,
+  recibe correcciones y entrega un plan. **No está conectado al CRM.**
+- **Pruebas:** 21/21 del router (`tests_core`) y 620/620 del CRM
+  (`pytest /app/tests`). Sin regresiones.
+- **Documentos:** `docs/ROUTER_CONVERSACIONAL_CIERRE.md` (componentes, flujo,
+  límites), Manual Vivo §3.5 y §4, `docs/CONTINUIDAD_CEREBRO.md` v1.4 y
+  `docs/AUDITORIA_PRUEBAS_MANUALES_2026-11-16.md`.
+- **Backlog:** evaluar Jev (TypeSafe AI) como clasificador o verificador de
+  intenciones. Sin fecha, sin integración y sin cambios de código.
+- **Siguiente paso:** autorizar el arreglo de `dictado_revocado` en
+  `app/cerebro/compilador.py` (detecta «mejor no» dentro de «mejor nos
+  abastecemos») y volver a pasar el audio real de 122 s por el panel.
+
 ### 2026-11-16 - Lenguaje natural, duda acotada y audio (v8.6)
 
 - **Caso real auditado (sin ordinales):** «que secretaría revise los despachos…
