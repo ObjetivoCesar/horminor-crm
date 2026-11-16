@@ -6903,3 +6903,60 @@ conecta Gato en esta fase.
 - `docs/CONTINUIDAD_CEREBRO.md` (v1.5)
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
+
+
+## 2026-11-16 - Cerebro experimental cerrado; se retoma el ERP
+
+### Objetivo
+
+Aceptar la correccion `c43c5c7`, cerrar definitivamente la etapa del Cerebro y
+dejar el proyecto listo para continuar con los modulos del ERP.
+
+### Hecho
+
+1. **Cierre aceptado:** la revocacion falsa quedo resuelta y las 623 pruebas
+   siguen aprobadas.
+2. **Limitaciones documentadas, sin corregirlas ahora:** cliente que no se pidio
+   (Diaz Sur propone `crear_cliente` sin que Julio lo pida), nombres confundidos
+   por vocabulario aprendido (Diaz Sur -> Dualsur) y encargos no separados (la
+   transferencia de 27 000 USD quedo como encargo aparte).
+3. **Continuidad v1.6:** Cerebro experimental cerrado; `router-1.7` congelado;
+   Gato desconectado; Jev en backlog; integracion futura con las tareas,
+   confirmaciones y auditoria existentes, sin otra interfaz.
+4. **ESTADO:** el proximo paso ya no es Cerebro; la lista arranca con C4
+   (`fecha_vencimiento`), ubicacion en telefono real, factura con extras,
+   contratos/horas extra, C9 y validacion del dashboard.
+
+### Evidencia (real, ejecutada)
+
+| Comprobacion | Resultado |
+|---|---|
+| Commit aceptado | `c43c5c7` |
+| Suite del CRM | 623/623 (sin cambios de codigo en esta entrada) |
+| Prueba del Manual Vivo y continuidad | 13/13 |
+
+### Decisiones tomadas
+
+1. **No se corrigen mas limitaciones del motor antiguo ahora.** Se retomaran con
+   el sistema de correcciones cuando haya uso real.
+2. **No se toca el Cerebro.** Router congelado, Gato desconectado y Jev sin
+   evaluar.
+3. **La integracion del router sera otra fase**, con decision explicita y
+   reutilizando tareas, confirmaciones y auditoria; sin interfaz nueva.
+4. **Se retoma el ERP** por el siguiente pendiente documentado.
+
+### Bloqueos / preguntas al cliente
+
+1. Falta elegir el modulo con el que se continua; el primer candidato es C4
+   (`fecha_vencimiento` en ordenes y facturas).
+
+### Proximo paso exacto
+
+C4: capturar `fecha_vencimiento` en los formularios de orden y factura y dejar
+de caer en `SIN_VENCIMIENTO`, con sus pruebas.
+
+### Archivos tocados
+
+- `docs/CONTINUIDAD_CEREBRO.md` (v1.6)
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`

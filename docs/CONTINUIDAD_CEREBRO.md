@@ -4,9 +4,8 @@
 > retomar el proyecto sin depender del historial del chat: qué está construido,
 > qué se decidió, qué NO se debe hacer todavía y cuál es el siguiente paso.
 >
-> **Fecha:** 2026-11-16 · **Corte:** Cerebro fases 0–2 + incremento v2 +
-> conservación + encargos independientes + lenguaje natural y audio +
-> **router conversacional 1.7 cerrado (solo laboratorio)** ·
+> **Fecha:** 2026-11-16 · **Corte:** Cerebro experimental **cerrado** (fase 0–2,
+> corrección de revocación aceptada, `router-1.7` congelado en laboratorio) ·
 > **Suites:** 623 pruebas del CRM + 21 del router en verde · **Migraciones:** 085–092.
 >
 > **Documentos hermanos.**
@@ -65,6 +64,18 @@
 - **Memoria entre dictados**: cada dictado es un borrador nuevo.
 - **Jev (TypeSafe AI)**: idea de backlog, sin evaluar y sin fecha.
 - Flujo comercial externo de WhatsApp con permisos separados.
+
+**Limitaciones conocidas del motor antiguo (no se corrigen ahora).** Quedan
+documentadas para retomarlas de forma progresiva con el sistema de correcciones,
+no con frentes individuales:
+
+- **Propone crear un cliente que Julio no pidió.** En el audio de Díaz Sur, Julio
+  dice «acabo de hacer un contrato», no «créame el cliente»; el motor igual
+  propone `crear_cliente`.
+- **Confunde nombres.** El vocabulario aprendido convierte «Díaz Sur» en
+  «Dualsur», aunque el audio diga otra cosa.
+- **No siempre separa los encargos.** La transferencia de 27 000 USD quedó como
+  un segundo encargo en lugar de ser un dato del primero.
 
 ---
 
@@ -252,3 +263,4 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 | v1.3 | 2026-11-16 | Separación de encargos en lenguaje natural (prompt v7), duda acotada al dato y cadena de audio con STT real; 620 pruebas. Se agrega la secuencia técnica del WhatsApp interno como documento futuro. |
 | v1.4 | 2026-11-16 | Cierre de la fase del router conversacional (`router-1.7`, laboratorio): estado, límites, correcciones, backlog de Jev y siguiente paso (defecto de producción y audio real). 620 + 21 pruebas en verde. |
 | v1.5 | 2026-11-16 | Corrección de `dictado_revocado`: expresiones completas y revocación por encargo. Audio de Díaz Sur verificado (2 encargos, 1 acción, preguntas pendientes). 623 pruebas. |
+| v1.6 | 2026-11-16 | Cierre aceptado del Cerebro experimental (commit `c43c5c7`). Limitaciones del motor antiguo documentadas: cliente no pedido, nombres confundidos y encargos no separados. El siguiente trabajo es el resto del ERP. |

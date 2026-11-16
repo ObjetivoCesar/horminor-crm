@@ -576,6 +576,18 @@ scripts de candado.
 - Capturas: `.agents/evidencias/panel_horminor_dashboard_dark.png`, `panel_horminor_dashboard_light.png`, `panel_horminor_banca.png`, `panel_horminor_secretaria.png`, `panel_horminor_superadmin.png`, `panel_horminor_movil.png`, `panel_horminor_clientes.png`, `panel_horminor_planta.png`, `panel_horminor_notificaciones.png`, `panel_horminor_busqueda.png`.
 - Design system: `.agents/diseno/horminor_design_system.json`.
 
+## Limitaciones del Cerebro experimental (no se corrigen ahora)
+
+Documentadas al cerrar la fase. Se retomarán de forma progresiva con el sistema
+de correcciones; no se abren frentes individuales.
+
+- **Cliente no solicitado:** en el audio de Díaz Sur, Julio dice «acabo de hacer
+  un contrato», no «créame el cliente»; el motor igual propone `crear_cliente`.
+- **Nombres mal interpretados:** el vocabulario aprendido convierte «Díaz Sur»
+  en «Dualsur».
+- **Encargos no identificados:** la transferencia de 27 000 USD quedó como un
+  segundo encargo en lugar de ser un dato del primero.
+
 ## Bloqueos actuales (ordenados por impacto)
 
 1. **Credenciales reales de Evolution API, Bunny.net y Gemini.** Ya **no
@@ -619,22 +631,20 @@ scripts de candado.
 
 ## Próximo paso exacto
 
-1. **Cerebro Fase 2 (cierre):** confirmación y ejecución de acciones con
-   `lock_version` (reutilizando `services/*` y Custodio) y UI de borrador en el
-   panel.
-2. **Audio real:** probar 5–10 audios humanos con ruido de planta, medir CER de
-   dígitos y decidir si hace falta convertir `ogg/opus`.
-3. **C4:** capturar `fecha_vencimiento` en los formularios de orden y factura;
+El Cerebro experimental queda **cerrado** (router `router-1.7` congelado, Gato
+desconectado, Jev en backlog). El siguiente trabajo es el resto del ERP:
+
+1. **C4:** capturar `fecha_vencimiento` en los formularios de orden y factura;
    hoy todo cae en `SIN_VENCIMIENTO`.
-4. **Ubicación v8.2:** probar en un teléfono real el botón **Usar mi ubicación**
+2. **Ubicación v8.2:** probar en un teléfono real el botón **Usar mi ubicación**
    y el pin enviado por WhatsApp. El residuo de prueba ya se limpió.
-5. **Cotizaciones Q5 (Gato):** crear borrador, consultar y enviar con “sí”.
-6. **Factura con extras:** conectar la factura/cartera a `v_orden_total` para
+3. **Factura con extras:** conectar la factura/cartera a `v_orden_total` para
    que sume `orden_extras`.
-7. **Validar el dashboard C5/C6 y Cotizaciones con Julio**: 4 ventanas, presets
-   de cobranza, meta/equilibrio y manual.
-8. **Contratos de obra cierta y horas extra** (siguiente migración libre) y
+4. **Contratos de obra cierta y horas extra** (siguiente migración libre) y
    **C9: UI de recordatorios en el panel**.
+5. **Cotizaciones Q5 (Gato):** crear borrador, consultar y enviar con “sí”.
+6. **Validar el dashboard C5/C6 y Cotizaciones con Julio**: 4 ventanas, presets
+   de cobranza, meta/equilibrio y manual.
 
 ## Decisiones de arquitectura vigentes
 
