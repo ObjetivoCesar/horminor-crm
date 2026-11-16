@@ -89,7 +89,9 @@ scripts de candado.
   se corrigió: cambiar un candado cerrado exige aprobación y volver a correr la
   suite.
 - **Punto de restauración:** se versionó el trabajo acumulado desde el commit
-  `7fade4a` (2026-11-13), que no incluía v8.2 ni el Cerebro (084–090).
+  `7fade4a` (2026-11-13), que no incluía v8.2 ni el Cerebro (084–090), en dos
+  commits: **`5c4b460`** (v8.2, migración 084 y servicios compartidos) y
+  **`67e18ff`** (v8.3, Cerebro y Voz con 085–090, docs y `.agents`).
 - Evidencia: `.agents/evidencias/verificacion_prioridad1_2026-11-16.txt`.
 
 ### 2026-11-15 - Caso Joaquín: teléfono, hora y conflicto de identidad
