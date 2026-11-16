@@ -414,15 +414,15 @@ El detalle técnico, las limitaciones y el backlog están en
 |---|---|
 | **Nombre técnico** | `_condicion_negada`, `dictado_revocado` |
 | **Nombre para el usuario** | «Dijiste que no» |
-| **Qué significa** | El sistema distingue negar un dato («no le hagan todavía el descuento») de cancelar toda la orden («mejor no hagas nada»). |
+| **Qué significa** | El sistema distingue negar un dato («no le hagan todavía el descuento») de cancelar toda la orden («mejor no hagas nada»). Las marcas se leen como **palabras completas**: «mejor nos abastecemos» no es «mejor no». La revocación se aplica al encargo donde aparece; solo «no hagas nada» corta el dictado completo. |
 | **Para qué existe** | Que una cita verdadera no se ejecute contra la intención del hablante. |
 | **Quién lo utiliza** | El sistema. |
 | **Qué lo activa** | Frases de negación o de revocación en el dictado. |
-| **Qué sucede después** | Si se niega un dato, ese dato no se aplica y queda una nota. Si se revoca la orden, no se propone ninguna acción. |
+| **Qué sucede después** | Si se niega un dato, ese dato no se aplica y queda una nota. Si se revoca la orden, ese encargo no propone acciones; los demás siguen. Si la revocación es total, no se propone nada. |
 | **Qué NO significa** | No es «el modelo se equivocó»: es una guarda de seguridad sobre el texto. |
-| **Ejemplo** | «No, mejor no hagas nada todavía» → borrador sin acciones. |
+| **Ejemplo** | «No, mejor no hagas nada todavía» → borrador sin acciones. «Mejor nos abastecemos ahí» → no revoca: es una frase del relato. |
 | **Dónde se encuentra** | Interno; se refleja en el resumen y en el borrador. |
-| **Referencia técnica** | `compilador._condicion_negada`, `dictado_revocado`. |
+| **Referencia técnica** | `compilador._condicion_negada`, `dictado_revocado`, `revocacion_global`. |
 
 ### Término: Router conversacional (laboratorio)
 
@@ -965,3 +965,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v1.4 | 2026-11-16 | Encargo y Cancelación de un encargo (§4); un dictado con tres asuntos se administra por separado. Índice actualizado. |
 | v1.5 | 2026-11-16 | Duda asociada al dato (§4); separación de encargos en lenguaje natural sin ordinales; etiquetas «Acciones ejecutadas» frente a «Trabajo realizado». |
 | v1.6 | 2026-11-16 | Cierre de la fase del router conversacional (§3.5): Router conversacional, Corrección registrada, Aclaración respondible y Encargo sugerido (§4); límites del laboratorio frente al CRM; Jev en backlog. |
+| v1.7 | 2026-11-16 | Negación y revocación: marcas como palabras completas y revocación por encargo; «mejor nos abastecemos» ya no revoca el dictado. |

@@ -15,7 +15,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Mapping, Sequence
 from ..voz import cedula_valida
-from .compilador import dictado_revocado
+from .compilador import dictado_revocado, revocacion_global
 from .dinero import dinero_ya_entro
 from .hechos import Evidencia, HechoCitado
 from .internas import detectar_rol_interno
@@ -415,10 +415,13 @@ def _resumen_plano(
         partes.append("condiciones: " + "; ".join(condiciones_dichas))
 
     if dictado_revocado(texto):
-        aviso = (
-            "Entendí que por ahora no hay que hacer nada: el dictado revoca la "
-            "instrucción."
-        )
+        if revocacion_global(texto):
+            aviso = (
+                "Entendí que por ahora no hay que hacer nada: el dictado revoca "
+                "la instrucción."
+            )
+        else:
+            aviso = "Entendí que hay una orden revocada en este dictado."
         if partes:
             return aviso + " Lo demás que escuché: " + ", ".join(partes) + "."
         return aviso

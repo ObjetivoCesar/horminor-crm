@@ -7,11 +7,12 @@
 > **Fecha:** 2026-11-16 · **Corte:** Cerebro fases 0–2 + incremento v2 +
 > conservación + encargos independientes + lenguaje natural y audio +
 > **router conversacional 1.7 cerrado (solo laboratorio)** ·
-> **Suites:** 620 pruebas del CRM + 21 del router en verde · **Migraciones:** 085–092.
+> **Suites:** 623 pruebas del CRM + 21 del router en verde · **Migraciones:** 085–092.
 >
 > **Documentos hermanos.**
 > - Explicación funcional: `docs/HORMINOR_MANUAL_FUNCIONAL.md`
 > - Cierre del router: `docs/ROUTER_CONVERSACIONAL_CIERRE.md`
+> - Corrección de revocación: `docs/CORRECCION_REVOCACION_DIAZ_SUR.md`
 > - Auditoría de las pruebas manuales: `docs/AUDITORIA_PRUEBAS_MANUALES_2026-11-16.md`
 > - Brechas y auditoría: `docs/CEREBRO_MATRIZ_BRECHAS.md`
 > - Diseño técnico: `docs/CEREBRO_VOZ_DISENO.md`
@@ -134,17 +135,18 @@ se corrigen con la caja de respuesta y la traza existentes.
 
 Las prioridades, en orden:
 
-1. **Arreglar el defecto de producción** que hoy devuelve cero acciones en el
-   audio real: `dictado_revocado` en `app/cerebro/compilador.py` detecta «mejor
-   no» como subcadena de «mejor nos abastecemos». Requiere autorización porque
-   toca el motor en producción.
-2. **Volver a pasar el audio real de 122 s** por el panel y comprobar que ya
-   propone acciones. Esa es la prueba que decide si el motor actual sirve.
+1. ~~Arreglar el defecto de producción de `dictado_revocado`.~~ **Hecho:** las
+   marcas se comparan como palabras completas y la revocación se aplica por
+   encargo (`docs/CORRECCION_REVOCACION_DIAZ_SUR.md`).
+2. ~~Volver a pasar el audio real de 122 s.~~ **Hecho:** ya no termina en
+   `SIN_ACCIONES`; propone 2 encargos y pide los datos que faltan. Detalle y
+   límites en el documento de la corrección.
 3. **Decidir, solo con pedido explícito**, si el router reemplaza al motor del
    panel. No se hace por iniciativa técnica.
 
 Lo demás sigue como estaba: sin conectar Gato, sin mensajes externos, sin
-operaciones financieras y sin despachos automáticos.
+operaciones financieras y sin despachos automáticos. El siguiente trabajo es el
+resto del ERP de Horminor.
 
 ---
 
@@ -249,3 +251,4 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 | v1.2 | 2026-11-16 | Encargos independientes (migración 092): corregir, cancelar y confirmar por asunto; 610 pruebas. La conversación por hilos sigue siendo de la siguiente fase. |
 | v1.3 | 2026-11-16 | Separación de encargos en lenguaje natural (prompt v7), duda acotada al dato y cadena de audio con STT real; 620 pruebas. Se agrega la secuencia técnica del WhatsApp interno como documento futuro. |
 | v1.4 | 2026-11-16 | Cierre de la fase del router conversacional (`router-1.7`, laboratorio): estado, límites, correcciones, backlog de Jev y siguiente paso (defecto de producción y audio real). 620 + 21 pruebas en verde. |
+| v1.5 | 2026-11-16 | Corrección de `dictado_revocado`: expresiones completas y revocación por encargo. Audio de Díaz Sur verificado (2 encargos, 1 acción, preguntas pendientes). 623 pruebas. |

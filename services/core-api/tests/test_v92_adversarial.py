@@ -14,6 +14,7 @@ ocurre en los casos concretos que preocupan a Dirección.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -21,6 +22,7 @@ from pathlib import Path
 import pytest
 
 from app.cerebro import Contexto, Evidencia, HechoCitado, Receta, compilar
+from app.cerebro.compilador import dictado_revocado, revocacion_global
 from app.cerebro.hechos import validar_hecho
 from app.cerebro.internas import (
     TareaInternaInvalida,
@@ -402,6 +404,84 @@ def test_negar_un_dato_no_revoca_toda_la_instruccion() -> None:
 
     assert [a.nombre for a in borrador.acciones] == ["crear_cotizacion_borrador"]
     assert borrador.acciones[0].parametros["descuento_pct"] is None
+
+
+# ---------------------------------------------------------------------------
+# F2 — la negación se reconoce como expresión completa, no como un trozo
+# ---------------------------------------------------------------------------
+def test_mejor_nos_abastecemos_no_revoca_el_dictado() -> None:
+    texto = (
+        "Mejor nos abastecemos de la planta de la Joya: prepara la cotización "
+        "de 25 metros cúbicos de 240."
+    )
+    hechos = [
+        hecho("cotizacion.obra_direccion", "la Joya"),
+        hecho("cotizacion.volumen_m3", 25, "DECIMAL", cita="25"),
+        hecho("cotizacion.resistencia", "240"),
+    ]
+
+    assert dictado_revocado(texto) is False
+    assert revocacion_global(texto) is False
+
+    borrador = compilar(hechos, _contexto(texto))
+
+    assert [a.nombre for a in borrador.acciones] == [
+        "crear_cotizacion_borrador"
+    ]
+
+
+def test_mejor_no_prepares_la_cotizacion_revoca_ese_encargo() -> None:
+    texto = "Mejor no preparen la cotización del colegio Central."
+    hechos = [
+        hecho("cotizacion.obra_direccion", "colegio Central"),
+        hecho("cotizacion.volumen_m3", 40, "DECIMAL", cita="40"),
+        hecho("cotizacion.resistencia", "280"),
+    ]
+
+    assert dictado_revocado(texto) is True
+    assert revocacion_global(texto) is False
+
+    borrador = compilar(hechos, _contexto(texto))
+
+    assert borrador.acciones == ()
+    assert borrador.estado == "SIN_ACCIONES"
+
+
+def test_revocacion_parcial_conserva_los_otros_encargos() -> None:
+    texto = (
+        "Primero, prepara la cotización de la Joya con 25 metros cúbicos de "
+        "240. Segundo, mejor no preparen la cotización del colegio Central. "
+        "Tercero, prepara la cotización de la escuela con 30 metros cúbicos "
+        "de 210."
+    )
+    hechos = [
+        replace(hecho("cotizacion.obra_direccion", "la Joya"), encargo=1),
+        replace(
+            hecho("cotizacion.volumen_m3", 25, "DECIMAL", cita="25"),
+            encargo=1,
+        ),
+        replace(hecho("cotizacion.resistencia", "240"), encargo=1),
+        replace(
+            hecho("cotizacion.obra_direccion", "colegio Central"), encargo=2
+        ),
+        replace(
+            hecho("cotizacion.volumen_m3", 40, "DECIMAL", cita="40"),
+            encargo=2,
+        ),
+        replace(hecho("cotizacion.resistencia", "280"), encargo=2),
+        replace(hecho("cotizacion.obra_direccion", "la escuela"), encargo=3),
+        replace(
+            hecho("cotizacion.volumen_m3", 30, "DECIMAL", cita="30"),
+            encargo=3,
+        ),
+        replace(hecho("cotizacion.resistencia", "210"), encargo=3),
+    ]
+
+    borrador = compilar(hechos, _contexto(texto))
+
+    obras = [a.parametros.get("obra_direccion") for a in borrador.acciones]
+    assert obras == ["la Joya", "la escuela"]
+    assert {e.encargo: e.estado for e in borrador.encargos}[2] == "SIN_ACCIONES"
 
 
 def test_una_clave_desconocida_no_tiene_efecto() -> None:

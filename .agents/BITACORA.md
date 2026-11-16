@@ -6833,3 +6833,73 @@ propone acciones. Despues de eso, continuar con el resto del proyecto.
 - `docs/CONTINUIDAD_CEREBRO.md` (v1.4)
 - `.agents/ESTADO.md`
 - `.agents/BITACORA.md`
+
+
+## 2026-11-16 - Corrección puntual de dictado_revocado y audio de Díaz Sur
+
+### Objetivo
+
+Eliminar la revocación global falsa que producía «mejor no» dentro de «mejor
+nos abastecemos», sin rediseñar el compilador y sin tocar el router congelado.
+
+### Hecho
+
+1. **Causa:** `dictado_revocado` comparaba las marcas como subcadenas del texto
+   normalizado; «mejor no» coincidía con «mejor nos».
+2. **Corrección:** cada marca se compila como expresión completa (límites de
+   palabra, espacios flexibles, sin tildes ni mayúsculas).
+3. **Alcance:** se distingue la revocación global («no hagas nada») de la
+   revocación por encargo. «Mejor no preparen la cotización» cancela ese
+   encargo y deja los otros en pie.
+4. **Resumen y nota:** ya no anuncian «no hay que hacer nada» cuando solo se
+   revocó una parte.
+5. **Pruebas nuevas:** «mejor nos abastecemos» no revoca; «mejor no preparen la
+   cotización» revoca ese encargo; revocación parcial conserva los otros dos.
+6. **Audio real de Díaz Sur:** se reconstruyó solo `core-api` y se reejecutó la
+   transcripción original de 122 s.
+
+### Evidencia (real, ejecutada)
+
+| Comprobación | Resultado |
+|---|---|
+| `pytest /app/tests/test_v92_adversarial.py` | 25 passed |
+| Suite completa del CRM | **623 passed**, 1 warning |
+| `docker compose build core-api` + `up -d --no-deps core-api` | servicio recreado y healthy |
+| `POST /api/v1/cerebro/interpretar` con `transcripcion_id` de 122 s | HTTP 200 |
+| Estado anterior del audio | `SIN_ACCIONES` (revocación global falsa) |
+| Estado nuevo | `REQUIERE_ACLARACION`, 2 encargos, 1 acción (`crear_cliente`), 4 preguntas |
+| Borrador nuevo | `e133755d-db43-4257-9a50-c9dd8b1e325d` |
+
+### Decisiones tomadas
+
+1. **Corrección mínima:** se ajustó solo la detección y el alcance de la
+   revocación; no se tocaron reglas de dinero, permisos, confirmación ni la
+   estructura del borrador.
+2. **Revocación por encargo:** el texto propio de cada encargo ya existía; se
+   usa para que una orden revocada no anule las demás.
+3. **Sin maquillar el audio:** el resultado no es una cotización completa;
+   falta dirección de obra y precio. Se registra tal como salió.
+
+### Bloqueos / preguntas al cliente
+
+1. El audio de Díaz Sur sigue sin dirección de obra ni precio en el dictado; el
+   sistema pregunta en vez de inventarlos.
+2. La integración del router al panel queda para una fase distinta y con
+   decisión explícita.
+
+### Próximo paso exacto
+
+Continuar con el resto del ERP de Horminor. No se amplía el Cerebro ni se
+conecta Gato en esta fase.
+
+### Archivos tocados
+
+- `services/core-api/app/cerebro/compilador.py`
+- `services/core-api/app/cerebro/extractor.py`
+- `services/core-api/app/cerebro/revision.py`
+- `services/core-api/tests/test_v92_adversarial.py`
+- `docs/CORRECCION_REVOCACION_DIAZ_SUR.md` (nuevo)
+- `docs/HORMINOR_MANUAL_FUNCIONAL.md` (v1.7)
+- `docs/CONTINUIDAD_CEREBRO.md` (v1.5)
+- `.agents/ESTADO.md`
+- `.agents/BITACORA.md`

@@ -447,11 +447,50 @@ _MARCAS_REVOCACION = (
     "primero voy a hablar",
 )
 
+# Una marca es global solo si niega toda la acción («nada»). Las demás se
+# evalúan por encargo: «mejor no» puede cancelar un asunto y dejar otro.
+_MARCAS_REVOCACION_GLOBAL = tuple(
+    marca for marca in _MARCAS_REVOCACION if "nada" in marca
+)
+
+
+def _patron_marca(marca: str) -> re.Pattern[str]:
+    """Expresión completa: palabras enteras, nunca un trozo de otra."""
+    cuerpo = r"\s+".join(re.escape(parte) for parte in marca.split())
+    return re.compile(rf"\b{cuerpo}\b")
+
+
+_PATRONES_REVOCACION = tuple(
+    (marca, _patron_marca(marca)) for marca in _MARCAS_REVOCACION
+)
+_PATRONES_REVOCACION_GLOBAL = tuple(
+    (marca, _patron_marca(marca)) for marca in _MARCAS_REVOCACION_GLOBAL
+)
+
+
+def _revoca(
+    plano: str, patrones: Sequence[tuple[str, re.Pattern[str]]]
+) -> bool:
+    return any(patron.search(plano) for _marca, patron in patrones)
+
 
 def dictado_revocado(texto: str | None) -> bool:
-    """True si el dictado cancela la instrucción completa."""
-    plano = sin_tildes(texto or "")
-    return any(marca in plano for marca in _MARCAS_REVOCACION)
+    """True si el texto trae una revocación como expresión completa.
+
+    «Mejor nos abastecemos» no es «mejor no»: se comparan palabras enteras.
+    """
+    plano = " ".join(sin_tildes(texto or "").split())
+    return _revoca(plano, _PATRONES_REVOCACION)
+
+
+def revocacion_global(texto: str | None) -> bool:
+    """True si la revocación niega toda la acción («no hagas nada»).
+
+    Las demás marcas se evalúan por encargo: «mejor no» puede cancelar un
+    asunto y dejar los otros en pie.
+    """
+    plano = " ".join(sin_tildes(texto or "").split())
+    return _revoca(plano, _PATRONES_REVOCACION_GLOBAL)
 
 
 def normalizar_resistencia(valor: Any) -> str | None:
@@ -1452,7 +1491,7 @@ def compilar(
             hechos=hechos,
             encargos=(_resumen_encargo(1, segmentos, "SIN_ACCIONES"),),
         )
-    if dictado_revocado(contexto.texto):
+    if revocacion_global(contexto.texto):
         # El hablante canceló el dictado completo: los hechos quedan como
         # constancia, pero no se propone ni se ejecuta nada.
         return Borrador(

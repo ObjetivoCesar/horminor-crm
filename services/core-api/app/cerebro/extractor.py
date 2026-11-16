@@ -939,7 +939,7 @@ async def _borrador_desde_hechos(
             intencion=intencion,
         )
         notas.extend(_notas_de_dinero_y_tarea(hechos, borrador))
-        if dictado_revocado(texto):
+        if dictado_revocado(texto) and not borrador.acciones:
             notas.append(
                 "El dictado revoca la instruccion: no se proponen acciones."
             )

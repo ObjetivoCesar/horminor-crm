@@ -66,6 +66,27 @@ scripts de candado.
 
 ## Evidencia de la última sesión
 
+### 2026-11-16 - Corrección de revocación y audio de Díaz Sur
+
+- **Defecto:** `dictado_revocado` comparaba «mejor no» como subcadena y lo
+  encontraba dentro de «mejor nos abastecemos». El audio real terminaba en
+  `SIN_ACCIONES`.
+- **Corrección:** las marcas se leen como palabras completas y la revocación se
+  aplica al encargo donde aparece; solo «no hagas nada» corta el dictado
+  completo. Sin cambios en dinero, permisos ni confirmación.
+- **Pruebas:** 25/25 en `test_v92_adversarial.py` (3 nuevas) y **623/623** en la
+  suite del CRM.
+- **Audio de 122 s:** transcripción `37deb787-d140-44fb-80e4-078057dc34ca`.
+  Antes `SIN_ACCIONES`; ahora `REQUIERE_ACLARACION` con **2 encargos**,
+  **1 acción** (`crear_cliente`) y 4 preguntas. Borrador
+  `e133755d-db43-4257-9a50-c9dd8b1e325d`.
+- **Límite real:** no produce todavía la cotización completa porque falta la
+  dirección de la obra y el precio; no se registró dinero ni se envió nada.
+- **Documentos:** `docs/CORRECCION_REVOCACION_DIAZ_SUR.md`, Manual Vivo v1.7 y
+  Continuidad v1.5.
+- **Intacto:** router `router-1.7` congelado, Gato desconectado, sin interfaces
+  nuevas.
+
 ### 2026-11-16 - Cierre de la fase del router conversacional (laboratorio)
 
 - **Decisión:** la fase se cierra con `router-1.7`; no se amplía la arquitectura
