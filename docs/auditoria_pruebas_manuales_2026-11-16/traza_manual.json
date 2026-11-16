@@ -1,0 +1,148 @@
+[
+  {
+    "id": "fca87b761742",
+    "fecha": "2026-11-16T19:12:35+00:00",
+    "tipo": "CORRECCION",
+    "origen": "LABORATORIO",
+    "mensaje_julio": "No, donde dije bomba me refería a la mezcladora. Lo demás está correcto, no cambies las otras tareas.",
+    "version_antes": 1,
+    "version_despues": 2,
+    "cambios": [
+      {
+        "campo": "E2.que_hacer",
+        "antes": "Verificar que estén listas las guías de remisión para la fundida de mañana en la obra de Ramiro Vega. Además, Informar a Julio cuando la fundida, las guías de remisión y la bomba estén preparadas.",
+        "despues": "Verificar que estén listas las guías de remisión para la fundida de mañana en la obra de Ramiro Vega. Además, Informar a Julio cuando la fundida, las guías de remisión y la mezcladora estén preparadas."
+      },
+      {
+        "campo": "confirmacion",
+        "antes": null,
+        "despues": "RESTO_APROBADO"
+      }
+    ],
+    "contexto": {
+      "via": "llm"
+    }
+  },
+  {
+    "id": "b83a12f42e46",
+    "fecha": "2026-11-16T19:13:31+00:00",
+    "tipo": "ACLARACION",
+    "origen": "LABORATORIO",
+    "mensaje_julio": "Ya me confirmaron que son 42 metros. Ahora sí prepara la cotización, pero la reviso yo antes de enviarla.",
+    "version_antes": 1,
+    "version_despues": 2,
+    "cambios": [
+      {
+        "campo": "cotizacion.volumen_m3",
+        "antes": 42,
+        "despues": 42
+      }
+    ],
+    "contexto": {}
+  },
+  {
+    "id": "d183e291d8b2",
+    "fecha": "2026-11-16T19:14:27+00:00",
+    "tipo": "CORRECCION",
+    "origen": "LABORATORIO",
+    "mensaje_julio": "Si mañana todavía no aparece el dinero, que secretaría llame al ingeniero. Prefiero llamada, no WhatsApp. La planificación de los camiones sigue adelante.",
+    "version_antes": 1,
+    "version_despues": 2,
+    "cambios": [
+      {
+        "campo": "E1.condiciones",
+        "antes": [],
+        "despues": [
+          "Si mañana todavía no aparece el dinero, secretaría debe llamar al ingeniero Ricardo (por llamada, no por WhatsApp)"
+        ]
+      },
+      {
+        "campo": "E2.estado",
+        "antes": "CONDICIONADO",
+        "despues": "PROPUESTO"
+      }
+    ],
+    "contexto": {
+      "via": "llm"
+    }
+  },
+  {
+    "id": "9c5cb60ff039",
+    "fecha": "2026-11-16T19:23:48+00:00",
+    "tipo": "CORRECCION",
+    "origen": "LABORATORIO",
+    "mensaje_julio": "El descuento déjalo como solicitud pendiente de mi decisión. Las otras dos tareas sí quiero que queden asignadas.",
+    "version_antes": 1,
+    "version_despues": 2,
+    "cambios": [
+      {
+        "campo": "E3.estado",
+        "antes": "CONDICIONADO",
+        "despues": "POR_DEFINIR"
+      }
+    ],
+    "contexto": {
+      "via": "llm"
+    }
+  },
+  {
+    "id": "f376a14a4494",
+    "fecha": "2026-11-16T19:24:14+00:00",
+    "tipo": "CORRECCION",
+    "origen": "LABORATORIO",
+    "mensaje_julio": "Cuando dije que secretaría hable con él, me refería a Daniel Torres. Y si hay problemas con el acceso, el jefe de planta debe informar primero a secretaría, para que ella se comunique con Daniel.",
+    "version_antes": 1,
+    "version_despues": 2,
+    "cambios": [
+      {
+        "campo": "E1.destinatario",
+        "antes": "Daniel Torres",
+        "despues": "Daniel Torres"
+      },
+      {
+        "campo": "E2.condiciones",
+        "antes": [],
+        "despues": [
+          "Si hay problemas con el acceso, el jefe de planta debe informar primero a secretaría, para que ella se comunique con Daniel"
+        ]
+      }
+    ],
+    "contexto": {
+      "via": "llm"
+    }
+  },
+  {
+    "id": "49f9300277d0",
+    "fecha": "2026-11-16T19:25:14+00:00",
+    "tipo": "CORRECCION",
+    "origen": "LABORATORIO",
+    "mensaje_julio": "Cancela el tercer encargo, el del WhatsApp. Los otros dos están bien, confírmalos y deja el informe de facturas solamente para mi revisión, sin iniciar cobros.",
+    "version_antes": 1,
+    "version_despues": 2,
+    "cambios": [
+      {
+        "campo": "E1.condiciones",
+        "antes": [
+          "PROHIBICION: no quiero que empiece a cobrar todavía"
+        ],
+        "despues": [
+          "PROHIBICION: no quiero que empiece a cobrar todavía",
+          "El informe es solo para revisión de Julio, sin iniciar cobros"
+        ]
+      },
+      {
+        "campo": "E3.estado",
+        "antes": "PROPUESTO",
+        "despues": "CANCELADO"
+      },
+      {
+        "campo": "confirmacion",
+        "antes": null,
+        "despues": "RESTO_APROBADO"
+      }
+    ],
+    "contexto": {
+      "via": "llm"
+    }
+  }
+]
