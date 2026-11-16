@@ -78,6 +78,9 @@ class HechoCitado:
     tipo: str = "TEXTO"
     evidencia: Evidencia | None = None
     checksum_valido: bool | None = None
+    # Encargo del dictado al que pertenece el hecho. Un audio con tres
+    # instrucciones produce hechos con encargo 1, 2 y 3; así no se mezclan.
+    encargo: int = 1
 
     @property
     def utilizable(self) -> bool:
@@ -117,6 +120,7 @@ class HechoCitado:
             "tipo": self.tipo,
             "evidencia": evidencia,
             "checksum_valido": self.checksum_valido,
+            "encargo": self.encargo,
         }
 
 

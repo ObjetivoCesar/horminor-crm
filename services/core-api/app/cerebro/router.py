@@ -70,6 +70,9 @@ class CorregirIn(BaseModel):
     clave: str = Field(min_length=3, max_length=80)
     valor: Any
     tipo: str | None = Field(default=None, max_length=12)
+    # Si el dictado trae varios encargos y la clave se repite, hay que decir
+    # cuál se corrige. Sin esto, una corrección podría tocar dos asuntos.
+    encargo: int | None = Field(default=None, ge=1)
 
 
 class ResolverTareaIn(BaseModel):
@@ -199,9 +202,11 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
                 """
                 INSERT INTO cerebro_borradores (
                     extraccion_id, version, estado, acciones_propuestas_json,
-                    preguntas_pendientes_json, condiciones_json, creado_por
+                    preguntas_pendientes_json, condiciones_json, encargos_json,
+                    creado_por
                 ) VALUES (
-                    $1::uuid, 1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6
+                    $1::uuid, 1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb,
+                    $7
                 )
                 RETURNING id::text AS id
                 """,
@@ -220,6 +225,10 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
                 ),
                 json.dumps(
                     [condicion.a_dict() for condicion in borrador.condiciones],
+                    ensure_ascii=False,
+                ),
+                json.dumps(
+                    [encargo.a_dict() for encargo in borrador.encargos],
                     ensure_ascii=False,
                 ),
                 usuario,
@@ -251,7 +260,7 @@ async def obtener_borrador(request: Request, borrador_id: str) -> dict[str, Any]
     fila = await pool.fetchrow(
         """
         SELECT b.id::text AS id, b.estado, b.version, b.acciones_propuestas_json,
-               b.preguntas_pendientes_json, b.condiciones_json,
+               b.preguntas_pendientes_json, b.condiciones_json, b.encargos_json,
                b.creado_por, b.creado_en,
                e.sobre_json, e.modelo_llm, e.version_prompt, e.latencia_ms
           FROM cerebro_borradores b
@@ -266,6 +275,51 @@ async def obtener_borrador(request: Request, borrador_id: str) -> dict[str, Any]
     datos["acciones"] = _jsonb(datos.pop("acciones_propuestas_json")) or []
     datos["preguntas"] = _jsonb(datos.pop("preguntas_pendientes_json")) or []
     datos["condiciones"] = _jsonb(datos.pop("condiciones_json")) or []
+    datos["encargos"] = _jsonb(datos.pop("encargos_json")) or []
+    cancelados = await pool.fetch(
+        """
+        SELECT encargo, motivo, decidido_por, creado_en
+          FROM cerebro_encargos_decisiones
+         WHERE borrador_id = $1::uuid AND decision = 'CANCELADO'
+         ORDER BY creado_en
+        """,
+        borrador_id,
+    )
+    datos["encargos_cancelados"] = [
+        {
+            "encargo": fila["encargo"],
+            "motivo": fila["motivo"],
+            "decidido_por": fila["decidido_por"],
+            "creado_en": (
+                fila["creado_en"].isoformat() if fila["creado_en"] else None
+            ),
+        }
+        for fila in cancelados
+    ]
+    # Estado real de cada encargo: una confirmación parcial no puede leerse
+    # como si todo el dictado se hubiera ejecutado.
+    ejecutadas = await pool.fetch(
+        """
+        SELECT encargo, COUNT(DISTINCT orden_ejecucion) AS total
+          FROM cerebro_ejecuciones
+         WHERE borrador_id = $1::uuid AND estado = 'EXITOSO'
+         GROUP BY encargo
+        """,
+        borrador_id,
+    )
+    hechas = {fila["encargo"]: int(fila["total"]) for fila in ejecutadas}
+    cancelados_indices = {fila["encargo"] for fila in cancelados}
+    for encargo in datos["encargos"]:
+        indice = int(encargo.get("encargo") or 1)
+        acciones = encargo.get("acciones") or []
+        if indice in cancelados_indices:
+            encargo["estado_actual"] = "CANCELADO"
+        elif acciones and hechas.get(indice, 0) >= len(acciones):
+            encargo["estado_actual"] = "EJECUTADO"
+        elif hechas.get(indice, 0) > 0:
+            encargo["estado_actual"] = "CONFIRMADO_PARCIAL"
+        else:
+            encargo["estado_actual"] = encargo.get("estado")
     datos["sobre"] = _jsonb(datos.pop("sobre_json")) or {}
     datos["creado_en"] = (
         datos["creado_en"].isoformat() if datos.get("creado_en") else None
@@ -394,7 +448,51 @@ async def corregir_borrador(
                     {str(previa["clave"]): previa["valor_nuevo"]},
                     tipos=TIPOS_CONOCIDOS,
                 )
-            actual = next((h for h in hechos if h.clave == clave), None)
+            candidatos_visibles = []
+            try:
+                base = await recompilar(
+                    pool,
+                    hechos=hechos,
+                    intencion=sobre.intencion,
+                    sandbox=sandbox,
+                    hoy=hoy,
+                    texto=normalizar_con_mapa(texto_dictado).texto,
+                )
+                candidatos_visibles = [
+                    h for h in base["hechos"] if h.clave == clave
+                ]
+            except Exception:  # pragma: no cover - si no se puede, sigue el camino simple
+                candidatos_visibles = [
+                    h for h in hechos if h.clave == clave
+                ]
+            candidatos = candidatos_visibles or [
+                h for h in hechos if h.clave == clave
+            ]
+            encargos_de_la_clave = sorted({h.encargo for h in candidatos})
+            if body.encargo is None and len(encargos_de_la_clave) > 1:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "ENCARGO_AMBIGUO",
+                        "message": (
+                            f"«{clave}» aparece en los encargos "
+                            + ", ".join(str(e) for e in encargos_de_la_clave)
+                            + ". Indica cuál se corrige para no tocar dos asuntos."
+                        ),
+                        "encargos": encargos_de_la_clave,
+                    },
+                )
+            encargo_objetivo = body.encargo or (
+                candidatos[0].encargo if candidatos else 1
+            )
+            actual = next(
+                (
+                    h
+                    for h in candidatos
+                    if h.encargo == encargo_objetivo
+                ),
+                None,
+            )
             tipo = body.tipo or (
                 actual.tipo if actual is not None else TIPOS_CONOCIDOS.get(clave, "TEXTO")
             )
@@ -404,6 +502,7 @@ async def corregir_borrador(
                     {clave: body.valor},
                     tipos={clave: tipo},
                     hablante=str(perfil.get("rol_base") or "SUPERADMIN"),
+                    encargo=encargo_objetivo,
                 )
             except CorreccionInvalida as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -429,10 +528,10 @@ async def corregir_borrador(
                 INSERT INTO cerebro_borradores (
                     extraccion_id, borrador_padre_id, version, estado,
                     acciones_propuestas_json, preguntas_pendientes_json,
-                    condiciones_json, creado_por
+                    condiciones_json, encargos_json, creado_por
                 ) VALUES (
                     $1::uuid, $2::uuid, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb,
-                    $8
+                    $8::jsonb, $9
                 )
                 RETURNING id::text AS id
                 """,
@@ -455,6 +554,10 @@ async def corregir_borrador(
                     [condicion.a_dict() for condicion in borrador.condiciones],
                     ensure_ascii=False,
                 ),
+                json.dumps(
+                    [encargo.a_dict() for encargo in borrador.encargos],
+                    ensure_ascii=False,
+                ),
                 usuario,
             )
             await conn.execute(
@@ -466,7 +569,11 @@ async def corregir_borrador(
                 """,
                 padre["id"],
             )
-            nuevo_hecho = next(h for h in corregidos if h.clave == clave)
+            nuevo_hecho = next(
+                h
+                for h in corregidos
+                if h.clave == clave and h.encargo == encargo_objetivo
+            )
             valor_anterior = None if actual is None or actual.valor is None else str(
                 actual.valor
             )
@@ -479,9 +586,10 @@ async def corregir_borrador(
                 """
                 INSERT INTO cerebro_correcciones (
                     borrador_id, borrador_nuevo_id, extraccion_id, clave,
-                    valor_anterior, valor_nuevo, cita, corregido_por, rol_base
+                    valor_anterior, valor_nuevo, cita, corregido_por, rol_base,
+                    encargo
                 ) VALUES (
-                    $1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9
+                    $1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10
                 )
                 """,
                 padre["id"],
@@ -493,6 +601,7 @@ async def corregir_borrador(
                 actual.evidencia.cita if actual is not None and actual.evidencia else None,
                 usuario,
                 rol,
+                encargo_objetivo,
             )
 
     return {
@@ -512,6 +621,7 @@ async def corregir_borrador(
             "valor_anterior": valor_anterior,
             "valor_nuevo": valor_nuevo,
             "tipo": tipo,
+            "encargo": encargo_objetivo,
         },
     }
 
@@ -688,6 +798,28 @@ async def confirmar_accion(
             ),
         )
 
+    cancelado = await pool.fetchval(
+        """
+        SELECT 1 FROM cerebro_encargos_decisiones
+         WHERE borrador_id = $1::uuid AND encargo = $2
+           AND decision = 'CANCELADO'
+         LIMIT 1
+        """,
+        borrador_id,
+        int(accion.get("encargo") or 1),
+    )
+    if cancelado:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "ENCARGO_CANCELADO",
+                "message": (
+                    f"El encargo {int(accion.get('encargo') or 1)} está cancelado: "
+                    "no se ejecuta. Los demás encargos del dictado siguen vigentes."
+                ),
+            },
+        )
+
     dependencia = accion.get("depende_de_orden")
     if dependencia:
         previa = await pool.fetchval(
@@ -730,7 +862,7 @@ async def confirmar_accion(
             "nota": "Esa accion ya se habia ejecutado; no se creo otra.",
             "datos": {
                 "id": existente["entidad_destino_id"],
-                "estado": "PENDIENTE",
+                "repetido": True,
             },
             "ejecutado_en": existente["ejecutado_en"].isoformat(),
         }
@@ -784,15 +916,18 @@ async def confirmar_accion(
             ejecucion = await conn.fetchrow(
                 """
                 INSERT INTO cerebro_ejecuciones (
-                    borrador_id, orden_ejecucion, intento_num, accion_nombre,
-                    request_id_custodio, parametros_ejecutados_json, estado,
-                    entidad_destino_tabla, entidad_destino_id, error_mensaje
+                    borrador_id, encargo, orden_ejecucion, intento_num,
+                    accion_nombre, request_id_custodio,
+                    parametros_ejecutados_json, estado, entidad_destino_tabla,
+                    entidad_destino_id, error_mensaje
                 ) VALUES (
-                    $1::uuid, $2, $3, $4, $5, $6::jsonb, $7, $8, $9::uuid, $10
+                    $1::uuid, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10::uuid,
+                    $11
                 )
                 RETURNING id::text AS id
                 """,
                 borrador_id,
+                int(accion.get("encargo") or 1),
                 body.accion_orden,
                 int(intento or 1),
                 nombre,
@@ -865,6 +1000,164 @@ async def confirmar_accion(
     }
 
 
+class CancelarEncargoIn(BaseModel):
+    motivo: str = Field(min_length=3, max_length=500)
+
+
+@router.post("/borradores/{borrador_id}/encargos/{encargo}/cancelar")
+async def cancelar_encargo(
+    request: Request, borrador_id: str, encargo: int, body: CancelarEncargoIn
+) -> dict[str, Any]:
+    """Cancela un encargo sin tocar los demás asuntos del dictado.
+
+    Si ese encargo ya produjo algo, se distingue: un recordatorio todavía
+    PENDIENTE se cancela de verdad; uno ya ENVIADO no se puede cancelar; una
+    tarea interna ya creada se cierra desde su propio flujo.
+    """
+    perfil = await exigir_modulo(request, "cerebro", mutacion=True)
+    try:
+        uuid.UUID(borrador_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="borrador_id invalido") from exc
+    if encargo < 1:
+        raise HTTPException(status_code=422, detail="encargo invalido")
+
+    actor_id = str(perfil.get("id") or "").strip()
+    if not actor_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Falta el usuario del panel para registrar la cancelación.",
+        )
+    rol = str(perfil.get("rol_base") or "").strip().upper()
+    pool = _pool(request)
+
+    fila = await pool.fetchrow(
+        """
+        SELECT estado, acciones_propuestas_json, encargos_json
+          FROM cerebro_borradores
+         WHERE id = $1::uuid
+        """,
+        borrador_id,
+    )
+    if fila is None:
+        raise HTTPException(status_code=404, detail="borrador no encontrado")
+    if fila["estado"] == "EJECUTADO":
+        raise HTTPException(
+            status_code=409,
+            detail="el borrador ya está ejecutado; no hay nada que cancelar",
+        )
+    acciones = _jsonb(fila["acciones_propuestas_json"]) or []
+    del_encargo = [a for a in acciones if int(a.get("encargo") or 1) == encargo]
+    if not del_encargo and not any(
+        int(e.get("encargo") or 1) == encargo
+        for e in (_jsonb(fila["encargos_json"]) or [])
+    ):
+        raise HTTPException(
+            status_code=404, detail=f"el borrador no tiene un encargo {encargo}"
+        )
+
+    ya = await pool.fetchval(
+        """
+        SELECT 1 FROM cerebro_encargos_decisiones
+         WHERE borrador_id = $1::uuid AND encargo = $2 AND decision = 'CANCELADO'
+        """,
+        borrador_id,
+        encargo,
+    )
+    if ya:
+        return {
+            "borrador_id": borrador_id,
+            "encargo": encargo,
+            "estado": "CANCELADO",
+            "repetido": True,
+            "nota": "Ese encargo ya estaba cancelado.",
+        }
+
+    ejecuciones = await pool.fetch(
+        """
+        SELECT id::text AS id, accion_nombre, entidad_destino_tabla,
+               entidad_destino_id::text AS entidad_destino_id
+          FROM cerebro_ejecuciones
+         WHERE borrador_id = $1::uuid AND encargo = $2 AND estado = 'EXITOSO'
+        """,
+        borrador_id,
+        encargo,
+    )
+    cancelados: list[str] = []
+    for ejecucion in ejecuciones:
+        tabla = ejecucion["entidad_destino_tabla"]
+        destino = ejecucion["entidad_destino_id"]
+        if tabla == "gato_recordatorios" and destino:
+            estado_recordatorio = await pool.fetchval(
+                "SELECT estado FROM gato_recordatorios WHERE id = $1::uuid",
+                destino,
+            )
+            if estado_recordatorio == "ENVIADO":
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "ENCARGO_YA_ENVIADO",
+                        "message": (
+                            "Ese recordatorio ya se envió: no se puede cancelar. "
+                            "Se puede registrar una corrección o una tarea de "
+                            "seguimiento, pero el mensaje ya salió."
+                        ),
+                    },
+                )
+            if estado_recordatorio in ("PENDIENTE", "BORRADOR", "FALLIDO"):
+                await recordatorios.cancelar(
+                    Bibliotecario(pool), actor=_actor(perfil), recordatorio_id=destino
+                )
+                cancelados.append(destino)
+        else:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "ENCARGO_YA_EJECUTADO",
+                    "message": (
+                        f"El encargo {encargo} ya generó «{ejecucion['accion_nombre']}». "
+                        "Eso se cierra o se revierte desde su propio módulo, no "
+                        "cancelando el encargo."
+                    ),
+                },
+            )
+
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                """
+                INSERT INTO cerebro_encargos_decisiones (
+                    borrador_id, encargo, decision, motivo, decidido_por, rol_base
+                ) VALUES ($1::uuid, $2, 'CANCELADO', $3, $4, $5)
+                """,
+                borrador_id,
+                encargo,
+                body.motivo.strip(),
+                str(perfil.get("nombre") or actor_id),
+                rol,
+            )
+
+    return {
+        "borrador_id": borrador_id,
+        "encargo": encargo,
+        "estado": "CANCELADO",
+        "repetido": False,
+        "recordatorios_cancelados": cancelados,
+        "nota": (
+            "Encargo cancelado. Los demás encargos del dictado siguen vigentes."
+        ),
+    }
+
+
+def _actor(perfil: dict[str, Any]) -> Actor:
+    return Actor(
+        nombre=str(perfil.get("nombre") or perfil.get("rol_base") or "panel"),
+        rol=str(perfil.get("rol_base") or "SECRETARIA"),
+        actor_id=str(perfil.get("id") or ""),
+        modo_envio="",
+    )
+
+
 async def _ejecutar_tarea(
     request: Request,
     pool: asyncpg.Pool,
@@ -896,6 +1189,7 @@ async def _ejecutar_tarea(
         adjuntar_factura=bool(parametros.get("adjuntar_factura")),
         confirmado_por=actor_id,
         clave_externa=clave,
+        cifras_autorizadas=parametros.get("cifras_autorizadas") or (),
     )
 
 

@@ -365,6 +365,12 @@
         </table>
       </div>
 
+      <div class="block" id="bloqueEncargos">
+        <h3>Encargos del dictado <span class="count" id="nEncargos">0</span></h3>
+        <ul class="preguntas" id="encargosLista"></ul>
+        <p class="sub">Corregir, cancelar o confirmar un encargo no toca los demás.</p>
+      </div>
+
       <div class="block" id="bloqueCondiciones">
         <h3>Condiciones y encargos conservados <span class="count" id="nCondiciones">0</span></h3>
         <ul class="notas" id="condiciones"></ul>
@@ -522,9 +528,9 @@
   // ------------------------------------------------------------------
   function clasePill(estado) {
     if (estado === 'PENDIENTE_CONFIRMACION') return 'ok';
-    if (estado === 'REQUIERE_ACLARACION') return 'warn';
+    if (estado === 'REQUIERE_ACLARACION' || estado === 'CONFIRMADO_PARCIAL') return 'warn';
     if (estado === 'SIN_ACCIONES' || estado === 'SOLO_CONSULTA') return 'blue';
-    if (estado === 'RECHAZADO' || estado === 'ERROR') return 'danger';
+    if (estado === 'RECHAZADO' || estado === 'ERROR' || estado === 'CANCELADO') return 'danger';
     return '';
   }
 
@@ -536,6 +542,8 @@
     SUPERADO_POR_CORRECCION: 'Existe una versión corregida',
     EJECUTADO: 'Ejecutado',
     RECHAZADO: 'Rechazado',
+    CANCELADO: 'Cancelado',
+    CONFIRMADO_PARCIAL: 'Confirmado en parte',
     ERROR_EJECUCION: 'Falló al ejecutar'
   };
   const ETIQUETA_HECHO = {
@@ -571,6 +579,7 @@
     const acciones = borrador.acciones || [];
     const preguntas = borrador.preguntas || [];
     const condiciones = borrador.condiciones || datos.condiciones || [];
+    const encargos = borrador.encargos || datos.encargos || [];
     const notas = datos.notas || [];
 
     $('resumen').textContent = datos.resumen || '—';
@@ -676,6 +685,42 @@
       tbody.appendChild(tr);
     });
 
+    // Encargos del dictado
+    const ulE = $('encargosLista');
+    ulE.innerHTML = '';
+    $('nEncargos').textContent = encargos.length;
+    $('bloqueEncargos').classList.toggle('hidden', encargos.length <= 1);
+    const cancelados = new Set(
+      (datos.encargos_cancelados || []).map((c) => Number(c.encargo)),
+    );
+    encargos.forEach((e) => {
+      const indice = Number(e.encargo || 1);
+      const li = document.createElement('li');
+      const estado = cancelados.has(indice)
+        ? 'CANCELADO'
+        : (e.estado_actual || e.estado || '');
+      const pill = document.createElement('span');
+      pill.className = 'pill ' + clasePill(estado);
+      pill.textContent = 'Encargo ' + indice + ' · ' + (etiquetaBorrador(estado) || estado);
+      li.appendChild(pill);
+      const texto = document.createElement('span');
+      texto.className = 'sub';
+      texto.textContent = ' ' + (e.texto || '');
+      li.appendChild(texto);
+      if (
+        datos.borrador_id
+        && e.acciones && e.acciones.length
+        && !cancelados.has(indice)
+        && estado !== 'EJECUTADO'
+      ) {
+        const btn = document.createElement('button');
+        btn.textContent = 'Cancelar encargo';
+        btn.addEventListener('click', () => cancelarEncargo(datos.borrador_id, indice, btn));
+        li.appendChild(btn);
+      }
+      ulE.appendChild(li);
+    });
+
     // Condiciones y encargos que no son una acción
     const ulC = $('condiciones');
     ulC.innerHTML = '';
@@ -715,6 +760,13 @@
       const titulo = document.createElement('b');
       titulo.textContent = nombre.replaceAll('_', ' ');
       top.append(orden, titulo);
+
+      if (a.encargo && encargos.length > 1) {
+        const p = document.createElement('span');
+        p.className = 'pill blue';
+        p.textContent = 'encargo ' + a.encargo;
+        top.appendChild(p);
+      }
 
       if (a.requiere_doble_confirmacion) {
         const p = document.createElement('span');
@@ -861,6 +913,42 @@
     }
   }
 
+  async function cancelarEncargo(borradorId, encargo, boton) {
+    const motivo = window.prompt(
+      'Motivo para cancelar el encargo ' + encargo + ' (no afecta a los demás):',
+    );
+    if (motivo === null) return;
+    if (!motivo.trim()) {
+      mostrarError('La cancelación necesita un motivo.');
+      return;
+    }
+    limpiarAvisos();
+    ocupado(boton, true);
+    try {
+      await pedir(`/api/v1/cerebro/borradores/${borradorId}/encargos/${encargo}/cancelar`, {
+        method: 'POST',
+        headers: cabeceras({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ motivo: motivo.trim() }),
+      });
+      const datos = await pedir(`/api/v1/cerebro/borradores/${borradorId}`, {
+        headers: cabeceras(),
+      });
+      datos.borrador = {
+        acciones: datos.acciones || [],
+        preguntas: datos.preguntas || [],
+        condiciones: datos.condiciones || [],
+        encargos: datos.encargos || [],
+      };
+      render(datos, ultimaTranscripcion);
+      mostrarInfo(
+        'Encargo ' + encargo + ' cancelado. Los demás encargos siguen vigentes.',
+      );
+    } catch (e) {
+      ocupado(boton, false);
+      mostrarError(e.message);
+    }
+  }
+
   async function corregirHecho(borradorId, hecho, boton) {
     const actual = hecho.valor === null || hecho.valor === undefined ? '' : String(hecho.valor);
     const nuevo = window.prompt(
@@ -875,7 +963,11 @@
       const datos = await pedir(`/api/v1/cerebro/borradores/${borradorId}/corregir`, {
         method: 'POST',
         headers: cabeceras({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ clave: hecho.clave, valor: nuevo }),
+        body: JSON.stringify({
+          clave: hecho.clave,
+          valor: nuevo,
+          encargo: hecho.encargo || 1,
+        }),
       });
       render(datos, ultimaTranscripcion);
       mostrarInfo(

@@ -1,8 +1,8 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-16** (conservación de instrucciones del
-> Cerebro; 601 pruebas y migración 091).
+> Última actualización: **2026-11-16** (encargos independientes del Cerebro;
+> 610 pruebas y migración 092).
 > Base v6.17: Custodio v4.4.0 + HTTP, agenda única `HorminorAgenda`,
 > compras/caja chica, perfiles ACL, Superadmin por Action Cards, Carpetas de
 > Clientes con buscador Sabueso, bancos con color de marca, **facturas
@@ -65,6 +65,34 @@ Orellana/SucumbÃ­os para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
 
 ## Evidencia de la última sesión
+
+### 2026-11-16 - Encargos independientes en un dictado (v8.5)
+
+- **Caso real auditado.** Un dictado con tres asuntos (revisar medidas de una
+  cotización, recordatorio al ingeniero Mauricio, revisar despachos). El motor
+  anterior lo colapsaba en **una** acción, perdía el tercer encargo y convertía
+  el recordatorio externo en tarea interna por la palabra «secretaría».
+- **Migración 092:** `encargos_json` en el borrador, `encargo` en ejecuciones y
+  correcciones, y `cerebro_encargos_decisiones` append-only para cancelaciones.
+- **Segmentación determinística** (`app/cerebro/encargos.py`) por ordinales
+  («primero, segundo, tercero, por último, finalmente»); el preámbulo no se
+  compila. Sin marcas, un solo encargo y el comportamiento anterior.
+- **Compilación por encargo:** cada asunto se compila con **su propio texto**;
+  un tramo con rol interno y sin hechos se conserva como tarea interna copiando
+  el tramo (sin redactar).
+- **Operaciones:** corrección dirigida (clave repetida → `ENCARGO_AMBIGUO`),
+  cancelación con motivo (`ENCARGO_CANCELADO` al confirmar), cancelación real de
+  un recordatorio PENDIENTE y aviso si ya se envió.
+- **Cifras:** las cifras dictadas del encargo se pasan como `cifras_autorizadas`
+  a la guarda del mensaje: un anticipo citado ya no se pierde, y un número que
+  nadie dijo sigue bloqueado.
+- **Prueba en vivo:** A corregido a 35 m³ (v2, sin ejecutar), B cancelado (sin
+  recordatorio), C confirmado una sola vez (tarea interna); repetir no duplica.
+- **Suite:** **610 passed** (9 nuevas en `test_v95_encargos.py`); Hito 3 →
+  `[CANDADO CERRADO EN SANDBOX]`.
+- **Evidencia:** `.agents/evidencias/cerebro_encargos_2026-11-16.txt`
+  (`ENCARGOS: OK — tres asuntos independientes, sin mezcla`).
+- **Manual Vivo v1.4:** términos *Encargo* y *Cancelación de un encargo*.
 
 ### 2026-11-16 - Conservación de instrucciones (v8.4)
 

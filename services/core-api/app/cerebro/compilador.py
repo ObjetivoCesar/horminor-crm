@@ -9,13 +9,14 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Mapping, Sequence
 
 from .dinero import dinero_ya_entro, sin_tildes
-from .hechos import HechoCitado, decimal_utilizable
+from .encargos import segmentar, texto_de
+from .hechos import Evidencia, HechoCitado, decimal_utilizable
 from .internas import (
     detectar_intencion_tarea,
     detectar_prioridad,
@@ -85,6 +86,7 @@ class Pregunta:
     clave: str
     texto: str
     opciones: tuple[str, ...] = ()
+    encargo: int = 1
 
 
 @dataclass(frozen=True)
@@ -101,6 +103,7 @@ class Condicion:
     texto: str
     cita: str | None = None
     estado: str = "VIGENTE"  # VIGENTE | POR_ACLARAR
+    encargo: int = 1
 
     def a_dict(self) -> dict[str, Any]:
         return {
@@ -108,6 +111,7 @@ class Condicion:
             "texto": self.texto,
             "cita": self.cita,
             "estado": self.estado,
+            "encargo": self.encargo,
         }
 
 
@@ -120,6 +124,7 @@ class AccionPropuesta:
     requiere_doble_confirmacion: bool = False
     depende_de: int | None = None
     bloqueada_por: str | None = None
+    encargo: int = 1
 
     def a_dict(self) -> dict[str, Any]:
         return {
@@ -130,6 +135,32 @@ class AccionPropuesta:
             "requiere_doble_confirmacion": self.requiere_doble_confirmacion,
             "depende_de_orden": self.depende_de,
             "bloqueada_por": self.bloqueada_por,
+            "encargo": self.encargo,
+        }
+
+
+@dataclass(frozen=True)
+class EncargoResumen:
+    """Un asunto del dictado, con su estado propio.
+
+    Tres instrucciones en un audio son tres encargos: cada uno tiene sus
+    acciones, sus preguntas y su estado. Lo que se confirma o se cancela es el
+    encargo, no el dictado entero.
+    """
+
+    encargo: int
+    texto: str
+    estado: str
+    acciones: tuple[int, ...] = ()
+    preguntas: tuple[str, ...] = ()
+
+    def a_dict(self) -> dict[str, Any]:
+        return {
+            "encargo": self.encargo,
+            "texto": self.texto,
+            "estado": self.estado,
+            "acciones": list(self.acciones),
+            "preguntas": list(self.preguntas),
         }
 
 
@@ -141,6 +172,7 @@ class Borrador:
     preguntas: tuple[Pregunta, ...] = ()
     hechos: tuple[HechoCitado, ...] = field(default_factory=tuple)
     condiciones: tuple[Condicion, ...] = ()
+    encargos: tuple[EncargoResumen, ...] = ()
 
     def a_dict(self) -> dict[str, Any]:
         return {
@@ -148,11 +180,17 @@ class Borrador:
             "intencion": self.intencion,
             "acciones": [accion.a_dict() for accion in self.acciones],
             "preguntas": [
-                {"clave": p.clave, "texto": p.texto, "opciones": list(p.opciones)}
+                {
+                    "clave": p.clave,
+                    "texto": p.texto,
+                    "opciones": list(p.opciones),
+                    "encargo": p.encargo,
+                }
                 for p in self.preguntas
             ],
             "hechos": [hecho.a_dict() for hecho in self.hechos],
             "condiciones": [condicion.a_dict() for condicion in self.condiciones],
+            "encargos": [encargo.a_dict() for encargo in self.encargos],
         }
 
 
@@ -776,13 +814,13 @@ def _sin_duplicados(preguntas: list[Pregunta]) -> tuple[Pregunta, ...]:
     return tuple(salida)
 
 
-def compilar(
+def _compilar_asunto(
     hechos: Sequence[HechoCitado],
     contexto: Contexto,
     *,
     intencion: str = "MUTACION",
 ) -> Borrador:
-    """Convierte hechos en un borrador. No escribe nada."""
+    """Compila UN asunto (los hechos de un solo encargo). No escribe nada."""
     hechos = tuple(hechos)
     if intencion == "CONSULTA":
         return Borrador("SIN_ACCIONES", "CONSULTA", hechos=hechos)
@@ -1287,6 +1325,18 @@ def compilar(
                         hechos, "tarea.adjuntar_factura"
                     ),
                     "programado_inferido": cuando_tarea is None,
+                    # Cifras dictadas y sostenidas por cita en este encargo:
+                    # la guarda de cifras del mensaje las acepta sin abrir la
+                    # puerta a números que nadie dijo.
+                    "cifras_autorizadas": sorted(
+                        {
+                            str(hecho.valor)
+                            for hecho in hechos
+                            if hecho.utilizable
+                            and hecho.tipo in ("DECIMAL", "ENTERO")
+                            and hecho.valor is not None
+                        }
+                    ),
                 },
                 # Si el destino es un nombre, el cliente tiene que existir
                 # antes; con un teléfono dictado no hace falta.
@@ -1341,6 +1391,183 @@ def compilar(
         hechos=hechos,
         condiciones=condiciones,
     )
+
+
+def compilar(
+    hechos: Sequence[HechoCitado],
+    contexto: Contexto,
+    *,
+    intencion: str = "MUTACION",
+) -> Borrador:
+    """Compila el dictado completo: un asunto por encargo, sin mezclarlos.
+
+    Cada encargo se compila por separado con **su propio texto**, para que el
+    léxico de uno (por ejemplo, «secretaría») no cambie la intención de otro.
+    Luego se unen las acciones en un solo borrador, numeradas y etiquetadas.
+    """
+    hechos = tuple(hechos)
+    segmentos = segmentar(contexto.texto or "")
+
+    if intencion == "CONSULTA":
+        return Borrador(
+            "SIN_ACCIONES",
+            "CONSULTA",
+            hechos=hechos,
+            encargos=(_resumen_encargo(1, segmentos, "SIN_ACCIONES"),),
+        )
+    if dictado_revocado(contexto.texto):
+        # El hablante canceló el dictado completo: los hechos quedan como
+        # constancia, pero no se propone ni se ejecuta nada.
+        return Borrador(
+            "SIN_ACCIONES",
+            "MUTACION",
+            hechos=hechos,
+            encargos=(_resumen_encargo(1, segmentos, "SIN_ACCIONES"),),
+        )
+
+    grupos: dict[int, list[HechoCitado]] = {}
+    for hecho in hechos:
+        grupos.setdefault(hecho.encargo, []).append(hecho)
+    if not grupos:
+        # Sin hechos: se compila un asunto vacío para que las preguntas de
+        # siempre («¿para qué cliente?») sigan apareciendo.
+        grupos[1] = []
+
+    # Un tramo sin mensaje de tarea puede ser un encargo al equipo que el
+    # modelo no extrajo (o extrajo solo el destinatario). Se copia el tramo tal
+    # cual, con su cita: no se redacta ni se inventa.
+    sinteticos: list[HechoCitado] = []
+    for segmento in segmentos:
+        del_grupo = grupos.get(segmento.indice)
+        if del_grupo is not None and any(
+            h.clave == "tarea.mensaje" for h in del_grupo
+        ):
+            continue
+        if not (
+            detectar_rol_interno(segmento.texto)
+            or es_instruccion_interna(segmento.texto)
+        ):
+            continue
+        if del_grupo is None:
+            del_grupo = []
+            grupos[segmento.indice] = del_grupo
+        hecho = HechoCitado(
+            clave="tarea.mensaje",
+            valor=segmento.texto,
+            estado="EXTRAIDO",
+            tipo="TEXTO",
+            evidencia=Evidencia(
+                cita=segmento.texto,
+                sostiene=segmento.texto,
+                crudo_inicio=segmento.inicio,
+                crudo_fin=segmento.fin,
+                start_ms=None,
+                end_ms=None,
+                confianza=None,
+                hablante="SUPERADMIN",
+            ),
+            encargo=segmento.indice,
+        )
+        del_grupo.append(hecho)
+        sinteticos.append(hecho)
+
+    acciones: list[AccionPropuesta] = []
+    preguntas: list[Pregunta] = []
+    condiciones: list[Condicion] = []
+    resumenes: list[EncargoResumen] = []
+
+    for indice in sorted(grupos):
+        grupo = grupos[indice]
+        texto_grupo = texto_de(segmentos, indice) or contexto.texto
+        parcial = _compilar_asunto(
+            grupo,
+            replace(contexto, texto=texto_grupo),
+            intencion=intencion,
+        )
+        base = len(acciones)
+        ordenes: list[int] = []
+        for accion in parcial.acciones:
+            orden = base + accion.orden
+            ordenes.append(orden)
+            acciones.append(
+                replace(
+                    accion,
+                    orden=orden,
+                    depende_de=(
+                        base + accion.depende_de if accion.depende_de else None
+                    ),
+                    encargo=indice,
+                )
+            )
+        preguntas.extend(replace(p, encargo=indice) for p in parcial.preguntas)
+        condiciones.extend(
+            replace(c, encargo=indice) for c in parcial.condiciones
+        )
+        resumenes.append(
+            EncargoResumen(
+                encargo=indice,
+                texto=(texto_grupo or "").strip()[:180],
+                estado=parcial.estado,
+                acciones=tuple(ordenes),
+                preguntas=tuple(p.clave for p in parcial.preguntas),
+            )
+        )
+
+    acciones = _unificar_clientes(acciones)
+
+    if any(encargo.estado == "REQUIERE_ACLARACION" for encargo in resumenes):
+        estado = "REQUIERE_ACLARACION"
+    elif acciones:
+        estado = "PENDIENTE_CONFIRMACION"
+    else:
+        estado = "SIN_ACCIONES"
+
+    return Borrador(
+        estado=estado,
+        intencion=intencion,
+        acciones=tuple(acciones),
+        preguntas=tuple(preguntas),
+        hechos=hechos + tuple(sinteticos),
+        condiciones=tuple(condiciones),
+        encargos=tuple(resumenes),
+    )
+
+
+def _resumen_encargo(
+    indice: int, segmentos: Sequence[Any], estado: str
+) -> EncargoResumen:
+    texto = texto_de(segmentos, indice) or ""
+    return EncargoResumen(encargo=indice, texto=texto.strip()[:180], estado=estado)
+
+
+def _unificar_clientes(
+    acciones: Sequence[AccionPropuesta],
+) -> list[AccionPropuesta]:
+    """Un mismo cliente no se propone dos veces si aparece en dos encargos."""
+    primero_por_nombre: dict[str, int] = {}
+    reemplazos: dict[int, int] = {}
+    salida: list[AccionPropuesta] = []
+    for accion in acciones:
+        if accion.nombre == "crear_cliente":
+            nombre = sin_tildes(str(accion.parametros.get("nombre") or "")).strip()
+            if nombre in primero_por_nombre:
+                reemplazos[accion.orden] = primero_por_nombre[nombre]
+                continue
+            primero_por_nombre[nombre] = accion.orden
+        salida.append(accion)
+    if not reemplazos:
+        return salida
+    unificadas: list[AccionPropuesta] = []
+    orden = 0
+    for accion in salida:
+        orden += 1
+        dependencia = accion.depende_de
+        if dependencia in reemplazos:
+            dependencia = reemplazos[dependencia]
+        unificadas.append(
+            replace(accion, orden=orden, depende_de=dependencia)
+        )
+    return unificadas
 
 
 def acciones_permitidas(

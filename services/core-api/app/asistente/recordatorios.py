@@ -22,7 +22,7 @@ import re
 import unicodedata
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, Sequence
 from zoneinfo import ZoneInfo
 
 from ..m1_whatsapp.models import formato_whatsapp
@@ -470,6 +470,7 @@ async def crear(
     factura_de: str | None = None,
     confirmado_por: str | None = None,
     clave_externa: str | None = None,
+    cifras_autorizadas: Sequence[Any] | None = None,
 ) -> Resultado:
     """Crea la fila del recordatorio.
 
@@ -551,6 +552,14 @@ async def crear(
     cifras = cifras_de(cuerpo)
     if cifras:
         permitidas = await _cifras_permitidas(biblio, cliente_id)
+        # Una cifra dictada por el hablante y confirmada por un humano es una
+        # cifra con sustento, aunque el cliente todavía no tenga ficha o el
+        # monto no esté en una factura. Sin esto, un anticipo citado se perdía.
+        for valor in cifras_autorizadas or ():
+            try:
+                permitidas.add(Decimal(str(valor)).quantize(Decimal("0.01")))
+            except (InvalidOperation, ValueError, TypeError):
+                continue
         sobrantes = cifras - permitidas
         if sobrantes:
             detalle = ", ".join(f"{valor:.2f}" for valor in sorted(sobrantes))

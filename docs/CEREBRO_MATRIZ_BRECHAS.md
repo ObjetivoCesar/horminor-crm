@@ -222,3 +222,48 @@ real de la base, rehace los hechos sin LLM, recompila y compara
 **Lo que sigue sin existir.** La confirmación por el mismo chat de WhatsApp
 (requiere persistir entrantes y autorizar por riesgo, no solo por número), la
 conexión Gato–Cerebro y el flujo externo. No se tocaron.
+
+---
+
+## 7. Incremento 2026-11-16 — tres encargos independientes
+
+> **Origen.** Criterio de aceptación del laboratorio: un dictado con tres
+> asuntos («primero… segundo… tercero…»), corregir uno, cancelar otro y
+> confirmar el tercero. Corte anterior: 091 y 601 pruebas; ahora **092 y 610**.
+
+**Lo que se encontró (antes de corregir).** El motor trataba el dictado como un
+solo asunto. Con el texto real produjo **una** acción (`crear_tarea_interna`),
+perdió el tercer encargo, convirtió el recordatorio externo al ingeniero en
+tarea interna porque la palabra «secretaría» del primer encargo teñía todo el
+texto, y el resumen mezcló datos de dos asuntos. No era un caso de prompt: la
+estructura de hechos no representaba varios asuntos.
+
+| # | Cambio | Estado | Dónde |
+|---|---|---|---|
+| 1 | Segmentación determinística del dictado por ordinales | **VERIFICADO** | `cerebro/encargos.py` |
+| 2 | `encargo` en cada hecho; el hecho se asigna por su cita | **VERIFICADO** | `HechoCitado.encargo`, `construir_hechos` |
+| 3 | Cada encargo se compila con **su propio texto** (sin contaminación) | **VERIFICADO** | `compilar()` + `_compilar_asunto` |
+| 4 | Estado, acciones y preguntas por encargo | **VERIFICADO** | `EncargoResumen`, `encargos_json` (092) |
+| 5 | Corrección dirigida a un encargo; clave repetida exige indicar cuál | **VERIFICADO** | `CorregirIn.encargo`, `ENCARGO_AMBIGUO` |
+| 6 | Cancelación por encargo, append-only, con motivo y autor | **VERIFICADO** | `cerebro_encargos_decisiones`, `POST …/encargos/{n}/cancelar` |
+| 7 | Confirmar un encargo cancelado se rechaza | **VERIFICADO** | `ENCARGO_CANCELADO` |
+| 8 | Cancelar un recordatorio ya **PENDIENTE** lo cancela; si ya se **ENVIÓ**, avisa | **VERIFICADO** | `ENCARGO_YA_ENVIADO`, `recordatorios.cancelar` |
+| 9 | Cifras dictadas se propagan a la guarda del mensaje | **VERIFICADO** | `cifras_autorizadas` en el recordatorio |
+| 10 | Estado real por encargo (propuesto / pendiente / confirmado / ejecutado / cancelado) | **VERIFICADO** | `estado_actual` en `GET /borradores/{id}` |
+
+**Prueba de aceptación (ejecutada en vivo, SANDBOX).**
+
+| Encargo | Decisión | Resultado real |
+|---|---|---|
+| A — revisar medidas / 30 m³ FC-240 | Corregido a 35 m³ | versión 2, hecho `CORREGIDO_POR_HUMANO`; no se ejecutó nada |
+| B — recordatorio al ing. Mauricio | Cancelado | decisión registrada; **sin** recordatorio pendiente ni enviado |
+| C — revisar despachos | Confirmado | **una** tarea interna para secretaría; repetir la confirmación no duplica |
+
+Evidencia: `.agents/evidencias/cerebro_encargos_2026-11-16.txt`
+(`ENCARGOS: OK — tres asuntos independientes, sin mezcla`) y
+`.agents/evidencias/cerebro_v84_...` para las guardas.
+
+**Dependencia de la siguiente fase (no implementada).** El encargo vive dentro
+de un dictado. Sostener «cancela el segundo» en **otro** audio exige conversación
+persistida con asuntos e hilos; eso pertenece a la fase conversacional y no se
+simuló aquí.

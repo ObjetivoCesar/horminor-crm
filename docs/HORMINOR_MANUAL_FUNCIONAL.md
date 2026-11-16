@@ -244,6 +244,38 @@ El detalle completo y las prioridades están en `docs/CONTINUIDAD_CEREBRO.md`.
 | **Dónde se encuentra** | Interno; su efecto se ve en el borrador. |
 | **Referencia técnica** | `compilar()`, `ROLES_ACCIONES`, `_guarda de dinero`. |
 
+### Término: Encargo (asunto del dictado)
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `encargo` en `cerebro_borradores.encargos_json`, `cerebro_ejecuciones` y `cerebro_correcciones` |
+| **Nombre para el usuario** | Encargo |
+| **Qué significa** | Cada instrucción independiente dentro de un mismo dictado. Un audio con «primero… segundo… tercero…» son tres encargos, cada uno con sus datos, sus preguntas y su estado. |
+| **Para qué existe** | Que un asunto no contamine a otro: antes, «secretaría» de un encargo convertía el recordatorio externo de otro en tarea interna, y dos mensajes se pisaban. |
+| **Quién lo utiliza** | Julio y secretaría al revisar la propuesta. |
+| **Qué lo activa** | El dictado se corta por conectores ordinales («primero, segundo, tercero, por último, finalmente») y cada hecho se asigna al tramo donde está su cita. |
+| **Qué sucede después** | Cada encargo se compila con su propio texto. Se puede corregir, cancelar o confirmar uno sin tocar los demás. |
+| **Qué NO significa** | No es un hilo de conversación ni un expediente: es un asunto dentro de un dictado. |
+| **Ejemplo** | «Tres cosas: revisar medidas, recordatorio a Mauricio, revisar despachos» → encargos 1, 2 y 3. |
+| **Dónde se encuentra** | Bloque **Encargos del dictado** del laboratorio. |
+| **Referencia técnica** | `app/cerebro/encargos.py`, migración 092. |
+
+### Término: Cancelación de un encargo
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `cerebro_encargos_decisiones` (`CANCELADO`) |
+| **Nombre para el usuario** | Encargo cancelado |
+| **Qué significa** | Julio decide no ejecutar ese asunto. No es lo mismo que revocar el dictado: los otros encargos siguen vigentes. |
+| **Para qué existe** | Cancelar una propuesta todavía no ejecutada sin perder el resto del trabajo, con motivo y autor. |
+| **Quién lo utiliza** | Julio y secretaría, desde el laboratorio. |
+| **Qué lo activa** | El botón **Cancelar encargo** (o `POST /borradores/{id}/encargos/{n}/cancelar`). |
+| **Qué sucede después** | Se registra la decisión (append-only). Confirmar una acción de ese encargo responde `ENCARGO_CANCELADO`. |
+| **Qué NO significa** | No cancela los demás encargos ni el dictado. Si el encargo ya generó un recordatorio **PENDIENTE**, se cancela ese recordatorio; si ya se **ENVIÓ**, no se puede cancelar y se avisa (`ENCARGO_YA_ENVIADO`). |
+| **Ejemplo** | Cancelar el recordatorio a Mauricio deja intactas la revisión de medidas y la de despachos. |
+| **Dónde se encuentra** | Laboratorio, lista de encargos. |
+| **Referencia técnica** | `router.cancelar_encargo`, `recordatorios.cancelar`. |
+
 ### Término: Condición conservada
 
 | Campo | Contenido |
@@ -750,7 +782,8 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 ### Por nombre técnico
 
 `ACUSADA` §5 · `clave_externa` §6 · `condiciones_json` §4 ·
-`cerebro_ejecuciones` §7 · `ESCALADA` §5 · `EXTRAIDO` §7 ·
+`cerebro_ejecuciones` §7 · `cerebro_encargos_decisiones` §4 ·
+`encargo` §4 · `ESCALADA` §5 · `EXTRAIDO` §7 ·
 `gato_recordatorios` §6 · `JUSTIFICADA` §5 · `mensaje_por_confirmar` §4 ·
 `NOTIFICADA` §5 · `pago.recibido` (INFERIDO) §4 · `REGISTRADA` §5 ·
 `REQUIERE_ACLARACION` §7 · `RESUELTA` §5 · `SANDBOX` §6 · `SIN_ACCIONES` §7 ·
@@ -758,9 +791,10 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 
 ### Por nombre visible
 
-Aviso dejado §5 · Cierre con justificación §5 · Compilador §4 ·
-Condición conservada §4 · Confirmación doble §6 · Dato sin confirmar §4 ·
-Elevada al supervisor §5 · Ficha de la tarea §5 · Guarda de «el dinero ya entró» §6 ·
+Aviso dejado §5 · Cancelación de un encargo §4 · Cierre con justificación §5 ·
+Compilador §4 · Condición conservada §4 · Confirmación doble §6 ·
+Dato sin confirmar §4 · Elevada al supervisor §5 · Encargo §4 ·
+Ficha de la tarea §5 · Guarda de «el dinero ya entró» §6 ·
 Gato §6 · Hecho citado §4 · Ingreso sin confirmar §4 ·
 Mensaje autorizado del recordatorio §4 · Prioridad y plazo §5 ·
 Recepción confirmada §5 · Recordatorio programado §6 · Resultado registrado §5 ·
@@ -768,12 +802,13 @@ Retención de audio §6 · Tarea consultada §5 · Trabajo realizado §5.
 
 ### Por sinónimo
 
-«acuse» → Recepción confirmada §5 · «avisada» → Aviso dejado §5 ·
-«cita» → Hecho citado §4 · «condición» → Condición conservada §4 ·
-«duda» → Dato sin confirmar §4 · «escalar» → Elevada al supervisor §5 ·
-«expediente» → Condición conservada §4 · «marcar hecho» → Trabajo realizado §5 ·
-«no ha pagado» → Ingreso sin confirmar §4 · «plazo» → Condición conservada §4 ·
-«registrar» → Resultado registrado §5 · «revisada» → Tarea consultada §5 ·
+«acuse» → Recepción confirmada §5 · «asunto» → Encargo §4 ·
+«avisada» → Aviso dejado §5 · «cita» → Hecho citado §4 ·
+«condición» → Condición conservada §4 · «duda» → Dato sin confirmar §4 ·
+«escalar» → Elevada al supervisor §5 · «expediente» → Condición conservada §4 ·
+«marcar hecho» → Trabajo realizado §5 · «no ha pagado» → Ingreso sin confirmar §4 ·
+«plazo» → Condición conservada §4 · «registrar» → Resultado registrado §5 ·
+«revisada» → Tarea consultada §5 · «tres cosas» → Encargo §4 ·
 «vencida» → Prioridad y plazo §5.
 
 ---
@@ -801,3 +836,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v1.1 | 2026-11-15 | Revocación completa del dictado (F) y negación de instrucciones citadas (L); etiquetas visibles en el panel y el laboratorio. |
 | v1.2 | 2026-11-15 | Arquitectura futura Cerebro–Gato–módulos y separación de los flujos interno y externo (§3.4); sigue sin implementarse. |
 | v1.3 | 2026-11-16 | Condición conservada, Mensaje autorizado del recordatorio e Ingreso sin confirmar (§4); índice actualizado. Conservación de instrucciones ante el dictado espontáneo del 2026-11-16. |
+| v1.4 | 2026-11-16 | Encargo y Cancelación de un encargo (§4); un dictado con tres asuntos se administra por separado. Índice actualizado. |

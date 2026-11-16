@@ -6439,3 +6439,98 @@ documentar el contrato de confirmación por WhatsApp interno (§11 de
 - `.agents/ESTADO.md`
 - `.agents/evidencias/cerebro_conservacion_2026-11-16.txt` (nuevo)
 - `.agents/evidencias/cerebro_v84_2026-11-16.txt` (nuevo)
+
+## 2026-11-16 — Tres encargos independientes: corregir uno, cancelar otro, confirmar el tercero
+
+**Agente:** DeepSeek V4.1 Flash (OpenCode)
+**Duración:** una sesión
+**Objetivo:** criterio de aceptación del laboratorio: un dictado con tres
+asuntos, con datos, correcciones, cancelaciones y confirmaciones separadas.
+
+### Hecho
+
+1. **Línea base medida.** Con el texto de tres encargos y el motor anterior, la
+   interpretación real devolvió **una** acción (`crear_tarea_interna`), perdió el
+   tercer encargo y convirtió el recordatorio externo al ingeniero en tarea
+   interna porque «secretaría» del primer asunto teñía todo el texto. La
+   limitación era estructural, no de prompt: los hechos no representaban varios
+   asuntos.
+2. **Migración 092:** `cerebro_borradores.encargos_json`,
+   `cerebro_ejecuciones.encargo`, `cerebro_correcciones.encargo` y
+   `cerebro_encargos_decisiones` (append-only, con motivo y autor).
+3. **Segmentación determinística** por ordinales en `app/cerebro/encargos.py`;
+   los hechos se asignan al tramo de su cita. Sin marcas, un solo encargo.
+4. **Compilación por asunto:** cada encargo usa su propio texto; un tramo con
+   rol interno y sin hechos se conserva como tarea interna copiando el tramo.
+5. **Operaciones por encargo:** corrección con `encargo` (clave repetida →
+   `ENCARGO_AMBIGUO`), cancelación (`ENCARGO_CANCELADO`), cancelación real de un
+   recordatorio PENDIENTE y aviso `ENCARGO_YA_ENVIADO`.
+6. **Cifras:** `cifras_autorizadas` propaga los montos dictados y citados del
+   encargo a la guarda del mensaje; lo no dictado sigue bloqueado.
+7. **Laboratorio:** bloque «Encargos del dictado» con estado real por asunto y
+   botón de cancelación; la corrección envía el encargo.
+
+### Evidencia (real, ejecutada)
+
+| Comprobación | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **610 passed**, 1 warning, exit 0 |
+| `hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]` |
+| `db_migrate.py` | sin pendientes; **092** aplicada |
+| `scripts/evidencia_encargos.py` | `ENCARGOS: OK — tres asuntos independientes, sin mezcla` |
+| Corrección A | versión 2, `cotizacion.volumen_m3` = 35, `CORREGIDO_POR_HUMANO`, nada ejecutado |
+| Cancelación B | decisión registrada; 0 recordatorios; repetir → `repetido: true` |
+| Confirmación C | una tarea interna `NOTIFICADA`; repetir → `repetido: true` |
+| Confirmar el encargo cancelado B | 422/409 `ENCARGO_CANCELADO` |
+| Corregir `tarea.mensaje` sin indicar encargo | **409 `ENCARGO_AMBIGUO`** (encargos 1, 2, 3) |
+| Mensaje con «USD 17.000» dictado | aceptado por `cifras_autorizadas` (antes rechazado) |
+
+### Decisiones tomadas
+
+1. **El encargo es la unidad de decisión.** Corregir, cancelar o confirmar se
+   hace por asunto; el estado global no se presenta como «todo ejecutado».
+   Alternativa descartada: un borrador por asunto (rompía la API y la UI).
+2. **Segmentar por el texto, no por lo que diga el modelo.** Los ordinales son
+   determinísticos y auditables. Alternativa descartada: confiar en un índice
+   que el LLM debía numerar.
+3. **Un tramo con rol y sin hechos se conserva copiando el dictado.** No se
+   redacta ni se inventa. Alternativa descartada: descartar el tramo.
+4. **Las cifras dictadas y confirmadas son sustento.** Se pasan explícitamente
+   a la guarda; no se abre la puerta a números no dictados.
+5. **La conversación por hilos queda fuera.** «Cancela el segundo» en otro audio
+   exige mensajes persistidos y asuntos entre turnos: siguiente fase.
+
+### Bloqueos / preguntas al cliente
+
+1. La confirmación por el mismo chat de WhatsApp sigue pendiente (persistir
+   entrantes y autorizar por riesgo).
+2. El modelo marcó «240» como tentativo cuando la duda era solo sobre los 30 m³;
+   conviene ajustar el prompt en la fase conversacional.
+3. Falta probar el mismo dictado con un **audio real** (hoy el texto y el sobre
+   guardado; el audio exige credenciales de STT y revisión de CER).
+
+### Próximo paso exacto
+
+Grabar el audio de tres encargos en `/panel/cerebro`, repetir la secuencia
+corregir A / cancelar B / confirmar C desde la interfaz y comprobar en el JSON
+que solo se ejecuta C. Después, documentar el hilo conversacional mínimo
+(mensajes entrantes persistidos, asunto por mensaje) antes de conectar Gato.
+
+### Archivos tocados
+
+- `db/migrations/092_cerebro_encargos.sql` (nuevo)
+- `services/core-api/app/cerebro/encargos.py` (nuevo)
+- `services/core-api/app/cerebro/compilador.py`
+- `services/core-api/app/cerebro/extractor.py`
+- `services/core-api/app/cerebro/hechos.py`
+- `services/core-api/app/cerebro/revision.py`
+- `services/core-api/app/cerebro/router.py`
+- `services/core-api/app/asistente/recordatorios.py`
+- `services/core-api/app/web/templates/cerebro_lab.html`
+- `services/core-api/tests/test_v95_encargos.py` (nuevo)
+- `scripts/evidencia_encargos.py` (nuevo)
+- `docs/HORMINOR_MANUAL_FUNCIONAL.md` (v1.4)
+- `docs/CEREBRO_MATRIZ_BRECHAS.md` (§7)
+- `docs/CONTINUIDAD_CEREBRO.md` (v1.2)
+- `.agents/ESTADO.md`
+- `.agents/evidencias/cerebro_encargos_2026-11-16.txt` (nuevo)

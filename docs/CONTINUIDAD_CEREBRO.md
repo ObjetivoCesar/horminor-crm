@@ -5,8 +5,8 @@
 > qué se decidió, qué NO se debe hacer todavía y cuál es el siguiente paso.
 >
 > **Fecha:** 2026-11-16 · **Corte:** Cerebro fases 0–2 + incremento v2 +
-> conservación de instrucciones ·
-> **Suites:** 601 pruebas en verde · **Migraciones:** 085–091.
+> conservación de instrucciones + encargos independientes ·
+> **Suites:** 610 pruebas en verde · **Migraciones:** 085–092.
 >
 > **Documentos hermanos.**
 > - Explicación funcional: `docs/HORMINOR_MANUAL_FUNCIONAL.md`
@@ -28,6 +28,7 @@
 | Tareas internas con aviso, vista, acuse, cierre, prioridad, plazo y escalada | Funciona | migración 088 y 090; `cerebro_tareas_internas_2026-11-15.txt` |
 | Condiciones conservadas con cita (plazo, entrega contra pago, expediente) | Funciona | migración 091; `cerebro_conservacion_2026-11-16.txt` |
 | Recordatorio con mensaje autorizado y envío inmediato confirmado | Funciona | `test_v94_conservacion.py`; guardas 422 |
+| Varios encargos en un dictado, con corrección, cancelación y confirmación por separado | Funciona | migración 092; `test_v95_encargos.py`; `cerebro_encargos_2026-11-16.txt` |
 | Guarda de dinero y doble confirmación | Funciona | `cerebro_guarda_dinero_2026-11-15.txt` |
 | Revocación completa y negación de instrucción citada | Funciona | `test_v92_adversarial.py`; en vivo |
 | Panel: franja persistente, ficha de tarea, etiquetas visibles | Funciona | navegador verificado |
@@ -38,6 +39,10 @@
 **No implementado todavía** (y así debe decirse):
 
 - Conversación por WhatsApp (entrantes no persistidos).
+- **Hilos de conversación y asuntos que sobreviven entre mensajes.** El
+  laboratorio separa los encargos *dentro de un dictado*; mantener ese hilo
+  cuando Julio responde «cancela el segundo» en otro audio exige conversación
+  persistida (siguiente fase).
 - Confirmación por el mismo chat de WhatsApp: cuando se conecte, Julio enviará un
   audio, leerá el resumen, corregirá y confirmará en el hilo; exige persistir
   entrantes y autorizar por riesgo, no solo por el número de teléfono.
@@ -133,7 +138,7 @@ docker ps --filter name=orminorth --format "{{.Names}}  {{.Status}}"
 # migraciones (deben estar 085 a 090 aplicadas)
 docker compose run --rm --no-deps core-api python scripts/db_migrate.py
 
-# suite completa (hoy 601)
+# suite completa (hoy 610)
 docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto
 
 # candado del Hito 3
@@ -141,6 +146,9 @@ docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py
 
 # conservación de instrucciones sobre el dictado real (sin LLM)
 docker compose run --rm --no-deps core-api python scripts/evidencia_conservacion.py
+
+# tres encargos independientes (sin LLM)
+docker compose run --rm --no-deps core-api python scripts/evidencia_encargos.py
 
 # evidencia del ciclo de tareas internas
 docker compose run --rm --no-deps core-api python scripts/evidencia_tareas_internas.py
@@ -168,8 +176,9 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 | `services/core-api/app/cerebro/router.py` | endpoints de interpretar, corregir, confirmar y tareas |
 | `services/core-api/app/web/templates/cerebro_lab.html` | laboratorio (uso interno de prueba) |
 | `services/core-api/app/web/templates/panel.html` | franja, campanita, tareas y etiquetas visibles |
-| `db/migrations/085…091` | esquema de voz, cerebro, correcciones, tareas, acuse y condiciones |
-| `services/core-api/tests/` | 601 pruebas; `test_v92` adversarial, `test_v93` manual y `test_v94` conservación |
+| `db/migrations/085…092` | esquema de voz, cerebro, correcciones, tareas, acuse, condiciones y encargos |
+| `services/core-api/tests/` | 610 pruebas; `test_v92` adversarial, `test_v93` manual, `test_v94` conservación y `test_v95` encargos |
+| `services/core-api/app/cerebro/encargos.py` | segmentación del dictado en asuntos independientes |
 | `scripts/evidencia_*.py` | evidencia reproducible |
 | `docs/HORMINOR_MANUAL_FUNCIONAL.md` | **Manual Vivo** (fuente única de definiciones) |
 | `docs/CEREBRO_MATRIZ_BRECHAS.md` | brechas y estado real por requisito |
@@ -209,3 +218,4 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 |---|---|---|
 | v1 | 2026-11-15 | Documento de continuidad: estado, arquitectura Cerebro/Gato, dos flujos, prioridades y reglas. |
 | v1.1 | 2026-11-16 | Conservación de condiciones (migración 091), mensaje autorizado del recordatorio; 601 pruebas. Se registra que la confirmación por el mismo chat de WhatsApp es futura. |
+| v1.2 | 2026-11-16 | Encargos independientes (migración 092): corregir, cancelar y confirmar por asunto; 610 pruebas. La conversación por hilos sigue siendo de la siguiente fase. |

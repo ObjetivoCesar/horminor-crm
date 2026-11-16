@@ -14,7 +14,6 @@ import unicodedata
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Mapping, Sequence
-
 from ..voz import cedula_valida
 from .compilador import dictado_revocado
 from .dinero import dinero_ya_entro
@@ -132,6 +131,7 @@ def corregir(
     *,
     tipo: str | None = None,
     hablante: str = "SUPERADMIN",
+    encargo: int | None = None,
 ) -> HechoCitado:
     """Devuelve el hecho corregido; si no existía, lo crea sin cita."""
     tipo_final = tipo or (hecho.tipo if hecho is not None else "TEXTO")
@@ -157,6 +157,11 @@ def corregir(
         checksum_valido=(
             cedula_valida(str(convertido)) if tipo_final == "CEDULA" else None
         ),
+        encargo=(
+            encargo
+            if encargo is not None
+            else (hecho.encargo if hecho is not None else 1)
+        ),
     )
 
 
@@ -166,12 +171,20 @@ def aplicar(
     *,
     tipos: Mapping[str, str] | None = None,
     hablante: str = "SUPERADMIN",
+    encargo: int | None = None,
 ) -> list[HechoCitado]:
-    """Aplica correcciones por clave y conserva el resto de los hechos."""
+    """Aplica correcciones por clave y conserva el resto de los hechos.
+
+    Si se indica `encargo`, la corrección alcanza solo a ese asunto: dos
+    encargos pueden tener la misma clave (dos `tarea.mensaje`) sin pisarse.
+    """
     salida: list[HechoCitado] = []
     pendientes = {clave: valor for clave, valor in correcciones.items()}
     for hecho in hechos:
-        if hecho.clave in pendientes:
+        aplica = hecho.clave in pendientes and (
+            encargo is None or hecho.encargo == encargo
+        )
+        if aplica:
             salida.append(
                 corregir(
                     hecho,
@@ -179,6 +192,7 @@ def aplicar(
                     pendientes.pop(hecho.clave),
                     tipo=(tipos or {}).get(hecho.clave),
                     hablante=hablante,
+                    encargo=hecho.encargo,
                 )
             )
         else:
@@ -191,6 +205,7 @@ def aplicar(
                 valor,
                 tipo=(tipos or {}).get(clave, "TEXTO"),
                 hablante=hablante,
+                encargo=encargo,
             )
         )
     return salida
@@ -228,6 +243,36 @@ def _personas(hechos: Sequence[HechoCitado]) -> list[str]:
 
 
 def resumen_legible(
+    hechos: Sequence[HechoCitado],
+    *,
+    texto: str | None = None,
+    condiciones: Sequence[Any] = (),
+    textos_por_encargo: Mapping[int, str] | None = None,
+) -> str:
+    """Resumen por encargo cuando el dictado trae varios asuntos."""
+    lista = list(hechos)
+    encargos = sorted({hecho.encargo for hecho in lista})
+    if len(encargos) <= 1:
+        return _resumen_plano(lista, texto=texto, condiciones=condiciones)
+
+    partes: list[str] = []
+    for indice in encargos:
+        del_encargo = [h for h in lista if h.encargo == indice]
+        propias = [
+            c for c in condiciones if getattr(c, "encargo", 1) == indice
+        ]
+        partes.append(
+            f"Encargo {indice}: "
+            + _resumen_plano(
+                del_encargo,
+                texto=(textos_por_encargo or {}).get(indice),
+                condiciones=propias,
+            )
+        )
+    return " ".join(partes)
+
+
+def _resumen_plano(
     hechos: Sequence[HechoCitado],
     *,
     texto: str | None = None,

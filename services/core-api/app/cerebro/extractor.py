@@ -40,6 +40,7 @@ from .compilador import (
     dictado_revocado,
     normalizar_resistencia,
 )
+from .encargos import asignar, segmentar
 from .hechos import (
     Evidencia,
     HechoCitado,
@@ -385,7 +386,8 @@ def construir_hechos(
     notas.extend(_inferir_telefono(secuencias, hechos, texto_crudo))
     notas.extend(_completar_cuando_de_tarea(hechos, mapa.texto))
     notas.extend(_degradar_pago_no_declarado(hechos, texto_crudo))
-    return hechos, notas
+    # Cada hecho queda en el encargo (tramo) del dictado donde está su cita.
+    return asignar(hechos, segmentar(texto_crudo)), notas
 
 
 # «No recibido» es una afirmación financiera. Solo se acepta como dato cuando
@@ -890,14 +892,21 @@ async def interpretar(
         texto=mapa.texto,
     )
     notas.extend(notas_compiladas)
+    hechos_finales = list(borrador.hechos)
+    textos_por_encargo = {
+        segmento.indice: segmento.texto for segmento in segmentar(mapa.texto)
+    }
 
     return {
         "sobre": sobre,
-        "hechos": hechos,
+        "hechos": hechos_finales,
         "borrador": borrador,
         "notas": notas,
         "resumen": resumen_legible(
-            hechos, texto=mapa.texto, condiciones=borrador.condiciones
+            hechos_finales,
+            texto=mapa.texto,
+            condiciones=borrador.condiciones,
+            textos_por_encargo=textos_por_encargo,
         ),
         "cliente": cliente,
         "texto_normalizado": mapa.texto,
@@ -921,10 +930,20 @@ async def recompilar(
         pool, lista, intencion=intencion, sandbox=sandbox, hoy=hoy, texto=texto
     )
     return {
-        "hechos": lista,
+        "hechos": list(borrador.hechos),
         "borrador": borrador,
         "notas": notas,
         "resumen": resumen_legible(
-            lista, texto=texto, condiciones=borrador.condiciones
+            list(borrador.hechos),
+            texto=texto,
+            condiciones=borrador.condiciones,
+            textos_por_encargo=(
+                {
+                    segmento.indice: segmento.texto
+                    for segmento in segmentar(texto or "")
+                }
+                if texto
+                else None
+            ),
         ),
     }
