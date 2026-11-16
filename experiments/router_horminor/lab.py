@@ -76,6 +76,9 @@ overflow:auto;font-size:12px;max-height:360px}
 .msg .quien{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
 .responder{display:flex;gap:8px;align-items:flex-end;margin-top:8px}
 .responder textarea{min-height:56px}
+details.card summary{cursor:pointer;color:var(--dim);font-size:12px;
+letter-spacing:.06em;text-transform:uppercase}
+details.card[open] summary{margin-bottom:10px}
 </style></head><body>
 <header><b>Router Horminor</b><span>prototipo aislado &middot; propone, no ejecuta</span></header>
 <main>
@@ -86,6 +89,7 @@ overflow:auto;font-size:12px;max-height:360px}
       <button id="btnEjemplo">Poner ejemplo</button>
       <span class="aviso">Al confirmar se muestra el plan; no se crea nada real.</span>
     </div>
+    <div class="aviso" id="avisoDictado" style="display:none;color:var(--danger);margin-top:8px"></div>
   </section>
   <section class="card" id="resultado" style="display:none">
     <div class="burbuja"><div class="quien">Cerebro</div><p class="resumen" id="resumen"></p></div>
@@ -103,13 +107,22 @@ overflow:auto;font-size:12px;max-height:360px}
       <button class="primary" id="btnResponder">Enviar</button>
     </div>
   </section>
-  <section class="card" id="erroresCard">
-    <h3 style="margin-top:0">Errores y correcciones</h3>
+  <details class="card" id="erroresCard">
+    <summary>Historial de correcciones (dev)</summary>
     <div class="errores" id="errores"><span class="detalle">Sin correcciones todavia.</span></div>
-  </section>
+  </details>
 </main>
 <script>
 let borrador = null;
+const CLAVE_DICTADO = 'router_dictado';
+const CLAVE_BORRADOR = 'router_borrador';
+function guardar() {
+  try {
+    localStorage.setItem(CLAVE_DICTADO, $('dictado').value);
+    if (borrador) localStorage.setItem(CLAVE_BORRADOR, JSON.stringify(borrador));
+    else localStorage.removeItem(CLAVE_BORRADOR);
+  } catch (e) { /* silencio */ }
+}
 const $ = (id) => document.getElementById(id);
 const color = (r) => r === 'SECRETARIA' ? 'sec' : r === 'JEFE_PLANTA' ? 'plan' : r === 'JULIO' ? 'julio' : 'warn';
 async function post(ruta, cuerpo) {
@@ -143,7 +156,7 @@ function pintar() {
       if (!frase) return;
       const d = await post('/api/corregir', {borrador, frase});
       if (d.errores.length) { alert(d.errores.join('\\n')); return; }
-      borrador = d.borrador; pintar(); cargarErrores();
+      borrador = d.borrador; pintar(); cargarErrores(); guardar();
     };
     const b2 = document.createElement('button'); b2.className='ghost'; b2.textContent='Cancelar';
     b2.onclick = async () => {
@@ -151,7 +164,7 @@ function pintar() {
       if (!frase) return;
       const d = await post('/api/corregir', {borrador, frase});
       if (d.errores.length) { alert(d.errores.join('\\n')); return; }
-      borrador = d.borrador; pintar(); cargarErrores();
+      borrador = d.borrador; pintar(); cargarErrores(); guardar();
     };
     acc.append(b1, b2); div.appendChild(acc);
     caja.appendChild(div);
@@ -227,6 +240,7 @@ async function responder() {
         + (d.problemas && d.problemas.length ? d.problemas.join('; ') : 'OK') + '</p>';
     }
     cargarErrores();
+    guardar();
   } catch (e) {
     agregar('cerebro', 'No pude responder: ' + e.message);
   } finally {
@@ -239,9 +253,17 @@ $('respuesta').addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); responder(); }
 });
 
+$('dictado').addEventListener('input', guardar);
 $('btnInterpretar').onclick = async () => {
   const texto = $('dictado').value.trim();
-  if (!texto) return;
+  if (!texto) {
+    const aviso = $('avisoDictado');
+    aviso.textContent = 'Escribe o pega el dictado primero.';
+    aviso.style.display = 'block';
+    $('dictado').focus();
+    return;
+  }
+  $('avisoDictado').style.display = 'none';
   $('btnInterpretar').disabled = true;
   try {
     const d = await post('/api/dictar', {texto});
@@ -251,10 +273,13 @@ $('btnInterpretar').onclick = async () => {
     $('conv').innerHTML = '';
     agregar('julio', texto);
     agregar('cerebro', borrador.resumen);
+    guardar();
   } catch (e) { alert(e.message); } finally { $('btnInterpretar').disabled = false; }
 };
 $('btnEjemplo').onclick = () => {
   $('dictado').value = 'Tres cosas para hoy: que secretaria revise el pago de La Pradera, que contacte al cliente para confirmar la fecha de entrega, y que el jefe de planta prepare la coordinacion del despacho. La salida del camion queda condicionada a que se confirme el anticipo.';
+  guardar();
+  $('btnInterpretar').click();
 };
 $('btnTodo').onclick = () => document.querySelectorAll('#encargos input[type=checkbox]').forEach(c => c.checked = true);
 $('btnConfirmar').onclick = async () => {
@@ -264,6 +289,19 @@ $('btnConfirmar').onclick = async () => {
   $('plan').innerHTML = '<h3>Plan de confirmacion</h3><pre>' + JSON.stringify(d.plan, null, 1) + '</pre>'
     + '<p class="detalle">Correspondencia: ' + (d.problemas.length ? d.problemas.join('; ') : 'OK') + '</p>';
 };
+window.addEventListener('load', () => {
+  try {
+    const guardadoTexto = localStorage.getItem(CLAVE_DICTADO);
+    if (guardadoTexto) $('dictado').value = guardadoTexto;
+    const guardadoBorrador = localStorage.getItem(CLAVE_BORRADOR);
+    if (guardadoBorrador) {
+      borrador = JSON.parse(guardadoBorrador);
+      pintar();
+      $('conv').innerHTML = '';
+      agregar('cerebro', borrador.resumen);
+    }
+  } catch (e) { /* silencio */ }
+});
 </script></body></html>
 """
 
@@ -290,8 +328,8 @@ class ResponderIn(BaseModel):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def inicio() -> str:
-    return HTML
+async def inicio() -> HTMLResponse:
+    return HTMLResponse(HTML, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.post("/api/dictar")
