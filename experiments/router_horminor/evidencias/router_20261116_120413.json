@@ -1,0 +1,351 @@
+{
+ "dictado": "Tres cosas para hoy: que secretaría revise el pago de La Pradera, que contacte al cliente para confirmar la fecha de entrega, y que el jefe de planta prepare la coordinación del despacho. La salida del camión queda condicionada a que se confirme el anticipo.",
+ "borrador": {
+  "version": 1,
+  "padre": null,
+  "resumen": "Julio, entendí 3 encargo(s): 2 tarea(s) para secretaría, 1 para el jefe de planta. E1 Revisar el pago de La Pradera (con datos por averiguar) · E2 Contactar al cliente para confirmar la fecha de entrega (con datos por averiguar) · E3 Preparar la coordinación del despacho (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Revisar el pago de La Pradera",
+    "que_hacer": "Revisar el pago correspondiente a La Pradera y verificar su estado (si está recibido, pendiente o acreditado).",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": null,
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Confirmar el estado del pago de La Pradera",
+    "plazo": "hoy",
+    "datos": {
+     "tarea.mensaje": "revisar el pago de La Pradera",
+     "tarea.destinatario": "secretaría"
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "monto y referencia del pago de La Pradera",
+     "comprobante o registro bancario del pago"
+    ],
+    "requiere_autorizacion": false,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "que secretaría revise el pago de La Pradera"
+    ],
+    "origen": "DICTADO"
+   },
+   {
+    "id": "E2",
+    "titulo": "Contactar al cliente para confirmar la fecha de entrega",
+    "que_hacer": "Comunicarse con el cliente para confirmar la fecha de entrega acordada.",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": "cliente de La Pradera",
+    "canal": "LLAMADA",
+    "ambito": "EXTERNO",
+    "resultado_esperado": "Fecha de entrega confirmada con el cliente",
+    "plazo": "hoy",
+    "datos": {
+     "tarea.mensaje": "contactar al cliente para confirmar la fecha de entrega"
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "nombre y número de teléfono del cliente",
+     "fecha de entrega a confirmar"
+    ],
+    "requiere_autorizacion": false,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "que contacte al cliente para confirmar la fecha de entrega"
+    ],
+    "origen": "DICTADO"
+   },
+   {
+    "id": "E3",
+    "titulo": "Preparar la coordinación del despacho",
+    "que_hacer": "Preparar la coordinación del despacho (camión, personal y logística) sin ejecutar la salida hasta que se confirme el anticipo.",
+    "responsable": "JEFE_PLANTA",
+    "responsable_sugerido": true,
+    "destinatario": null,
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Coordinación de despacho lista, condicionada a la confirmación del anticipo",
+    "plazo": "hoy",
+    "datos": {
+     "tarea.destinatario": "jefe de planta",
+     "tarea.mensaje": "preparar la coordinación del despacho"
+    },
+    "condiciones": [
+     "CONDICION: La salida del camión queda condicionada a que se confirme el anticipo.",
+     "DEPENDENCIA: La coordinación del despacho depende de que se confirme el anticipo antes de la salida del camión."
+    ],
+    "por_investigar": [
+     "volumen exacto a despachar",
+     "fecha y hora de salida del camión",
+     "disponibilidad de camión y operarios"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "CONDICIONADO",
+    "citas": [
+     "que el jefe de planta prepare la coordinación del despacho",
+     "La salida del camión queda condicionada a que se confirme el anticipo"
+    ],
+    "origen": "DICTADO"
+   }
+  ],
+  "informacion_sin_encargo": [],
+  "consultas": [],
+  "constancias": [
+   "La salida del camión queda condicionada a que se confirme el anticipo"
+  ],
+  "decisiones_julio": [
+   "La salida del camión queda condicionada a que se confirme el anticipo"
+  ],
+  "preguntas": [],
+  "notas": []
+ },
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 1987,
+   "usage": {
+    "prompt_tokens": 808,
+    "completion_tokens": 401,
+    "total_tokens": 1209,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 168
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 3348,
+   "usage": {
+    "prompt_tokens": 950,
+    "completion_tokens": 659,
+    "total_tokens": 1609,
+    "prompt_tokens_details": {
+     "cached_tokens": 768
+    },
+    "prompt_cache_hit_tokens": 768,
+    "prompt_cache_miss_tokens": 182
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 1651,
+   "usage": {
+    "prompt_tokens": 588,
+    "completion_tokens": 224,
+    "total_tokens": 812,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 204
+   },
+   "error": null
+  }
+ ],
+ "correccion": {
+  "frase": "No era para secretaría, era para el jefe de planta lo de contactar al cliente",
+  "errores": [],
+  "meta": {
+   "via": "deterministica"
+  }
+ },
+ "borrador_corregido": {
+  "version": 2,
+  "padre": 1,
+  "resumen": "Julio, entendí 3 encargo(s): 2 tarea(s) para secretaría, 1 para el jefe de planta. E1 Revisar el pago de La Pradera (con datos por averiguar) · E2 Contactar al cliente para confirmar la fecha de entrega (con datos por averiguar) · E3 Preparar la coordinación del despacho (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Revisar el pago de La Pradera",
+    "que_hacer": "Revisar el pago correspondiente a La Pradera y verificar su estado (si está recibido, pendiente o acreditado).",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": null,
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Confirmar el estado del pago de La Pradera",
+    "plazo": "hoy",
+    "datos": {
+     "tarea.mensaje": "revisar el pago de La Pradera",
+     "tarea.destinatario": "secretaría"
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "monto y referencia del pago de La Pradera",
+     "comprobante o registro bancario del pago"
+    ],
+    "requiere_autorizacion": false,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "que secretaría revise el pago de La Pradera"
+    ],
+    "origen": "DICTADO"
+   },
+   {
+    "id": "E2",
+    "titulo": "Contactar al cliente para confirmar la fecha de entrega",
+    "que_hacer": "Comunicarse con el cliente para confirmar la fecha de entrega acordada.",
+    "responsable": "JEFE_PLANTA",
+    "responsable_sugerido": false,
+    "destinatario": "cliente de La Pradera",
+    "canal": "LLAMADA",
+    "ambito": "EXTERNO",
+    "resultado_esperado": "Fecha de entrega confirmada con el cliente",
+    "plazo": "hoy",
+    "datos": {
+     "tarea.mensaje": "contactar al cliente para confirmar la fecha de entrega"
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "nombre y número de teléfono del cliente",
+     "fecha de entrega a confirmar"
+    ],
+    "requiere_autorizacion": false,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "que contacte al cliente para confirmar la fecha de entrega"
+    ],
+    "origen": "DICTADO"
+   },
+   {
+    "id": "E3",
+    "titulo": "Preparar la coordinación del despacho",
+    "que_hacer": "Preparar la coordinación del despacho (camión, personal y logística) sin ejecutar la salida hasta que se confirme el anticipo.",
+    "responsable": "JEFE_PLANTA",
+    "responsable_sugerido": true,
+    "destinatario": null,
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Coordinación de despacho lista, condicionada a la confirmación del anticipo",
+    "plazo": "hoy",
+    "datos": {
+     "tarea.destinatario": "jefe de planta",
+     "tarea.mensaje": "preparar la coordinación del despacho"
+    },
+    "condiciones": [
+     "CONDICION: La salida del camión queda condicionada a que se confirme el anticipo.",
+     "DEPENDENCIA: La coordinación del despacho depende de que se confirme el anticipo antes de la salida del camión."
+    ],
+    "por_investigar": [
+     "volumen exacto a despachar",
+     "fecha y hora de salida del camión",
+     "disponibilidad de camión y operarios"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "CONDICIONADO",
+    "citas": [
+     "que el jefe de planta prepare la coordinación del despacho",
+     "La salida del camión queda condicionada a que se confirme el anticipo"
+    ],
+    "origen": "DICTADO"
+   }
+  ],
+  "informacion_sin_encargo": [],
+  "consultas": [],
+  "constancias": [
+   "La salida del camión queda condicionada a que se confirme el anticipo"
+  ],
+  "decisiones_julio": [
+   "La salida del camión queda condicionada a que se confirme el anticipo"
+  ],
+  "preguntas": [],
+  "notas": [
+   "Responsable corregido a JEFE_PLANTA en E2",
+   "Corrección aplicada a E2"
+  ]
+ },
+ "plan": {
+  "confirmados": [
+   "E1",
+   "E2",
+   "E3"
+  ],
+  "tareas": [
+   {
+    "encargo_id": "E1",
+    "titulo": "Revisar el pago de La Pradera",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Confirmar el estado del pago de La Pradera",
+    "plazo": "hoy",
+    "clave_idempotencia": "04688da6ec39203c3d7a4aa4",
+    "condiciones": [],
+    "datos_por_investigar": [
+     "monto y referencia del pago de La Pradera",
+     "comprobante o registro bancario del pago"
+    ]
+   },
+   {
+    "encargo_id": "E2",
+    "titulo": "Contactar al cliente para confirmar la fecha de entrega",
+    "responsable": "JEFE_PLANTA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Fecha de entrega confirmada con el cliente",
+    "plazo": "hoy",
+    "clave_idempotencia": "9811e107745f2ccc8796d2f5",
+    "condiciones": [],
+    "datos_por_investigar": [
+     "nombre y número de teléfono del cliente",
+     "fecha de entrega a confirmar"
+    ]
+   },
+   {
+    "encargo_id": "E3",
+    "titulo": "Preparar la coordinación del despacho",
+    "responsable": "JEFE_PLANTA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Coordinación de despacho lista, condicionada a la confirmación del anticipo",
+    "plazo": "hoy",
+    "clave_idempotencia": "c2d67a5c2cd7c08e877cb3df",
+    "condiciones": [
+     "CONDICION: La salida del camión queda condicionada a que se confirme el anticipo.",
+     "DEPENDENCIA: La coordinación del despacho depende de que se confirme el anticipo antes de la salida del camión."
+    ],
+    "datos_por_investigar": [
+     "volumen exacto a despachar",
+     "fecha y hora de salida del camión",
+     "disponibilidad de camión y operarios"
+    ]
+   }
+  ],
+  "comunicaciones": [],
+  "operaciones": [
+   {
+    "encargo_id": "E3",
+    "operacion": "OPERACION_CONDICIONADA",
+    "autorizada": false,
+    "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+   }
+  ],
+  "pendientes": [],
+  "advertencias": [
+   "E3: CONDICION: La salida del camión queda condicionada a que se confirme el anticipo.; DEPENDENCIA: La coordinación del despacho depende de que se confirme el anticipo antes de la salida del camión."
+  ]
+ },
+ "correspondencia": []
+}

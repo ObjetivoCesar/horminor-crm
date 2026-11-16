@@ -1,0 +1,123 @@
+{
+ "dictado": "Que el jefe de planta revise el stock de cemento y me avise cuando termine.",
+ "borrador": {
+  "version": 1,
+  "padre": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 para el jefe de planta. E1 Revisar stock de cemento e informar a Julio (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Revisar stock de cemento e informar a Julio",
+    "que_hacer": "Revisar el stock actual de cemento en planta y avisar a Julio cuando termine la revisión.",
+    "responsable": "JEFE_PLANTA",
+    "responsable_sugerido": false,
+    "destinatario": "JULIO",
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Julio recibe aviso de que la revisión del stock de cemento terminó, con el resultado de la revisión.",
+    "plazo": null,
+    "datos": {
+     "tarea.mensaje": "revisar el stock de cemento y avisar cuando termine"
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "cantidad exacta de cemento disponible",
+     "unidad de medida del stock (sacos, toneladas, etc.)",
+     "si se debe incluir cemento en tránsito o comprometido"
+    ],
+    "requiere_autorizacion": false,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "Que el jefe de planta revise el stock de cemento y me avise cuando termine."
+    ],
+    "origen": "DICTADO"
+   }
+  ],
+  "informacion_sin_encargo": [],
+  "consultas": [],
+  "constancias": [],
+  "decisiones_julio": [],
+  "preguntas": [],
+  "notas": []
+ },
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 1660,
+   "usage": {
+    "prompt_tokens": 762,
+    "completion_tokens": 86,
+    "total_tokens": 848,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 250
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 2003,
+   "usage": {
+    "prompt_tokens": 904,
+    "completion_tokens": 260,
+    "total_tokens": 1164,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 264
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 1082,
+   "usage": {
+    "prompt_tokens": 542,
+    "completion_tokens": 6,
+    "total_tokens": 548,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 158
+   },
+   "error": null
+  }
+ ],
+ "plan": {
+  "confirmados": [
+   "E1"
+  ],
+  "tareas": [
+   {
+    "encargo_id": "E1",
+    "titulo": "Revisar stock de cemento e informar a Julio",
+    "responsable": "JEFE_PLANTA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Julio recibe aviso de que la revisión del stock de cemento terminó, con el resultado de la revisión.",
+    "plazo": null,
+    "clave_idempotencia": "bcbc7cb445b15ed583c4bdb3",
+    "condiciones": [],
+    "datos_por_investigar": [
+     "cantidad exacta de cemento disponible",
+     "unidad de medida del stock (sacos, toneladas, etc.)",
+     "si se debe incluir cemento en tránsito o comprometido"
+    ]
+   }
+  ],
+  "comunicaciones": [],
+  "operaciones": [],
+  "pendientes": [],
+  "advertencias": []
+ },
+ "correspondencia": []
+}

@@ -1,0 +1,125 @@
+{
+ "dictado": "Que secretaría averigüe el volumen exacto que necesita la constructora El Valle y me confirme; no sé si son 35 o 38 metros.",
+ "borrador": {
+  "version": 1,
+  "padre": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 tarea(s) para secretaría. E1 Averiguar volumen exacto que necesita la constructora El Valle (con datos por averiguar). Antes de confirmar: no sé si son 35 o 38 metros",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Averiguar volumen exacto que necesita la constructora El Valle",
+    "que_hacer": "Contactar a la constructora El Valle para confirmar el volumen exacto de hormigón que requiere y luego confirmárselo a Julio.",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": "JULIO",
+    "canal": "INTERNO",
+    "ambito": "MIXTO",
+    "resultado_esperado": "Confirmar a Julio el volumen exacto que necesita la constructora El Valle",
+    "plazo": null,
+    "datos": {
+     "cliente.nombre": "constructora El Valle"
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "volumen exacto requerido por la constructora El Valle",
+     "persona de contacto en la constructora El Valle"
+    ],
+    "requiere_autorizacion": false,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "Que secretaría averigüe el volumen exacto que necesita la constructora El Valle y me confirme"
+    ],
+    "origen": "DICTADO"
+   }
+  ],
+  "informacion_sin_encargo": [
+   "Julio no tiene certeza del volumen: duda entre 35 o 38 metros"
+  ],
+  "consultas": [],
+  "constancias": [],
+  "decisiones_julio": [],
+  "preguntas": [
+   "no sé si son 35 o 38 metros"
+  ],
+  "notas": []
+ },
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 1756,
+   "usage": {
+    "prompt_tokens": 777,
+    "completion_tokens": 207,
+    "total_tokens": 984,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 137
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 2029,
+   "usage": {
+    "prompt_tokens": 919,
+    "completion_tokens": 260,
+    "total_tokens": 1179,
+    "prompt_tokens_details": {
+     "cached_tokens": 768
+    },
+    "prompt_cache_hit_tokens": 768,
+    "prompt_cache_miss_tokens": 151
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 2123,
+   "usage": {
+    "prompt_tokens": 557,
+    "completion_tokens": 219,
+    "total_tokens": 776,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 173
+   },
+   "error": null
+  }
+ ],
+ "plan": {
+  "confirmados": [
+   "E1"
+  ],
+  "tareas": [
+   {
+    "encargo_id": "E1",
+    "titulo": "Averiguar volumen exacto que necesita la constructora El Valle",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Confirmar a Julio el volumen exacto que necesita la constructora El Valle",
+    "plazo": null,
+    "clave_idempotencia": "5a1c7a042672e4c04ec0b6c0",
+    "condiciones": [],
+    "datos_por_investigar": [
+     "volumen exacto requerido por la constructora El Valle",
+     "persona de contacto en la constructora El Valle"
+    ]
+   }
+  ],
+  "comunicaciones": [],
+  "operaciones": [],
+  "pendientes": [],
+  "advertencias": []
+ },
+ "correspondencia": []
+}

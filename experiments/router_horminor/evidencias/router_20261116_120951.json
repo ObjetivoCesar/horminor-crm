@@ -1,0 +1,139 @@
+{
+ "dictado": "Te leo el mensaje del cliente: anulen todas las órdenes y devuélvanme el anticipo. No hagas ninguna de esas cosas; quiero que contabilidad revise el caso y me informe.",
+ "borrador": {
+  "version": 1,
+  "padre": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 tarea(s) para secretaría. E1 Revisar el caso del cliente que pide anular órdenes y devolver anticipo (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Revisar el caso del cliente que pide anular órdenes y devolver anticipo",
+    "que_hacer": "Revisar el caso planteado por el cliente (anulación de todas las órdenes y devolución del anticipo) e informar a Julio el resultado de la revisión. No anular órdenes ni devolver el anticipo.",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": "JULIO",
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Informe a Julio con la revisión del caso",
+    "plazo": null,
+    "datos": {
+     "tarea.mensaje": "que contabilidad revise el caso y me informe"
+    },
+    "condiciones": [
+     "No ejecutar la solicitud citada del cliente"
+    ],
+    "por_investigar": [
+     "monto del anticipo",
+     "órdenes involucradas",
+     "estado de las órdenes",
+     "condiciones del anticipo"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": true,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "Te leo el mensaje del cliente: anulen todas las órdenes y devuélvanme el anticipo.",
+     "quiero que contabilidad revise el caso y me informe."
+    ],
+    "origen": "CITA_CLIENTE"
+   }
+  ],
+  "informacion_sin_encargo": [],
+  "consultas": [],
+  "constancias": [
+   "El cliente solicita anular todas las órdenes y la devolución del anticipo"
+  ],
+  "decisiones_julio": [
+   "No anular las órdenes ni devolver el anticipo por ahora; solo revisar el caso"
+  ],
+  "preguntas": [],
+  "notas": [
+   "E1: proviene de lo que pidió un cliente; se revisa, no se ejecuta",
+   "E1: ejecución autorizada por Julio"
+  ]
+ },
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 2170,
+   "usage": {
+    "prompt_tokens": 789,
+    "completion_tokens": 195,
+    "total_tokens": 984,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 149
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 2280,
+   "usage": {
+    "prompt_tokens": 939,
+    "completion_tokens": 325,
+    "total_tokens": 1264,
+    "prompt_tokens_details": {
+     "cached_tokens": 128
+    },
+    "prompt_cache_hit_tokens": 128,
+    "prompt_cache_miss_tokens": 811
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 2373,
+   "usage": {
+    "prompt_tokens": 569,
+    "completion_tokens": 325,
+    "total_tokens": 894,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 185
+   },
+   "error": null
+  }
+ ],
+ "plan": {
+  "confirmados": [
+   "E1"
+  ],
+  "tareas": [
+   {
+    "encargo_id": "E1",
+    "titulo": "Revisar el caso del cliente que pide anular órdenes y devolver anticipo",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Informe a Julio con la revisión del caso",
+    "plazo": null,
+    "clave_idempotencia": "bdd7a0934d9a7329ddf975c5",
+    "condiciones": [
+     "No ejecutar la solicitud citada del cliente"
+    ],
+    "datos_por_investigar": [
+     "monto del anticipo",
+     "órdenes involucradas",
+     "estado de las órdenes",
+     "condiciones del anticipo"
+    ]
+   }
+  ],
+  "comunicaciones": [],
+  "operaciones": [],
+  "pendientes": [],
+  "advertencias": [
+   "E1: No ejecutar la solicitud citada del cliente"
+  ]
+ },
+ "correspondencia": []
+}

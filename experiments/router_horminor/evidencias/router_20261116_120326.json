@@ -1,0 +1,128 @@
+{
+ "dictado": "Oye, mañana hay fundida temprano. Que los chicos estén a las cinco de la mañana en la planta, y que el jefe de planta me avise si falta algún operario.",
+ "borrador": {
+  "version": 1,
+  "padre": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 para el jefe de planta. E1 Confirmar asistencia de operarios a la fundida temprana (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Confirmar asistencia de operarios a la fundida temprana",
+    "que_hacer": "Asegurar que los operarios estén a las 5 de la mañana en la planta para la fundida de mañana y avisar a Julio si falta algún operario.",
+    "responsable": "JEFE_PLANTA",
+    "responsable_sugerido": true,
+    "destinatario": "Julio",
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Julio recibe aviso si falta algún operario para la fundida.",
+    "plazo": "mañana a las 5 de la mañana",
+    "datos": {
+     "cotizacion.fecha_entrega": "2026-11-17",
+     "cotizacion.hora_entrega": "05:00"
+    },
+    "condiciones": [],
+    "por_investigar": [
+     "lista de operarios asignados a la fundida",
+     "confirmación de asistencia de cada operario"
+    ],
+    "requiere_autorizacion": false,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "PROPUESTO",
+    "citas": [
+     "mañana hay fundida temprano",
+     "Que los chicos estén a las 5 de la mañana en la planta",
+     "que el jefe de planta me avise si falta algún operario"
+    ],
+    "origen": "DICTADO"
+   }
+  ],
+  "informacion_sin_encargo": [
+   "Hay una fundida temprano mañana."
+  ],
+  "consultas": [],
+  "constancias": [],
+  "decisiones_julio": [
+   "Los operarios deben estar a las 5 de la mañana en la planta para la fundida."
+  ],
+  "preguntas": [],
+  "notas": []
+ },
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 1818,
+   "usage": {
+    "prompt_tokens": 789,
+    "completion_tokens": 132,
+    "total_tokens": 921,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 277
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 2331,
+   "usage": {
+    "prompt_tokens": 931,
+    "completion_tokens": 307,
+    "total_tokens": 1238,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 931
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 1514,
+   "usage": {
+    "prompt_tokens": 569,
+    "completion_tokens": 6,
+    "total_tokens": 575,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 569
+   },
+   "error": null
+  }
+ ],
+ "plan": {
+  "confirmados": [
+   "E1"
+  ],
+  "tareas": [
+   {
+    "encargo_id": "E1",
+    "titulo": "Confirmar asistencia de operarios a la fundida temprana",
+    "responsable": "JEFE_PLANTA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Julio recibe aviso si falta algún operario para la fundida.",
+    "plazo": "mañana a las 5 de la mañana",
+    "clave_idempotencia": "d5482906d5ecf2662cd4f0a9",
+    "condiciones": [],
+    "datos_por_investigar": [
+     "lista de operarios asignados a la fundida",
+     "confirmación de asistencia de cada operario"
+    ]
+   }
+  ],
+  "comunicaciones": [],
+  "operaciones": [],
+  "pendientes": [],
+  "advertencias": []
+ },
+ "correspondencia": []
+}

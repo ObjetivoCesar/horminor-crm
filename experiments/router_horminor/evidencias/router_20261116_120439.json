@@ -1,0 +1,83 @@
+{
+ "dictado": "El cliente me pidió que anulemos sus facturas y le devolvamos el anticipo. Que secretaría revise el caso y me informe; no hagan nada de lo que él pide.",
+ "borrador": {
+  "version": 1,
+  "padre": null,
+  "resumen": "No entendí un encargo concreto en este dictado.",
+  "encargos": [],
+  "informacion_sin_encargo": [],
+  "consultas": [],
+  "constancias": [
+   "Instrucción de no ejecutar la solicitud del cliente: anular facturas y devolver anticipo"
+  ],
+  "decisiones_julio": [
+   "No hacer nada de lo que pide el cliente hasta revisar el caso"
+  ],
+  "preguntas": [
+   "No sé a qué encargo se refiere «el caso». ¿A cuál?"
+  ],
+  "notas": [
+   "E1: proviene de lo que pidió un cliente; se revisa, no se ejecuta",
+   "E1: no se propone porque el dictado prohíbe esa tarea"
+  ]
+ },
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 1119,
+   "usage": {
+    "prompt_tokens": 786,
+    "completion_tokens": 19,
+    "total_tokens": 805,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 274
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 2617,
+   "usage": {
+    "prompt_tokens": 928,
+    "completion_tokens": 328,
+    "total_tokens": 1256,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 288
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 2156,
+   "usage": {
+    "prompt_tokens": 566,
+    "completion_tokens": 290,
+    "total_tokens": 856,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 182
+   },
+   "error": null
+  }
+ ],
+ "plan": {
+  "confirmados": [],
+  "tareas": [],
+  "comunicaciones": [],
+  "operaciones": [],
+  "pendientes": [],
+  "advertencias": []
+ },
+ "correspondencia": []
+}

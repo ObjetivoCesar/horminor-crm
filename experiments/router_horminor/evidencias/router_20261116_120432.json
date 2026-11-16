@@ -1,0 +1,142 @@
+{
+ "dictado": "El despacho para la obra La Pradera: que planta prepare la coordinación, pero no autoricen la salida del camión hasta que se confirme el anticipo.",
+ "borrador": {
+  "version": 1,
+  "padre": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 para el jefe de planta. E1 Preparar coordinación de despacho para obra La Pradera (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Preparar coordinación de despacho para obra La Pradera",
+    "que_hacer": "Coordinar con planta la preparación del despacho de hormigón para la obra La Pradera (volumen, camión, horario y personal), dejando todo listo pero sin autorizar la salida del camión hasta que se confirme el anticipo.",
+    "responsable": "JEFE_PLANTA",
+    "responsable_sugerido": true,
+    "destinatario": null,
+    "canal": "INTERNO",
+    "ambito": "MIXTO",
+    "resultado_esperado": "Despacho coordinado y retenido a la espera de confirmación del anticipo",
+    "plazo": null,
+    "datos": {},
+    "condiciones": [
+     "PROHIBICION: no autoricen la salida del camión hasta que se confirme el anticipo",
+     "CONDICION: hasta que se confirme el anticipo",
+     "DEPENDENCIA: la salida del camión depende de la confirmación del anticipo"
+    ],
+    "por_investigar": [
+     "volumen exacto requerido para la obra La Pradera",
+     "fecha y hora de entrega",
+     "número o identificación del camión asignado",
+     "estado del anticipo (confirmado o no)"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "CONDICIONADO",
+    "citas": [
+     "que planta prepare la coordinación, pero no autoricen la salida del camión hasta que se confirme el anticipo"
+    ],
+    "origen": "DICTADO"
+   }
+  ],
+  "informacion_sin_encargo": [],
+  "consultas": [],
+  "constancias": [],
+  "decisiones_julio": [
+   "No autorizar la salida del camión hasta que se confirme el anticipo de la obra La Pradera"
+  ],
+  "preguntas": [],
+  "notas": []
+ },
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 1294,
+   "usage": {
+    "prompt_tokens": 780,
+    "completion_tokens": 75,
+    "total_tokens": 855,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 268
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 2388,
+   "usage": {
+    "prompt_tokens": 922,
+    "completion_tokens": 317,
+    "total_tokens": 1239,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 282
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 2039,
+   "usage": {
+    "prompt_tokens": 560,
+    "completion_tokens": 300,
+    "total_tokens": 860,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 176
+   },
+   "error": null
+  }
+ ],
+ "plan": {
+  "confirmados": [
+   "E1"
+  ],
+  "tareas": [
+   {
+    "encargo_id": "E1",
+    "titulo": "Preparar coordinación de despacho para obra La Pradera",
+    "responsable": "JEFE_PLANTA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Despacho coordinado y retenido a la espera de confirmación del anticipo",
+    "plazo": null,
+    "clave_idempotencia": "2427b9677ec6317e1e2e592d",
+    "condiciones": [
+     "PROHIBICION: no autoricen la salida del camión hasta que se confirme el anticipo",
+     "CONDICION: hasta que se confirme el anticipo",
+     "DEPENDENCIA: la salida del camión depende de la confirmación del anticipo"
+    ],
+    "datos_por_investigar": [
+     "volumen exacto requerido para la obra La Pradera",
+     "fecha y hora de entrega",
+     "número o identificación del camión asignado",
+     "estado del anticipo (confirmado o no)"
+    ]
+   }
+  ],
+  "comunicaciones": [],
+  "operaciones": [
+   {
+    "encargo_id": "E1",
+    "operacion": "OPERACION_CONDICIONADA",
+    "autorizada": false,
+    "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+   }
+  ],
+  "pendientes": [],
+  "advertencias": [
+   "E1: PROHIBICION: no autoricen la salida del camión hasta que se confirme el anticipo; CONDICION: hasta que se confirme el anticipo; DEPENDENCIA: la salida del camión depende de la confirmación del anticipo"
+  ]
+ },
+ "correspondencia": []
+}

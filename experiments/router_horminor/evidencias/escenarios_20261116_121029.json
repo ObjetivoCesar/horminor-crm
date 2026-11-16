@@ -1,0 +1,1395 @@
+[
+ {
+  "caso": "A",
+  "dictado": "Oye, mañana hay fundida temprano. Que los chicos estén a las cinco de la mañana en la planta, y que el jefe de planta me avise si falta algún operario.",
+  "error": null,
+  "resumen": "Julio, entendí 2 encargo(s): 2 para el jefe de planta. E1 Convocar a los operarios a las 5 de la mañana en la planta (con datos por averiguar) · E2 Avisar a Julio si falta algún operario (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Convocar a los operarios a las 5 de la mañana en la planta",
+    "responsable": "JEFE_PLANTA",
+    "sugerido": true,
+    "condiciones": [],
+    "por_investigar": [
+     "confirmar nómina de operarios que deben asistir",
+     "confirmar que todos fueron notificados"
+    ],
+    "resultado_esperado": "Operarios presentes en planta a las 5 de la mañana para la fundida",
+    "datos": {
+     "cotizacion.fecha_entrega": "2026-11-17",
+     "cotizacion.hora_entrega": "05:00"
+    },
+    "origen": "DICTADO",
+    "requiere_autorizacion": false,
+    "autorizado": false
+   },
+   {
+    "id": "E2",
+    "titulo": "Avisar a Julio si falta algún operario",
+    "responsable": "JEFE_PLANTA",
+    "sugerido": true,
+    "condiciones": [],
+    "por_investigar": [
+     "verificar asistencia real a las 5 de la mañana"
+    ],
+    "resultado_esperado": "Julio informado sobre operarios faltantes",
+    "datos": {},
+    "origen": "DICTADO",
+    "requiere_autorizacion": false,
+    "autorizado": false
+   }
+  ],
+  "preguntas": [],
+  "constancias": [],
+  "plan": {
+   "confirmados": [
+    "E1",
+    "E2"
+   ],
+   "tareas": [
+    {
+     "encargo_id": "E1",
+     "titulo": "Convocar a los operarios a las 5 de la mañana en la planta",
+     "responsable": "JEFE_PLANTA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Operarios presentes en planta a las 5 de la mañana para la fundida",
+     "plazo": "mañana temprano, 5 de la mañana",
+     "clave_idempotencia": "b635fd9ec55c870ed5ec537d",
+     "condiciones": [],
+     "datos_por_investigar": [
+      "confirmar nómina de operarios que deben asistir",
+      "confirmar que todos fueron notificados"
+     ]
+    },
+    {
+     "encargo_id": "E2",
+     "titulo": "Avisar a Julio si falta algún operario",
+     "responsable": "JEFE_PLANTA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Julio informado sobre operarios faltantes",
+     "plazo": "mañana antes de la fundida",
+     "clave_idempotencia": "49cd89e3dad7af3abb9646ca",
+     "condiciones": [],
+     "datos_por_investigar": [
+      "verificar asistencia real a las 5 de la mañana"
+     ]
+    }
+   ],
+   "comunicaciones": [],
+   "operaciones": [],
+   "pendientes": [],
+   "advertencias": []
+  },
+  "correspondencia": [],
+  "correccion": null,
+  "llamadas": [
+   {
+    "lector": "A",
+    "ok": true,
+    "latency_ms": 1273,
+    "usage": {
+     "prompt_tokens": 789,
+     "completion_tokens": 132,
+     "total_tokens": 921,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 149
+    },
+    "error": null
+   },
+   {
+    "lector": "B",
+    "ok": true,
+    "latency_ms": 3055,
+    "usage": {
+     "prompt_tokens": 939,
+     "completion_tokens": 472,
+     "total_tokens": 1411,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 299
+    },
+    "error": null
+   },
+   {
+    "lector": "C",
+    "ok": true,
+    "latency_ms": 1536,
+    "usage": {
+     "prompt_tokens": 569,
+     "completion_tokens": 6,
+     "total_tokens": 575,
+     "prompt_tokens_details": {
+      "cached_tokens": 384
+     },
+     "prompt_cache_hit_tokens": 384,
+     "prompt_cache_miss_tokens": 185
+    },
+    "error": null
+   }
+  ]
+ },
+ {
+  "caso": "B",
+  "dictado": "Que secretaría averigüe el volumen exacto que necesita la constructora El Valle y me confirme; no sé si son 35 o 38 metros.",
+  "error": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 tarea(s) para secretaría. E1 Averiguar volumen exacto que necesita la constructora El Valle (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Averiguar volumen exacto que necesita la constructora El Valle",
+    "responsable": "SECRETARIA",
+    "sugerido": true,
+    "condiciones": [],
+    "por_investigar": [
+     "volumen exacto requerido por la constructora El Valle",
+     "persona de contacto en la constructora El Valle"
+    ],
+    "resultado_esperado": "Confirmar a Julio el volumen exacto que necesita la constructora El Valle",
+    "datos": {
+     "cliente.nombre": "constructora El Valle",
+     "cotizacion.volumen_m3": 35,
+     "tarea.destinatario": "secretaría",
+     "tarea.mensaje": "averiguar el volumen exacto que necesita la constructora El Valle y confirmar"
+    },
+    "origen": "DICTADO",
+    "requiere_autorizacion": false,
+    "autorizado": false
+   }
+  ],
+  "preguntas": [],
+  "constancias": [],
+  "plan": {
+   "confirmados": [
+    "E1"
+   ],
+   "tareas": [
+    {
+     "encargo_id": "E1",
+     "titulo": "Averiguar volumen exacto que necesita la constructora El Valle",
+     "responsable": "SECRETARIA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Confirmar a Julio el volumen exacto que necesita la constructora El Valle",
+     "plazo": null,
+     "clave_idempotencia": "5a1c7a042672e4c04ec0b6c0",
+     "condiciones": [],
+     "datos_por_investigar": [
+      "volumen exacto requerido por la constructora El Valle",
+      "persona de contacto en la constructora El Valle"
+     ]
+    }
+   ],
+   "comunicaciones": [],
+   "operaciones": [],
+   "pendientes": [],
+   "advertencias": []
+  },
+  "correspondencia": [],
+  "correccion": null,
+  "llamadas": [
+   {
+    "lector": "A",
+    "ok": true,
+    "latency_ms": 1829,
+    "usage": {
+     "prompt_tokens": 777,
+     "completion_tokens": 273,
+     "total_tokens": 1050,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 137
+    },
+    "error": null
+   },
+   {
+    "lector": "B",
+    "ok": true,
+    "latency_ms": 1867,
+    "usage": {
+     "prompt_tokens": 927,
+     "completion_tokens": 254,
+     "total_tokens": 1181,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 287
+    },
+    "error": null
+   },
+   {
+    "lector": "C",
+    "ok": true,
+    "latency_ms": 2207,
+    "usage": {
+     "prompt_tokens": 557,
+     "completion_tokens": 219,
+     "total_tokens": 776,
+     "prompt_tokens_details": {
+      "cached_tokens": 384
+     },
+     "prompt_cache_hit_tokens": 384,
+     "prompt_cache_miss_tokens": 173
+    },
+    "error": null
+   }
+  ]
+ },
+ {
+  "caso": "C",
+  "dictado": "Tres cosas para hoy: que secretaría revise el pago de La Pradera, que contacte al cliente para confirmar la fecha de entrega, y que el jefe de planta prepare la coordinación del despacho.",
+  "error": null,
+  "resumen": "Julio, entendí 3 encargo(s): 2 tarea(s) para secretaría, 1 para el jefe de planta. E1 Revisar el pago de La Pradera (con datos por averiguar) · E2 Contactar al cliente para confirmar la fecha de entrega (con datos por averiguar) · E3 Preparar la coordinación del despacho (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Revisar el pago de La Pradera",
+    "responsable": "SECRETARIA",
+    "sugerido": true,
+    "condiciones": [],
+    "por_investigar": [
+     "estado real del pago",
+     "monto y comprobante del pago"
+    ],
+    "resultado_esperado": "Pago de La Pradera revisado y verificado",
+    "datos": {
+     "tarea.mensaje": "revisar el pago de La Pradera",
+     "tarea.destinatario": "secretaría"
+    },
+    "origen": "DICTADO",
+    "requiere_autorizacion": false,
+    "autorizado": false
+   },
+   {
+    "id": "E2",
+    "titulo": "Contactar al cliente para confirmar la fecha de entrega",
+    "responsable": "JEFE_PLANTA",
+    "sugerido": false,
+    "condiciones": [],
+    "por_investigar": [
+     "número de teléfono del cliente",
+     "fecha de entrega a confirmar"
+    ],
+    "resultado_esperado": "Fecha de entrega confirmada con el cliente",
+    "datos": {
+     "tarea.mensaje": "contactar al cliente para confirmar la fecha de entrega"
+    },
+    "origen": "DICTADO",
+    "requiere_autorizacion": false,
+    "autorizado": false
+   },
+   {
+    "id": "E3",
+    "titulo": "Preparar la coordinación del despacho",
+    "responsable": "JEFE_PLANTA",
+    "sugerido": true,
+    "condiciones": [],
+    "por_investigar": [
+     "volumen exacto a despachar",
+     "fecha y hora del despacho",
+     "camión y operarios asignados"
+    ],
+    "resultado_esperado": "Coordinación del despacho preparada",
+    "datos": {
+     "tarea.mensaje": "preparar la coordinación del despacho",
+     "tarea.destinatario": "jefe de planta"
+    },
+    "origen": "DICTADO",
+    "requiere_autorizacion": false,
+    "autorizado": false
+   }
+  ],
+  "preguntas": [],
+  "constancias": [],
+  "plan": {
+   "confirmados": [
+    "E1",
+    "E2",
+    "E3"
+   ],
+   "tareas": [
+    {
+     "encargo_id": "E1",
+     "titulo": "Revisar el pago de La Pradera",
+     "responsable": "SECRETARIA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Pago de La Pradera revisado y verificado",
+     "plazo": "hoy",
+     "clave_idempotencia": "04688da6ec39203c3d7a4aa4",
+     "condiciones": [],
+     "datos_por_investigar": [
+      "estado real del pago",
+      "monto y comprobante del pago"
+     ]
+    },
+    {
+     "encargo_id": "E2",
+     "titulo": "Contactar al cliente para confirmar la fecha de entrega",
+     "responsable": "JEFE_PLANTA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Fecha de entrega confirmada con el cliente",
+     "plazo": "hoy",
+     "clave_idempotencia": "9811e107745f2ccc8796d2f5",
+     "condiciones": [],
+     "datos_por_investigar": [
+      "número de teléfono del cliente",
+      "fecha de entrega a confirmar"
+     ]
+    },
+    {
+     "encargo_id": "E3",
+     "titulo": "Preparar la coordinación del despacho",
+     "responsable": "JEFE_PLANTA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Coordinación del despacho preparada",
+     "plazo": "hoy",
+     "clave_idempotencia": "c2d67a5c2cd7c08e877cb3df",
+     "condiciones": [],
+     "datos_por_investigar": [
+      "volumen exacto a despachar",
+      "fecha y hora del despacho",
+      "camión y operarios asignados"
+     ]
+    }
+   ],
+   "comunicaciones": [],
+   "operaciones": [],
+   "pendientes": [],
+   "advertencias": []
+  },
+  "correspondencia": [],
+  "correccion": {
+   "frase": "No era para secretaría, era para el jefe de planta lo de contactar al cliente",
+   "errores": [],
+   "meta": {
+    "via": "deterministica"
+   },
+   "antes": [
+    [
+     "E1",
+     "SECRETARIA"
+    ],
+    [
+     "E2",
+     "SECRETARIA"
+    ],
+    [
+     "E3",
+     "JEFE_PLANTA"
+    ]
+   ],
+   "despues": [
+    [
+     "E1",
+     "SECRETARIA"
+    ],
+    [
+     "E2",
+     "JEFE_PLANTA"
+    ],
+    [
+     "E3",
+     "JEFE_PLANTA"
+    ]
+   ],
+   "version": 2
+  },
+  "llamadas": [
+   {
+    "lector": "A",
+    "ok": true,
+    "latency_ms": 2107,
+    "usage": {
+     "prompt_tokens": 789,
+     "completion_tokens": 401,
+     "total_tokens": 1190,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 149
+    },
+    "error": null
+   },
+   {
+    "lector": "B",
+    "ok": true,
+    "latency_ms": 2800,
+    "usage": {
+     "prompt_tokens": 939,
+     "completion_tokens": 544,
+     "total_tokens": 1483,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 299
+    },
+    "error": null
+   },
+   {
+    "lector": "C",
+    "ok": true,
+    "latency_ms": 1050,
+    "usage": {
+     "prompt_tokens": 569,
+     "completion_tokens": 6,
+     "total_tokens": 575,
+     "prompt_tokens_details": {
+      "cached_tokens": 384
+     },
+     "prompt_cache_hit_tokens": 384,
+     "prompt_cache_miss_tokens": 185
+    },
+    "error": null
+   }
+  ]
+ },
+ {
+  "caso": "D",
+  "dictado": "El despacho para la obra La Pradera: que planta prepare la coordinación, pero no autoricen la salida del camión hasta que se confirme el anticipo.",
+  "error": null,
+  "resumen": "Julio, entendí 2 encargo(s): 1 tarea(s) para secretaría, 1 para el jefe de planta. E1 Preparar coordinación de despacho para obra La Pradera (condicionado) (con datos por averiguar) · E2 Confirmar anticipo antes de autorizar salida del camión (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Preparar coordinación de despacho para obra La Pradera",
+    "responsable": "JEFE_PLANTA",
+    "sugerido": true,
+    "condiciones": [
+     "PROHIBICION: no autoricen la salida del camión hasta que se confirme el anticipo",
+     "CONDICION: hasta que se confirme el anticipo",
+     "DEPENDENCIA: la salida del camión depende de la confirmación del anticipo"
+    ],
+    "por_investigar": [
+     "volumen exacto de hormigón requerido",
+     "fecha y hora de entrega",
+     "datos de contacto de la obra La Pradera",
+     "tipo de hormigón y especificaciones"
+    ],
+    "resultado_esperado": "Despacho coordinado y listo, pendiente de confirmación del anticipo para autorizar la salida del camión",
+    "datos": {},
+    "origen": "DICTADO",
+    "requiere_autorizacion": true,
+    "autorizado": false
+   },
+   {
+    "id": "E2",
+    "titulo": "Confirmar anticipo antes de autorizar salida del camión",
+    "responsable": "SECRETARIA",
+    "sugerido": true,
+    "condiciones": [
+     "PROHIBICION: no autoricen la salida del camión hasta que se confirme el anticipo",
+     "CONDICION: hasta que se confirme el anticipo",
+     "DEPENDENCIA: la salida del camión depende de la confirmación del anticipo"
+    ],
+    "por_investigar": [
+     "monto exacto del anticipo",
+     "forma y comprobante de pago",
+     "fecha en que se espera el anticipo"
+    ],
+    "resultado_esperado": "Anticipo confirmado y comunicado para habilitar la salida del camión",
+    "datos": {},
+    "origen": "DICTADO",
+    "requiere_autorizacion": true,
+    "autorizado": false
+   }
+  ],
+  "preguntas": [],
+  "constancias": [],
+  "plan": {
+   "confirmados": [
+    "E1",
+    "E2"
+   ],
+   "tareas": [
+    {
+     "encargo_id": "E1",
+     "titulo": "Preparar coordinación de despacho para obra La Pradera",
+     "responsable": "JEFE_PLANTA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Despacho coordinado y listo, pendiente de confirmación del anticipo para autorizar la salida del camión",
+     "plazo": null,
+     "clave_idempotencia": "2427b9677ec6317e1e2e592d",
+     "condiciones": [
+      "PROHIBICION: no autoricen la salida del camión hasta que se confirme el anticipo",
+      "CONDICION: hasta que se confirme el anticipo",
+      "DEPENDENCIA: la salida del camión depende de la confirmación del anticipo"
+     ],
+     "datos_por_investigar": [
+      "volumen exacto de hormigón requerido",
+      "fecha y hora de entrega",
+      "datos de contacto de la obra La Pradera",
+      "tipo de hormigón y especificaciones"
+     ]
+    },
+    {
+     "encargo_id": "E2",
+     "titulo": "Confirmar anticipo antes de autorizar salida del camión",
+     "responsable": "SECRETARIA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Anticipo confirmado y comunicado para habilitar la salida del camión",
+     "plazo": null,
+     "clave_idempotencia": "856b71227ed61c70f342dd57",
+     "condiciones": [
+      "PROHIBICION: no autoricen la salida del camión hasta que se confirme el anticipo",
+      "CONDICION: hasta que se confirme el anticipo",
+      "DEPENDENCIA: la salida del camión depende de la confirmación del anticipo"
+     ],
+     "datos_por_investigar": [
+      "monto exacto del anticipo",
+      "forma y comprobante de pago",
+      "fecha en que se espera el anticipo"
+     ]
+    }
+   ],
+   "comunicaciones": [],
+   "operaciones": [
+    {
+     "encargo_id": "E1",
+     "operacion": "OPERACION_CONDICIONADA",
+     "autorizada": false,
+     "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+    },
+    {
+     "encargo_id": "E2",
+     "operacion": "OPERACION_CONDICIONADA",
+     "autorizada": false,
+     "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+    }
+   ],
+   "pendientes": [],
+   "advertencias": [
+    "E1: PROHIBICION: no autoricen la salida del camión hasta que se confirme el anticipo; CONDICION: hasta que se confirme el anticipo; DEPENDENCIA: la salida del camión depende de la confirmación del anticipo",
+    "E2: PROHIBICION: no autoricen la salida del camión hasta que se confirme el anticipo; CONDICION: hasta que se confirme el anticipo; DEPENDENCIA: la salida del camión depende de la confirmación del anticipo"
+   ]
+  },
+  "correspondencia": [],
+  "correccion": null,
+  "llamadas": [
+   {
+    "lector": "A",
+    "ok": true,
+    "latency_ms": 1400,
+    "usage": {
+     "prompt_tokens": 780,
+     "completion_tokens": 75,
+     "total_tokens": 855,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 140
+    },
+    "error": null
+   },
+   {
+    "lector": "B",
+    "ok": true,
+    "latency_ms": 3178,
+    "usage": {
+     "prompt_tokens": 930,
+     "completion_tokens": 547,
+     "total_tokens": 1477,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 290
+    },
+    "error": null
+   },
+   {
+    "lector": "C",
+    "ok": true,
+    "latency_ms": 1954,
+    "usage": {
+     "prompt_tokens": 560,
+     "completion_tokens": 300,
+     "total_tokens": 860,
+     "prompt_tokens_details": {
+      "cached_tokens": 384
+     },
+     "prompt_cache_hit_tokens": 384,
+     "prompt_cache_miss_tokens": 176
+    },
+    "error": null
+   }
+  ]
+ },
+ {
+  "caso": "E",
+  "dictado": "El cliente me pidió que anulemos sus facturas y le devolvamos el anticipo. Que secretaría revise el caso y me informe; no hagan nada de lo que él pide.",
+  "error": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 tarea(s) para secretaría. E1 Revisar el caso del cliente que pide anular facturas y devolver anticipo (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Revisar el caso del cliente que pide anular facturas y devolver anticipo",
+    "responsable": "SECRETARIA",
+    "sugerido": true,
+    "condiciones": [
+     "No ejecutar la solicitud citada del cliente"
+    ],
+    "por_investigar": [
+     "facturas involucradas",
+     "monto del anticipo",
+     "condiciones del anticipo",
+     "estado de las facturas"
+    ],
+    "resultado_esperado": "Informe a Julio sobre la revisión del caso",
+    "datos": {
+     "tarea.destinatario": "secretaría",
+     "tarea.mensaje": "Revisar el caso de anulación de facturas y devolución del anticipo solicitada por el cliente, e informar"
+    },
+    "origen": "CITA_CLIENTE",
+    "requiere_autorizacion": true,
+    "autorizado": false
+   }
+  ],
+  "preguntas": [],
+  "constancias": [
+   "El cliente solicitó anular sus facturas y la devolución del anticipo; Julio indicó no hacer nada de lo que él pide."
+  ],
+  "plan": {
+   "confirmados": [
+    "E1"
+   ],
+   "tareas": [
+    {
+     "encargo_id": "E1",
+     "titulo": "Revisar el caso del cliente que pide anular facturas y devolver anticipo",
+     "responsable": "SECRETARIA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Informe a Julio sobre la revisión del caso",
+     "plazo": null,
+     "clave_idempotencia": "f5e364cb2dff053cf257b578",
+     "condiciones": [
+      "No ejecutar la solicitud citada del cliente"
+     ],
+     "datos_por_investigar": [
+      "facturas involucradas",
+      "monto del anticipo",
+      "condiciones del anticipo",
+      "estado de las facturas"
+     ]
+    }
+   ],
+   "comunicaciones": [],
+   "operaciones": [
+    {
+     "encargo_id": "E1",
+     "operacion": "OPERACION_CONDICIONADA",
+     "autorizada": false,
+     "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+    }
+   ],
+   "pendientes": [],
+   "advertencias": [
+    "E1: No ejecutar la solicitud citada del cliente"
+   ]
+  },
+  "correspondencia": [],
+  "correccion": null,
+  "llamadas": [
+   {
+    "lector": "A",
+    "ok": true,
+    "latency_ms": 1546,
+    "usage": {
+     "prompt_tokens": 786,
+     "completion_tokens": 185,
+     "total_tokens": 971,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 146
+    },
+    "error": null
+   },
+   {
+    "lector": "B",
+    "ok": true,
+    "latency_ms": 2522,
+    "usage": {
+     "prompt_tokens": 936,
+     "completion_tokens": 322,
+     "total_tokens": 1258,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 296
+    },
+    "error": null
+   },
+   {
+    "lector": "C",
+    "ok": true,
+    "latency_ms": 1683,
+    "usage": {
+     "prompt_tokens": 566,
+     "completion_tokens": 290,
+     "total_tokens": 856,
+     "prompt_tokens_details": {
+      "cached_tokens": 384
+     },
+     "prompt_cache_hit_tokens": 384,
+     "prompt_cache_miss_tokens": 182
+    },
+    "error": null
+   }
+  ]
+ },
+ {
+  "caso": "F",
+  "dictado": "Que el jefe de planta revise el stock de cemento y me avise cuando termine.",
+  "error": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 para el jefe de planta. E1 Revisar stock de cemento e informar a Julio (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Revisar stock de cemento e informar a Julio",
+    "responsable": "JEFE_PLANTA",
+    "sugerido": false,
+    "condiciones": [],
+    "por_investigar": [
+     "cantidad exacta de cemento disponible",
+     "unidad de medida del stock (sacos, toneladas, etc.)",
+     "si se debe incluir stock mínimo o consumo proyectado"
+    ],
+    "resultado_esperado": "Julio recibe el aviso de que la revisión del stock de cemento terminó (con el resultado de la revisión).",
+    "datos": {
+     "tarea.mensaje": "revisar el stock de cemento y avisar cuando termine"
+    },
+    "origen": "DICTADO",
+    "requiere_autorizacion": false,
+    "autorizado": false
+   }
+  ],
+  "preguntas": [],
+  "constancias": [],
+  "plan": {
+   "confirmados": [
+    "E1"
+   ],
+   "tareas": [
+    {
+     "encargo_id": "E1",
+     "titulo": "Revisar stock de cemento e informar a Julio",
+     "responsable": "JEFE_PLANTA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Julio recibe el aviso de que la revisión del stock de cemento terminó (con el resultado de la revisión).",
+     "plazo": null,
+     "clave_idempotencia": "bcbc7cb445b15ed583c4bdb3",
+     "condiciones": [],
+     "datos_por_investigar": [
+      "cantidad exacta de cemento disponible",
+      "unidad de medida del stock (sacos, toneladas, etc.)",
+      "si se debe incluir stock mínimo o consumo proyectado"
+     ]
+    }
+   ],
+   "comunicaciones": [],
+   "operaciones": [],
+   "pendientes": [],
+   "advertencias": []
+  },
+  "correspondencia": [],
+  "correccion": null,
+  "llamadas": [
+   {
+    "lector": "A",
+    "ok": true,
+    "latency_ms": 1228,
+    "usage": {
+     "prompt_tokens": 762,
+     "completion_tokens": 86,
+     "total_tokens": 848,
+     "prompt_tokens_details": {
+      "cached_tokens": 512
+     },
+     "prompt_cache_hit_tokens": 512,
+     "prompt_cache_miss_tokens": 250
+    },
+    "error": null
+   },
+   {
+    "lector": "B",
+    "ok": true,
+    "latency_ms": 2067,
+    "usage": {
+     "prompt_tokens": 912,
+     "completion_tokens": 256,
+     "total_tokens": 1168,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 272
+    },
+    "error": null
+   },
+   {
+    "lector": "C",
+    "ok": true,
+    "latency_ms": 888,
+    "usage": {
+     "prompt_tokens": 542,
+     "completion_tokens": 6,
+     "total_tokens": 548,
+     "prompt_tokens_details": {
+      "cached_tokens": 384
+     },
+     "prompt_cache_hit_tokens": 384,
+     "prompt_cache_miss_tokens": 158
+    },
+    "error": null
+   }
+  ]
+ },
+ {
+  "caso": "REG-E07",
+  "dictado": "Necesito que quede listo un WhatsApp para la ingeniera Paula acerca del comprobante. No conozco su número todavía, así que no mandes nada hasta obtenerlo.",
+  "error": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 tarea(s) para secretaría. E1 Preparar WhatsApp para la ingeniera Paula sobre el comprobante (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Preparar WhatsApp para la ingeniera Paula sobre el comprobante",
+    "responsable": "SECRETARIA",
+    "sugerido": true,
+    "condiciones": [
+     "PROHIBICION: No conozco su número todavía, así que no mandes nada hasta obtenerlo.",
+     "DEPENDENCIA: El envío depende de obtener el número de la ingeniera Paula.",
+     "CONDICION: Solo se puede enviar una vez obtenido el número."
+    ],
+    "por_investigar": [
+     "número de teléfono de la ingeniera Paula",
+     "cuál es el comprobante al que se refiere y sus datos concretos"
+    ],
+    "resultado_esperado": "Mensaje de WhatsApp redactado y listo para enviar, pendiente de obtener el número y de autorización de Julio",
+    "datos": {
+     "tarea.destinatario": "ingeniera Paula",
+     "tarea.mensaje": "acerca del comprobante"
+    },
+    "origen": "DICTADO",
+    "requiere_autorizacion": true,
+    "autorizado": false
+   }
+  ],
+  "preguntas": [],
+  "constancias": [],
+  "plan": {
+   "confirmados": [
+    "E1"
+   ],
+   "tareas": [
+    {
+     "encargo_id": "E1",
+     "titulo": "Preparar WhatsApp para la ingeniera Paula sobre el comprobante",
+     "responsable": "SECRETARIA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Mensaje de WhatsApp redactado y listo para enviar, pendiente de obtener el número y de autorización de Julio",
+     "plazo": null,
+     "clave_idempotencia": "85a165b2b55756f2973a6190",
+     "condiciones": [
+      "PROHIBICION: No conozco su número todavía, así que no mandes nada hasta obtenerlo.",
+      "DEPENDENCIA: El envío depende de obtener el número de la ingeniera Paula.",
+      "CONDICION: Solo se puede enviar una vez obtenido el número."
+     ],
+     "datos_por_investigar": [
+      "número de teléfono de la ingeniera Paula",
+      "cuál es el comprobante al que se refiere y sus datos concretos"
+     ]
+    }
+   ],
+   "comunicaciones": [
+    {
+     "encargo_id": "E1",
+     "destinatario": "Ingeniera Paula",
+     "accion": "PREPARAR",
+     "motivo": "solo preparar: falta autorización explícita de envío"
+    }
+   ],
+   "operaciones": [
+    {
+     "encargo_id": "E1",
+     "operacion": "OPERACION_CONDICIONADA",
+     "autorizada": false,
+     "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+    }
+   ],
+   "pendientes": [],
+   "advertencias": [
+    "E1: PROHIBICION: No conozco su número todavía, así que no mandes nada hasta obtenerlo.; DEPENDENCIA: El envío depende de obtener el número de la ingeniera Paula.; CONDICION: Solo se puede enviar una vez obtenido el número."
+   ]
+  },
+  "correspondencia": [],
+  "correccion": null,
+  "llamadas": [
+   {
+    "lector": "A",
+    "ok": true,
+    "latency_ms": 1270,
+    "usage": {
+     "prompt_tokens": 782,
+     "completion_tokens": 198,
+     "total_tokens": 980,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 142
+    },
+    "error": null
+   },
+   {
+    "lector": "B",
+    "ok": true,
+    "latency_ms": 2137,
+    "usage": {
+     "prompt_tokens": 932,
+     "completion_tokens": 317,
+     "total_tokens": 1249,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 292
+    },
+    "error": null
+   },
+   {
+    "lector": "C",
+    "ok": true,
+    "latency_ms": 1892,
+    "usage": {
+     "prompt_tokens": 562,
+     "completion_tokens": 294,
+     "total_tokens": 856,
+     "prompt_tokens_details": {
+      "cached_tokens": 384
+     },
+     "prompt_cache_hit_tokens": 384,
+     "prompt_cache_miss_tokens": 178
+    },
+    "error": null
+   }
+  ]
+ },
+ {
+  "caso": "REG-E11",
+  "dictado": "Anota para mañana una revisión de combustible y una llamada al proveedor de arena. Pensándolo mejor, cancela la llamada al proveedor, pero mantén la revisión de combustible.",
+  "error": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 para el jefe de planta. E1 Revisión de combustible (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Revisión de combustible",
+    "responsable": "JEFE_PLANTA",
+    "sugerido": true,
+    "condiciones": [
+     "RECTIFICACION: Pensándolo mejor, cancela la llamada al proveedor, pero mantén la revisión de combustible."
+    ],
+    "por_investigar": [
+     "qué vehículos/equipos y qué tanque o depósito se revisan",
+     "quién lleva el registro de combustible"
+    ],
+    "resultado_esperado": "Revisión de combustible hecha y anotada para mañana",
+    "datos": {
+     "tarea.mensaje": "revisión de combustible",
+     "tarea.cuando": "mañana"
+    },
+    "origen": "DICTADO",
+    "requiere_autorizacion": false,
+    "autorizado": false
+   }
+  ],
+  "preguntas": [],
+  "constancias": [
+   "Julio canceló la llamada al proveedor de arena: no debe ejecutarse."
+  ],
+  "plan": {
+   "confirmados": [
+    "E1"
+   ],
+   "tareas": [
+    {
+     "encargo_id": "E1",
+     "titulo": "Revisión de combustible",
+     "responsable": "JEFE_PLANTA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Revisión de combustible hecha y anotada para mañana",
+     "plazo": "mañana (2026-11-17)",
+     "clave_idempotencia": "25ee0e30082e119fea2e4714",
+     "condiciones": [
+      "RECTIFICACION: Pensándolo mejor, cancela la llamada al proveedor, pero mantén la revisión de combustible."
+     ],
+     "datos_por_investigar": [
+      "qué vehículos/equipos y qué tanque o depósito se revisan",
+      "quién lleva el registro de combustible"
+     ]
+    }
+   ],
+   "comunicaciones": [],
+   "operaciones": [],
+   "pendientes": [],
+   "advertencias": [
+    "E1: RECTIFICACION: Pensándolo mejor, cancela la llamada al proveedor, pero mantén la revisión de combustible."
+   ]
+  },
+  "correspondencia": [],
+  "correccion": null,
+  "llamadas": [
+   {
+    "lector": "A",
+    "ok": true,
+    "latency_ms": 1429,
+    "usage": {
+     "prompt_tokens": 786,
+     "completion_tokens": 144,
+     "total_tokens": 930,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 146
+    },
+    "error": null
+   },
+   {
+    "lector": "B",
+    "ok": true,
+    "latency_ms": 2147,
+    "usage": {
+     "prompt_tokens": 936,
+     "completion_tokens": 275,
+     "total_tokens": 1211,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 296
+    },
+    "error": null
+   },
+   {
+    "lector": "C",
+    "ok": true,
+    "latency_ms": 1017,
+    "usage": {
+     "prompt_tokens": 566,
+     "completion_tokens": 123,
+     "total_tokens": 689,
+     "prompt_tokens_details": {
+      "cached_tokens": 384
+     },
+     "prompt_cache_hit_tokens": 384,
+     "prompt_cache_miss_tokens": 182
+    },
+    "error": null
+   }
+  ]
+ },
+ {
+  "caso": "REG-E14",
+  "dictado": "El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo. Que planta prepare un plan tentativo, pero no autorizamos salida de camiones hasta verificar el dinero.",
+  "error": null,
+  "resumen": "Julio, entendí 2 encargo(s): 1 tarea(s) para secretaría, 1 para el jefe de planta. E1 Preparar plan tentativo de despacho para obra La Pradera (condicionado) (con datos por averiguar) · E2 Verificar anticipo antes de autorizar salida de camiones a La Pradera (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Preparar plan tentativo de despacho para obra La Pradera",
+    "responsable": "JEFE_PLANTA",
+    "sugerido": true,
+    "condiciones": [
+     "CONDICION: El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo.",
+     "PROHIBICION: No autorizamos salida de camiones hasta verificar el dinero."
+    ],
+    "por_investigar": [
+     "volumen exacto requerido para la obra",
+     "fecha de entrega prevista",
+     "tipo de hormigon y especificaciones"
+    ],
+    "resultado_esperado": "Plan tentativo de despacho listo, condicionado a confirmacion del anticipo",
+    "datos": {
+     "operacion.planta_movil": true
+    },
+    "origen": "DICTADO",
+    "requiere_autorizacion": true,
+    "autorizado": true
+   },
+   {
+    "id": "E2",
+    "titulo": "Verificar anticipo antes de autorizar salida de camiones a La Pradera",
+    "responsable": "SECRETARIA",
+    "sugerido": true,
+    "condiciones": [
+     "CONDICION: El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo.",
+     "PROHIBICION: No autorizamos salida de camiones hasta verificar el dinero."
+    ],
+    "por_investigar": [
+     "monto exacto del anticipo",
+     "comprobante o referencia del pago",
+     "fecha en que se espera el anticipo"
+    ],
+    "resultado_esperado": "Anticipo verificado y constancia registrada; despacho habilitado solo tras confirmacion",
+    "datos": {},
+    "origen": "DICTADO",
+    "requiere_autorizacion": true,
+    "autorizado": false
+   }
+  ],
+  "preguntas": [],
+  "constancias": [
+   "El despacho para la obra La Pradera queda condicionado a la confirmacion del anticipo; no se autoriza salida de camiones hasta verificar el dinero."
+  ],
+  "plan": {
+   "confirmados": [
+    "E1",
+    "E2"
+   ],
+   "tareas": [
+    {
+     "encargo_id": "E1",
+     "titulo": "Preparar plan tentativo de despacho para obra La Pradera",
+     "responsable": "JEFE_PLANTA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Plan tentativo de despacho listo, condicionado a confirmacion del anticipo",
+     "plazo": null,
+     "clave_idempotencia": "cfa5eaa26e0c1e5e6fe94a1c",
+     "condiciones": [
+      "CONDICION: El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo.",
+      "PROHIBICION: No autorizamos salida de camiones hasta verificar el dinero."
+     ],
+     "datos_por_investigar": [
+      "volumen exacto requerido para la obra",
+      "fecha de entrega prevista",
+      "tipo de hormigon y especificaciones"
+     ]
+    },
+    {
+     "encargo_id": "E2",
+     "titulo": "Verificar anticipo antes de autorizar salida de camiones a La Pradera",
+     "responsable": "SECRETARIA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Anticipo verificado y constancia registrada; despacho habilitado solo tras confirmacion",
+     "plazo": null,
+     "clave_idempotencia": "ed2afaa7f740717d644eecf1",
+     "condiciones": [
+      "CONDICION: El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo.",
+      "PROHIBICION: No autorizamos salida de camiones hasta verificar el dinero."
+     ],
+     "datos_por_investigar": [
+      "monto exacto del anticipo",
+      "comprobante o referencia del pago",
+      "fecha en que se espera el anticipo"
+     ]
+    }
+   ],
+   "comunicaciones": [],
+   "operaciones": [
+    {
+     "encargo_id": "E2",
+     "operacion": "OPERACION_CONDICIONADA",
+     "autorizada": false,
+     "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+    }
+   ],
+   "pendientes": [],
+   "advertencias": [
+    "E1: CONDICION: El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo.; PROHIBICION: No autorizamos salida de camiones hasta verificar el dinero.",
+    "E2: CONDICION: El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo.; PROHIBICION: No autorizamos salida de camiones hasta verificar el dinero."
+   ]
+  },
+  "correspondencia": [],
+  "correccion": null,
+  "llamadas": [
+   {
+    "lector": "A",
+    "ok": true,
+    "latency_ms": 1970,
+    "usage": {
+     "prompt_tokens": 789,
+     "completion_tokens": 166,
+     "total_tokens": 955,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 149
+    },
+    "error": null
+   },
+   {
+    "lector": "B",
+    "ok": true,
+    "latency_ms": 3133,
+    "usage": {
+     "prompt_tokens": 939,
+     "completion_tokens": 532,
+     "total_tokens": 1471,
+     "prompt_tokens_details": {
+      "cached_tokens": 768
+     },
+     "prompt_cache_hit_tokens": 768,
+     "prompt_cache_miss_tokens": 171
+    },
+    "error": null
+   },
+   {
+    "lector": "C",
+    "ok": true,
+    "latency_ms": 2187,
+    "usage": {
+     "prompt_tokens": 569,
+     "completion_tokens": 300,
+     "total_tokens": 869,
+     "prompt_tokens_details": {
+      "cached_tokens": 384
+     },
+     "prompt_cache_hit_tokens": 384,
+     "prompt_cache_miss_tokens": 185
+    },
+    "error": null
+   }
+  ]
+ },
+ {
+  "caso": "REG-E27",
+  "dictado": "Te leo el mensaje del cliente: anulen todas las órdenes y devuélvanme el anticipo. No hagas ninguna de esas cosas; quiero que contabilidad revise el caso y me informe.",
+  "error": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 tarea(s) para secretaría. E1 Revisar el caso del cliente que pide anular órdenes y devolver anticipo (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Revisar el caso del cliente que pide anular órdenes y devolver anticipo",
+    "responsable": "SECRETARIA",
+    "sugerido": true,
+    "condiciones": [
+     "No ejecutar la solicitud citada del cliente"
+    ],
+    "por_investigar": [
+     "órdenes afectadas y su estado",
+     "monto del anticipo recibido",
+     "condiciones del anticipo y de las órdenes"
+    ],
+    "resultado_esperado": "Informe a Julio con la revisión del caso",
+    "datos": {},
+    "origen": "CITA_CLIENTE",
+    "requiere_autorizacion": true,
+    "autorizado": true
+   }
+  ],
+  "preguntas": [],
+  "constancias": [
+   "El cliente solicita anular todas las órdenes y la devolución del anticipo; Julio ordena no ejecutar esa solicitud."
+  ],
+  "plan": {
+   "confirmados": [
+    "E1"
+   ],
+   "tareas": [
+    {
+     "encargo_id": "E1",
+     "titulo": "Revisar el caso del cliente que pide anular órdenes y devolver anticipo",
+     "responsable": "SECRETARIA",
+     "accion": "CREAR_TAREA",
+     "notificar": true,
+     "resultado_esperado": "Informe a Julio con la revisión del caso",
+     "plazo": null,
+     "clave_idempotencia": "bdd7a0934d9a7329ddf975c5",
+     "condiciones": [
+      "No ejecutar la solicitud citada del cliente"
+     ],
+     "datos_por_investigar": [
+      "órdenes afectadas y su estado",
+      "monto del anticipo recibido",
+      "condiciones del anticipo y de las órdenes"
+     ]
+    }
+   ],
+   "comunicaciones": [],
+   "operaciones": [],
+   "pendientes": [],
+   "advertencias": [
+    "E1: No ejecutar la solicitud citada del cliente"
+   ]
+  },
+  "correspondencia": [],
+  "correccion": null,
+  "llamadas": [
+   {
+    "lector": "A",
+    "ok": true,
+    "latency_ms": 974,
+    "usage": {
+     "prompt_tokens": 789,
+     "completion_tokens": 19,
+     "total_tokens": 808,
+     "prompt_tokens_details": {
+      "cached_tokens": 640
+     },
+     "prompt_cache_hit_tokens": 640,
+     "prompt_cache_miss_tokens": 149
+    },
+    "error": null
+   },
+   {
+    "lector": "B",
+    "ok": true,
+    "latency_ms": 2316,
+    "usage": {
+     "prompt_tokens": 939,
+     "completion_tokens": 337,
+     "total_tokens": 1276,
+     "prompt_tokens_details": {
+      "cached_tokens": 768
+     },
+     "prompt_cache_hit_tokens": 768,
+     "prompt_cache_miss_tokens": 171
+    },
+    "error": null
+   },
+   {
+    "lector": "C",
+    "ok": true,
+    "latency_ms": 2373,
+    "usage": {
+     "prompt_tokens": 569,
+     "completion_tokens": 325,
+     "total_tokens": 894,
+     "prompt_tokens_details": {
+      "cached_tokens": 384
+     },
+     "prompt_cache_hit_tokens": 384,
+     "prompt_cache_miss_tokens": 185
+    },
+    "error": null
+   }
+  ]
+ }
+]

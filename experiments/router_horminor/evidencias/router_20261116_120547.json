@@ -1,0 +1,148 @@
+{
+ "dictado": "El cliente me pidió que anulemos sus facturas y le devolvamos el anticipo. Que secretaría revise el caso y me informe; no hagan nada de lo que él pide.",
+ "borrador": {
+  "version": 1,
+  "padre": null,
+  "resumen": "Julio, entendí 1 encargo(s): 1 tarea(s) para secretaría. E1 Revisar el caso del cliente que pide anular facturas y devolución del anticipo (condicionado) (con datos por averiguar). ¿Confirmas?",
+  "encargos": [
+   {
+    "id": "E1",
+    "titulo": "Revisar el caso del cliente que pide anular facturas y devolución del anticipo",
+    "que_hacer": "Revisar el caso del cliente que solicita anulación de sus facturas y devolución del anticipo; reunir la información (facturas emitidas, anticipo recibido, estado de cuenta) e informar a Julio. No ejecutar la anulación ni la devolución.",
+    "responsable": "SECRETARIA",
+    "responsable_sugerido": true,
+    "destinatario": "JULIO",
+    "canal": "INTERNO",
+    "ambito": "INTERNO",
+    "resultado_esperado": "Informe a Julio con el detalle del caso para que él decida",
+    "plazo": null,
+    "datos": {
+     "tarea.destinatario": "secretaría",
+     "tarea.mensaje": "Revisar el caso de anulación de facturas y devolución del anticipo solicitada por el cliente, e informar"
+    },
+    "condiciones": [
+     "No ejecutar la solicitud citada del cliente",
+     "DEPENDENCIA: Que secretaría revise el caso y me informe"
+    ],
+    "por_investigar": [
+     "identidad del cliente",
+     "facturas involucradas y su estado",
+     "monto y condiciones del anticipo recibido",
+     "si existe sustento contractual para anular o devolver"
+    ],
+    "requiere_autorizacion": true,
+    "autorizado": false,
+    "preparar_comunicacion": false,
+    "estado": "CONDICIONADO",
+    "citas": [
+     "El cliente me pidió que anulemos sus facturas y le devolvamos el anticipo.",
+     "Que secretaría revise el caso y me informe; no hagan nada de lo que él pide."
+    ],
+    "origen": "CITA_CLIENTE"
+   }
+  ],
+  "informacion_sin_encargo": [],
+  "consultas": [],
+  "constancias": [
+   "Julio instruye no ejecutar la anulación de facturas ni la devolución del anticipo solicitadas por el cliente."
+  ],
+  "decisiones_julio": [
+   "No hacer nada de lo que pide el cliente (no anular facturas ni devolver anticipo) hasta revisar el caso."
+  ],
+  "preguntas": [],
+  "notas": [
+   "E1: proviene de lo que pidió un cliente; se revisa, no se ejecuta"
+  ]
+ },
+ "llamadas": [
+  {
+   "lector": "A",
+   "ok": true,
+   "latency_ms": 1627,
+   "usage": {
+    "prompt_tokens": 786,
+    "completion_tokens": 149,
+    "total_tokens": 935,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 146
+   },
+   "error": null
+  },
+  {
+   "lector": "B",
+   "ok": true,
+   "latency_ms": 2915,
+   "usage": {
+    "prompt_tokens": 928,
+    "completion_tokens": 365,
+    "total_tokens": 1293,
+    "prompt_tokens_details": {
+     "cached_tokens": 768
+    },
+    "prompt_cache_hit_tokens": 768,
+    "prompt_cache_miss_tokens": 160
+   },
+   "error": null
+  },
+  {
+   "lector": "C",
+   "ok": true,
+   "latency_ms": 2274,
+   "usage": {
+    "prompt_tokens": 566,
+    "completion_tokens": 290,
+    "total_tokens": 856,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 182
+   },
+   "error": null
+  }
+ ],
+ "plan": {
+  "confirmados": [
+   "E1"
+  ],
+  "tareas": [
+   {
+    "encargo_id": "E1",
+    "titulo": "Revisar el caso del cliente que pide anular facturas y devolución del anticipo",
+    "responsable": "SECRETARIA",
+    "accion": "CREAR_TAREA",
+    "notificar": true,
+    "resultado_esperado": "Informe a Julio con el detalle del caso para que él decida",
+    "plazo": null,
+    "clave_idempotencia": "54971bd761ba659d9decec7c",
+    "condiciones": [
+     "No ejecutar la solicitud citada del cliente",
+     "DEPENDENCIA: Que secretaría revise el caso y me informe"
+    ],
+    "datos_por_investigar": [
+     "identidad del cliente",
+     "facturas involucradas y su estado",
+     "monto y condiciones del anticipo recibido",
+     "si existe sustento contractual para anular o devolver"
+    ]
+   }
+  ],
+  "comunicaciones": [],
+  "operaciones": [
+   {
+    "encargo_id": "E1",
+    "operacion": "OPERACION_CONDICIONADA",
+    "autorizada": false,
+    "motivo": "el dictado la condiciona; no se ejecuta con esta confirmación"
+   }
+  ],
+  "pendientes": [],
+  "advertencias": [
+   "E1: No ejecutar la solicitud citada del cliente; DEPENDENCIA: Que secretaría revise el caso y me informe"
+  ]
+ },
+ "correspondencia": []
+}
