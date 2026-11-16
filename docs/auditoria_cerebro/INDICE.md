@@ -14,6 +14,7 @@
 | Diagnóstico arquitectónico | `docs/AUDITORIA_ARQUITECTURA_CEREBRO.md` | flujo real, decisiones LLM vs código, causas y límites |
 | Trazabilidad P1–P7 | `docs/TRAZABILIDAD_P1_P7.md` | qué se conservó de cada prueba y dónde nace cada error |
 | Alternativas | `docs/ALTERNATIVAS_SOLUCION_CEREBRO.md` | A, B, C y D con riesgos, coste y pruebas |
+| Análisis D+ | `docs/ANALISIS_D_MAS.md` | comparación D vs D+ (lectores paralelos + conciliación) y plan de prueba |
 
 ## Material de apoyo
 
