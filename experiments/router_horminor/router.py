@@ -283,6 +283,7 @@ def conciliar(
         borrador.encargos.append(encargo)
 
     _quitar_verificaciones_inventadas(borrador)
+    _quitar_contexto_sin_orden(borrador)
     _fusionar_encargos_similares(borrador)
 
     # 2. Observaciones de C
@@ -573,6 +574,32 @@ def _fusionar_encargos_similares(borrador: BorradorRouter) -> None:
             )
 
 
+def _quitar_contexto_sin_orden(borrador: BorradorRouter) -> None:
+    """«Nos vamos a estar comunicando» describe una relación, no ordena nada."""
+    patrones = (
+        "coordinar comunicacion",
+        "coordinar contacto",
+        "mantener comunicacion",
+        "mantener contacto",
+        "comunicacion constante",
+        "comunicarnos con",
+    )
+    for encargo in list(borrador.encargos):
+        base = plano(encargo.titulo + " " + encargo.que_hacer)
+        if not any(p in base for p in patrones):
+            continue
+        citas = plano(" ".join(encargo.citas))
+        if re.search(
+            r"\b(coordina|coordine|coordinen|contacta|contacte|contacten|llama|llame|llamen|avisa|informa)\b",
+            citas,
+        ):
+            continue
+        borrador.encargos.remove(encargo)
+        borrador.notas.append(
+            f"{encargo.id}: describe una relación habitual, no un encargo"
+        )
+
+
 def _quitar_verificaciones_inventadas(borrador: BorradorRouter) -> None:
     """Un pago anunciado no es una orden de verificarlo."""
     patrones = (
@@ -640,6 +667,9 @@ def _datos_contexto(hechos: list[Any]) -> dict[str, Any]:
                 cita = getattr(evidencia, "cita", None)
             valor = _reparar_monto(valor, cita)
         datos[clave] = valor
+    contactos = _contactos_de(list(hechos))
+    if contactos:
+        datos["contactos"] = contactos
     return datos
 
 
@@ -797,54 +827,63 @@ def resumen_conversacional(borrador: BorradorRouter) -> str:
     datos = borrador.datos_contexto
     cliente = datos.get("cliente.nombre")
     volumen = datos.get("cotizacion.volumen_m3")
+    resistencia = datos.get("cotizacion.resistencia")
+    plazo = datos.get("cotizacion.plazo_entrega")
+    descuento = datos.get("cotizacion.descuento_pct")
     monto = datos.get("pago.monto")
     recibido = datos.get("pago.recibido")
 
     intro = "Julio, "
     if cliente and volumen:
-        intro += (
-            f"entendí que tenemos un contrato de {volumen} m³ con {cliente}. "
-        )
+        intro += f"entendí que cerraste un contrato con {cliente} por {volumen} m³"
+        if resistencia:
+            intro += f" de hormigón de {resistencia}"
+        detalles = []
+        if plazo:
+            detalles.append(f"con entregas durante {plazo}")
+        if descuento:
+            detalles.append(f"y un descuento del {descuento} %")
+        if detalles:
+            intro += " " + " ".join(detalles)
+        intro += ". "
     elif cliente:
         intro += f"entendí un encargo para {cliente}. "
     else:
-        intro += "entendí lo siguiente. "
+        intro += "entendí estos encargos. "
 
     if not borrador.encargos:
         if borrador.consultas:
             return intro + "Es una consulta: " + "; ".join(borrador.consultas) + "."
         return intro + "No vi un encargo concreto en este dictado."
 
-    cuentas = {"SECRETARIA": 0, "JEFE_PLANTA": 0, "JULIO": 0, "POR_DEFINIR": 0}
-    for encargo in borrador.encargos:
-        cuentas[encargo.responsable] += 1
-    partes = []
-    if cuentas["SECRETARIA"]:
-        partes.append(f"{cuentas['SECRETARIA']} para secretaría")
-    if cuentas["JEFE_PLANTA"]:
-        partes.append(f"{cuentas['JEFE_PLANTA']} para el jefe de planta")
-    if cuentas["JULIO"]:
-        partes.append(f"{cuentas['JULIO']} para ti")
-    if cuentas["POR_DEFINIR"]:
-        partes.append(f"{cuentas['POR_DEFINIR']} por asignar")
-    texto = intro + f"Propongo {len(borrador.encargos)} encargo(s): " + ", ".join(partes) + ". "
-    detalle = []
-    for encargo in borrador.encargos:
-        linea = f"{encargo.id} {encargo.titulo}"
-        if encargo.condiciones:
-            linea += " (condicionado)"
-        if encargo.por_investigar:
-            linea += " (con datos por averiguar)"
-        detalle.append(linea)
-    texto += " · ".join(detalle) + ". "
+    etiquetas = {
+        "SECRETARIA": "Secretaría",
+        "JEFE_PLANTA": "Jefe de planta",
+        "JULIO": "Tú",
+        "POR_DEFINIR": "Por asignar",
+    }
+    lineas = ["📋 Te propongo:"]
+    for rol in ("SECRETARIA", "JEFE_PLANTA", "JULIO", "POR_DEFINIR"):
+        del_rol = [e for e in borrador.encargos if e.responsable == rol]
+        if not del_rol:
+            continue
+        titulos = []
+        for encargo in del_rol:
+            titulo = encargo.titulo
+            if encargo.condiciones:
+                titulo += " (condicionado)"
+            titulos.append(titulo)
+        lineas.append(f"• {etiquetas[rol]}: " + " y ".join(titulos) + ".")
+    texto = intro + "\n\n" + "\n".join(lineas) + "\n\n"
     if monto is not None and recibido is False:
-        texto += f"El pago de {_monto(monto)} USD todavía no está confirmado. "
+        texto += f"El pago de ${_monto(monto)} todavía está pendiente de confirmar.\n\n"
     if borrador.preguntas:
         texto += (
-            f"¿Confirmas estos {len(borrador.encargos)} encargos? "
-            "Antes de ejecutar necesito que me aclares: "
-            + " ".join(borrador.preguntas)
+            "Solo necesito aclarar algo: " + " ".join(borrador.preguntas) + "\n\n"
+            "Cuando me confirmes eso, dejo las tareas asignadas a los responsables."
         )
     else:
-        texto += f"¿Confirmas estos {len(borrador.encargos)} encargos?"
+        texto += (
+            "Si estás de acuerdo, dejaré estas tareas asignadas a los responsables."
+        )
     return texto

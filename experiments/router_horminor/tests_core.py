@@ -218,7 +218,7 @@ def main() -> None:
     from .correccion import _aplicar, CambioIn
 
     objetivo = "E1"
-    nuevo, errores = _aplicar(
+    nuevo, errores, _cambios = _aplicar(
         b5,
         cambios=[CambioIn(encargo=objetivo, campo="responsable", valor="JEFE_PLANTA")],
         cancelar=[],
@@ -236,7 +236,7 @@ def main() -> None:
     resultados.append(("corrección de un encargo no toca los demás", ok, f"v{nuevo.version if nuevo else '?'}"))
 
     # 12. Cancelar uno no afecta al resto
-    nuevo2, errores2 = _aplicar(
+    nuevo2, errores2, _cambios2 = _aplicar(
         b5,
         cambios=[],
         cancelar=["E2"],
@@ -356,6 +356,73 @@ def main() -> None:
     )
     ok = bool(b_cond.encargos) and not b_cond.encargos[0].condiciones
     resultados.append(("condición falsa no se adjunta", ok, str(b_cond.encargos[0].condiciones if b_cond.encargos else None)))
+
+    # 17. Corrección del mensaje real: nombre, dos destinatarios y resto OK
+    from .correccion import _correccion_directa
+    from .router import resumen_conversacional
+
+    b6 = BorradorRouter(
+        version=1,
+        resumen="",
+        datos_contexto={
+            "cliente.nombre": "Díaz Sur",
+            "contactos": [
+                {"nombre": "Julio Alvarado Meneses"},
+                {"nombre": "Mauricio Santander"},
+            ],
+            "pago.monto": 27000,
+            "pago.recibido": False,
+            "cotizacion.volumen_m3": 380,
+        },
+        encargos=[
+            Encargo(
+                id="E1",
+                titulo="Recordatorio para Díaz Sur",
+                que_hacer="preparar el recordatorio",
+                responsable="SECRETARIA",
+                canal="WHATSAPP",
+                destinatario="Díaz Sur",
+                citas=["hay que prepararle los documentos"],
+            )
+        ],
+        preguntas=[
+            "¿El recordatorio va para Julio Alvarado Meneses o para Mauricio Santander?"
+        ],
+    )
+    directa = _correccion_directa(
+        b6,
+        "De entrada no es Diaz Sur es DIALSUR, y notifícales a los dos, "
+        "por lo demás todo correcto.",
+    )
+    nuevo6, errs6, meta6 = directa if directa else (None, ["sin cambios"], {})
+    ok = (
+        nuevo6 is not None
+        and nuevo6.datos_contexto.get("cliente.nombre") == "DIALSUR"
+        and "DIALSUR" in nuevo6.encargos[0].titulo
+        and nuevo6.encargos[0].destinatario
+        == "Julio Alvarado Meneses y Mauricio Santander"
+        and not any("recordatorio va para" in p for p in nuevo6.preguntas)
+        and any("aprobó" in n for n in nuevo6.notas)
+    )
+    resultados.append(
+        ("corrección real: DIALSUR y a los dos", ok, str(meta6.get("cambios")))
+    )
+
+    # 18. Resumen humano con viñetas, salto de línea y monto con formato
+    b7 = b6.model_copy(deep=True)
+    b7.preguntas = [
+        "¿El recordatorio va para Julio Alvarado Meneses o para Mauricio Santander?"
+    ]
+    texto = resumen_conversacional(b7)
+    ok = (
+        "📋" in texto
+        and "• Secretaría:" in texto
+        and "\n" in texto
+        and "$27.000" in texto
+        and "¿El recordatorio va para" in texto
+        and "dejo las tareas asignadas" in texto
+    )
+    resultados.append(("resumen humano con viñetas", ok, texto[:60]))
 
     print()
     for nombre, ok, detalle in resultados:

@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from experiments.d_vs_dmas.llm import nuevo_cliente
 
+from . import errores
 from .confirmacion import planificar, verificar_correspondencia
 from .correccion import corregir
 from .model import BorradorRouter
@@ -40,7 +41,12 @@ padding:9px 14px;font:inherit;cursor:pointer}
 button.primary{background:var(--ok);color:#161616;border-color:var(--ok);font-weight:600}
 button.ghost{padding:5px 9px;font-size:12px}
 button:disabled{opacity:.5;cursor:default}
-.resumen{font-size:16px;margin:0}
+.resumen{font-size:16px;margin:0;white-space:pre-line}
+.errores{display:grid;gap:8px;font-size:13px}
+.error{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#141821}
+.error b{color:var(--ok)}
+.error .antes{color:var(--danger);text-decoration:line-through}
+.error .despues{color:#8fd3a8}
 .burbuja{background:#1b2230;border-left:3px solid var(--ok);border-radius:0 12px 12px 0;
 padding:14px 16px;margin:0 0 14px;font-size:16px;line-height:1.55}
 .quien{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ok);
@@ -80,6 +86,10 @@ overflow:auto;font-size:12px;max-height:360px}
     </div>
     <div id="plan" style="margin-top:14px"></div>
   </section>
+  <section class="card" id="erroresCard">
+    <h3 style="margin-top:0">Errores y correcciones</h3>
+    <div class="errores" id="errores"><span class="detalle">Sin correcciones todavia.</span></div>
+  </section>
 </main>
 <script>
 let borrador = null;
@@ -116,7 +126,7 @@ function pintar() {
       if (!frase) return;
       const d = await post('/api/corregir', {borrador, frase});
       if (d.errores.length) { alert(d.errores.join('\\n')); return; }
-      borrador = d.borrador; pintar();
+      borrador = d.borrador; pintar(); cargarErrores();
     };
     const b2 = document.createElement('button'); b2.className='ghost'; b2.textContent='Cancelar';
     b2.onclick = async () => {
@@ -124,7 +134,7 @@ function pintar() {
       if (!frase) return;
       const d = await post('/api/corregir', {borrador, frase});
       if (d.errores.length) { alert(d.errores.join('\\n')); return; }
-      borrador = d.borrador; pintar();
+      borrador = d.borrador; pintar(); cargarErrores();
     };
     acc.append(b1, b2); div.appendChild(acc);
     caja.appendChild(div);
@@ -133,6 +143,37 @@ function pintar() {
   $('notas').textContent = borrador.notas.length ? borrador.notas.join(' - ') : '';
   $('plan').innerHTML = '';
 }
+async function cargarErrores() {
+  try {
+    const d = await (await fetch('/api/errores')).json();
+    const caja = $('errores'); caja.innerHTML = '';
+    if (!d.errores.length) {
+      const s = document.createElement('span'); s.className='detalle';
+      s.textContent = 'Sin correcciones todavia.'; caja.appendChild(s); return;
+    }
+    d.errores.forEach((e) => {
+      const div = document.createElement('div'); div.className='error';
+      const b = document.createElement('b');
+      b.textContent = e.fecha + ' · ' + (e.tipo || 'CORRECCION');
+      div.appendChild(b);
+      const m = document.createElement('div');
+      m.textContent = 'Julio: «' + (e.mensaje_julio || '') + '»';
+      div.appendChild(m);
+      (e.cambios || []).forEach((c) => {
+        const p = document.createElement('div');
+        p.textContent = c.campo + ': ';
+        const a = document.createElement('span'); a.className='antes';
+        a.textContent = String(c.antes === null ? '—' : c.antes);
+        const s = document.createElement('span'); s.className='despues';
+        s.textContent = '  →  ' + String(c.despues);
+        p.append(a, s); div.appendChild(p);
+      });
+      caja.appendChild(div);
+    });
+  } catch (e) { /* silencio */ }
+}
+cargarErrores();
+
 $('btnInterpretar').onclick = async () => {
   const texto = $('dictado').value.trim();
   if (!texto) return;
@@ -211,6 +252,11 @@ async def confirmar_api(body: ConfirmarIn) -> dict:
     )
     problemas = verificar_correspondencia(borrador, plan, confirmados=body.confirmados)
     return {"plan": plan.model_dump(), "problemas": problemas}
+
+
+@app.get("/api/errores")
+async def errores_api() -> dict:
+    return {"errores": errores.listar(30)}
 
 
 def main() -> None:
