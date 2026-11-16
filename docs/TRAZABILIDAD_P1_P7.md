@@ -228,6 +228,12 @@ visible**; el borrador se guarda, pero la respuesta no lo dice ni queda un
 registro nombrado. El descuento del 20 % y las facturas no se conservan como
 hechos.
 
+**Criterio del cliente (2026-11-16):** debe existir un registro **consultable**
+de lo solicitado por el cliente —anular facturas, descuento, despacho sin
+anticipo— dejando claro que **ninguna condición fue aceptada**. Registrar no
+equivale a aprobar; no necesariamente debe crear una tarea. Hoy ese registro no
+existe como objeto propio: solo el borrador.
+
 **Evidencia:** RECUPERADO.
 
 ---

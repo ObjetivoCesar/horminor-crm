@@ -182,6 +182,42 @@ acción**.
 
 ---
 
+## Aprendizaje del habla de Julio vs reglas de autorización
+
+Tema abierto para la auditoría. Hoy el aprendizaje existe y es acotado:
+
+- **Qué aprende:** pares «lo que se transcribió» → «lo que la persona quiso
+  decir» (`v_cerebro_vocabulario`, migración 087) y las correcciones
+  versionadas. Se usan como **pista** en el prompt, no como regla.
+- **Qué NO puede tocar:** roles, permisos, canales, precios, dinero ni
+  autorizaciones. El vocabulario solo influye en cómo se lee un texto.
+- **Riesgo real:** que una corrección aprendida cambie el significado de una
+  frase («Díaz Sur» → «Dualsur») está bien; que una corrección aprendida
+  convierta «llamar» en «enviar WhatsApp» sería un fallo de seguridad. Hoy no
+  ocurre porque el canal lo decide código, no el vocabulario; pero cualquier
+  rediseño debe conservar esa frontera.
+
+**Requisitos para cualquier alternativa:**
+
+1. El aprendizaje solo puede afectar la **interpretación** (nombres, jerga,
+   lugares), nunca la **autorización** (rol, canal, límite de dinero).
+2. Una asociación aprendida no puede crear un área nueva, un canal nuevo ni un
+   permiso nuevo: como máximo, corrige una palabra.
+3. Toda asociación debe ser **revisable y retirable** con motivo y quedar
+   auditada (ya existe `cerebro_vocabulario_retiros`).
+4. El aprendizaje no puede alterar hechos de dinero: un monto corregido sigue
+   exigiendo doble confirmación.
+5. Debe poder demostrarse con una prueba: corregir una palabra no cambia el
+   canal ni el rol de una orden.
+
+**Pruebas propuestas:** (a) una corrección de nombre no altera el canal;
+(b) una expresión aprendida que suene a «envía» no convierte una orden interna
+en WhatsApp; (c) retirar una asociación devuelve la lectura anterior sin tocar
+los borradores ya emitidos; (d) el vocabulario no se aplica a la validación de
+permisos.
+
+---
+
 ## Comparación
 
 | Dimensión | A | B | C | D |
