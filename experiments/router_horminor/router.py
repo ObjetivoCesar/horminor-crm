@@ -862,7 +862,7 @@ def resumen_conversacional(borrador: BorradorRouter) -> str:
         "JULIO": "Tú",
         "POR_DEFINIR": "Por asignar",
     }
-    lineas = ["📋 Te propongo:"]
+    lineas = ["▸ Te propongo:"]
     for rol in ("SECRETARIA", "JEFE_PLANTA", "JULIO", "POR_DEFINIR"):
         del_rol = [e for e in borrador.encargos if e.responsable == rol]
         if not del_rol:

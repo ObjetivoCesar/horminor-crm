@@ -16,6 +16,11 @@ from experiments.d_vs_dmas.llm import nuevo_cliente
 
 from . import errores
 from .confirmacion import planificar, verificar_correspondencia
+from .conversacion import (
+    es_confirmacion,
+    respuesta_confirmacion,
+    respuesta_correccion,
+)
 from .correccion import corregir
 from .model import BorradorRouter
 from .router import construir
@@ -64,6 +69,13 @@ pre{background:#0c0e13;border:1px solid var(--line);border-radius:8px;padding:12
 overflow:auto;font-size:12px;max-height:360px}
 .aviso{color:var(--dim);font-size:12px}
 .preguntas{color:#e0a35c}
+.conv{display:grid;gap:8px;margin:14px 0;max-height:320px;overflow:auto}
+.msg{max-width:86%;padding:10px 12px;border-radius:12px;white-space:pre-line;font-size:14px;line-height:1.45}
+.msg.julio{background:#243044;margin-left:auto}
+.msg.cerebro{background:#1b2230;border-left:3px solid var(--ok)}
+.msg .quien{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.responder{display:flex;gap:8px;align-items:flex-end;margin-top:8px}
+.responder textarea{min-height:56px}
 </style></head><body>
 <header><b>Router Horminor</b><span>prototipo aislado &middot; propone, no ejecuta</span></header>
 <main>
@@ -85,6 +97,11 @@ overflow:auto;font-size:12px;max-height:360px}
       <button id="btnTodo">Seleccionar todo</button>
     </div>
     <div id="plan" style="margin-top:14px"></div>
+    <div class="conv" id="conv"></div>
+    <div class="responder">
+      <textarea id="respuesta" rows="2" placeholder="Responde al Cerebro: corrige, cancela o confirma..."></textarea>
+      <button class="primary" id="btnResponder">Enviar</button>
+    </div>
   </section>
   <section class="card" id="erroresCard">
     <h3 style="margin-top:0">Errores y correcciones</h3>
@@ -174,6 +191,54 @@ async function cargarErrores() {
 }
 cargarErrores();
 
+function agregar(quien, texto) {
+  const caja = $('conv');
+  const div = document.createElement('div');
+  div.className = 'msg ' + quien;
+  const q = document.createElement('div');
+  q.className = 'quien';
+  q.textContent = quien === 'julio' ? 'Julio' : 'Cerebro';
+  const cuerpo = document.createElement('div');
+  cuerpo.textContent = texto;
+  div.append(q, cuerpo);
+  caja.appendChild(div);
+  caja.scrollTop = caja.scrollHeight;
+}
+
+async function responder() {
+  const frase = $('respuesta').value.trim();
+  if (!frase || !borrador) return;
+  $('btnResponder').disabled = true;
+  try {
+    const d = await post('/api/responder', {borrador, frase});
+    agregar('julio', frase);
+    $('respuesta').value = '';
+    if (d.tipo === 'ERROR') {
+      agregar('cerebro', d.mensaje);
+      return;
+    }
+    borrador = d.borrador;
+    pintar();
+    agregar('cerebro', d.mensaje);
+    if (d.plan) {
+      $('plan').innerHTML = '<h3>Plan de confirmacion</h3><pre>'
+        + JSON.stringify(d.plan, null, 1) + '</pre>'
+        + '<p class="detalle">Correspondencia: '
+        + (d.problemas && d.problemas.length ? d.problemas.join('; ') : 'OK') + '</p>';
+    }
+    cargarErrores();
+  } catch (e) {
+    agregar('cerebro', 'No pude responder: ' + e.message);
+  } finally {
+    $('btnResponder').disabled = false;
+  }
+}
+
+$('btnResponder').onclick = responder;
+$('respuesta').addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); responder(); }
+});
+
 $('btnInterpretar').onclick = async () => {
   const texto = $('dictado').value.trim();
   if (!texto) return;
@@ -181,7 +246,11 @@ $('btnInterpretar').onclick = async () => {
   try {
     const d = await post('/api/dictar', {texto});
     if (d.error) { alert(d.error); return; }
-    borrador = d.borrador; pintar();
+    borrador = d.borrador;
+    pintar();
+    $('conv').innerHTML = '';
+    agregar('julio', texto);
+    agregar('cerebro', borrador.resumen);
   } catch (e) { alert(e.message); } finally { $('btnInterpretar').disabled = false; }
 };
 $('btnEjemplo').onclick = () => {
@@ -212,6 +281,12 @@ class ConfirmarIn(BaseModel):
     borrador: dict
     confirmados: list[str] | None = None
     autorizaciones: dict[str, bool] = {}
+
+
+class ResponderIn(BaseModel):
+    borrador: dict
+    frase: str
+    confirmados: list[str] | None = None
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -252,6 +327,40 @@ async def confirmar_api(body: ConfirmarIn) -> dict:
     )
     problemas = verificar_correspondencia(borrador, plan, confirmados=body.confirmados)
     return {"plan": plan.model_dump(), "problemas": problemas}
+
+
+@app.post("/api/responder")
+async def responder_api(body: ResponderIn) -> dict:
+    borrador = BorradorRouter.model_validate(body.borrador)
+    if es_confirmacion(body.frase):
+        plan = planificar(borrador, confirmados=body.confirmados)
+        return {
+            "tipo": "CONFIRMACION",
+            "mensaje": respuesta_confirmacion(plan),
+            "borrador": borrador.model_dump(),
+            "plan": plan.model_dump(),
+            "problemas": verificar_correspondencia(
+                borrador, plan, confirmados=body.confirmados
+            ),
+        }
+
+    async with nuevo_cliente(concurrencia=4) as cliente:
+        nuevo, errores_correccion, meta = await corregir(
+            cliente, borrador, body.frase
+        )
+    if nuevo is None:
+        return {
+            "tipo": "ERROR",
+            "mensaje": "No pude aplicarlo: " + "; ".join(errores_correccion),
+            "borrador": borrador.model_dump(),
+            "meta": meta,
+        }
+    return {
+        "tipo": "CORRECCION",
+        "mensaje": respuesta_correccion(nuevo, meta),
+        "borrador": nuevo.model_dump(),
+        "meta": meta,
+    }
 
 
 @app.get("/api/errores")

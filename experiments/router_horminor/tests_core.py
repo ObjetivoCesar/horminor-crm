@@ -415,7 +415,7 @@ def main() -> None:
     ]
     texto = resumen_conversacional(b7)
     ok = (
-        "📋" in texto
+        "▸" in texto
         and "• Secretaría:" in texto
         and "\n" in texto
         and "$27.000" in texto
@@ -423,6 +423,38 @@ def main() -> None:
         and "dejo las tareas asignadas" in texto
     )
     resultados.append(("resumen humano con viñetas", ok, texto[:60]))
+
+    # 19. Conversación: confirmar y corregir se distinguen
+    from .conversacion import (
+        es_confirmacion,
+        respuesta_confirmacion,
+        respuesta_correccion,
+    )
+
+    ok = (
+        es_confirmacion("Sí, confirmo")
+        and es_confirmacion("dale")
+        and not es_confirmacion("No, corrige el destinatario")
+        and not es_confirmacion("cancela el segundo")
+    )
+    respuesta = respuesta_correccion(
+        b6,
+        {
+            "cambios": [
+                {
+                    "campo": "cliente.nombre",
+                    "antes": "Díaz Sur",
+                    "despues": "DIALSUR",
+                }
+            ]
+        },
+    )
+    plan_prueba = planificar(b6)
+    confirmacion = respuesta_confirmacion(plan_prueba)
+    ok = ok and "DIALSUR" in respuesta and "¿Confirmas" in respuesta
+    ok = ok and "De estas tareas asignadas" not in confirmacion
+    ok = ok and "Así quedarían las tareas" in confirmacion
+    resultados.append(("conversación: confirmar vs corregir", ok, respuesta[:50]))
 
     print()
     for nombre, ok, detalle in resultados:

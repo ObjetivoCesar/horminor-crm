@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent
-VERSION = "router-1.5"
+VERSION = "router-1.6"
 ARCHIVOS = (
     "model.py",
     "prompts.py",
@@ -25,6 +25,7 @@ ARCHIVOS = (
     "evidencia_escenarios.py",
     "caso_diaz_sur.py",
     "errores.py",
+    "conversacion.py",
 )
 
 
