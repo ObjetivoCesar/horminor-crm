@@ -244,6 +244,54 @@ El detalle completo y las prioridades están en `docs/CONTINUIDAD_CEREBRO.md`.
 | **Dónde se encuentra** | Interno; su efecto se ve en el borrador. |
 | **Referencia técnica** | `compilar()`, `ROLES_ACCIONES`, `_guarda de dinero`. |
 
+### Término: Condición conservada
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `cerebro_borradores.condiciones_json`, claves `entrega.plazo`, `entrega.contra_pago`, `expediente.completar` |
+| **Nombre para el usuario** | Condición conservada |
+| **Qué significa** | Una condición o un encargo que Julio dictó y que no cabe dentro de una acción (por ejemplo, un plazo, «contra entrega del pago» o «hay que añadir ese expediente»). Se guarda con la frase exacta que la sostiene. |
+| **Para qué existe** | Que una instrucción no desaparezca porque todavía no existe un ejecutor para ella. Antes, si la cotización no se podía armar (faltaba la dirección de obra), el plazo se perdía con ella. |
+| **Quién lo utiliza** | Julio y secretaría, al revisar la propuesta. |
+| **Qué lo activa** | Un dictado con condiciones. Las detecta el compilador con reglas fijas sobre el texto, aunque el modelo no las haya extraído. |
+| **Qué sucede después** | Se muestran en el bloque **Condiciones y encargos conservados** y en el resumen «Lo que entendí», con la cita. El encargo al expediente además crea una tarea interna para secretaría. |
+| **Qué NO significa** | No autoriza nada: no despacha, no condiciona el precio ni aprueba crédito. No afirma que los documentos ya llegaron. |
+| **Ejemplo** | «Nos han dado un plazo de 2 meses» → «Plazo de entrega: 2 meses. Falta precisar desde cuándo se cuenta». |
+| **Dónde se encuentra** | `/panel/cerebro`, bloque de condiciones, y resumen «Lo que entendí». |
+| **Referencia técnica** | `compilador._condiciones()`, migración 091. |
+
+### Término: Mensaje autorizado del recordatorio
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `mensaje_por_confirmar`, `mensaje_final`, `programado_inferido` |
+| **Nombre para el usuario** | Mensaje y momento autorizados |
+| **Qué significa** | La diferencia entre lo que Julio dictó (la instrucción), lo que el sistema propone y el texto que finalmente recibe la persona. Si lo dictado describe el encargo («el recordatorio del pago que tiene que hacernos»), el sistema no lo envía: pide el mensaje exacto. |
+| **Para qué existe** | Que un recordatorio no salga con una frase interna que el destinatario no entendería, y que un envío inmediato no se dé por supuesto. |
+| **Quién lo utiliza** | Julio y secretaría, en el laboratorio y en el panel. |
+| **Qué lo activa** | El compilador marca `mensaje_por_confirmar` cuando la frase no es un mensaje dirigido a la persona, y `programado_inferido` cuando el dictado no dio hora. |
+| **Qué sucede después** | Al confirmar, el sistema exige el texto y la aceptación del envío inmediato. Sin ellos responde `MENSAJE_POR_CONFIRMAR` o `CONFIRMAR_ENVIO_INMEDIATO` y no programa nada. |
+| **Qué NO significa** | No es redacción automática: el texto lo escribe una persona. La instrucción original se conserva como constancia. |
+| **Ejemplo** | «Hay que pasarle el recordatorio del pago» → pide el texto; «Dile: ingeniero, le recuerdo el anticipo» → se puede enviar tal cual. |
+| **Dónde se encuentra** | Botón **Confirmar y programar** del laboratorio y de la ficha. |
+| **Referencia técnica** | `compilador.mensaje_es_final()`, `router.validar_confirmacion_recordatorio()`. |
+
+### Término: Ingreso sin confirmar
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `pago.recibido` con estado `INFERIDO` |
+| **Nombre para el usuario** | Sin ingreso confirmado |
+| **Qué significa** | El dictado habla de un pago que todavía no consta, pero no declara expresamente que no se haya recibido. Se conserva como referencia, no como estado financiero. |
+| **Para qué existe** | Distinguir «el cliente no ha pagado» (afirmación) de «no tenemos confirmación del ingreso» (duda). |
+| **Quién lo utiliza** | Julio, secretaría y contadora al leer el resumen. |
+| **Qué lo activa** | El extractor marca el hecho como inferido si la cita no contiene una negación explícita («no ha pagado», «todavía no», «queda pendiente»). |
+| **Qué sucede después** | No se registra ningún abono; el resumen dice «sin ingreso confirmado». Si el dictado lo declara, dice «que todavía no entra». |
+| **Qué NO significa** | No es un pago perdido ni una deuda reconocida: es una verificación pendiente. |
+| **Ejemplo** | «El recordatorio del pago que tiene que hacernos» → «un pago de 17000 USD (sin ingreso confirmado)». |
+| **Dónde se encuentra** | Resumen «Lo que entendí» y notas del verificador. |
+| **Referencia técnica** | `extractor._degradar_pago_no_declarado()`, `revision.resumen_legible()`. |
+
 ### Término: Dato sin confirmar (`TENTATIVO`)
 
 | Campo | Contenido |
@@ -501,12 +549,12 @@ El detalle completo y las prioridades están en `docs/CONTINUIDAD_CEREBRO.md`.
 | **Qué significa** | Un mensaje a una persona, con texto, destinatario y hora, que el sistema envía cuando corresponde. |
 | **Para qué existe** | Que un aviso no dependa de que alguien se acuerde. |
 | **Quién lo utiliza** | Julio y secretaría. |
-| **Qué lo activa** | Una acción `crear_tarea_recordatorio` confirmada. |
+| **Qué lo activa** | Una acción `crear_tarea_recordatorio` confirmada **con mensaje autorizado y momento confirmado**. |
 | **Qué sucede después** | Queda `PENDIENTE`; el despachador revisa la cola cada 20 segundos y lo envía a su hora; el estado pasa a `ENVIADO` o `FALLIDO`. |
-| **Qué NO significa** | No es una tarea interna: se envía a un teléfono y no se resuelve en el panel. |
+| **Qué NO significa** | No es una tarea interna: se envía a un teléfono y no se resuelve en el panel. Tampoco se envía la frase dictada si esa frase describe el encargo en vez de ser el mensaje. |
 | **Ejemplo** | «Recuérdale a Mauricio a las 18:00 que pase el comprobante». |
 | **Dónde se encuentra** | Popout y campanita de `/panel`. |
-| **Referencia técnica** | `app/asistente/recordatorios.py`, `cerebro_ejecuciones`. |
+| **Referencia técnica** | `app/asistente/recordatorios.py`, `cerebro_ejecuciones`, `validar_confirmacion_recordatorio()`. |
 
 ### Término: SANDBOX
 
@@ -701,26 +749,30 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 
 ### Por nombre técnico
 
-`ACUSADA` §5 · `clave_externa` §6 · `cerebro_ejecuciones` §7 · `ESCALADA` §5 ·
-`EXTRAIDO` §7 · `gato_recordatorios` §6 · `JUSTIFICADA` §5 · `NOTIFICADA` §5 ·
-`REGISTRADA` §5 · `REQUIERE_ACLARACION` §7 · `RESUELTA` §5 ·
-`SANDBOX` §6 · `SIN_ACCIONES` §7 · `SUPERADO_POR_CORRECCION` §4 ·
-`TENTATIVO` §4 · `VISTA` §5.
+`ACUSADA` §5 · `clave_externa` §6 · `condiciones_json` §4 ·
+`cerebro_ejecuciones` §7 · `ESCALADA` §5 · `EXTRAIDO` §7 ·
+`gato_recordatorios` §6 · `JUSTIFICADA` §5 · `mensaje_por_confirmar` §4 ·
+`NOTIFICADA` §5 · `pago.recibido` (INFERIDO) §4 · `REGISTRADA` §5 ·
+`REQUIERE_ACLARACION` §7 · `RESUELTA` §5 · `SANDBOX` §6 · `SIN_ACCIONES` §7 ·
+`SUPERADO_POR_CORRECCION` §4 · `TENTATIVO` §4 · `VISTA` §5.
 
 ### Por nombre visible
 
 Aviso dejado §5 · Cierre con justificación §5 · Compilador §4 ·
-Confirmación doble §6 · Dato sin confirmar §4 · Elevada al supervisor §5 ·
-Ficha de la tarea §5 · Guarda de «el dinero ya entró» §6 · Gato §6 ·
-Hecho citado §4 · Prioridad y plazo §5 · Recepción confirmada §5 ·
-Recordatorio programado §6 · Resultado registrado §5 · Retención de audio §6 ·
-Tarea consultada §5 · Trabajo realizado §5.
+Condición conservada §4 · Confirmación doble §6 · Dato sin confirmar §4 ·
+Elevada al supervisor §5 · Ficha de la tarea §5 · Guarda de «el dinero ya entró» §6 ·
+Gato §6 · Hecho citado §4 · Ingreso sin confirmar §4 ·
+Mensaje autorizado del recordatorio §4 · Prioridad y plazo §5 ·
+Recepción confirmada §5 · Recordatorio programado §6 · Resultado registrado §5 ·
+Retención de audio §6 · Tarea consultada §5 · Trabajo realizado §5.
 
 ### Por sinónimo
 
 «acuse» → Recepción confirmada §5 · «avisada» → Aviso dejado §5 ·
-«cita» → Hecho citado §4 · «duda» → Dato sin confirmar §4 ·
-«escalar» → Elevada al supervisor §5 · «marcar hecho» → Trabajo realizado §5 ·
+«cita» → Hecho citado §4 · «condición» → Condición conservada §4 ·
+«duda» → Dato sin confirmar §4 · «escalar» → Elevada al supervisor §5 ·
+«expediente» → Condición conservada §4 · «marcar hecho» → Trabajo realizado §5 ·
+«no ha pagado» → Ingreso sin confirmar §4 · «plazo» → Condición conservada §4 ·
 «registrar» → Resultado registrado §5 · «revisada» → Tarea consultada §5 ·
 «vencida» → Prioridad y plazo §5.
 
@@ -748,3 +800,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v1 | 2026-11-15 | Manual inicial del Cerebro: mapa, 21 términos, índice, nombres visibles y regla de mantenimiento. |
 | v1.1 | 2026-11-15 | Revocación completa del dictado (F) y negación de instrucciones citadas (L); etiquetas visibles en el panel y el laboratorio. |
 | v1.2 | 2026-11-15 | Arquitectura futura Cerebro–Gato–módulos y separación de los flujos interno y externo (§3.4); sigue sin implementarse. |
+| v1.3 | 2026-11-16 | Condición conservada, Mensaje autorizado del recordatorio e Ingreso sin confirmar (§4); índice actualizado. Conservación de instrucciones ante el dictado espontáneo del 2026-11-16. |

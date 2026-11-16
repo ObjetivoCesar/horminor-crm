@@ -228,7 +228,10 @@ def _personas(hechos: Sequence[HechoCitado]) -> list[str]:
 
 
 def resumen_legible(
-    hechos: Sequence[HechoCitado], *, texto: str | None = None
+    hechos: Sequence[HechoCitado],
+    *,
+    texto: str | None = None,
+    condiciones: Sequence[Any] = (),
 ) -> str:
     """«Entendí esto: …» armado con los hechos, sin redactar nada nuevo."""
     partes: list[str] = []
@@ -284,11 +287,15 @@ def resumen_legible(
     monto = _primero(hechos, "pago.monto")
     forma = _primero(hechos, "pago.forma")
     recibido = _primero(hechos, "pago.recibido")
+    hecho_recibido = next(
+        (h for h in hechos if h.clave == "pago.recibido" and h.utilizable),
+        None,
+    )
+    no_recibido_declarado = (
+        hecho_recibido is not None
+        and hecho_recibido.estado in ("EXTRAIDO", "CORREGIDO_POR_HUMANO")
+    )
     if recibido is True:
-        hecho_recibido = next(
-            (h for h in hechos if h.clave == "pago.recibido" and h.utilizable),
-            None,
-        )
         try:
             monto_dec = Decimal(str(monto)) if monto is not None else None
         except (InvalidOperation, ValueError):
@@ -305,11 +312,12 @@ def resumen_legible(
             pago += f" por {_plano(str(forma))}"
         if recibido is True:
             pago += " que ya entró"
-        elif recibido is False:
+        elif recibido is False and no_recibido_declarado:
             pago += " que todavía no entra"
         else:
-            # El audio habló del dinero pero no dijo si entró: no se inventa.
-            pago += " (sin confirmar si ya entró)"
+            # «El pago que tiene que hacernos» no afirma que no haya entrado:
+            # afirma que todavía no consta. No se inventa un estado financiero.
+            pago += " (sin ingreso confirmado)"
         partes.append(pago)
 
     mensaje = _primero(hechos, "tarea.mensaje")
@@ -352,6 +360,14 @@ def resumen_legible(
             "sin confirmar: "
             + "; ".join(f"«{dicho}»" for dicho in dict.fromkeys(dudas))
         )
+
+    condiciones_dichas = [
+        str(getattr(condicion, "texto", condicion)).strip().rstrip(".")
+        for condicion in condiciones
+    ]
+    if condiciones_dichas:
+        # Una condición dictada no es una acción: se conserva y se lee.
+        partes.append("condiciones: " + "; ".join(condiciones_dichas))
 
     if dictado_revocado(texto):
         aviso = (

@@ -187,3 +187,38 @@ Prerrequisitos técnicos, en orden:
 3. Reutilizar las mismas operaciones de corrección y confirmación que usa el
    panel: **un solo Cerebro, dos canales**.
 4. Consulta de estado de tareas para responder «¿qué pasó con lo de ayer?».
+
+---
+
+## 6. Incremento 2026-11-16 — conservación de instrucciones
+
+> **Origen.** Un audio espontáneo de Julio en `/panel/cerebro` (anticipo de USD
+> 17.000, 250 m³ FC-240, ingeniero Julio Cartuche, la rectificación «la
+> cotización, no la cotización, el recordatorio del pago», entrega contra pago,
+> plazo de dos meses y encargo al expediente). La suite estaba en verde y aun
+> así el borrador perdió parte del encargo. Corte anterior: 090 y 586 pruebas;
+> ahora **091 y 601 pruebas**.
+
+| # | Hallazgo | ¿Era falla? | Causa real | Corrección | Prueba |
+|---|---|---|---|---|---|
+| A | Se perdió el plazo de dos meses | **Sí** | El plazo vivía solo en los parámetros de `crear_cotizacion_borrador`. Sin dirección de obra la cotización no se arma, y con ella desaparecía el plazo. | `Condicion` + `condiciones_json` (091): el plazo se conserva aparte, con su cita, aunque no haya acción. | `test_el_plazo_no_se_pierde...` |
+| B | No se conservó «entrega contra pago» | **Sí** | No existía clave ni condición para esa frase; el modelo no la extrajo. | Detección determinística sobre el texto (`entrega.contra_pago`), con la frase como cita. No crea acción de despacho. | `test_la_entrega_contra_pago...` |
+| C | El encargo al expediente no apareció | **Sí** | Tampoco existía clave; el LLM no lo extrajo y no había respaldo. | Condición `expediente.completar` + tarea interna para secretaría con la instrucción copiada y nota de qué falta verificar. | `test_el_encargo_al_expediente...` |
+| D | El recordatorio usaba la frase dictada como mensaje | **Sí** | El compilador copiaba `tarea.mensaje` a `mensaje` sin distinguir instrucción de mensaje final. | Se separan `instruccion` y `mensaje`; `mensaje_por_confirmar` exige texto autorizado al confirmar (`MENSAJE_POR_CONFIRMAR`). | `test_el_recordatorio_no_hereda...`, `test_confirmar_sin_mensaje_final...` |
+| E | `tarea.cuando = ahora` sin hora dictada | **Parcial** | La inferencia era correcta pero no pedía aceptación explícita. | `programado_inferido` ahora exige `enviar_ahora` al confirmar (`CONFIRMAR_ENVIO_INMEDIATO`). | `test_confirmar_sin_aceptar_envio...` |
+| F | `pago.recibido = no` sin declaración expresa | **Sí** (de redacción) | El LLM infirió «no recibido» de «el pago que tiene que hacernos» y se leía como estado financiero. | Si no hay negación explícita, el hecho baja a `INFERIDO` y el resumen dice «sin ingreso confirmado». Si se declara, dice «que todavía no entra». | `test_pago_no_recibido_sin_negacion...` |
+| G | «Programado» con confirmación pendiente | **No** | La secuencia es correcta: el recordatorio se creó en la misma petición de confirmación (00:21:46), 19 s después del borrador (00:21:27), no antes. Lo confuso era la etiqueta: el borrador seguía en `REQUIERE_ACLARACION`. | La respuesta expone `confirmado_parcial` y `preguntas_pendientes`; la UI dice «Programado · quedan preguntas». | Evidencia SQL en `.agents/evidencias/cerebro_conservacion_2026-11-16.txt` |
+
+**Hallazgo extra (recompilación).** Al recompilar el mismo sobre, un dato de
+texto podía rechazarse porque el verificador comparaba el valor contra el texto
+normalizado («2 meses») y no contra la cita cruda («dos meses»). Corregido:
+la cita cruda también sostiene el hecho.
+
+**Prueba de conservación.** `scripts/evidencia_conservacion.py` toma el dictado
+real de la base, rehace los hechos sin LLM, recompila y compara
+*dictado → hechos → resumen → acciones y condiciones*. Resultado:
+`CONSERVACION: OK — ninguna instrucción relevante se perdió` (10 de 10).
+
+**Lo que sigue sin existir.** La confirmación por el mismo chat de WhatsApp
+(requiere persistir entrantes y autorizar por riesgo, no solo por número), la
+conexión Gato–Cerebro y el flujo externo. No se tocaron.

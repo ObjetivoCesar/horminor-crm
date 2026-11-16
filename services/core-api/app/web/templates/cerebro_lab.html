@@ -365,6 +365,13 @@
         </table>
       </div>
 
+      <div class="block" id="bloqueCondiciones">
+        <h3>Condiciones y encargos conservados <span class="count" id="nCondiciones">0</span></h3>
+        <ul class="notas" id="condiciones"></ul>
+        <p class="sub">Estas condiciones no autorizan nada por sí solas: quedan
+          visibles para que no se pierda parte del encargo.</p>
+      </div>
+
       <div class="block">
         <h3>Acciones propuestas <span class="count" id="nAcciones">0</span></h3>
         <ol class="acciones" id="acciones"></ol>
@@ -563,6 +570,7 @@
     const hechos = datos.hechos || [];
     const acciones = borrador.acciones || [];
     const preguntas = borrador.preguntas || [];
+    const condiciones = borrador.condiciones || datos.condiciones || [];
     const notas = datos.notas || [];
 
     $('resumen').textContent = datos.resumen || '—';
@@ -668,6 +676,27 @@
       tbody.appendChild(tr);
     });
 
+    // Condiciones y encargos que no son una acción
+    const ulC = $('condiciones');
+    ulC.innerHTML = '';
+    $('nCondiciones').textContent = condiciones.length;
+    $('bloqueCondiciones').classList.toggle('hidden', condiciones.length === 0);
+    condiciones.forEach((c) => {
+      const li = document.createElement('li');
+      const estado = document.createElement('span');
+      estado.className = 'pill ' + (c.estado === 'POR_ACLARAR' ? 'warn' : 'ok');
+      estado.textContent = c.estado === 'POR_ACLARAR' ? 'por aclarar' : 'vigente';
+      li.textContent = (c.texto || '') + ' ';
+      li.appendChild(estado);
+      if (c.cita) {
+        const cita = document.createElement('span');
+        cita.className = 'sub';
+        cita.textContent = '«' + c.cita + '»';
+        li.appendChild(cita);
+      }
+      ulC.appendChild(li);
+    });
+
     // Acciones
     const lista = $('acciones');
     lista.innerHTML = '';
@@ -725,11 +754,36 @@
         li.appendChild(dl);
       }
       if (nombre === 'crear_tarea_recordatorio' && datos.borrador_id) {
+        // El texto que va a leer la persona y el momento se autorizan aquí,
+        // no se heredan de una suposición del dictado.
+        let caja = null;
+        if (params.mensaje_por_confirmar) {
+          caja = document.createElement('textarea');
+          caja.rows = 3;
+          caja.placeholder = 'Escribe el mensaje exacto que recibirá la persona';
+          caja.value = '';
+          li.appendChild(caja);
+        }
+        let ahora = null;
+        if (params.programado_inferido) {
+          const fila = document.createElement('label');
+          fila.className = 'sub';
+          ahora = document.createElement('input');
+          ahora.type = 'checkbox';
+          fila.append(ahora, document.createTextNode(' Confirmo que se envía ahora'));
+          li.appendChild(fila);
+        }
         const btn = document.createElement('button');
         btn.className = 'primary';
         btn.textContent = 'Confirmar y programar';
         btn.addEventListener('click', () => {
-          confirmarAccion(datos.borrador_id, a.orden, btn);
+          confirmarAccion(
+            datos.borrador_id,
+            a.orden,
+            btn,
+            caja ? caja.value : null,
+            ahora ? ahora.checked : false
+          );
         });
         li.appendChild(btn);
       }
@@ -770,21 +824,35 @@
   // ------------------------------------------------------------------
   // Confirmar una acción conectada
   // ------------------------------------------------------------------
-  async function confirmarAccion(borradorId, orden, boton) {
+  async function confirmarAccion(borradorId, orden, boton, mensajeFinal, enviarAhora) {
     limpiarAvisos();
     ocupado(boton, true);
     try {
+      const cuerpo = { accion_orden: orden, enviar_ahora: Boolean(enviarAhora) };
+      if (mensajeFinal && String(mensajeFinal).trim()) {
+        cuerpo.mensaje_final = String(mensajeFinal).trim();
+      }
       const datos = await pedir(`/api/v1/cerebro/borradores/${borradorId}/confirmar`, {
         method: 'POST',
         headers: cabeceras({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ accion_orden: orden }),
+        body: JSON.stringify(cuerpo),
       });
-      boton.textContent = datos.repetido ? 'Ya estaba programado' : 'Programado';
+      const etiqueta = datos.repetido
+        ? 'Ya estaba programado'
+        : (datos.estado_borrador === 'EJECUTADO'
+            ? 'Programado'
+            : 'Programado · quedan preguntas');
+      boton.textContent = etiqueta;
       boton.disabled = true;
       const nota = document.createElement('span');
       nota.className = 'sub';
       const id = datos.datos && datos.datos.id ? ` · ${datos.datos.id}` : '';
-      nota.textContent = (datos.nota || 'Recordatorio programado.') + id;
+      let texto = datos.nota || 'Recordatorio programado.';
+      if (datos.confirmado_parcial) {
+        texto += ` Este borrador conserva ${datos.preguntas_pendientes} pregunta(s) `
+          + 'sin responder: no está todo confirmado.';
+      }
+      nota.textContent = texto + id;
       boton.parentElement.appendChild(nota);
       mostrarPopoutTarea(datos);
     } catch (e) {

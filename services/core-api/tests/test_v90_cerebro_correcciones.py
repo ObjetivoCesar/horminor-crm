@@ -177,7 +177,7 @@ def test_resumen_no_dice_que_el_dinero_entro_si_no_se_sabe() -> None:
 
     resumen = resumen_legible(hechos)
 
-    assert "sin confirmar si ya entró" in resumen
+    assert "sin ingreso confirmado" in resumen
     assert "que ya entró" not in resumen
     assert "todavía no entra" not in resumen
 
@@ -190,7 +190,7 @@ def test_resumen_no_afirma_que_entro_sin_frase_en_pasado() -> None:
 
     resumen = resumen_legible(hechos, texto="nos van a transferir 27000 USD")
 
-    assert "sin confirmar si ya entró" in resumen
+    assert "sin ingreso confirmado" in resumen
 
 
 def test_resumen_dice_que_entro_cuando_el_audio_lo_dice_en_pasado() -> None:

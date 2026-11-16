@@ -88,6 +88,30 @@ class Pregunta:
 
 
 @dataclass(frozen=True)
+class Condicion:
+    """Lo que el dictado dejó como condición y no cabe en una acción.
+
+    Un plazo, una entrega contra pago o un encargo al expediente no son
+    columnas de ninguna acción. Si la acción que los llevaba no se puede
+    compilar, la condición no puede desaparecer: se conserva con su cita y se
+    muestra tal cual. No autoriza nada por sí sola.
+    """
+
+    clave: str
+    texto: str
+    cita: str | None = None
+    estado: str = "VIGENTE"  # VIGENTE | POR_ACLARAR
+
+    def a_dict(self) -> dict[str, Any]:
+        return {
+            "clave": self.clave,
+            "texto": self.texto,
+            "cita": self.cita,
+            "estado": self.estado,
+        }
+
+
+@dataclass(frozen=True)
 class AccionPropuesta:
     orden: int
     nombre: str
@@ -116,6 +140,7 @@ class Borrador:
     acciones: tuple[AccionPropuesta, ...] = ()
     preguntas: tuple[Pregunta, ...] = ()
     hechos: tuple[HechoCitado, ...] = field(default_factory=tuple)
+    condiciones: tuple[Condicion, ...] = ()
 
     def a_dict(self) -> dict[str, Any]:
         return {
@@ -127,6 +152,7 @@ class Borrador:
                 for p in self.preguntas
             ],
             "hechos": [hecho.a_dict() for hecho in self.hechos],
+            "condiciones": [condicion.a_dict() for condicion in self.condiciones],
         }
 
 
@@ -327,6 +353,7 @@ def _ficha_tarea(
     persona: str | None,
     telefono_referencia: str | None,
     cuando: str | None,
+    nota: str | None = None,
 ) -> dict[str, Any]:
     """Ficha determinística: solo hechos, nunca texto redactado."""
     tipo = _tipo_de_tarea(f"{texto or ''} {mensaje}")
@@ -355,6 +382,7 @@ def _ficha_tarea(
         "plazo_dicho": cuando,
         "datos_faltantes": pendientes,
         "resultado_esperado": RESULTADO_POR_TIPO[tipo],
+        "nota": nota,
     }
 
 
@@ -493,6 +521,203 @@ def _condicion_negada(texto: str | None, *marcas: str) -> bool:
                 return True
             inicio = plano.find(marca, inicio + 1)
     return False
+
+
+def _fragmento(texto: str, marca: str, *, margen: int = 90) -> str:
+    """Devuelve la frase del dictado que contiene la marca, sin redactarla."""
+    plano = sin_tildes(texto or "")
+    posicion = plano.find(marca)
+    if posicion < 0:
+        return marca
+    inicio = max(0, posicion - margen)
+    cortes = [texto.rfind(sep, inicio, posicion) for sep in (".", ";", "!")]
+    corte = max(cortes)
+    if corte >= inicio:
+        inicio = corte + 1
+    else:
+        espacio = texto.find(" ", inicio, posicion)
+        if espacio > 0:
+            inicio = espacio + 1
+    fin = len(texto)
+    for sep in (".", ";", "!", "?"):
+        encontrado = texto.find(sep, posicion)
+        if 0 <= encontrado < fin:
+            fin = encontrado
+    return texto[inicio:fin].strip(" ,;\n\t")
+
+
+# El dictado condiciona la entrega al pago. No autoriza despachar: solo deja
+# constancia de la condición para secretaría y para el área comercial.
+_MARCAS_ENTREGA_CONTRA_PAGO = (
+    "contra entrega de ese pago",
+    "contra entrega del pago",
+    "contra entrega",
+    "contra el pago",
+    "previo pago",
+    "previo al pago",
+    "contra pago",
+    "despues de que nos pague",
+    "despues que nos pague",
+    "cuando nos pague",
+    "una vez que nos pague",
+    "sujeto a pago",
+    "si nos pagan",
+    "hasta que nos pague",
+)
+
+# Encargo de completar el expediente. No dice que los documentos ya llegaron.
+_MARCAS_EXPEDIENTE = (
+    "expediente",
+    "especificaciones de la constructora",
+)
+
+
+def _condiciones(
+    hechos: Sequence[HechoCitado], texto: str | None
+) -> tuple[Condicion, ...]:
+    """Condiciones y encargos que no caben en una acción ejecutable.
+
+    Se leen de los hechos citados y, si el modelo no los capturó, del propio
+    dictado (con su frase como cita). Nunca se convierten en una autorización:
+    solo quedan visibles para que no se pierda el encargo.
+    """
+    condiciones: list[Condicion] = []
+    plano = sin_tildes(texto or "")
+
+    plazo = _texto(hechos, "cotizacion.plazo_entrega")
+    cita_plazo = None
+    if plazo:
+        hecho_plazo = _hecho(hechos, "cotizacion.plazo_entrega")
+        if hecho_plazo is not None and hecho_plazo.evidencia is not None:
+            cita_plazo = hecho_plazo.evidencia.cita
+    else:
+        coincidencia = re.search(
+            r"plazo de ([a-z0-9]+ (?:dias|semanas|meses|anos))", plano
+        )
+        if coincidencia:
+            plazo = coincidencia.group(1)
+            cita_plazo = _fragmento(texto or "", coincidencia.group(0))
+    if plazo:
+        condiciones.append(
+            Condicion(
+                clave="entrega.plazo",
+                texto=(
+                    f"Plazo de entrega: {plazo}. Falta precisar desde cuándo "
+                    "se cuenta."
+                ),
+                cita=cita_plazo,
+                estado="POR_ACLARAR",
+            )
+        )
+
+    for marca in _MARCAS_ENTREGA_CONTRA_PAGO:
+        if marca in plano:
+            condiciones.append(
+                Condicion(
+                    clave="entrega.contra_pago",
+                    texto=(
+                        "La entrega queda condicionada a la recepción del pago. "
+                        "No autoriza despachar."
+                    ),
+                    cita=_fragmento(texto or "", marca),
+                    estado="VIGENTE",
+                )
+            )
+            break
+
+    for marca in _MARCAS_EXPEDIENTE:
+        if marca in plano:
+            condiciones.append(
+                Condicion(
+                    clave="expediente.completar",
+                    texto=(
+                        "Incorporar al expediente del cliente la información que "
+                        "indique la constructora. Falta verificar qué documentos "
+                        "son y si ya se recibieron."
+                    ),
+                    cita=_fragmento(texto or "", marca),
+                    estado="POR_ACLARAR",
+                )
+            )
+            break
+
+    return tuple(condiciones)
+
+
+# Una frase que el dictado dirige al destinatario es un mensaje final; una
+# descripción («el recordatorio del pago que tiene que hacernos») es la
+# instrucción, no el texto que se envía. El compilador no redacta: si no hay
+# mensaje final, lo pide antes de ejecutar.
+_MARCAS_MENSAJE_FINAL = (
+    "dile ",
+    "dile:",
+    "digale",
+    "dígale",
+    "mandele",
+    "mándele",
+    "escribale",
+    "escríbele",
+    "ponle",
+    "enviele",
+    "envíele",
+    "que diga",
+    "con estas palabras",
+    "el mensaje es",
+    "texto:",
+    "le dice",
+    "le escribes",
+    "le mandas",
+    "le envias",
+    "le envías",
+    "que le diga",
+)
+_FORMAS_MENSAJE_DIRECTO = (
+    "por favor",
+    "licenciado",
+    "licenciada",
+    "ingeniero",
+    "ingeniera",
+    "estimado",
+    "estimada",
+    "buenas",
+    "buenos dias",
+    "buenas tardes",
+    "hola ",
+    "senor ",
+    "senora ",
+    "sr.",
+    "sra.",
+)
+_VERBOS_MENSAJE = (
+    "envie",
+    "envíe",
+    "confirme",
+    "confírmeme",
+    "confirmenos",
+    "confírmenos",
+    "remita",
+    "comuniquese",
+    "comuníquese",
+    "avisenos",
+    "avísenos",
+    "avíseme",
+    "adjunte",
+    "adjuntenos",
+    "deposite",
+)
+
+
+def mensaje_es_final(texto: str | None, mensaje: str | None) -> bool:
+    """True si lo dictado ya es el texto que se puede enviar tal cual."""
+    if not mensaje:
+        return False
+    plano = sin_tildes(texto or "")
+    if any(marca in plano for marca in _MARCAS_MENSAJE_FINAL):
+        return True
+    cuerpo = sin_tildes(mensaje)
+    if any(cuerpo.startswith(forma) for forma in _FORMAS_MENSAJE_DIRECTO):
+        return True
+    return any(verbo in cuerpo for verbo in _VERBOS_MENSAJE)
 
 
 def _notas_cotizacion(
@@ -909,6 +1134,15 @@ def compilar(
         contactos = _contactos(hechos)
         telefono_dictado = _texto(hechos, "tarea.telefono")
         nombre_tarea = _texto(hechos, "tarea.destinatario")
+        # Si el modelo citó mal el nombre del destinatario, el contacto con el
+        # mismo teléfono es la misma persona: se recupera sin inventar.
+        if not nombre_tarea and telefono_dictado:
+            digitos = re.sub(r"\D", "", telefono_dictado)
+            for contacto in contactos:
+                telefono = re.sub(r"\D", "", str(contacto.get("telefono") or ""))
+                if telefono and telefono == digitos and contacto.get("nombre"):
+                    nombre_tarea = str(contacto["nombre"])
+                    break
         mensaje_tarea = _texto(hechos, "tarea.mensaje")
         cuando_tarea = _texto(hechos, "tarea.cuando")
         rol_interno = detectar_rol_interno(contexto.texto)
@@ -1002,6 +1236,19 @@ def compilar(
                 )
             )
             bloqueos = True
+        # Una descripción del encargo no es el texto que recibe la persona.
+        # No se redacta: se pide el mensaje final antes de programar.
+        mensaje_final = mensaje_es_final(contexto.texto, mensaje_tarea)
+        if mensaje_tarea and not delegar and not mensaje_final:
+            preguntas.append(
+                Pregunta(
+                    "tarea.mensaje",
+                    "¿Con qué texto exacto le envío el recordatorio? Lo dictado "
+                    f"fue «{mensaje_tarea}»: eso describe el encargo, no el "
+                    "mensaje que va a leer el destinatario.",
+                )
+            )
+            bloqueos = True
         if delegar and mensaje_tarea:
             # La instrucción se guarda tal cual se dictó: no se redacta.
             rol_final = rol_interno or "SECRETARIA"
@@ -1030,7 +1277,11 @@ def compilar(
                 "crear_tarea_recordatorio",
                 {
                     "destinatario": destino,
-                    "mensaje": mensaje_tarea,
+                    # `mensaje` es lo que se envía; `instruccion` es lo dictado.
+                    # Sin mensaje final, la ejecución lo exige antes de enviar.
+                    "mensaje": mensaje_tarea if mensaje_final else None,
+                    "instruccion": mensaje_tarea,
+                    "mensaje_por_confirmar": not mensaje_final,
                     "cuando": cuando_tarea or "ahora",
                     "adjuntar_factura": _booleano(
                         hechos, "tarea.adjuntar_factura"
@@ -1041,6 +1292,39 @@ def compilar(
                 # antes; con un teléfono dictado no hace falta.
                 depende=orden_cliente if (nombre_tarea and not telefono_tarea) else None,
             )
+
+    # ------------------------------------------------------------------
+    # Encargo al expediente: no es una acción comercial, es trabajo interno.
+    # ------------------------------------------------------------------
+    condiciones = _condiciones(hechos, contexto.texto)
+    expediente = next(
+        (c for c in condiciones if c.clave == "expediente.completar"), None
+    )
+    if expediente is not None and not any(
+        accion.nombre == "crear_tarea_interna" for accion in acciones
+    ):
+        instruccion = expediente.cita or expediente.texto
+        agregar(
+            "crear_tarea_interna",
+            {
+                "instruccion": instruccion,
+                "asignado_rol": "SECRETARIA",
+                "asignado_a": None,
+                "cuando": None,
+                "prioridad": "NORMAL",
+                "ficha": _ficha_tarea(
+                    hechos,
+                    texto=contexto.texto,
+                    mensaje=instruccion,
+                    rol="SECRETARIA",
+                    persona=None,
+                    telefono_referencia=None,
+                    cuando=None,
+                    nota=expediente.texto,
+                ),
+            },
+            depende=orden_cliente,
+        )
 
     if bloqueos:
         estado = "REQUIERE_ACLARACION"
@@ -1055,6 +1339,7 @@ def compilar(
         acciones=tuple(acciones),
         preguntas=_sin_duplicados(preguntas),
         hechos=hechos,
+        condiciones=condiciones,
     )
 
 

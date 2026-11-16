@@ -4,8 +4,9 @@
 > retomar el proyecto sin depender del historial del chat: qué está construido,
 > qué se decidió, qué NO se debe hacer todavía y cuál es el siguiente paso.
 >
-> **Fecha:** 2026-11-15 · **Corte:** Cerebro fases 0–2 + incremento v2 ·
-> **Suites:** 586 pruebas en verde · **Migraciones:** 085–090.
+> **Fecha:** 2026-11-16 · **Corte:** Cerebro fases 0–2 + incremento v2 +
+> conservación de instrucciones ·
+> **Suites:** 601 pruebas en verde · **Migraciones:** 085–091.
 >
 > **Documentos hermanos.**
 > - Explicación funcional: `docs/HORMINOR_MANUAL_FUNCIONAL.md`
@@ -25,6 +26,8 @@
 | Borradores versionados y correcciones con bóveda | Funciona | `test_v90_cerebro_correcciones.py`, cadena v1→v3 en vivo |
 | Vocabulario aprendido y retiro de asociaciones | Funciona | migración 087 y 090; en vivo |
 | Tareas internas con aviso, vista, acuse, cierre, prioridad, plazo y escalada | Funciona | migración 088 y 090; `cerebro_tareas_internas_2026-11-15.txt` |
+| Condiciones conservadas con cita (plazo, entrega contra pago, expediente) | Funciona | migración 091; `cerebro_conservacion_2026-11-16.txt` |
+| Recordatorio con mensaje autorizado y envío inmediato confirmado | Funciona | `test_v94_conservacion.py`; guardas 422 |
 | Guarda de dinero y doble confirmación | Funciona | `cerebro_guarda_dinero_2026-11-15.txt` |
 | Revocación completa y negación de instrucción citada | Funciona | `test_v92_adversarial.py`; en vivo |
 | Panel: franja persistente, ficha de tarea, etiquetas visibles | Funciona | navegador verificado |
@@ -35,6 +38,9 @@
 **No implementado todavía** (y así debe decirse):
 
 - Conversación por WhatsApp (entrantes no persistidos).
+- Confirmación por el mismo chat de WhatsApp: cuando se conecte, Julio enviará un
+  audio, leerá el resumen, corregirá y confirmará en el hilo; exige persistir
+  entrantes y autorizar por riesgo, no solo por el número de teléfono.
 - Ejecución de `crear_cliente` y `crear_cotizacion_borrador` desde el Cerebro (501 a propósito).
 - Persistencia de `contacto.*` en la ficha del cliente.
 - Aprendizaje de significados y lugares.
@@ -127,11 +133,14 @@ docker ps --filter name=orminorth --format "{{.Names}}  {{.Status}}"
 # migraciones (deben estar 085 a 090 aplicadas)
 docker compose run --rm --no-deps core-api python scripts/db_migrate.py
 
-# suite completa (hoy 586)
+# suite completa (hoy 601)
 docker compose run --rm --no-deps core-api python -m pytest /app/tests -q -o asyncio_mode=auto
 
 # candado del Hito 3
 docker compose run --rm --no-deps core-api python scripts/hito3_lock_test.py
+
+# conservación de instrucciones sobre el dictado real (sin LLM)
+docker compose run --rm --no-deps core-api python scripts/evidencia_conservacion.py
 
 # evidencia del ciclo de tareas internas
 docker compose run --rm --no-deps core-api python scripts/evidencia_tareas_internas.py
@@ -159,8 +168,8 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 | `services/core-api/app/cerebro/router.py` | endpoints de interpretar, corregir, confirmar y tareas |
 | `services/core-api/app/web/templates/cerebro_lab.html` | laboratorio (uso interno de prueba) |
 | `services/core-api/app/web/templates/panel.html` | franja, campanita, tareas y etiquetas visibles |
-| `db/migrations/085…090` | esquema de voz, cerebro, correcciones, tareas y acuse |
-| `services/core-api/tests/` | 586 pruebas; `test_v92` adversarial y `test_v93` manual |
+| `db/migrations/085…091` | esquema de voz, cerebro, correcciones, tareas, acuse y condiciones |
+| `services/core-api/tests/` | 601 pruebas; `test_v92` adversarial, `test_v93` manual y `test_v94` conservación |
 | `scripts/evidencia_*.py` | evidencia reproducible |
 | `docs/HORMINOR_MANUAL_FUNCIONAL.md` | **Manual Vivo** (fuente única de definiciones) |
 | `docs/CEREBRO_MATRIZ_BRECHAS.md` | brechas y estado real por requisito |
@@ -199,3 +208,4 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 | Versión | Fecha | Cambio |
 |---|---|---|
 | v1 | 2026-11-15 | Documento de continuidad: estado, arquitectura Cerebro/Gato, dos flujos, prioridades y reglas. |
+| v1.1 | 2026-11-16 | Conservación de condiciones (migración 091), mensaje autorizado del recordatorio; 601 pruebas. Se registra que la confirmación por el mismo chat de WhatsApp es futura. |

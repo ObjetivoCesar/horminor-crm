@@ -6344,3 +6344,98 @@ independiente del Cerebro) según `docs/CONTINUIDAD_CEREBRO.md` §4.
 - `.agents/evidencias/verificacion_prioridad1_2026-11-16.txt` (nuevo)
 - `.agents/BITACORA.md` (esta entrada)
 - `.agents/ESTADO.md` (foto de la sesión)
+
+## 2026-11-16 — Conservación de instrucciones: el dictado espontáneo no se pierde
+
+**Agente:** DeepSeek V4.1 Flash (OpenCode)
+**Duración:** una sesión
+**Objetivo:** auditar el recorrido de un audio espontáneo de Julio y corregir
+las pérdidas de información durante la interpretación y la compilación, sin
+conectar Gato y sin dar por cerrado el Cerebro.
+
+### Hecho
+
+1. **Caso recuperado de la base** (no del chat): borrador `534afe55` del
+   2026-11-16 00:21:27, extracción con 13 hechos citados y el texto del audio.
+2. **Auditoría A–G.** Falla confirmada en A (plazo), B (entrega contra pago),
+   C (expediente), D (mensaje del recordatorio) y F (estado del anticipo);
+   inferencia sin confirmación en E (hora); **G no era falla**: el recordatorio
+   se creó dentro de la misma petición de confirmación, 19 s después del
+   borrador, no antes.
+3. **Migración 091** `cerebro_borradores.condiciones_json` y trigger ampliado
+   (sin editar 085–090).
+4. **Compilador:** `Condicion` con cita; `_condiciones()` lee el plazo, la
+   entrega contra pago y el expediente del texto dictado aunque el modelo no
+   los extraiga; el expediente crea tarea interna para secretaría.
+5. **Recordatorio:** `instruccion` (lo dictado) y `mensaje` (lo que se envía)
+   separados; `mensaje_por_confirmar` y `programado_inferido` se validan en
+   `validar_confirmacion_recordatorio()` con 422 `MENSAJE_POR_CONFIRMAR` y
+   `CONFIRMAR_ENVIO_INMEDIATO`.
+6. **Dinero:** `pago.recibido=false` sin negación explícita baja a `INFERIDO`;
+   el resumen dice «sin ingreso confirmado» y sigue sin registrarse abono.
+7. **Recompilación:** la cita cruda también sostiene un hecho de texto (antes
+   «dos meses» se rechazaba frente a «2 meses» normalizado).
+8. **Conservación reproducible:** `scripts/evidencia_conservacion.py`, 10/10.
+9. **Manual Vivo v1.3**, matriz de brechas §6 y continuidad v1.1.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `pytest /app/tests -q` | **601 passed**, 1 warning, exit 0 |
+| `hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]` |
+| `db_migrate.py` | sin pendientes; **091** aplicada el 2026-11-16 00:32 |
+| `scripts/evidencia_conservacion.py` | `CONSERVACION: OK — ninguna instrucción relevante se perdió` (10/10) |
+| Guardas de confirmación | `MENSAJE_POR_CONFIRMAR` y `CONFIRMAR_ENVIO_INMEDIATO` (422); con texto y envío aceptado → autorizado |
+| Secuencia G (SQL) | borrador 00:21:27 → confirmación/ejecución 00:21:46 → recordatorio `ENVIADO` 00:22:16 |
+
+### Decisiones tomadas
+
+1. **Conservar la condición, no inventar un ejecutor.** El plazo y el encargo
+   quedan visibles con su cita; no se crea una cotización ni un despacho que
+   Julio no pidió. Alternativa descartada: guardar el plazo en las notas de una
+   cotización que no existe.
+2. **El mensaje se autoriza, no se redacta.** Sin texto humano no se programa.
+   Alternativa descartada: que el LLM redacte el recordatorio.
+3. **«No verificado» no es «no recibido».** Se degrada a inferencia. Alternativa
+   descartada: confiar en la lectura del modelo sobre un estado financiero.
+4. **La confirmación parcial se muestra como parcial.** Alternativa descartada:
+   bloquear todo el borrador por una pregunta pendiente.
+
+### Bloqueos / preguntas al cliente
+
+1. La confirmación por el mismo chat de WhatsApp sigue siendo futura: requiere
+   persistir entrantes y autorizar por riesgo, no solo por el número.
+2. `tarea.destinatario` puede venir con una cita que no lo sostiene literalmente
+   (el nombre se menciona en otra frase); hoy se recupera por el teléfono del
+   contacto, pero la cita del modelo es mejorable.
+3. Queda pendiente la prueba de aceptación de **tres encargos en un audio**
+   (corregir uno, cancelar otro, confirmar el tercero).
+
+### Próximo paso exacto
+
+Grabar el audio de tres encargos en `/panel/cerebro`, corregir el primero,
+revocar el segundo y confirmar el tercero; comprobar en el JSON que solo se
+programa el tercero y que los otros dos quedan como constancia. Después,
+documentar el contrato de confirmación por WhatsApp interno (§11 de
+`docs/CONTRATO_WHATSAPP_CEREBRO.md`) sin conectar Gato.
+
+### Archivos tocados
+
+- `db/migrations/091_cerebro_condiciones.sql` (nuevo)
+- `services/core-api/app/cerebro/compilador.py`
+- `services/core-api/app/cerebro/extractor.py`
+- `services/core-api/app/cerebro/hechos.py`
+- `services/core-api/app/cerebro/revision.py`
+- `services/core-api/app/cerebro/router.py`
+- `services/core-api/app/cerebro/__init__.py`
+- `services/core-api/app/web/templates/cerebro_lab.html`
+- `services/core-api/tests/test_v94_conservacion.py` (nuevo)
+- `services/core-api/tests/test_v90_cerebro_correcciones.py`
+- `scripts/evidencia_conservacion.py` (nuevo)
+- `docs/HORMINOR_MANUAL_FUNCIONAL.md` (v1.3)
+- `docs/CEREBRO_MATRIZ_BRECHAS.md` (§6)
+- `docs/CONTINUIDAD_CEREBRO.md` (v1.1)
+- `.agents/ESTADO.md`
+- `.agents/evidencias/cerebro_conservacion_2026-11-16.txt` (nuevo)
+- `.agents/evidencias/cerebro_v84_2026-11-16.txt` (nuevo)

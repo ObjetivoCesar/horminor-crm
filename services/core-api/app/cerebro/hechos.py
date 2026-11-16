@@ -274,8 +274,17 @@ def validar_hecho(hecho: HechoCitado) -> list[str]:
         if hecho.clave == "cliente.nombre":
             return errores
         valor = _sin_tildes(str(hecho.valor)).strip()
-        sosten = _sin_tildes(evidencia.sostiene).strip()
-        if valor and valor not in sosten and sosten not in valor:
+        # La cita cruda manda: el normalizador puede haber cambiado el número
+        # hablado («dos meses» → «2 meses») y aun así la cita sostiene el dato.
+        candidatos = (
+            _sin_tildes(evidencia.sostiene).strip(),
+            _sin_tildes(evidencia.cita).strip(),
+        )
+        if valor and not any(
+            valor in candidato or candidato in valor
+            for candidato in candidatos
+            if candidato
+        ):
             errores.append("el texto no esta sostenido por la cita")
     return errores
 

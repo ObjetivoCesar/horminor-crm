@@ -7,7 +7,7 @@ import json
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 from zoneinfo import ZoneInfo
 
 import asyncpg
@@ -58,6 +58,12 @@ class InterpretarIn(BaseModel):
 
 class ConfirmarIn(BaseModel):
     accion_orden: int = Field(ge=1)
+    # Texto que el humano autoriza para el recordatorio. Si la acción nace con
+    # `mensaje_por_confirmar`, sin esto no se programa nada: la instrucción
+    # dictada no es el mensaje que lee el destinatario.
+    mensaje_final: str | None = Field(default=None, max_length=2000)
+    # Confirmación explícita de envío inmediato cuando el dictado no dio hora.
+    enviar_ahora: bool = False
 
 
 class CorregirIn(BaseModel):
@@ -193,9 +199,9 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
                 """
                 INSERT INTO cerebro_borradores (
                     extraccion_id, version, estado, acciones_propuestas_json,
-                    preguntas_pendientes_json, creado_por
+                    preguntas_pendientes_json, condiciones_json, creado_por
                 ) VALUES (
-                    $1::uuid, 1, $2, $3::jsonb, $4::jsonb, $5
+                    $1::uuid, 1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6
                 )
                 RETURNING id::text AS id
                 """,
@@ -210,6 +216,10 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
                         {"clave": p.clave, "texto": p.texto, "opciones": list(p.opciones)}
                         for p in borrador.preguntas
                     ],
+                    ensure_ascii=False,
+                ),
+                json.dumps(
+                    [condicion.a_dict() for condicion in borrador.condiciones],
                     ensure_ascii=False,
                 ),
                 usuario,
@@ -241,7 +251,8 @@ async def obtener_borrador(request: Request, borrador_id: str) -> dict[str, Any]
     fila = await pool.fetchrow(
         """
         SELECT b.id::text AS id, b.estado, b.version, b.acciones_propuestas_json,
-               b.preguntas_pendientes_json, b.creado_por, b.creado_en,
+               b.preguntas_pendientes_json, b.condiciones_json,
+               b.creado_por, b.creado_en,
                e.sobre_json, e.modelo_llm, e.version_prompt, e.latencia_ms
           FROM cerebro_borradores b
           JOIN cerebro_extracciones e ON e.id = b.extraccion_id
@@ -254,6 +265,7 @@ async def obtener_borrador(request: Request, borrador_id: str) -> dict[str, Any]
     datos = dict(fila)
     datos["acciones"] = _jsonb(datos.pop("acciones_propuestas_json")) or []
     datos["preguntas"] = _jsonb(datos.pop("preguntas_pendientes_json")) or []
+    datos["condiciones"] = _jsonb(datos.pop("condiciones_json")) or []
     datos["sobre"] = _jsonb(datos.pop("sobre_json")) or {}
     datos["creado_en"] = (
         datos["creado_en"].isoformat() if datos.get("creado_en") else None
@@ -416,9 +428,11 @@ async def corregir_borrador(
                 """
                 INSERT INTO cerebro_borradores (
                     extraccion_id, borrador_padre_id, version, estado,
-                    acciones_propuestas_json, preguntas_pendientes_json, creado_por
+                    acciones_propuestas_json, preguntas_pendientes_json,
+                    condiciones_json, creado_por
                 ) VALUES (
-                    $1::uuid, $2::uuid, $3, $4, $5::jsonb, $6::jsonb, $7
+                    $1::uuid, $2::uuid, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb,
+                    $8
                 )
                 RETURNING id::text AS id
                 """,
@@ -435,6 +449,10 @@ async def corregir_borrador(
                         {"clave": p.clave, "texto": p.texto, "opciones": list(p.opciones)}
                         for p in borrador.preguntas
                     ],
+                    ensure_ascii=False,
+                ),
+                json.dumps(
+                    [condicion.a_dict() for condicion in borrador.condiciones],
                     ensure_ascii=False,
                 ),
                 usuario,
@@ -544,6 +562,54 @@ async def tareas_pendientes(request: Request) -> dict[str, Any]:
     return {"tareas": tareas, "internas": internas, "total": len(tareas)}
 
 
+def validar_confirmacion_recordatorio(
+    parametros: Mapping[str, Any],
+    *,
+    mensaje_final: str | None,
+    enviar_ahora: bool,
+    actor_id: str,
+) -> dict[str, Any]:
+    """Exige el texto autorizado y el momento antes de programar.
+
+    Lo dictado describe el encargo; el mensaje que lee la persona y el momento
+    del envío los autoriza un humano. Si falta cualquiera de los dos, no se
+    programa nada: se devuelve el motivo.
+    """
+    mensaje = " ".join(str(mensaje_final or "").split())
+    if parametros.get("mensaje_por_confirmar") and not mensaje:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "MENSAJE_POR_CONFIRMAR",
+                "message": (
+                    "Falta el texto exacto del recordatorio. Lo dictado fue "
+                    f"«{parametros.get('instruccion')}», que describe el "
+                    "encargo; escribe el mensaje que va a leer la persona "
+                    "antes de programarlo."
+                ),
+            },
+        )
+    if parametros.get("programado_inferido") and not enviar_ahora:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "CONFIRMAR_ENVIO_INMEDIATO",
+                "message": (
+                    "El dictado no dijo cuándo enviarlo. Confirma que se "
+                    "envía ahora o indica la hora antes de programarlo."
+                ),
+            },
+        )
+    if not mensaje:
+        return dict(parametros)
+    return {
+        **parametros,
+        "mensaje": mensaje,
+        "mensaje_por_confirmar": False,
+        "mensaje_autorizado_por": actor_id,
+    }
+
+
 @router.post("/borradores/{borrador_id}/confirmar")
 async def confirmar_accion(
     request: Request, borrador_id: str, body: ConfirmarIn
@@ -575,6 +641,7 @@ async def confirmar_accion(
     fila = await pool.fetchrow(
         """
         SELECT id::text AS id, estado, acciones_propuestas_json,
+               preguntas_pendientes_json,
                extraccion_id::text AS extraccion_id
           FROM cerebro_borradores
          WHERE id = $1::uuid
@@ -669,6 +736,15 @@ async def confirmar_accion(
         }
 
     parametros = accion.get("parametros") or {}
+    if nombre == "crear_tarea_recordatorio":
+        # El dictado propone; el humano autoriza el texto y el momento. Sin
+        # eso, la tarea no se programa (no se envía nada por inferencia).
+        parametros = validar_confirmacion_recordatorio(
+            parametros,
+            mensaje_final=body.mensaje_final,
+            enviar_ahora=body.enviar_ahora,
+            actor_id=actor_id,
+        )
     if nombre == "crear_tarea_recordatorio":
         resultado = await _ejecutar_tarea(
             request,
@@ -780,6 +856,12 @@ async def confirmar_accion(
         "nota": resultado.nota,
         "datos": resultado.datos,
         "estado_borrador": estado_borrador,
+        # Un borrador puede ejecutarse por partes: lo confirmado se programó y
+        # lo que falta sigue visible. Nunca se presenta como «todo listo».
+        "confirmado_parcial": estado_borrador == "REQUIERE_ACLARACION",
+        "preguntas_pendientes": len(
+            _jsonb(fila["preguntas_pendientes_json"]) or []
+        ),
     }
 
 

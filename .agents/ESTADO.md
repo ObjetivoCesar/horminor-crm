@@ -1,8 +1,8 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-16** (verificación de prioridad 1; sin cambios
-> de código).
+> Última actualización: **2026-11-16** (conservación de instrucciones del
+> Cerebro; 601 pruebas y migración 091).
 > Base v6.17: Custodio v4.4.0 + HTTP, agenda única `HorminorAgenda`,
 > compras/caja chica, perfiles ACL, Superadmin por Action Cards, Carpetas de
 > Clientes con buscador Sabueso, bancos con color de marca, **facturas
@@ -65,6 +65,40 @@ Orellana/SucumbÃ­os para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
 
 ## Evidencia de la última sesión
+
+### 2026-11-16 - Conservación de instrucciones (v8.4)
+
+- **Caso real auditado.** Audio espontáneo en `/panel/cerebro`: anticipo de USD
+  17.000, 250 m³ FC-240, ingeniero Julio Cartuche, rectificación «la cotización,
+  no la cotización, el recordatorio del pago», entrega contra pago, plazo de dos
+  meses y encargo al expediente. El borrador guardado perdió el plazo, la
+  condición de pago y el expediente: la suite verde no lo detectaba.
+- **Migración 091:** `cerebro_borradores.condiciones_json` (append-only,
+  protegida por el trigger ampliado). No se editó ninguna migración aplicada.
+- **Compilador:** `Condicion` con cita; detección determinística de
+  `entrega.plazo`, `entrega.contra_pago` y `expediente.completar`; el encargo al
+  expediente crea tarea interna para secretaría. El plazo ya no depende de que
+  la cotización se pueda armar.
+- **Recordatorio:** se separan `instruccion` (lo dictado) y `mensaje` (lo que se
+  envía). Si la frase describe el encargo, `mensaje_por_confirmar` exige el
+  texto al confirmar; si no hay hora, `programado_inferido` exige aceptar el
+  envío inmediato. Guardas 422 `MENSAJE_POR_CONFIRMAR` y
+  `CONFIRMAR_ENVIO_INMEDIATO`.
+- **Dinero:** «el pago que tiene que hacernos» ya no se registra como «no
+  recibido»: queda `INFERIDO` y el resumen dice «sin ingreso confirmado».
+- **Secuencia verificada (G):** el recordatorio se creó en la misma petición de
+  confirmación (00:21:46), 19 s después del borrador (00:21:27); no se programó
+  antes de aprobar. La confusión era de etiqueta: el borrador seguía en
+  `REQUIERE_ACLARACION` y ahora la respuesta lo dice (`confirmado_parcial`).
+- **Hallazgo extra:** al recompilar, un texto podía rechazarse por compararse
+  contra el texto normalizado («2 meses») en vez de la cita cruda («dos
+  meses»). Corregido en `validar_hecho`.
+- **Suite:** **601 passed** (15 nuevas en `test_v94_conservacion.py`); Hito 3 →
+  `[CANDADO CERRADO EN SANDBOX]`.
+- **Evidencia:** `.agents/evidencias/cerebro_conservacion_2026-11-16.txt`
+  (matriz 10/10: `CONSERVACION: OK`).
+- **Manual Vivo v1.3:** términos *Condición conservada*, *Mensaje autorizado del
+  recordatorio* e *Ingreso sin confirmar*.
 
 ### 2026-11-16 - Verificación de prioridad 1 (sin tocar código)
 

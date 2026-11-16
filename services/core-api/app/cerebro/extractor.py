@@ -384,7 +384,60 @@ def construir_hechos(
 
     notas.extend(_inferir_telefono(secuencias, hechos, texto_crudo))
     notas.extend(_completar_cuando_de_tarea(hechos, mapa.texto))
+    notas.extend(_degradar_pago_no_declarado(hechos, texto_crudo))
     return hechos, notas
+
+
+# «No recibido» es una afirmación financiera. Solo se acepta como dato cuando
+# el dictado la declara; si solo la sugiere («el pago que tiene que hacernos»),
+# queda como inferencia y el resumen dice «sin ingreso confirmado».
+_MARCAS_PAGO_NO_RECIBIDO = (
+    "no ha pagado",
+    "no ha depositado",
+    "no nos ha pagado",
+    "no nos ha depositado",
+    "no me ha pagado",
+    "no nos ha transferido",
+    "no ha transferido",
+    "no ha cancelado",
+    "no ha entrado",
+    "no ha llegado",
+    "todavia no",
+    "aun no",
+    "falta que nos pague",
+    "queda pendiente",
+    "quedo pendiente",
+)
+
+
+def _degradar_pago_no_declarado(
+    hechos: list[HechoCitado], texto_crudo: str
+) -> list[str]:
+    plano = _sin_tildes(texto_crudo)
+    for indice, hecho in enumerate(hechos):
+        if hecho.clave != "pago.recibido" or hecho.valor is not False:
+            continue
+        if hecho.estado == "CORREGIDO_POR_HUMANO":
+            continue
+        cita = _sin_tildes(
+            hecho.evidencia.cita if hecho.evidencia is not None else ""
+        )
+        if any(marca in plano or marca in cita for marca in _MARCAS_PAGO_NO_RECIBIDO):
+            continue
+        hechos[indice] = HechoCitado(
+            clave=hecho.clave,
+            valor=hecho.valor,
+            estado="INFERIDO",
+            tipo=hecho.tipo,
+            evidencia=hecho.evidencia,
+            checksum_valido=hecho.checksum_valido,
+        )
+        return [
+            "pago.recibido: el dictado sugiere que el anticipo no ha llegado, "
+            "pero no lo declara; queda como inferencia y el resumen lo dice "
+            "«sin ingreso confirmado»"
+        ]
+    return []
 
 
 def _completar_cuando_de_tarea(
@@ -693,8 +746,26 @@ def _notas_de_dinero_y_tarea(
         for accion in borrador.acciones
     ):
         notas.append(
-            "tarea.cuando: no se dicto hora; el recordatorio se enviara al "
-            "confirmar («ahora»)"
+            "tarea.cuando: no se dicto hora; antes de programarlo hay que "
+            "confirmar el envio inmediato"
+        )
+    if any(
+        accion.nombre == "crear_tarea_recordatorio"
+        and accion.parametros.get("mensaje_por_confirmar")
+        for accion in borrador.acciones
+    ):
+        notas.append(
+            "tarea.mensaje: lo dictado describe el encargo («"
+            + str(
+                next(
+                    accion.parametros.get("instruccion")
+                    for accion in borrador.acciones
+                    if accion.nombre == "crear_tarea_recordatorio"
+                )
+                or ""
+            )
+            + "»); el mensaje que leera el destinatario se define antes de "
+            "enviar"
         )
     return notas
 
@@ -825,7 +896,9 @@ async def interpretar(
         "hechos": hechos,
         "borrador": borrador,
         "notas": notas,
-        "resumen": resumen_legible(hechos, texto=mapa.texto),
+        "resumen": resumen_legible(
+            hechos, texto=mapa.texto, condiciones=borrador.condiciones
+        ),
         "cliente": cliente,
         "texto_normalizado": mapa.texto,
         "palabras": [p.__dict__ for p in palabras],
@@ -851,5 +924,7 @@ async def recompilar(
         "hechos": lista,
         "borrador": borrador,
         "notas": notas,
-        "resumen": resumen_legible(lista, texto=texto),
+        "resumen": resumen_legible(
+            lista, texto=texto, condiciones=borrador.condiciones
+        ),
     }
