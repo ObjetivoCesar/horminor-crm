@@ -276,6 +276,121 @@ def _aplicar(
     return nuevo, [], registrados
 
 
+def _quitar_pregunta(borrador: BorradorRouter, *claves: str) -> None:
+    claves_planas = [plano(c) for c in claves]
+    borrador.preguntas = [
+        p for p in borrador.preguntas
+        if not any(clave in plano(p) for clave in claves_planas)
+    ]
+
+
+def _aclaracion_directa(
+    borrador: BorradorRouter, frase: str
+) -> tuple[BorradorRouter | None, list[str], dict[str, Any]] | None:
+    """Responde las aclaraciones del borrador sin pasar por el LLM."""
+    t = plano(frase)
+    nuevo = borrador.cambio(["Aclaraciones de Julio"], padre=borrador.version)
+    cambios: list[dict[str, Any]] = []
+
+    volumen = re.search(
+        r"(?:volumen|son|seran|sera|confirmo)\D{0,18}(\d{2,4})", t
+    )
+    if volumen and any("volumen" in plano(p) for p in nuevo.preguntas):
+        anterior = nuevo.datos_contexto.get("cotizacion.volumen_m3")
+        nuevo.datos_contexto["cotizacion.volumen_m3"] = int(volumen.group(1))
+        nuevo.datos_contexto.pop("cotizacion.volumen_m3_estado", None)
+        for encargo in nuevo.encargos:
+            encargo.por_investigar = [
+                x for x in encargo.por_investigar if "volumen" not in plano(x)
+            ]
+        _quitar_pregunta(nuevo, "volumen")
+        cambios.append(
+            {
+                "campo": "cotizacion.volumen_m3",
+                "antes": anterior,
+                "despues": int(volumen.group(1)),
+            }
+        )
+
+    resistencia = re.search(
+        r"(?:resistencia|mezcla)\D{0,18}(?:fc-?)?(\d{3})", t
+    )
+    if resistencia and any("resistencia" in plano(p) for p in nuevo.preguntas):
+        anterior = nuevo.datos_contexto.get("cotizacion.resistencia")
+        nuevo.datos_contexto["cotizacion.resistencia"] = resistencia.group(1)
+        nuevo.datos_contexto.pop("cotizacion.resistencia_estado", None)
+        for encargo in nuevo.encargos:
+            encargo.por_investigar = [
+                x for x in encargo.por_investigar if "resistencia" not in plano(x)
+            ]
+        _quitar_pregunta(nuevo, "resistencia")
+        cambios.append(
+            {
+                "campo": "cotizacion.resistencia",
+                "antes": anterior,
+                "despues": resistencia.group(1),
+            }
+        )
+
+    if "anticipo" in t or "pago" in t:
+        if re.search(r"(?:no|sin)\b.{0,30}(?:confirmad|recib)|solo (?:hay )?comprobante", t):
+            anterior = nuevo.datos_contexto.get("pago.recibido")
+            nuevo.datos_contexto["pago.recibido"] = False
+            _quitar_pregunta(nuevo, "anticipo")
+            cambios.append(
+                {"campo": "pago.recibido", "antes": anterior, "despues": False}
+            )
+        elif re.search(r"(?:si|confirmad|recibid|entro|llego)", t):
+            anterior = nuevo.datos_contexto.get("pago.recibido")
+            nuevo.datos_contexto["pago.recibido"] = True
+            _quitar_pregunta(nuevo, "anticipo")
+            cambios.append(
+                {"campo": "pago.recibido", "antes": anterior, "despues": True}
+            )
+
+    if "autoriza" in t:
+        if re.search(r"\bno\b.{0,20}(?:autoriza|solo)|\bsolo\b.{0,20}tecnico", t):
+            cambios.append(
+                {"campo": "autorizacion", "antes": None, "despues": "SOLO_TECNICO"}
+            )
+        elif re.search(r"\bsi\b.{0,20}autoriza|autoriza", t):
+            cambios.append(
+                {"campo": "autorizacion", "antes": None, "despues": "AUTORIZA"}
+            )
+        _quitar_pregunta(nuevo, "autoriza")
+
+    if "pedido anterior" in t or "mezcl" in t:
+        if re.search(r"\bsi\b.{0,20}(?:son|es).{0,10}mism", t):
+            cambios.append(
+                {"campo": "proyecto.identidad", "antes": None, "despues": "MISMO"}
+            )
+        elif re.search(r"\bno\b.{0,20}mezcl|\bno\b.{0,20}son", t):
+            cambios.append(
+                {"campo": "proyecto.identidad", "antes": None, "despues": "DISTINTO"}
+            )
+        _quitar_pregunta(nuevo, "pedido anterior")
+
+    if not cambios:
+        return None
+
+    nuevo.notas.append("Aclaraciones aplicadas: " + ", ".join(c["campo"] for c in cambios))
+    from .router import resumen_conversacional
+
+    nuevo.resumen = resumen_conversacional(nuevo)
+    entrada = errores.registrar(
+        mensaje=frase,
+        cambios=cambios,
+        version_antes=borrador.version,
+        version_despues=nuevo.version,
+        tipo="ACLARACION",
+    )
+    return (
+        nuevo,
+        [],
+        {"via": "deterministica_aclaracion", "cambios": cambios, "registro": entrada["id"]},
+    )
+
+
 def _correccion_directa(
     borrador: BorradorRouter, frase: str
 ) -> tuple[BorradorRouter | None, list[str], dict[str, Any]] | None:
@@ -327,6 +442,10 @@ async def corregir(
 ) -> tuple[BorradorRouter | None, list[str], dict[str, Any]]:
     """Devuelve (borrador nuevo, errores, meta). No ejecuta nada."""
     meta: dict[str, Any] = {"via": "llm"}
+
+    aclaracion = _aclaracion_directa(borrador, frase)
+    if aclaracion is not None:
+        return aclaracion
 
     directa = _correccion_directa(borrador, frase)
     if directa is not None:

@@ -37,12 +37,36 @@ def resumen_cambios(cambios: list[dict[str, Any]]) -> str:
         despues = cambio.get("despues")
         if campo == "cliente.nombre":
             partes.append(f"el cliente ahora es {despues}")
+        elif campo == "cotizacion.volumen_m3":
+            partes.append(f"el volumen queda en {despues} m³")
+        elif campo == "cotizacion.resistencia":
+            partes.append(f"la resistencia queda en FC-{despues}")
+        elif campo == "pago.recibido":
+            partes.append(
+                "el anticipo queda confirmado"
+                if despues is True
+                else "el anticipo sigue sin confirmar"
+            )
+        elif campo == "autorizacion":
+            partes.append(
+                "Roberto autoriza el pedido"
+                if despues == "AUTORIZA"
+                else "Roberto es solo técnico de obra"
+            )
+        elif campo == "proyecto.identidad":
+            partes.append(
+                "es el mismo proyecto y queda separado del pedido en reclamo"
+                if despues == "MISMO"
+                else "es un proyecto distinto"
+            )
         elif campo.endswith(".destinatario"):
             partes.append(f"el recordatorio va para {despues}")
         elif campo.endswith(".responsable"):
             partes.append(f"{campo.split('.')[0]} pasa a {despues}")
         elif campo == "confirmacion":
             continue
+        elif antes == despues:
+            partes.append(f"confirmé {campo}")
         elif antes in (None, ""):
             partes.append(f"{campo}: {despues}")
         else:

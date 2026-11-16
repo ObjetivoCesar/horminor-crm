@@ -4,7 +4,7 @@
 > organiza el trabajo, propone responsables y espera la confirmación de Julio.
 > **No ejecuta nada.** Al confirmar devuelve el plan de lo que se crearía.
 >
-> **Versión:** `router-1.6` · **Estado:** prototipo en el experimento, sin tocar
+> **Versión:** `router-1.7` · **Estado:** prototipo en el experimento, sin tocar
 > el panel productivo ni Gato.
 
 ## Filosofía

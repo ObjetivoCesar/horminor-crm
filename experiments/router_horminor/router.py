@@ -285,29 +285,15 @@ def conciliar(
     _quitar_verificaciones_inventadas(borrador)
     _quitar_contexto_sin_orden(borrador)
     _fusionar_encargos_similares(borrador)
+    _asignar_por_defecto(borrador)
 
     # 2. Observaciones de C
     for obs in observaciones:
         texto_obs = plano(" ".join([obs.objeto or "", obs.texto or "", " ".join(obs.citas)]))
         if obs.ambiguo:
-            if obs.tipo not in ("PROHIBICION", "CONDICION", "DEPENDENCIA", "AUTORIZACION"):
-                borrador.notas.append(
-                    f"Referencia ambigua no crítica: {obs.texto or obs.objeto or ''}"
-                )
-                continue
-            dicho = " ".join([obs.texto or "", obs.objeto or ""])
-            palabras = {p for p in plano(dicho).split() if len(p) > 3}
-            lo_investiga = any(
-                palabras & {p for p in plano(item).split() if len(p) > 3}
-                for encargo in borrador.encargos
-                for item in encargo.por_investigar
+            borrador.notas.append(
+                f"Referencia ambigua no crítica: {obs.texto or obs.objeto or ''}"
             )
-            if not lo_investiga:
-                borrador.preguntas.append(
-                    obs.texto
-                    or obs.objeto
-                    or "Hay una referencia que no sé a qué encargo apunta."
-                )
             continue
 
         objetivos = _encargo_por_objeto(borrador.encargos, obs.objeto) or (
@@ -389,8 +375,8 @@ def conciliar(
             continue
 
         if obs.tipo == "CONTRADICCION":
-            borrador.preguntas.append(
-                obs.texto or "Hay dos frases del dictado que no coinciden."
+            borrador.notas.append(
+                f"Contradicción en el dictado: {obs.texto or obs.objeto or ''}"
             )
             continue
 
@@ -450,8 +436,10 @@ def conciliar(
             )
 
     _fusionar_avisos(borrador)
-    borrador.datos_contexto = _datos_contexto(hechos)
+    borrador.datos_contexto = _datos_contexto(hechos, texto)
     _elegir_destinatario(borrador, hechos, texto)
+    _aclaraciones(borrador, texto)
+    _agregar_mensaje_pendiente(borrador, texto)
     for encargo in borrador.encargos:
         if encargo.canal != "WHATSAPP" and not encargo.preparar_comunicacion:
             continue
@@ -548,7 +536,7 @@ def _fusionar_encargos_similares(borrador: BorradorRouter) -> None:
                 continue
             tipo_a = _tipo_trabajo(encargo)
             tipo_b = _tipo_trabajo(otro)
-            if tipo_a != tipo_b and "OTRO" not in (tipo_a, tipo_b):
+            if tipo_a != tipo_b:
                 continue
             comunes = _tokens_encargo(encargo) & _tokens_encargo(otro)
             if len(comunes) < 2:
@@ -642,6 +630,7 @@ def _autorizacion_explicita(obs: ObservacionOut) -> bool:
 
 _DATOS_CONTRATO = (
     "cliente.nombre",
+    "cotizacion.obra_direccion",
     "cotizacion.volumen_m3",
     "cotizacion.resistencia",
     "cotizacion.descuento_pct",
@@ -653,7 +642,162 @@ _DATOS_CONTRATO = (
 )
 
 
-def _datos_contexto(hechos: list[Any]) -> dict[str, Any]:
+def _limpiar_proyecto(texto: str | None) -> str | None:
+    if not texto:
+        return None
+    limpio = re.sub(r"^(el |la )?proyecto\s+", "", str(texto), flags=re.IGNORECASE)
+    return limpio.strip() or None
+
+
+def _aclaraciones(borrador: BorradorRouter, texto: str) -> None:
+    """Convierte conflictos del dictado en preguntas concretas, con opciones."""
+    t = plano(texto)
+    proyecto = _limpiar_proyecto(
+        borrador.datos_contexto.get("proyecto.nombre")
+        or borrador.datos_contexto.get("cotizacion.obra_direccion")
+    ) or "el proyecto"
+    nuevas: list[str] = []
+
+    resistencias = sorted(
+        {
+            m.group(1)
+            for m in re.finditer(r"\b(210|240|280|350)\b", t)
+        }
+    )
+    candidatos = set()
+    for coincidencia in re.finditer(r"\b(\d{2,3})\b", t):
+        despues = t[coincidencia.end() : coincidencia.end() + 16]
+        if "dolar" in despues or "usd" in despues:
+            continue
+        candidatos.add(coincidencia.group(1))
+    volumenes = sorted(candidatos - set(resistencias), key=int)
+    if len(volumenes) >= 2:
+        borrador.datos_contexto["cotizacion.volumen_m3_estado"] = "POR_ACLARAR"
+        nuevas.append(
+            f"¿Qué volumen confirmamos para {proyecto}: "
+            + ", ".join(volumenes)
+            + " m³?"
+        )
+
+    if len(resistencias) >= 2:
+        borrador.datos_contexto["cotizacion.resistencia_estado"] = "POR_ACLARAR"
+        nuevas.append(
+            "¿La resistencia es "
+            + " o ".join(f"FC-{r}" for r in resistencias)
+            + "?"
+        )
+
+    autoridad = re.search(
+        r"(?:no se|necesito saber|primero necesito saber|falta saber)\s+si\s+"
+        r"([a-záéíóúñ]+)\s+(?:es quien autoriza|autoriza)\s+o\s+"
+        r"(?:solamente |solo )?(?:el )?tecnico",
+        t,
+    )
+    if autoridad:
+        nombre = autoridad.group(1).capitalize()
+        nuevas.append(
+            f"¿{nombre} autoriza el pedido o es solo el técnico de obra?"
+        )
+
+    if "no mezclen" in t and "pedido anterior" in t:
+        nuevas.append(
+            f"¿El proyecto {proyecto} es el mismo del pedido anterior en reclamo, "
+            "para no mezclar las órdenes?"
+        )
+
+    if "comprobante" in t and re.search(
+        r"no (?:la )?confirmacion|sin confirmacion|no.*banco", t
+    ):
+        nuevas.append(
+            "¿El anticipo está confirmado por el banco o solo hay comprobante?"
+        )
+
+    for pregunta in nuevas:
+        if pregunta not in borrador.preguntas:
+            borrador.preguntas.append(pregunta)
+
+
+def _agregar_mensaje_pendiente(borrador: BorradorRouter, texto: str) -> None:
+    """«Mande un mensaje al cliente» es una tarea de preparación, no un envío."""
+    if any(
+        "mensaje" in plano(e.titulo + " " + e.que_hacer)
+        for e in borrador.encargos
+    ):
+        return
+    coincidencia = re.search(
+        r"(mande|mandar|enviar|envíe|envie)\s+un\s+mensaje[^.]*", texto, re.IGNORECASE
+    )
+    if not coincidencia:
+        return
+    cita = coincidencia.group(0).strip().rstrip(".,")
+    borrador.encargos.append(
+        Encargo(
+            id=f"E{len(borrador.encargos) + 1}",
+            titulo="Preparar mensaje al cliente",
+            que_hacer=(
+                "Preparar el mensaje para el cliente. No enviarlo hasta confirmar "
+                "quién autoriza el pedido."
+            ),
+            responsable="SECRETARIA",
+            responsable_sugerido=True,
+            canal="WHATSAPP",
+            ambito="EXTERNO",
+            resultado_esperado="Mensaje preparado y pendiente de autorización",
+            por_investigar=[
+                "si el ingeniero Roberto autoriza o es solo técnico de obra",
+                "texto exacto que debe llevar el mensaje",
+            ],
+            requiere_autorizacion=True,
+            autorizado=False,
+            preparar_comunicacion=True,
+            citas=[cita],
+        )
+    )
+
+
+def _asignar_por_defecto(borrador: BorradorRouter) -> None:
+    """Propone el área razonable en vez de devolverle la decisión a Julio."""
+    operativo = (
+        "planta",
+        "despacho",
+        "camion",
+        "mezcla",
+        "produccion",
+        "acceso",
+        "transporte",
+        "operario",
+        "fundida",
+        "bomba",
+        "stock",
+        "bodega",
+    )
+    for encargo in borrador.encargos:
+        if encargo.responsable != "POR_DEFINIR":
+            continue
+        base = plano(encargo.titulo + " " + encargo.que_hacer)
+        encargo.responsable = (
+            "JEFE_PLANTA" if any(p in base for p in operativo) else "SECRETARIA"
+        )
+        encargo.responsable_sugerido = True
+        if encargo.estado == "POR_DEFINIR":
+            encargo.estado = "PROPUESTO"
+        borrador.notas.append(
+            f"{encargo.id}: lo asigné a {encargo.responsable} por el tipo de trabajo; "
+            "es una sugerencia."
+        )
+
+
+def _proyecto_nombre(texto: str) -> str | None:
+    coincidencia = re.search(
+        r"proyecto\s+([A-ZÁÉÍÓÚÑ][\wáéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][\wáéíóúñ]+)*)",
+        texto,
+    )
+    if coincidencia:
+        return coincidencia.group(1).strip().rstrip(".,")
+    return None
+
+
+def _datos_contexto(hechos: list[Any], texto: str = "") -> dict[str, Any]:
     datos: dict[str, Any] = {}
     for hecho in hechos:
         clave = getattr(hecho, "clave", None)
@@ -670,6 +814,10 @@ def _datos_contexto(hechos: list[Any]) -> dict[str, Any]:
     contactos = _contactos_de(list(hechos))
     if contactos:
         datos["contactos"] = contactos
+    if not datos.get("cliente.nombre") and not datos.get("cotizacion.obra_direccion"):
+        proyecto = _proyecto_nombre(texto)
+        if proyecto:
+            datos["proyecto.nombre"] = proyecto
     return datos
 
 
@@ -834,9 +982,14 @@ def resumen_conversacional(borrador: BorradorRouter) -> str:
     recibido = datos.get("pago.recibido")
 
     intro = "Julio, "
-    if cliente and volumen:
+    proyecto = _limpiar_proyecto(
+        datos.get("cotizacion.obra_direccion") or datos.get("proyecto.nombre")
+    )
+    vol_estado = datos.get("cotizacion.volumen_m3_estado")
+    res_estado = datos.get("cotizacion.resistencia_estado")
+    if cliente and volumen and vol_estado != "POR_ACLARAR":
         intro += f"entendí que cerraste un contrato con {cliente} por {volumen} m³"
-        if resistencia:
+        if resistencia and res_estado != "POR_ACLARAR":
             intro += f" de hormigón de {resistencia}"
         detalles = []
         if plazo:
@@ -846,6 +999,8 @@ def resumen_conversacional(borrador: BorradorRouter) -> str:
         if detalles:
             intro += " " + " ".join(detalles)
         intro += ". "
+    elif proyecto:
+        intro += f"entendí lo del proyecto {proyecto}. "
     elif cliente:
         intro += f"entendí un encargo para {cliente}. "
     else:

@@ -456,6 +456,55 @@ def main() -> None:
     ok = ok and "Así quedarían las tareas" in confirmacion
     resultados.append(("conversación: confirmar vs corregir", ok, respuesta[:50]))
 
+    # 20. Aclaraciones en un solo mensaje
+    from .correccion import _aclaracion_directa
+
+    b8 = BorradorRouter(
+        version=1,
+        resumen="",
+        datos_contexto={
+            "cotizacion.volumen_m3": 42,
+            "cotizacion.volumen_m3_estado": "POR_ACLARAR",
+            "cotizacion.resistencia": "210",
+            "cotizacion.resistencia_estado": "POR_ACLARAR",
+            "pago.recibido": False,
+        },
+        encargos=[
+            Encargo(
+                id="E1",
+                titulo="Planificar producción",
+                que_hacer="planificar",
+                responsable="JEFE_PLANTA",
+                citas=["planificar"],
+            )
+        ],
+        preguntas=[
+            "¿Qué volumen confirmamos: 36, 40, 42 m³?",
+            "¿La resistencia es FC-210 o FC-280?",
+            "¿Roberto autoriza el pedido o es solo el técnico de obra?",
+            "¿El anticipo está confirmado por el banco o solo hay comprobante?",
+            "¿El proyecto Las Palmeras es el mismo del pedido anterior?",
+        ],
+    )
+    acl = _aclaracion_directa(
+        b8,
+        "El volumen es 42, la resistencia 210, Roberto autoriza, "
+        "sí son las mismas de la urbanización del norte pero no mezcles con "
+        "el pedido en reclamo, y el anticipo está confirmado por el banco.",
+    )
+    nuevo8, errs8, meta8 = acl if acl else (None, ["sin cambios"], {})
+    ok = (
+        nuevo8 is not None
+        and nuevo8.datos_contexto.get("cotizacion.volumen_m3") == 42
+        and nuevo8.datos_contexto.get("cotizacion.resistencia") == "210"
+        and nuevo8.datos_contexto.get("pago.recibido") is True
+        and not any("volumen" in p for p in nuevo8.preguntas)
+        and not any("resistencia" in p for p in nuevo8.preguntas)
+        and not any("anticipo" in p for p in nuevo8.preguntas)
+        and meta8.get("registro")
+    )
+    resultados.append(("aclaraciones en un solo mensaje", ok, str(meta8.get("cambios"))))
+
     print()
     for nombre, ok, detalle in resultados:
         print(f"[{'OK' if ok else 'FALLA'}] {nombre} — {detalle}")
