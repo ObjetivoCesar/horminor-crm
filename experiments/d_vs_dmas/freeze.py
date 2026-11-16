@@ -18,6 +18,8 @@ from .contracts import CONTRACT_VERSION
 from .prompts import EXPERIMENT_VERSION, PROMPT_VERSIONS
 from .reconcile import RECONCILE_VERSION
 
+HARNESS_VERSION = "harness-1.1"
+
 BASE = Path(__file__).resolve().parent
 REPO = BASE.parents[1]
 CORPUS = REPO / "docs" / "HORMINOR_CORPUS_D_VS_DMAS_40"
@@ -31,6 +33,10 @@ ARCHIVOS_EXPERIMENTO = (
     "evaluate.py",
     "reference.py",
     "spike.py",
+    "tests_encoding.py",
+    "fichas.py",
+    "idempotencia.py",
+    "inspect.py",
 )
 
 
@@ -62,6 +68,7 @@ def main() -> None:
 
     contenido = {
         "experimento": EXPERIMENT_VERSION,
+        "harness": HARNESS_VERSION,
         "contratos": CONTRACT_VERSION,
         "conciliacion": RECONCILE_VERSION,
         "prompts": PROMPT_VERSIONS,

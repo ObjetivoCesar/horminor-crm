@@ -1,4 +1,4 @@
-﻿"""Brazos del experimento: motor actual (v7), D y D+.
+"""Brazos del experimento: motor actual (v7), D y D+.
 
 Los brazos no escriben en la base ni modifican el motor. El brazo v7 importa
 el prompt y el compilador productivos en modo lectura para proyectar acciones
@@ -172,7 +172,7 @@ async def arm_dplus(
         hechos=hechos,
     )
     if not r3.get("ok"):
-        # Sin A3 no se avanza en silencio: todo queda bloqueado hasta revisiÃ³n.
+        # Sin A3 no se avanza en silencio: todo queda bloqueado hasta revisión.
         for orden in conciliacion.ordenes:
             orden.estado = "BLOQUEADA"
             orden.motivo_estado = "restricciones no verificadas: A3 fallo"
@@ -222,7 +222,7 @@ _MAPA_ACCION = {
 async def arm_v7(
     cliente: httpx.AsyncClient, texto: str, *, clientes: Sequence[str] = ()
 ) -> ResultadoBrazo:
-    """Motor actual a nivel de interpretaciÃ³n: prompt v7 â†’ hechos â†’ compilar."""
+    """Motor actual a nivel de interpretación: prompt v7 → hechos → compilar."""
     normalizado = normalizar(texto)
     resultado = ResultadoBrazo(brazo="V7", texto=normalizado)
     try:

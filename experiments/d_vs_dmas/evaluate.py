@@ -66,12 +66,25 @@ async def main() -> None:
         choices=["all", "v7", "d", "dplus", "dplus_arb"],
     )
     parser.add_argument("--limite", type=int, default=0)
+    parser.add_argument(
+        "--excluir",
+        default="E01,E02,E03",
+        help="IDs usados para probar el arnés (no cuentan como evaluación)",
+    )
+    parser.add_argument(
+        "--incluir-prueba",
+        action="store_true",
+        help="incluye también los casos de prueba del arnés",
+    )
     parser.add_argument("--corpus", default=str(ARCHIVO_CORPUS))
     parser.add_argument("--referencia", default=str(ARCHIVO_REFERENCIA))
     parser.add_argument("--salida", default="")
     args = parser.parse_args()
 
     casos = cargar_corpus(Path(args.corpus))
+    if not args.incluir_prueba:
+        excluidos = {x.strip() for x in args.excluir.split(",") if x.strip()}
+        casos = [c for c in casos if c.id not in excluidos]
     if args.limite:
         casos = casos[: args.limite]
     referencia = cargar_referencia(Path(args.referencia))

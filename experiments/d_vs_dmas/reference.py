@@ -82,6 +82,11 @@ def _tipo_de(frase: str) -> str | None:
 
 
 def cargar_referencia(ruta: Path | None = None) -> dict[str, ReferenciaCaso]:
+    """Carga referencia preliminar o estructurada (revisión humana).
+
+    Estructurada: {"id","ordenes":[{"tipo":...}],"prohibidas":[],"revisor_1":...}
+    Preliminar:  {"id","esperado_preliminar":[frases],"acciones_prohibidas":[]}
+    """
     ruta = ruta or ARCHIVO_REFERENCIA
     salida: dict[str, ReferenciaCaso] = {}
     for linea in ruta.read_text(encoding="utf-8").splitlines():
@@ -89,11 +94,26 @@ def cargar_referencia(ruta: Path | None = None) -> dict[str, ReferenciaCaso]:
         if not linea:
             continue
         datos = json.loads(linea)
+        if "ordenes" in datos:
+            caso = ReferenciaCaso(
+                id=str(datos["id"]),
+                prohibidas=[str(x) for x in datos.get("prohibidas") or []],
+                validada=bool(str(datos.get("revisor_1") or "").strip()),
+                fuente="humana" if datos.get("revisor_1") else "estructurada_sin_firmar",
+            )
+            for orden in datos.get("ordenes") or []:
+                tipo = str(orden.get("tipo") or "").upper()
+                if tipo in TIPOS_ORDEN:
+                    caso.tipos[tipo] += 1
+            salida[caso.id] = caso
+            continue
+
         caso = ReferenciaCaso(
             id=str(datos["id"]),
             prohibidas=[str(x) for x in datos.get("acciones_prohibidas") or []],
             crudo=[str(x) for x in datos.get("esperado_preliminar") or []],
             validada=False,
+            fuente="preliminar_no_humana",
         )
         for frase in caso.crudo:
             tipo = _tipo_de(frase)

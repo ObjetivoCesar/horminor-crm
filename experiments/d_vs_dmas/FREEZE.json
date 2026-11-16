@@ -1,5 +1,6 @@
 {
  "experimento": "d-vs-dmas-1.0",
+ "harness": "harness-1.1",
  "contratos": "contracts-1.0",
  "conciliacion": "reconcile-1.0",
  "prompts": {
@@ -10,17 +11,21 @@
   "ARB": "arb-v1"
  },
  "modelo": "deepseek-chat",
- "commit": "ef01741",
- "fecha": "2026-11-16T11:10:42",
+ "commit": "01ab515",
+ "fecha": "2026-11-16T11:26:09",
  "archivos": {
   "prompts.py": "d262945245ae6be886cc6a99826dd3de7663b500f1a434cb1528ea9f3a14e6da",
   "contracts.py": "01e330e0a3135b7b9b54d764318cb73cddaeebbef89718f72c4e93b614f36f3c",
   "reconcile.py": "30144618d6ae14bc022fe14a12924c45d92678fa59796bfba14fab76b28f9537",
-  "arms.py": "40aac211330f83d8a49850109b6ae236609eadf00d5b94ae0f23a0151c737e94",
+  "arms.py": "21e82e9290ca8eec52c72c76f80e0725af93bd2eeec2e2ac1e5f0ed50d4fdbea",
   "llm.py": "31cea9299fd2bfdc764648a10ca52df19702072d237358ee2b832900e7421ef9",
-  "evaluate.py": "94825cc6adb0ce6ea9e844673db341b1a0a03ba385081bdf49b15527800078e6",
-  "reference.py": "f80e3ee45de0d8543a301f0925c9d98aba4da17256ef0283acbb4c1aec332bbc",
-  "spike.py": "f77f6db572ec544f7b864ccb787caee255e8fc4f42a278ae22296ebbeba58b89"
+  "evaluate.py": "35e36e3aa51eef12e2f5ffc5789668535d4ec79eb322b00f8f80f871611db3e3",
+  "reference.py": "08fccf9248c99a7cada9ac4ab4dad9413f1b0d2c2aa197853622122930714abf",
+  "spike.py": "b8f72b94a8a67b77fac7f5bc4a29cb68733785797f7093456a6580040e979b50",
+  "tests_encoding.py": "02d525e7578b2fb601c07539f4e52b8c43be79edd34675be3912817fe2958c46",
+  "fichas.py": "7004c2fcfdbca705009481a073595a0a7f438a40da80a6f2249f2132d6146601",
+  "idempotencia.py": "7651f047bbc4136a5c913e4fbe91d5a5457ee556dfdaf5654d2762132e719bc4",
+  "inspect.py": "e2960d1ef625108da65958707df64916be77b5ae3b3bbe933a46d7088b57f606"
  },
  "corpus": {
   "corpus_nuevo_40.jsonl": "a4c232d7edcaaae71b5e13001263ef590aee81e1b7b340ea9436b1c022de5f9b",

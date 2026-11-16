@@ -1,7 +1,7 @@
-﻿"""Spike de paralelismo: tres lecturas simultÃ¡neas con el proveedor actual.
+"""Spike de paralelismo: tres lecturas simultáneas con el proveedor actual.
 
 Mide latencia individual, latencia total en paralelo, tokens y errores.
-No evalÃºa calidad. No escribe en la base.
+No evalúa calidad. No escribe en la base.
 
     python -m experiments.d_vs_dmas.spike --repeticiones 5
 """
@@ -20,8 +20,8 @@ from . import prompts
 from .llm import en_paralelo, llamar, nuevo_cliente
 
 DICTADO = (
-    "Que secretarÃ­a revise si el despacho de maÃ±ana ya estÃ¡ listo y me confirme "
-    "si falta algÃºn viaje. Si falta, que lo diga hoy."
+    "Que secretaría revise si el despacho de mañana ya está listo y me confirme "
+    "si falta algún viaje. Si falta, que lo diga hoy."
 )
 
 RUNS = Path(__file__).resolve().parent / "runs"

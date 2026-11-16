@@ -1,7 +1,7 @@
 # Experimento D vs D+ — Cerebro Horminor
 
 > **Estado:** arnés experimental. **No toca el motor productivo.**
-> **Versión del experimento:** `d-vs-dmas-1.0`
+> **Versión del experimento:** `d-vs-dmas-1.0` · **Arnés:** `harness-1.1`
 > **Contratos:** `contracts-1.0` · **Conciliación:** `reconcile-1.0`
 > **Prompts:** `a1-v1`, `a2-v1`, `a3-v1`, `d-v1`, `arb-v1`
 
@@ -44,13 +44,24 @@ Reglas del conciliador:
 
 ```powershell
 # desde orminorth/
+python -m experiments.d_vs_dmas.tests_encoding
 python -m experiments.d_vs_dmas.spike --repeticiones 5
-python -m experiments.d_vs_dmas.evaluate --brazo all --limite 3
+python -m experiments.d_vs_dmas.evaluate --brazo all
+python -m experiments.d_vs_dmas.inspect E07 E14 E27
+python -m experiments.d_vs_dmas.fichas
+python -m experiments.d_vs_dmas.idempotencia
 python -m experiments.d_vs_dmas.freeze
 ```
 
 El spike y el evaluador escriben en `experiments/d_vs_dmas/runs/` (ignorado por
 git). No requieren la base: leen `DEEPSEEK_API_KEY` del entorno o del `.env`.
+
+**Evaluación:** `evaluate` excluye por defecto E01–E03 (usados para probar el
+arnés). Usa `--incluir-prueba` solo para depurar.
+
+**Codificación:** la etapa 1 corrompió literales al editar con PowerShell.
+Corregido en `harness-1.1`; `prompts.py` conserva la huella original. La prueba
+`tests_encoding` verifica fuente, payload, recepción y archivo.
 
 ## Referencia
 

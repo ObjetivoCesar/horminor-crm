@@ -1,0 +1,412 @@
+{
+ "fecha": "2026-11-16T11:09:16",
+ "modelo": "deepseek-chat",
+ "dictado": "Que secretarÃ­a revise si el despacho de maÃ±ana ya estÃ¡ listo y me confirme si falta algÃºn viaje. Si falta, que lo diga hoy.",
+ "repeticiones": 5,
+ "paralelo": {
+  "p50_ms": 1892,
+  "p95_ms": 2409,
+  "min_ms": 1627,
+  "max_ms": 2409,
+  "media_ms": 1930,
+  "uso": {
+   "prompt_tokens": 10825,
+   "completion_tokens": 2122
+  }
+ },
+ "sola": {
+  "p50_ms": 1528,
+  "p95_ms": 2097,
+  "min_ms": 1235,
+  "max_ms": 2097,
+  "media_ms": 1573,
+  "uso": {
+   "prompt_tokens": 3835,
+   "completion_tokens": 870
+  }
+ },
+ "errores": 0,
+ "detalle_errores": [],
+ "registros": [
+  {
+   "repeticion": 1,
+   "modo": "paralelo",
+   "analizador": "A1",
+   "ok": true,
+   "latency_ms": 1911,
+   "usage": {
+    "prompt_tokens": 793,
+    "completion_tokens": 221,
+    "total_tokens": 1014,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 793
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 1,
+   "modo": "paralelo",
+   "analizador": "A2",
+   "ok": true,
+   "latency_ms": 1966,
+   "usage": {
+    "prompt_tokens": 767,
+    "completion_tokens": 174,
+    "total_tokens": 941,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 767
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 1,
+   "modo": "paralelo",
+   "analizador": "A3",
+   "ok": true,
+   "latency_ms": 1300,
+   "usage": {
+    "prompt_tokens": 605,
+    "completion_tokens": 13,
+    "total_tokens": 618,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 605
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 1,
+   "modo": "sola",
+   "analizador": "A2",
+   "ok": true,
+   "latency_ms": 2097,
+   "usage": {
+    "prompt_tokens": 767,
+    "completion_tokens": 174,
+    "total_tokens": 941,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 255
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 2,
+   "modo": "paralelo",
+   "analizador": "A1",
+   "ok": true,
+   "latency_ms": 1627,
+   "usage": {
+    "prompt_tokens": 793,
+    "completion_tokens": 221,
+    "total_tokens": 1014,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 153
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 2,
+   "modo": "paralelo",
+   "analizador": "A2",
+   "ok": true,
+   "latency_ms": 1442,
+   "usage": {
+    "prompt_tokens": 767,
+    "completion_tokens": 174,
+    "total_tokens": 941,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 255
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 2,
+   "modo": "paralelo",
+   "analizador": "A3",
+   "ok": true,
+   "latency_ms": 1023,
+   "usage": {
+    "prompt_tokens": 605,
+    "completion_tokens": 13,
+    "total_tokens": 618,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 221
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 2,
+   "modo": "sola",
+   "analizador": "A2",
+   "ok": true,
+   "latency_ms": 1243,
+   "usage": {
+    "prompt_tokens": 767,
+    "completion_tokens": 174,
+    "total_tokens": 941,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 255
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 3,
+   "modo": "paralelo",
+   "analizador": "A1",
+   "ok": true,
+   "latency_ms": 1892,
+   "usage": {
+    "prompt_tokens": 793,
+    "completion_tokens": 221,
+    "total_tokens": 1014,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 153
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 3,
+   "modo": "paralelo",
+   "analizador": "A2",
+   "ok": true,
+   "latency_ms": 1663,
+   "usage": {
+    "prompt_tokens": 767,
+    "completion_tokens": 256,
+    "total_tokens": 1023,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 255
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 3,
+   "modo": "paralelo",
+   "analizador": "A3",
+   "ok": true,
+   "latency_ms": 862,
+   "usage": {
+    "prompt_tokens": 605,
+    "completion_tokens": 13,
+    "total_tokens": 618,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 221
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 3,
+   "modo": "sola",
+   "analizador": "A2",
+   "ok": true,
+   "latency_ms": 1528,
+   "usage": {
+    "prompt_tokens": 767,
+    "completion_tokens": 174,
+    "total_tokens": 941,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 255
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 4,
+   "modo": "paralelo",
+   "analizador": "A1",
+   "ok": true,
+   "latency_ms": 1750,
+   "usage": {
+    "prompt_tokens": 793,
+    "completion_tokens": 221,
+    "total_tokens": 1014,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 153
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 4,
+   "modo": "paralelo",
+   "analizador": "A2",
+   "ok": true,
+   "latency_ms": 1608,
+   "usage": {
+    "prompt_tokens": 767,
+    "completion_tokens": 174,
+    "total_tokens": 941,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 255
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 4,
+   "modo": "paralelo",
+   "analizador": "A3",
+   "ok": true,
+   "latency_ms": 1041,
+   "usage": {
+    "prompt_tokens": 605,
+    "completion_tokens": 13,
+    "total_tokens": 618,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 221
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 4,
+   "modo": "sola",
+   "analizador": "A2",
+   "ok": true,
+   "latency_ms": 1235,
+   "usage": {
+    "prompt_tokens": 767,
+    "completion_tokens": 174,
+    "total_tokens": 941,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 255
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 5,
+   "modo": "paralelo",
+   "analizador": "A1",
+   "ok": true,
+   "latency_ms": 2409,
+   "usage": {
+    "prompt_tokens": 793,
+    "completion_tokens": 221,
+    "total_tokens": 1014,
+    "prompt_tokens_details": {
+     "cached_tokens": 640
+    },
+    "prompt_cache_hit_tokens": 640,
+    "prompt_cache_miss_tokens": 153
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 5,
+   "modo": "paralelo",
+   "analizador": "A2",
+   "ok": true,
+   "latency_ms": 1155,
+   "usage": {
+    "prompt_tokens": 767,
+    "completion_tokens": 174,
+    "total_tokens": 941,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 255
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 5,
+   "modo": "paralelo",
+   "analizador": "A3",
+   "ok": true,
+   "latency_ms": 1091,
+   "usage": {
+    "prompt_tokens": 605,
+    "completion_tokens": 13,
+    "total_tokens": 618,
+    "prompt_tokens_details": {
+     "cached_tokens": 384
+    },
+    "prompt_cache_hit_tokens": 384,
+    "prompt_cache_miss_tokens": 221
+   },
+   "error": null,
+   "intentos": 1
+  },
+  {
+   "repeticion": 5,
+   "modo": "sola",
+   "analizador": "A2",
+   "ok": true,
+   "latency_ms": 1762,
+   "usage": {
+    "prompt_tokens": 767,
+    "completion_tokens": 174,
+    "total_tokens": 941,
+    "prompt_tokens_details": {
+     "cached_tokens": 512
+    },
+    "prompt_cache_hit_tokens": 512,
+    "prompt_cache_miss_tokens": 255
+   },
+   "error": null,
+   "intentos": 1
+  }
+ ]
+}

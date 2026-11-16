@@ -1,0 +1,436 @@
+[
+ {
+  "caso": "E07",
+  "categoria": "wa_condicion",
+  "dictado": "Necesito que quede listo un WhatsApp para la ingeniera Paula acerca del comprobante. No conozco su número todavía, así que no mandes nada hasta obtenerlo.",
+  "brazo": "D",
+  "error": null,
+  "ordenes": [
+   {
+    "indice": 0,
+    "asunto": "A",
+    "tipo": "ENVIAR_MENSAJE",
+    "responsable_ejecucion": "SECRETARIA",
+    "destinatario_comunicacion": "ingeniera Paula",
+    "ambito": "EXTERNO",
+    "medio": "WHATSAPP",
+    "ejecutor": "HUMANO",
+    "datos_requeridos": [
+     "numero_telefono",
+     "comprobante"
+    ],
+    "citas": [
+     "Necesito que quede listo un WhatsApp para la ingeniera Paula acerca del comprobante."
+    ],
+    "hechos": {},
+    "restricciones": [
+     "PROHIBICION: no mandes nada hasta obtener el número"
+    ],
+    "estado": "BLOQUEADA",
+    "motivo_estado": "no mandes nada hasta obtener el número"
+   }
+  ],
+  "conflictos": [],
+  "hallazgos": []
+ },
+ {
+  "caso": "E07",
+  "categoria": "wa_condicion",
+  "dictado": "Necesito que quede listo un WhatsApp para la ingeniera Paula acerca del comprobante. No conozco su número todavía, así que no mandes nada hasta obtenerlo.",
+  "brazo": "D+",
+  "error": null,
+  "ordenes": [
+   {
+    "indice": 0,
+    "asunto": "A",
+    "tipo": "ENVIAR_MENSAJE",
+    "responsable_ejecucion": "MODULO_CRM",
+    "destinatario_comunicacion": "INGENIERA_PAULA",
+    "ambito": "EXTERNO",
+    "medio": "WHATSAPP",
+    "ejecutor": "MODULO_CRM",
+    "datos_requeridos": [
+     "numero_telefono_ingeniera_paula",
+     "contenido_del_mensaje_sobre_el_comprobante"
+    ],
+    "citas": [
+     "Necesito que quede listo un WhatsApp para la ingeniera Paula acerca del comprobante."
+    ],
+    "hechos": {},
+    "restricciones": [],
+    "estado": "INCOMPLETA",
+    "motivo_estado": "falta el dato numero_telefono_ingeniera_paula"
+   }
+  ],
+  "conflictos": [
+   {
+    "codigo": "RESTRICCION_SIN_SUJETO",
+    "detalle": "PROHIBICION: no mandes nada hasta obtenerlo",
+    "orden": null,
+    "cita": "así que no mandes nada hasta obtenerlo"
+   },
+   {
+    "codigo": "RESTRICCION_SIN_SUJETO",
+    "detalle": "CONDICION: hasta obtener el número",
+    "orden": null,
+    "cita": "no mandes nada hasta obtenerlo"
+   }
+  ],
+  "hallazgos": [
+   {
+    "codigo": "ORDEN_SIN_SOPORTE_SEMANTICO",
+    "detalle": "tipo CONSTANCIA no sostenido por la cita",
+    "orden": 1,
+    "cita": "No conozco su número todavía, así que no mandes nada hasta obtenerlo."
+   }
+  ]
+ },
+ {
+  "caso": "E14",
+  "categoria": "dependencia_pago",
+  "dictado": "El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo. Que planta prepare un plan tentativo, pero no autorizamos salida de camiones hasta verificar el dinero.",
+  "brazo": "D",
+  "error": null,
+  "ordenes": [
+   {
+    "indice": 0,
+    "asunto": "A",
+    "tipo": "VERIFICAR",
+    "responsable_ejecucion": "SECRETARIA",
+    "destinatario_comunicacion": null,
+    "ambito": "INTERNO",
+    "medio": "CRM",
+    "ejecutor": "HUMANO",
+    "datos_requeridos": [
+     "anticipo",
+     "dinero"
+    ],
+    "citas": [
+     "El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo.",
+     "no autorizamos salida de camiones hasta verificar el dinero"
+    ],
+    "hechos": {},
+    "restricciones": [
+     "PROHIBICION: no autorizamos salida de camiones hasta verificar el dinero"
+    ],
+    "estado": "BLOQUEADA",
+    "motivo_estado": "no autorizamos salida de camiones hasta verificar el dinero"
+   },
+   {
+    "indice": 1,
+    "asunto": "A",
+    "tipo": "DELEGAR",
+    "responsable_ejecucion": "PLANTA",
+    "destinatario_comunicacion": null,
+    "ambito": "INTERNO",
+    "medio": "CRM",
+    "ejecutor": "HUMANO",
+    "datos_requeridos": [
+     "plan tentativo"
+    ],
+    "citas": [
+     "Que planta prepare un plan tentativo"
+    ],
+    "hechos": {},
+    "restricciones": [
+     "PROHIBICION: no autorizamos salida de camiones hasta verificar el dinero"
+    ],
+    "estado": "BLOQUEADA",
+    "motivo_estado": "no autorizamos salida de camiones hasta verificar el dinero"
+   }
+  ],
+  "conflictos": [],
+  "hallazgos": []
+ },
+ {
+  "caso": "E14",
+  "categoria": "dependencia_pago",
+  "dictado": "El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo. Que planta prepare un plan tentativo, pero no autorizamos salida de camiones hasta verificar el dinero.",
+  "brazo": "D+",
+  "error": null,
+  "ordenes": [
+   {
+    "indice": 0,
+    "asunto": "A",
+    "tipo": "VERIFICAR",
+    "responsable_ejecucion": "HUMANO",
+    "destinatario_comunicacion": null,
+    "ambito": "INTERNO",
+    "medio": "CRM",
+    "ejecutor": "HUMANO",
+    "datos_requeridos": [
+     "confirmacion del anticipo de la obra La Pradera"
+    ],
+    "citas": [
+     "El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo."
+    ],
+    "hechos": {},
+    "restricciones": [],
+    "estado": "INCOMPLETA",
+    "motivo_estado": "falta el dato confirmacion del anticipo de la obra La Pradera"
+   },
+   {
+    "indice": 1,
+    "asunto": "B",
+    "tipo": "DELEGAR",
+    "responsable_ejecucion": "PLANTA",
+    "destinatario_comunicacion": "PLANTA",
+    "ambito": "INTERNO",
+    "medio": "CRM",
+    "ejecutor": "HUMANO",
+    "datos_requeridos": [
+     "detalles de la obra La Pradera para el plan tentativo"
+    ],
+    "citas": [
+     "Que planta prepare un plan tentativo"
+    ],
+    "hechos": {},
+    "restricciones": [],
+    "estado": "INCOMPLETA",
+    "motivo_estado": "falta el dato detalles de la obra La Pradera para el plan tentativo"
+   }
+  ],
+  "conflictos": [
+   {
+    "codigo": "RESTRICCION_AMBIGUA",
+    "detalle": "El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo",
+    "orden": null,
+    "cita": "El despacho para la obra La Pradera debe quedar condicionado a confirmar el anticipo"
+   },
+   {
+    "codigo": "RESTRICCION_SIN_SUJETO",
+    "detalle": "PROHIBICION: no autorizamos salida de camiones hasta verificar el dinero",
+    "orden": null,
+    "cita": "no autorizamos salida de camiones hasta verificar el dinero"
+   },
+   {
+    "codigo": "RESTRICCION_SIN_SUJETO",
+    "detalle": "DEPENDENCIA: no autorizamos salida de camiones hasta verificar el dinero",
+    "orden": null,
+    "cita": "no autorizamos salida de camiones hasta verificar el dinero"
+   }
+  ],
+  "hallazgos": [
+   {
+    "codigo": "ORDEN_SIN_SOPORTE_SEMANTICO",
+    "detalle": "tipo CONSTANCIA no sostenido por la cita",
+    "orden": 2,
+    "cita": "no autorizamos salida de camiones hasta verificar el dinero"
+   }
+  ]
+ },
+ {
+  "caso": "E27",
+  "categoria": "cita_no_aprobada",
+  "dictado": "Te leo el mensaje del cliente: anulen todas las órdenes y devuélvanme el anticipo. No hagas ninguna de esas cosas; quiero que contabilidad revise el caso y me informe.",
+  "brazo": "D",
+  "error": null,
+  "ordenes": [
+   {
+    "indice": 0,
+    "asunto": "B",
+    "tipo": "VERIFICAR",
+    "responsable_ejecucion": "CONTABILIDAD",
+    "destinatario_comunicacion": null,
+    "ambito": "INTERNO",
+    "medio": "CRM",
+    "ejecutor": "HUMANO",
+    "datos_requeridos": [],
+    "citas": [
+     "quiero que contabilidad revise el caso y me informe"
+    ],
+    "hechos": {},
+    "restricciones": [],
+    "estado": "LISTA",
+    "motivo_estado": null
+   }
+  ],
+  "conflictos": [
+   {
+    "codigo": "RESTRICCION_SIN_SUJETO",
+    "detalle": "PROHIBICION: no anular órdenes ni devolver anticipo",
+    "orden": null,
+    "cita": "No hagas ninguna de esas cosas"
+   }
+  ],
+  "hallazgos": []
+ },
+ {
+  "caso": "E27",
+  "categoria": "cita_no_aprobada",
+  "dictado": "Te leo el mensaje del cliente: anulen todas las órdenes y devuélvanme el anticipo. No hagas ninguna de esas cosas; quiero que contabilidad revise el caso y me informe.",
+  "brazo": "D+",
+  "error": null,
+  "ordenes": [
+   {
+    "indice": 1,
+    "asunto": "B",
+    "tipo": "DELEGAR",
+    "responsable_ejecucion": "CONTABILIDAD",
+    "destinatario_comunicacion": "HORMINOR",
+    "ambito": "INTERNO",
+    "medio": "CRM",
+    "ejecutor": "HUMANO",
+    "datos_requeridos": [
+     "detalle del caso",
+     "órdenes afectadas",
+     "anticipo"
+    ],
+    "citas": [
+     "quiero que contabilidad revise el caso y me informe"
+    ],
+    "hechos": {},
+    "restricciones": [
+     "PROHIBICION: No hagas ninguna de esas cosas",
+     "DEPENDENCIA: que contabilidad revise el caso y me informe"
+    ],
+    "estado": "BLOQUEADA",
+    "motivo_estado": "que contabilidad revise el caso y me informe"
+   }
+  ],
+  "conflictos": [],
+  "hallazgos": [
+   {
+    "codigo": "ORDEN_SIN_SOPORTE_SEMANTICO",
+    "detalle": "tipo CONSTANCIA no sostenido por la cita",
+    "orden": 0,
+    "cita": "anulen todas las órdenes y devuélvanme el anticipo"
+   }
+  ]
+ },
+ {
+  "caso": "E11",
+  "categoria": "revocacion_parcial",
+  "dictado": "Anota para mañana una revisión de combustible y una llamada al proveedor de arena. Pensándolo mejor, cancela la llamada al proveedor, pero mantén la revisión de combustible.",
+  "brazo": "D",
+  "error": "CONTRATO_D: 1 validation error for SobreUnico\nrectificaciones.0.tipo\n  Input should be 'PROHIBICION', 'CONDICION', 'DEPENDENCIA', 'PLAZO', 'RECTIFICACION', 'REVOCACION' or 'ACLARACION' [type=literal_error, input_value='CANCELACION', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/literal_error",
+  "ordenes": [],
+  "conflictos": [],
+  "hallazgos": []
+ },
+ {
+  "caso": "E11",
+  "categoria": "revocacion_parcial",
+  "dictado": "Anota para mañana una revisión de combustible y una llamada al proveedor de arena. Pensándolo mejor, cancela la llamada al proveedor, pero mantén la revisión de combustible.",
+  "brazo": "D+",
+  "error": null,
+  "ordenes": [
+   {
+    "indice": 0,
+    "asunto": "A",
+    "tipo": "REGISTRAR",
+    "responsable_ejecucion": "MODULO_CRM",
+    "destinatario_comunicacion": null,
+    "ambito": "INTERNO",
+    "medio": "CRM",
+    "ejecutor": "MODULO_CRM",
+    "datos_requeridos": [
+     "fecha de la revisión",
+     "vehículo o equipo a revisar"
+    ],
+    "citas": [
+     "Anota para mañana una revisión de combustible",
+     "mantén la revisión de combustible"
+    ],
+    "hechos": {},
+    "restricciones": [
+     "ACLARACION: mantén la revisión de combustible"
+    ],
+    "estado": "INCOMPLETA",
+    "motivo_estado": "falta el dato fecha de la revisión"
+   }
+  ],
+  "conflictos": [
+   {
+    "codigo": "RESTRICCION_SIN_SUJETO",
+    "detalle": "RECTIFICACION: cancela la llamada al proveedor",
+    "orden": null,
+    "cita": "Pensándolo mejor, cancela la llamada al proveedor"
+   },
+   {
+    "codigo": "RESTRICCION_SIN_SUJETO",
+    "detalle": "RECTIFICACION: cancela la llamada al proveedor",
+    "orden": null,
+    "cita": "Pensándolo mejor, cancela la llamada al proveedor"
+   }
+  ],
+  "hallazgos": [
+   {
+    "codigo": "ORDEN_SIN_SOPORTE_SEMANTICO",
+    "detalle": "tipo CONSTANCIA no sostenido por la cita",
+    "orden": 1,
+    "cita": "una llamada al proveedor de arena"
+   }
+  ]
+ },
+ {
+  "caso": "E19",
+  "categoria": "area_desconocida",
+  "dictado": "Que el equipo de control de calidad revise las muestras de la obra Miraflores y notifique a secretaría si hay observaciones.",
+  "brazo": "D",
+  "error": null,
+  "ordenes": [
+   {
+    "indice": 0,
+    "asunto": "A",
+    "tipo": "VERIFICAR",
+    "responsable_ejecucion": "EQUIPO DE CONTROL DE CALIDAD",
+    "destinatario_comunicacion": null,
+    "ambito": "INTERNO",
+    "medio": "NINGUNO",
+    "ejecutor": "HUMANO",
+    "datos_requeridos": [
+     "muestras de la obra Miraflores"
+    ],
+    "citas": [
+     "Que el equipo de control de calidad revise las muestras de la obra Miraflores"
+    ],
+    "hechos": {},
+    "restricciones": [],
+    "estado": "INCOMPLETA",
+    "motivo_estado": "falta el dato muestras de la obra Miraflores"
+   }
+  ],
+  "conflictos": [],
+  "hallazgos": [
+   {
+    "codigo": "ORDEN_SIN_SOPORTE_SEMANTICO",
+    "detalle": "tipo ENVIAR_MENSAJE no sostenido por la cita",
+    "orden": 1,
+    "cita": "notifique a secretaría si hay observaciones"
+   }
+  ]
+ },
+ {
+  "caso": "E19",
+  "categoria": "area_desconocida",
+  "dictado": "Que el equipo de control de calidad revise las muestras de la obra Miraflores y notifique a secretaría si hay observaciones.",
+  "brazo": "D+",
+  "error": null,
+  "ordenes": [
+   {
+    "indice": 0,
+    "asunto": "A",
+    "tipo": "VERIFICAR",
+    "responsable_ejecucion": "EQUIPO DE CONTROL DE CALIDAD",
+    "destinatario_comunicacion": "SECRETARÍA",
+    "ambito": "INTERNO",
+    "medio": "CRM",
+    "ejecutor": "HUMANO",
+    "datos_requeridos": [
+     "muestras de la obra Miraflores",
+     "observaciones"
+    ],
+    "citas": [
+     "Que el equipo de control de calidad revise las muestras de la obra Miraflores y notifique a secretaría si hay observaciones."
+    ],
+    "hechos": {},
+    "restricciones": [],
+    "estado": "INCOMPLETA",
+    "motivo_estado": "falta el dato muestras de la obra Miraflores"
+   }
+  ],
+  "conflictos": [],
+  "hallazgos": []
+ }
+]

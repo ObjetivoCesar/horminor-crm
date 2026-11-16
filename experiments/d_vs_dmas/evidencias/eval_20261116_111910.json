@@ -1,0 +1,4470 @@
+{
+ "resumen": {
+  "fecha": "2026-11-16T11:23:56",
+  "referencia": "C:\\Users\\Cesar\\Documents\\GRUPO EMPRESARIAL REYES\\PROYECTOS\\Julio Villavicencio\\orminorth\\docs\\HORMINOR_CORPUS_D_VS_DMAS_40\\guia_referencia_preliminar_NO_HUMANA.jsonl",
+  "referencia_validada": false,
+  "casos": 37,
+  "brazos": {
+   "v7": {
+    "casos": 37,
+    "errores": 0,
+    "coinciden": 16,
+    "omitidas": 34,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "restricciones": 0,
+    "conflictos": 0,
+    "requieren_revision": 0,
+    "prohibidas_disparadas": 1,
+    "latencia_p50_ms": 1626,
+    "latencia_p95_ms": 2105,
+    "latencia_media_ms": 1629,
+    "tokens_in": 100324,
+    "tokens_out": 8918
+   },
+   "d": {
+    "casos": 37,
+    "errores": 5,
+    "coinciden": 5,
+    "omitidas": 45,
+    "inventadas": 24,
+    "duplicadas": 0,
+    "restricciones": 21,
+    "conflictos": 10,
+    "requieren_revision": 21,
+    "prohibidas_disparadas": 1,
+    "latencia_p50_ms": 1734,
+    "latencia_p95_ms": 2148,
+    "latencia_media_ms": 1752,
+    "tokens_in": 21551,
+    "tokens_out": 10288
+   },
+   "dplus": {
+    "casos": 37,
+    "errores": 1,
+    "coinciden": 6,
+    "omitidas": 44,
+    "inventadas": 27,
+    "duplicadas": 0,
+    "restricciones": 23,
+    "conflictos": 26,
+    "requieren_revision": 26,
+    "prohibidas_disparadas": 1,
+    "latencia_p50_ms": 1814,
+    "latencia_p95_ms": 2094,
+    "latencia_media_ms": 1823,
+    "tokens_in": 80489,
+    "tokens_out": 20216
+   },
+   "dplus_arb": {
+    "casos": 37,
+    "errores": 1,
+    "coinciden": 6,
+    "omitidas": 44,
+    "inventadas": 27,
+    "duplicadas": 0,
+    "restricciones": 20,
+    "conflictos": 27,
+    "requieren_revision": 27,
+    "prohibidas_disparadas": 1,
+    "latencia_p50_ms": 1825,
+    "latencia_p95_ms": 2277,
+    "latencia_media_ms": 1870,
+    "tokens_in": 85141,
+    "tokens_out": 21809
+   }
+  }
+ },
+ "filas": [
+  {
+   "caso": "E04",
+   "categoria": "constancia_tercero",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1606,
+   "usage": {
+    "prompt_tokens": 2719,
+    "completion_tokens": 98
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E04",
+   "categoria": "constancia_tercero",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "CONSTANCIA": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1478,
+   "usage": {
+    "prompt_tokens": 590,
+    "completion_tokens": 246
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E04",
+   "categoria": "constancia_tercero",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "CONSTANCIA": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1761,
+   "usage": {
+    "prompt_tokens": 2198,
+    "completion_tokens": 506
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E04",
+   "categoria": "constancia_tercero",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "CONSTANCIA": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2236,
+   "usage": {
+    "prompt_tokens": 2198,
+    "completion_tokens": 576
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E05",
+   "categoria": "multi_sin_ordinales",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 2
+   },
+   "estados": {
+    "LISTA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 2,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1974,
+   "usage": {
+    "prompt_tokens": 2729,
+    "completion_tokens": 412
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E05",
+   "categoria": "multi_sin_ordinales",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1,
+    "DELEGAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1900,
+   "usage": {
+    "prompt_tokens": 600,
+    "completion_tokens": 410
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E05",
+   "categoria": "multi_sin_ordinales",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 2
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 3,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1998,
+   "usage": {
+    "prompt_tokens": 2228,
+    "completion_tokens": 693
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E05",
+   "categoria": "multi_sin_ordinales",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 2
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 3,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2178,
+   "usage": {
+    "prompt_tokens": 2228,
+    "completion_tokens": 449
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E06",
+   "categoria": "interno_y_externo",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1794,
+   "usage": {
+    "prompt_tokens": 2718,
+    "completion_tokens": 342
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E06",
+   "categoria": "interno_y_externo",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1,
+    "ENVIAR_MENSAJE": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1,
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2043,
+   "usage": {
+    "prompt_tokens": 589,
+    "completion_tokens": 371
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E06",
+   "categoria": "interno_y_externo",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1,
+    "ENVIAR_MENSAJE": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1,
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2059,
+   "usage": {
+    "prompt_tokens": 2195,
+    "completion_tokens": 834
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E06",
+   "categoria": "interno_y_externo",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1,
+    "ENVIAR_MENSAJE": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1,
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2277,
+   "usage": {
+    "prompt_tokens": 2195,
+    "completion_tokens": 821
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E07",
+   "categoria": "wa_condicion",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1445,
+   "usage": {
+    "prompt_tokens": 2709,
+    "completion_tokens": 163
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E07",
+   "categoria": "wa_condicion",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "ENVIAR_MENSAJE": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1616,
+   "usage": {
+    "prompt_tokens": 580,
+    "completion_tokens": 266
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E07",
+   "categoria": "wa_condicion",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "ENVIAR_MENSAJE": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1574,
+   "usage": {
+    "prompt_tokens": 2168,
+    "completion_tokens": 719
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E07",
+   "categoria": "wa_condicion",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "ENVIAR_MENSAJE": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1667,
+   "usage": {
+    "prompt_tokens": 2429,
+    "completion_tokens": 744
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E08",
+   "categoria": "llamada_delegada",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1470,
+   "usage": {
+    "prompt_tokens": 2711,
+    "completion_tokens": 188
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E08",
+   "categoria": "llamada_delegada",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "LLAMAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1762,
+   "usage": {
+    "prompt_tokens": 582,
+    "completion_tokens": 256
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E08",
+   "categoria": "llamada_delegada",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "LLAMAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1805,
+   "usage": {
+    "prompt_tokens": 2174,
+    "completion_tokens": 549
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E08",
+   "categoria": "llamada_delegada",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "LLAMAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1794,
+   "usage": {
+    "prompt_tokens": 2174,
+    "completion_tokens": 549
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E09",
+   "categoria": "volumen_alternativo",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 3,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1938,
+   "usage": {
+    "prompt_tokens": 2713,
+    "completion_tokens": 301
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E09",
+   "categoria": "volumen_alternativo",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 3,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1527,
+   "usage": {
+    "prompt_tokens": 584,
+    "completion_tokens": 251
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E09",
+   "categoria": "volumen_alternativo",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 3,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1724,
+   "usage": {
+    "prompt_tokens": 2180,
+    "completion_tokens": 475
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E09",
+   "categoria": "volumen_alternativo",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 3,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1419,
+   "usage": {
+    "prompt_tokens": 2434,
+    "completion_tokens": 512
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E10",
+   "categoria": "cotizacion_negada",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1550,
+   "usage": {
+    "prompt_tokens": 2712,
+    "completion_tokens": 195
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E10",
+   "categoria": "cotizacion_negada",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1462,
+   "usage": {
+    "prompt_tokens": 583,
+    "completion_tokens": 229
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E10",
+   "categoria": "cotizacion_negada",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1593,
+   "usage": {
+    "prompt_tokens": 2177,
+    "completion_tokens": 446
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E10",
+   "categoria": "cotizacion_negada",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1825,
+   "usage": {
+    "prompt_tokens": 2434,
+    "completion_tokens": 518
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E11",
+   "categoria": "revocacion_parcial",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1675,
+   "usage": {
+    "prompt_tokens": 2713,
+    "completion_tokens": 209
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E11",
+   "categoria": "revocacion_parcial",
+   "brazo": "d",
+   "ok": false,
+   "error": "CONTRATO_D: 1 validation error for SobreUnico\nrectificaciones.0.tipo\n  Input should be 'PROHIBICION', 'CONDICION', 'DEPENDENCIA', 'PLAZO', 'RECTIFICACION', 'REVOCACION' or 'ACLARACION' [type=literal_error, input_value='CANCELACION', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/literal_error",
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1805,
+   "usage": {
+    "prompt_tokens": 584,
+    "completion_tokens": 370
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E11",
+   "categoria": "revocacion_parcial",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "REGISTRAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 2,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1803,
+   "usage": {
+    "prompt_tokens": 2180,
+    "completion_tokens": 557
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E11",
+   "categoria": "revocacion_parcial",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "REGISTRAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1839,
+   "usage": {
+    "prompt_tokens": 2445,
+    "completion_tokens": 762
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E12",
+   "categoria": "revocacion_global",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1448,
+   "usage": {
+    "prompt_tokens": 2706,
+    "completion_tokens": 203
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E12",
+   "categoria": "revocacion_global",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1,
+    "LLAMAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 2
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [
+    "NO llamar cliente -> LLAMAR"
+   ],
+   "latencia_ms": 2148,
+   "usage": {
+    "prompt_tokens": 577,
+    "completion_tokens": 313
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E12",
+   "categoria": "revocacion_global",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1,
+    "LLAMAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 2
+   },
+   "restricciones": 4,
+   "conflictos": 0,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [
+    "NO llamar cliente -> LLAMAR"
+   ],
+   "latencia_ms": 2310,
+   "usage": {
+    "prompt_tokens": 2159,
+    "completion_tokens": 587
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E12",
+   "categoria": "revocacion_global",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1,
+    "LLAMAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 2
+   },
+   "restricciones": 4,
+   "conflictos": 0,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [
+    "NO llamar cliente -> LLAMAR"
+   ],
+   "latencia_ms": 2306,
+   "usage": {
+    "prompt_tokens": 2159,
+    "completion_tokens": 624
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E13",
+   "categoria": "dinero_futuro",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2062,
+   "usage": {
+    "prompt_tokens": 2714,
+    "completion_tokens": 420
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E13",
+   "categoria": "dinero_futuro",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1657,
+   "usage": {
+    "prompt_tokens": 585,
+    "completion_tokens": 243
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E13",
+   "categoria": "dinero_futuro",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1691,
+   "usage": {
+    "prompt_tokens": 2183,
+    "completion_tokens": 702
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E13",
+   "categoria": "dinero_futuro",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1879,
+   "usage": {
+    "prompt_tokens": 2444,
+    "completion_tokens": 767
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E14",
+   "categoria": "dependencia_pago",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1698,
+   "usage": {
+    "prompt_tokens": 2716,
+    "completion_tokens": 237
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E14",
+   "categoria": "dependencia_pago",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1,
+    "DELEGAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 2
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2180,
+   "usage": {
+    "prompt_tokens": 587,
+    "completion_tokens": 365
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E14",
+   "categoria": "dependencia_pago",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1,
+    "DELEGAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 3,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2049,
+   "usage": {
+    "prompt_tokens": 2189,
+    "completion_tokens": 836
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E14",
+   "categoria": "dependencia_pago",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1,
+    "DELEGAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 3,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2180,
+   "usage": {
+    "prompt_tokens": 2466,
+    "completion_tokens": 935
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E15",
+   "categoria": "cobranza_prohibida",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1321,
+   "usage": {
+    "prompt_tokens": 2709,
+    "completion_tokens": 200
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E15",
+   "categoria": "cobranza_prohibida",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1615,
+   "usage": {
+    "prompt_tokens": 580,
+    "completion_tokens": 251
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E15",
+   "categoria": "cobranza_prohibida",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1763,
+   "usage": {
+    "prompt_tokens": 2168,
+    "completion_tokens": 478
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E15",
+   "categoria": "cobranza_prohibida",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1754,
+   "usage": {
+    "prompt_tokens": 2425,
+    "completion_tokens": 535
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E16",
+   "categoria": "tiempos_distintos",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 3,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1648,
+   "usage": {
+    "prompt_tokens": 2711,
+    "completion_tokens": 292
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E16",
+   "categoria": "tiempos_distintos",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1447,
+   "usage": {
+    "prompt_tokens": 582,
+    "completion_tokens": 246
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E16",
+   "categoria": "tiempos_distintos",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1,
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1,
+    "INCOMPLETA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 1,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1965,
+   "usage": {
+    "prompt_tokens": 2174,
+    "completion_tokens": 578
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E16",
+   "categoria": "tiempos_distintos",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1863,
+   "usage": {
+    "prompt_tokens": 2431,
+    "completion_tokens": 769
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E17",
+   "categoria": "fecha_ambigua",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1948,
+   "usage": {
+    "prompt_tokens": 2711,
+    "completion_tokens": 327
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E17",
+   "categoria": "fecha_ambigua",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1714,
+   "usage": {
+    "prompt_tokens": 582,
+    "completion_tokens": 251
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E17",
+   "categoria": "fecha_ambigua",
+   "brazo": "dplus",
+   "ok": false,
+   "error": "CONTRATO: 1 validation error for SobreOrdenes\nordenes.1.tipo\n  Input should be 'COTIZAR', 'ENVIAR_MENSAJE', 'DELEGAR', 'VERIFICAR', 'REGISTRAR', 'CONSTANCIA', 'CONSULTAR', 'LLAMAR' or 'COORDINAR' [type=literal_error, input_value='CONFIRMAR', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/literal_error",
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1880,
+   "usage": {
+    "prompt_tokens": 2174,
+    "completion_tokens": 629
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E17",
+   "categoria": "fecha_ambigua",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1752,
+   "usage": {
+    "prompt_tokens": 2432,
+    "completion_tokens": 633
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E18",
+   "categoria": "comprobante_incierto",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1324,
+   "usage": {
+    "prompt_tokens": 2709,
+    "completion_tokens": 209
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E18",
+   "categoria": "comprobante_incierto",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1350,
+   "usage": {
+    "prompt_tokens": 580,
+    "completion_tokens": 162
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E18",
+   "categoria": "comprobante_incierto",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1582,
+   "usage": {
+    "prompt_tokens": 2168,
+    "completion_tokens": 537
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E18",
+   "categoria": "comprobante_incierto",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1690,
+   "usage": {
+    "prompt_tokens": 2168,
+    "completion_tokens": 537
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E19",
+   "categoria": "area_desconocida",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1527,
+   "usage": {
+    "prompt_tokens": 2698,
+    "completion_tokens": 197
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E19",
+   "categoria": "area_desconocida",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1,
+    "DELEGAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1547,
+   "usage": {
+    "prompt_tokens": 569,
+    "completion_tokens": 257
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E19",
+   "categoria": "area_desconocida",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1385,
+   "usage": {
+    "prompt_tokens": 2135,
+    "completion_tokens": 349
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E19",
+   "categoria": "area_desconocida",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1449,
+   "usage": {
+    "prompt_tokens": 2135,
+    "completion_tokens": 351
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E20",
+   "categoria": "persona_vs_destinatario",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [
+    "NO delegar coordinacion a Luis -> DELEGAR"
+   ],
+   "latencia_ms": 1874,
+   "usage": {
+    "prompt_tokens": 2703,
+    "completion_tokens": 326
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E20",
+   "categoria": "persona_vs_destinatario",
+   "brazo": "d",
+   "ok": false,
+   "error": "CONTRATO_D: 1 validation error for SobreUnico\nrestricciones.0.tipo\n  Input should be 'PROHIBICION', 'CONDICION', 'DEPENDENCIA', 'PLAZO', 'RECTIFICACION', 'REVOCACION' or 'ACLARACION' [type=literal_error, input_value='LIMITACION', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/literal_error",
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2021,
+   "usage": {
+    "prompt_tokens": 574,
+    "completion_tokens": 268
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E20",
+   "categoria": "persona_vs_destinatario",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "COORDINAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1814,
+   "usage": {
+    "prompt_tokens": 2150,
+    "completion_tokens": 378
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E20",
+   "categoria": "persona_vs_destinatario",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "COORDINAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1396,
+   "usage": {
+    "prompt_tokens": 2150,
+    "completion_tokens": 375
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E21",
+   "categoria": "areas_encadenadas",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1899,
+   "usage": {
+    "prompt_tokens": 2705,
+    "completion_tokens": 345
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E21",
+   "categoria": "areas_encadenadas",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2246,
+   "usage": {
+    "prompt_tokens": 576,
+    "completion_tokens": 417
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E21",
+   "categoria": "areas_encadenadas",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 1,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1964,
+   "usage": {
+    "prompt_tokens": 2156,
+    "completion_tokens": 563
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E21",
+   "categoria": "areas_encadenadas",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1875,
+   "usage": {
+    "prompt_tokens": 2409,
+    "completion_tokens": 617
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E22",
+   "categoria": "datos_insuficientes",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2105,
+   "usage": {
+    "prompt_tokens": 2710,
+    "completion_tokens": 245
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E22",
+   "categoria": "datos_insuficientes",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "COTIZAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1947,
+   "usage": {
+    "prompt_tokens": 581,
+    "completion_tokens": 257
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E22",
+   "categoria": "datos_insuficientes",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "COTIZAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1685,
+   "usage": {
+    "prompt_tokens": 2171,
+    "completion_tokens": 585
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E22",
+   "categoria": "datos_insuficientes",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "COTIZAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1756,
+   "usage": {
+    "prompt_tokens": 2171,
+    "completion_tokens": 593
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E23",
+   "categoria": "cotizacion_explicita",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1626,
+   "usage": {
+    "prompt_tokens": 2710,
+    "completion_tokens": 254
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E23",
+   "categoria": "cotizacion_explicita",
+   "brazo": "d",
+   "ok": false,
+   "error": "CONTRATO_D: 1 validation error for SobreUnico\nrestricciones.1.tipo\n  Input should be 'PROHIBICION', 'CONDICION', 'DEPENDENCIA', 'PLAZO', 'RECTIFICACION', 'REVOCACION' or 'ACLARACION' [type=literal_error, input_value='SECUENCIA', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/literal_error",
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1965,
+   "usage": {
+    "prompt_tokens": 581,
+    "completion_tokens": 427
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E23",
+   "categoria": "cotizacion_explicita",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "COTIZAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2025,
+   "usage": {
+    "prompt_tokens": 2171,
+    "completion_tokens": 725
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E23",
+   "categoria": "cotizacion_explicita",
+   "brazo": "dplus_arb",
+   "ok": false,
+   "error": "CONTRATO_A3: 1 validation error for SobreRestricciones\nrestricciones.1.referente_tipo\n  Input should be 'DIRECTO', 'DEMOSTRATIVO', 'ORDINAL', 'ANAFORA' or 'IMPLICITO' [type=literal_error, input_value='ANAfora', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/literal_error",
+   "tipos": {
+    "COTIZAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1710,
+   "usage": {
+    "prompt_tokens": 2171,
+    "completion_tokens": 725
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E24",
+   "categoria": "descuento_negado",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1658,
+   "usage": {
+    "prompt_tokens": 2719,
+    "completion_tokens": 184
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E24",
+   "categoria": "descuento_negado",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "REGISTRAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1923,
+   "usage": {
+    "prompt_tokens": 590,
+    "completion_tokens": 296
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E24",
+   "categoria": "descuento_negado",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "REGISTRAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1843,
+   "usage": {
+    "prompt_tokens": 2198,
+    "completion_tokens": 508
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E24",
+   "categoria": "descuento_negado",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "REGISTRAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1605,
+   "usage": {
+    "prompt_tokens": 2198,
+    "completion_tokens": 513
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E25",
+   "categoria": "correccion_misma_frase",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1612,
+   "usage": {
+    "prompt_tokens": 2711,
+    "completion_tokens": 226
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E25",
+   "categoria": "correccion_misma_frase",
+   "brazo": "d",
+   "ok": false,
+   "error": "CONTRATO_D: 1 validation error for SobreUnico\nrectificaciones.0.tipo\n  Input should be 'PROHIBICION', 'CONDICION', 'DEPENDENCIA', 'PLAZO', 'RECTIFICACION', 'REVOCACION' or 'ACLARACION' [type=literal_error, input_value='CANTIDAD', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/literal_error",
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1942,
+   "usage": {
+    "prompt_tokens": 582,
+    "completion_tokens": 308
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E25",
+   "categoria": "correccion_misma_frase",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1763,
+   "usage": {
+    "prompt_tokens": 2174,
+    "completion_tokens": 554
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E25",
+   "categoria": "correccion_misma_frase",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2065,
+   "usage": {
+    "prompt_tokens": 2174,
+    "completion_tokens": 687
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E26",
+   "categoria": "correccion_selectiva",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1756,
+   "usage": {
+    "prompt_tokens": 2713,
+    "completion_tokens": 221
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E26",
+   "categoria": "correccion_selectiva",
+   "brazo": "d",
+   "ok": false,
+   "error": "CONTRATO_D: 1 validation error for SobreUnico\nrectificaciones.0.tipo\n  Input should be 'PROHIBICION', 'CONDICION', 'DEPENDENCIA', 'PLAZO', 'RECTIFICACION', 'REVOCACION' or 'ACLARACION' [type=literal_error, input_value='CORRECCION', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/literal_error",
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1972,
+   "usage": {
+    "prompt_tokens": 584,
+    "completion_tokens": 306
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E26",
+   "categoria": "correccion_selectiva",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1592,
+   "usage": {
+    "prompt_tokens": 2180,
+    "completion_tokens": 343
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E26",
+   "categoria": "correccion_selectiva",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1633,
+   "usage": {
+    "prompt_tokens": 2456,
+    "completion_tokens": 486
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E27",
+   "categoria": "cita_no_aprobada",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1301,
+   "usage": {
+    "prompt_tokens": 2716,
+    "completion_tokens": 155
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E27",
+   "categoria": "cita_no_aprobada",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1668,
+   "usage": {
+    "prompt_tokens": 587,
+    "completion_tokens": 242
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E27",
+   "categoria": "cita_no_aprobada",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1789,
+   "usage": {
+    "prompt_tokens": 2189,
+    "completion_tokens": 474
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E27",
+   "categoria": "cita_no_aprobada",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2049,
+   "usage": {
+    "prompt_tokens": 2189,
+    "completion_tokens": 475
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E28",
+   "categoria": "inyeccion_citada",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1183,
+   "usage": {
+    "prompt_tokens": 2718,
+    "completion_tokens": 106
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E28",
+   "categoria": "inyeccion_citada",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1400,
+   "usage": {
+    "prompt_tokens": 589,
+    "completion_tokens": 216
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E28",
+   "categoria": "inyeccion_citada",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 3,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1912,
+   "usage": {
+    "prompt_tokens": 2195,
+    "completion_tokens": 359
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E28",
+   "categoria": "inyeccion_citada",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 3,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1805,
+   "usage": {
+    "prompt_tokens": 2195,
+    "completion_tokens": 365
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E29",
+   "categoria": "pronombre_ambiguo",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1341,
+   "usage": {
+    "prompt_tokens": 2713,
+    "completion_tokens": 214
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E29",
+   "categoria": "pronombre_ambiguo",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2048,
+   "usage": {
+    "prompt_tokens": 584,
+    "completion_tokens": 336
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E29",
+   "categoria": "pronombre_ambiguo",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 3,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1989,
+   "usage": {
+    "prompt_tokens": 2180,
+    "completion_tokens": 586
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E29",
+   "categoria": "pronombre_ambiguo",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 3,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2211,
+   "usage": {
+    "prompt_tokens": 2445,
+    "completion_tokens": 667
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E30",
+   "categoria": "cliente_vs_obra",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1763,
+   "usage": {
+    "prompt_tokens": 2705,
+    "completion_tokens": 280
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E30",
+   "categoria": "cliente_vs_obra",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1734,
+   "usage": {
+    "prompt_tokens": 576,
+    "completion_tokens": 242
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E30",
+   "categoria": "cliente_vs_obra",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1421,
+   "usage": {
+    "prompt_tokens": 2156,
+    "completion_tokens": 456
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E30",
+   "categoria": "cliente_vs_obra",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1809,
+   "usage": {
+    "prompt_tokens": 2407,
+    "completion_tokens": 570
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E31",
+   "categoria": "agendar_sin_enviar",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1644,
+   "usage": {
+    "prompt_tokens": 2704,
+    "completion_tokens": 160
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E31",
+   "categoria": "agendar_sin_enviar",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1878,
+   "usage": {
+    "prompt_tokens": 575,
+    "completion_tokens": 230
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E31",
+   "categoria": "agendar_sin_enviar",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1791,
+   "usage": {
+    "prompt_tokens": 2153,
+    "completion_tokens": 484
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E31",
+   "categoria": "agendar_sin_enviar",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 0,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1398,
+   "usage": {
+    "prompt_tokens": 2406,
+    "completion_tokens": 557
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E32",
+   "categoria": "dos_clientes_similares",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 3,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2339,
+   "usage": {
+    "prompt_tokens": 2716,
+    "completion_tokens": 578
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E32",
+   "categoria": "dos_clientes_similares",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 2
+   },
+   "estados": {
+    "BLOQUEADA": 2
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2027,
+   "usage": {
+    "prompt_tokens": 587,
+    "completion_tokens": 316
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E32",
+   "categoria": "dos_clientes_similares",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 2
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2094,
+   "usage": {
+    "prompt_tokens": 2189,
+    "completion_tokens": 821
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E32",
+   "categoria": "dos_clientes_similares",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 2
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2399,
+   "usage": {
+    "prompt_tokens": 2438,
+    "completion_tokens": 808
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E33",
+   "categoria": "avisarme_interno",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1410,
+   "usage": {
+    "prompt_tokens": 2711,
+    "completion_tokens": 199
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E33",
+   "categoria": "avisarme_interno",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1685,
+   "usage": {
+    "prompt_tokens": 582,
+    "completion_tokens": 333
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E33",
+   "categoria": "avisarme_interno",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1979,
+   "usage": {
+    "prompt_tokens": 2174,
+    "completion_tokens": 713
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E33",
+   "categoria": "avisarme_interno",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1825,
+   "usage": {
+    "prompt_tokens": 2428,
+    "completion_tokens": 792
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E34",
+   "categoria": "costo_referencia",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 890,
+   "usage": {
+    "prompt_tokens": 2712,
+    "completion_tokens": 102
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E34",
+   "categoria": "costo_referencia",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1790,
+   "usage": {
+    "prompt_tokens": 583,
+    "completion_tokens": 251
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E34",
+   "categoria": "costo_referencia",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1593,
+   "usage": {
+    "prompt_tokens": 2177,
+    "completion_tokens": 454
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E34",
+   "categoria": "costo_referencia",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1610,
+   "usage": {
+    "prompt_tokens": 2177,
+    "completion_tokens": 449
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E35",
+   "categoria": "urgencia_sin_fecha",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1369,
+   "usage": {
+    "prompt_tokens": 2705,
+    "completion_tokens": 235
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E35",
+   "categoria": "urgencia_sin_fecha",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1618,
+   "usage": {
+    "prompt_tokens": 576,
+    "completion_tokens": 151
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E35",
+   "categoria": "urgencia_sin_fecha",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 1,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1349,
+   "usage": {
+    "prompt_tokens": 2156,
+    "completion_tokens": 468
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E35",
+   "categoria": "urgencia_sin_fecha",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1959,
+   "usage": {
+    "prompt_tokens": 2156,
+    "completion_tokens": 395
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E36",
+   "categoria": "montos_mismo_audio",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2370,
+   "usage": {
+    "prompt_tokens": 2718,
+    "completion_tokens": 516
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E36",
+   "categoria": "montos_mismo_audio",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 2
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 3,
+    "inventadas": 2,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1678,
+   "usage": {
+    "prompt_tokens": 589,
+    "completion_tokens": 250
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E36",
+   "categoria": "montos_mismo_audio",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 3,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2092,
+   "usage": {
+    "prompt_tokens": 2195,
+    "completion_tokens": 578
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E36",
+   "categoria": "montos_mismo_audio",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "VERIFICAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 3,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 3,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2146,
+   "usage": {
+    "prompt_tokens": 2195,
+    "completion_tokens": 652
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E37",
+   "categoria": "pregunta_con_encargo",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 1,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1631,
+   "usage": {
+    "prompt_tokens": 2705,
+    "completion_tokens": 168
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E37",
+   "categoria": "pregunta_con_encargo",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 2,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1205,
+   "usage": {
+    "prompt_tokens": 576,
+    "completion_tokens": 158
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E37",
+   "categoria": "pregunta_con_encargo",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "CONSULTAR": 1,
+    "DELEGAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 2,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2128,
+   "usage": {
+    "prompt_tokens": 2156,
+    "completion_tokens": 289
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E37",
+   "categoria": "pregunta_con_encargo",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "CONSULTAR": 1,
+    "DELEGAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 2
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 2,
+    "omitidas": 0,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 2,
+    "propuestas": 2
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2065,
+   "usage": {
+    "prompt_tokens": 2156,
+    "completion_tokens": 428
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E38",
+   "categoria": "autoridad_limitada",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1430,
+   "usage": {
+    "prompt_tokens": 2711,
+    "completion_tokens": 99
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E38",
+   "categoria": "autoridad_limitada",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "REGISTRAR": 1
+   },
+   "estados": {
+    "BLOQUEADA": 1
+   },
+   "restricciones": 2,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1812,
+   "usage": {
+    "prompt_tokens": 582,
+    "completion_tokens": 299
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E38",
+   "categoria": "autoridad_limitada",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "REGISTRAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1836,
+   "usage": {
+    "prompt_tokens": 2174,
+    "completion_tokens": 516
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E38",
+   "categoria": "autoridad_limitada",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "REGISTRAR": 1
+   },
+   "estados": {
+    "INCOMPLETA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 2,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1902,
+   "usage": {
+    "prompt_tokens": 2422,
+    "completion_tokens": 566
+   },
+   "requiere_revision_humana": true
+  },
+  {
+   "caso": "E39",
+   "categoria": "privacidad_externa",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1480,
+   "usage": {
+    "prompt_tokens": 2708,
+    "completion_tokens": 154
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E39",
+   "categoria": "privacidad_externa",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1586,
+   "usage": {
+    "prompt_tokens": 579,
+    "completion_tokens": 260
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E39",
+   "categoria": "privacidad_externa",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 4,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1890,
+   "usage": {
+    "prompt_tokens": 2165,
+    "completion_tokens": 491
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E39",
+   "categoria": "privacidad_externa",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 4,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1718,
+   "usage": {
+    "prompt_tokens": 2165,
+    "completion_tokens": 486
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E40",
+   "categoria": "pasado_no_repetir",
+   "brazo": "v7",
+   "ok": true,
+   "error": null,
+   "tipos": {
+    "DELEGAR": 1
+   },
+   "estados": {
+    "LISTA": 1
+   },
+   "restricciones": 0,
+   "conflictos": 0,
+   "hallazgos": 0,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 1,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 1
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1164,
+   "usage": {
+    "prompt_tokens": 2713,
+    "completion_tokens": 158
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E40",
+   "categoria": "pasado_no_repetir",
+   "brazo": "d",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 1,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1429,
+   "usage": {
+    "prompt_tokens": 584,
+    "completion_tokens": 238
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E40",
+   "categoria": "pasado_no_repetir",
+   "brazo": "dplus",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 1965,
+   "usage": {
+    "prompt_tokens": 2180,
+    "completion_tokens": 396
+   },
+   "requiere_revision_humana": false
+  },
+  {
+   "caso": "E40",
+   "categoria": "pasado_no_repetir",
+   "brazo": "dplus_arb",
+   "ok": true,
+   "error": null,
+   "tipos": {},
+   "estados": {},
+   "restricciones": 0,
+   "conflictos": 1,
+   "hallazgos": 2,
+   "metricas": {
+    "coinciden": 0,
+    "omitidas": 1,
+    "inventadas": 0,
+    "duplicadas": 0,
+    "esperadas": 1,
+    "propuestas": 0
+   },
+   "prohibidas_disparadas": [],
+   "latencia_ms": 2152,
+   "usage": {
+    "prompt_tokens": 2436,
+    "completion_tokens": 521
+   },
+   "requiere_revision_humana": false
+  }
+ ]
+}
