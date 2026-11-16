@@ -6624,3 +6624,70 @@ adjunto conserva su `media_asset`. Sin conectar Gato.
 - `docs/CONTINUIDAD_CEREBRO.md` (v1.3)
 - `.agents/ESTADO.md`
 - `.agents/evidencias/cerebro_audio_natural_2026-11-16.*` (nuevos)
+
+## 2026-11-16 — Trazabilidad P1–P7 y paquete de auditoría (sin cambios de código)
+
+**Agente:** DeepSeek V4.1 Flash (OpenCode)
+**Duración:** una sesión
+**Objetivo:** investigar qué quedó registrado de las siete pruebas manuales,
+preparar el paquete de auditoría arquitectónica y **no implementar** nada.
+
+### Hecho
+
+1. **P1–P7 localizadas en la base.** Las ocho ejecuciones (P7 dos veces) están
+   en `cerebro_extracciones` y `cerebro_borradores`, con texto, sobre validado,
+   acciones, preguntas y condiciones. Cero correcciones y cero ejecuciones.
+2. **Clasificación de evidencia.** Texto / sobre / encargos / acciones /
+   preguntas: **RECUPERADO**. Hechos y decisiones intermedias:
+   **RECONSTRUIBLE**. Cuerpo crudo del LLM, notas del verificador y prompt
+   enviado: **NO DISPONIBLE**.
+3. **Primer punto de divergencia por caso.** En 6 de 7 el extractor acertó; el
+   error nace al convertir hechos en intención, canal, responsable o plazo
+   (compilador). Excepciones: la hora de P7 (post-proceso del extractor) y la
+   restricción de P1 (falta de representación).
+4. **Paquete entregado:** `docs/AUDITORIA_ARQUITECTURA_CEREBRO.md`,
+   `docs/TRAZABILIDAD_P1_P7.md`, `docs/ALTERNATIVAS_SOLUCION_CEREBRO.md` y
+   `docs/auditoria_cerebro/` (prompt v7, 11 archivos de código, DDL, JSON de los
+   8 borradores, inventario de pruebas).
+5. **Sin cambios** en código, prompts, pruebas, migraciones ni configuración.
+
+### Evidencia (real, ejecutada)
+
+| Comprobación | Resultado |
+|---|---|
+| Búsqueda de los 7 fragmentos en la base | 8 borradores (P7 duplicado), 8 extracciones |
+| `cerebro_correcciones` / `cerebro_ejecuciones` de esos borradores | 0 / 0 |
+| `error_logs` con los textos de P1–P7 | 0 |
+| Log de acceso `POST /interpretar` | 8 llamadas, 14:52:03Z–14:58:15Z |
+| Suite sin tocar | 620 passed (no se reejecutó sobre P1–P7) |
+
+### Decisiones tomadas
+
+1. **No reejecutar las pruebas originales.** Se analiza el registro guardado
+   para no alterar la evidencia. Alternativa descartada: repetirlas para “ver”
+   el resultado, que habría creado registros nuevos y confundido el original.
+2. **Distinguir sobre validado de respuesta cruda.** Lo guardado es el JSON
+   validado por `SobreIn`; no se presenta como cuerpo HTTP original.
+3. **No elegir alternativa.** Se comparan A/B/C/D con riesgos y pruebas; la
+   decisión queda para la auditoría externa.
+
+### Bloqueos / preguntas al cliente
+
+1. Faltan las **respuestas visibles del panel** de P1–P7 para completar el
+   contraste con lo que Julio vio.
+2. Falta decidir si «quede constancia» (P6) debe crear un registro visible.
+3. No hay corpus real etiquetado para medir la alternativa elegida.
+
+### Próximo paso exacto
+
+Someter `docs/AUDITORIA_ARQUITECTURA_CEREBRO.md`,
+`docs/TRAZABILIDAD_P1_P7.md` y `docs/ALTERNATIVAS_SOLUCION_CEREBRO.md` a la
+auditoría externa y volver con la alternativa elegida. **No implementar antes.**
+
+### Archivos tocados
+
+- `docs/AUDITORIA_ARQUITECTURA_CEREBRO.md` (nuevo)
+- `docs/TRAZABILIDAD_P1_P7.md` (nuevo)
+- `docs/ALTERNATIVAS_SOLUCION_CEREBRO.md` (nuevo)
+- `docs/auditoria_cerebro/` (nuevo: índice, prompt, código, DDL, JSON, inventario)
+- `.agents/evidencias/auditoria_p1_p7/p1_p7_registros.json` (nuevo)

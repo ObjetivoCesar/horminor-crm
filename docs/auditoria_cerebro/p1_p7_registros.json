@@ -1,0 +1,1380 @@
+[
+ {
+  "caso": "P1",
+  "sobre": {
+   "hechos": [
+    {
+     "cita": "necesito que secretaría revise si ya está listo el despacho de mañana para la obra del ingeniero Mauricio Cueva",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "secretaría",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "necesito que secretaría revise si ya está listo el despacho de mañana para la obra del ingeniero Mauricio Cueva",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "revise si ya está listo el despacho de mañana para la obra del ingeniero Mauricio Cueva",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "la obra del ingeniero Mauricio Cueva",
+     "tipo": "TEXTO",
+     "clave": "contacto.nombre",
+     "valor": "Mauricio Cueva",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "la obra del ingeniero Mauricio Cueva",
+     "tipo": "TEXTO",
+     "clave": "contacto.rol",
+     "valor": "ingeniero",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Son 28 m3 de hormigón de 240",
+     "tipo": "DECIMAL",
+     "clave": "cotizacion.volumen_m3",
+     "valor": 28,
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Son 28 m3 de hormigón de 240",
+     "tipo": "ENTERO",
+     "clave": "cotizacion.resistencia",
+     "valor": 240,
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Que los chicos de planta tengan todo preparado desde temprano",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "chicos de planta",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Que los chicos de planta tengan todo preparado desde temprano",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "tengan todo preparado desde temprano",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "el cliente empieza a fundir a las 7",
+     "tipo": "HORA",
+     "clave": "cotizacion.hora_entrega",
+     "valor": "07:00",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "al ingeniero Mauricio, al 0965555555, hay que enviarle por WhatsApp un recordatorio",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "Mauricio",
+     "estado": "EXTRAIDO",
+     "encargo": 3,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "al ingeniero Mauricio, al 0965555555",
+     "tipo": "TELEFONO",
+     "clave": "tarea.telefono",
+     "valor": "0965555555",
+     "estado": "EXTRAIDO",
+     "encargo": 3,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "un recordatorio para que nos confirme si tendrá lista la bomba",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "para que nos confirme si tendrá lista la bomba",
+     "estado": "EXTRAIDO",
+     "encargo": 3,
+     "hablante": "SUPERADMIN"
+    }
+   ],
+   "faltantes": [],
+   "intencion": "MUTACION",
+   "preguntas": [
+    "¿Confirmas el envío del recordatorio a Mauricio al 0965555555?"
+   ],
+   "ambiguedades": [
+    "El envío del recordatorio a Mauricio queda condicionado: 'Todavía no le envíes nada hasta que yo confirme el mensaje'"
+   ]
+  },
+  "texto": "A ver, necesito que secretaría revise si ya está listo el despacho de mañana para la obra del ingeniero Mauricio Cueva. Son 28 metros cúbicos de hormigón de 240. Que los chicos de planta tengan todo preparado desde temprano porque el cliente empieza a fundir a las siete. Ah, y al ingeniero Mauricio, al 0965555555, hay que enviarle por WhatsApp un recordatorio para que nos confirme si tendrá lista la bomba. Todavía no le envíes nada hasta que yo confirme el mensaje.",
+  "estado": "REQUIERE_ACLARACION",
+  "modelo": "deepseek-chat",
+  "prompt": "cerebro-v7",
+  "acciones": [
+   {
+    "orden": 1,
+    "encargo": 1,
+    "parametros": {
+     "ficha": {
+      "nota": null,
+      "tipo": "OTRO",
+      "accion": "Atender la instrucción",
+      "cliente": null,
+      "monto_usd": null,
+      "volumen_m3": "28",
+      "plazo_dicho": null,
+      "responsable": null,
+      "datos_faltantes": [],
+      "responsable_rol": "SECRETARIA",
+      "resultado_esperado": "Informar qué se hizo y qué queda pendiente.",
+      "telefono_referencia": null
+     },
+     "cuando": null,
+     "prioridad": "NORMAL",
+     "asignado_a": null,
+     "instruccion": "revise si ya está listo el despacho de mañana para la obra del ingeniero Mauricio Cueva",
+     "asignado_rol": "SECRETARIA"
+    },
+    "accion_nombre": "crear_tarea_interna",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   },
+   {
+    "orden": 2,
+    "encargo": 2,
+    "parametros": {
+     "cuando": "ahora",
+     "mensaje": null,
+     "instruccion": "tengan todo preparado desde temprano",
+     "destinatario": "chicos de planta",
+     "adjuntar_factura": false,
+     "cifras_autorizadas": [],
+     "programado_inferido": true,
+     "mensaje_por_confirmar": true
+    },
+    "accion_nombre": "crear_tarea_recordatorio",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   },
+   {
+    "orden": 3,
+    "encargo": 3,
+    "parametros": {
+     "cuando": "ahora",
+     "mensaje": "para que nos confirme si tendrá lista la bomba",
+     "instruccion": "para que nos confirme si tendrá lista la bomba",
+     "destinatario": "0965555555",
+     "adjuntar_factura": false,
+     "cifras_autorizadas": [],
+     "programado_inferido": true,
+     "mensaje_por_confirmar": false
+    },
+    "accion_nombre": "crear_tarea_recordatorio",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   }
+  ],
+  "borrador": "2604865d-3448-490b-8152-54060ed6b8f6",
+  "encargos": [
+   {
+    "texto": "A ver, necesito que secretaría revise si ya está listo el despacho de mañana para la obra del ingeniero Mauricio Cueva. Son 28 m3 de hormigón de 240. Que los chicos de planta tenga",
+    "estado": "REQUIERE_ACLARACION",
+    "encargo": 1,
+    "acciones": [
+     1
+    ],
+    "preguntas": [
+     "cliente.nombre",
+     "cotizacion.obra_direccion"
+    ]
+   },
+   {
+    "texto": "Que los chicos de planta tengan todo preparado desde temprano",
+    "estado": "REQUIERE_ACLARACION",
+    "encargo": 2,
+    "acciones": [
+     2
+    ],
+    "preguntas": [
+     "tarea.telefono",
+     "tarea.mensaje"
+    ]
+   },
+   {
+    "texto": "al ingeniero Mauricio, al 0965555555, hay que enviarle por WhatsApp un recordatorio 0965555555 un recordatorio para que nos confirme si tendrá lista la bomba",
+    "estado": "PENDIENTE_CONFIRMACION",
+    "encargo": 3,
+    "acciones": [
+     3
+    ],
+    "preguntas": []
+   }
+  ],
+  "creado_en": "2026-11-16T09:52:03.02894-05:00",
+  "preguntas": [
+   {
+    "clave": "cliente.nombre",
+    "texto": "¿Para qué cliente es la operación?",
+    "opciones": []
+   },
+   {
+    "clave": "cotizacion.obra_direccion",
+    "texto": "¿Cuál es la dirección o referencia de la obra?",
+    "opciones": []
+   },
+   {
+    "clave": "tarea.telefono",
+    "texto": "¿A qué número le envío el mensaje a chicos de planta? Sin número no puedo enviarlo; si prefieres, lo dejo como tarea interna para secretaría.",
+    "opciones": []
+   },
+   {
+    "clave": "tarea.mensaje",
+    "texto": "¿Con qué texto exacto le envío el recordatorio? Lo dictado fue «tengan todo preparado desde temprano»: eso describe el encargo, no el mensaje que va a leer el destinatario.",
+    "opciones": []
+   }
+  ],
+  "extraccion": "c3ddcb6c-ff4a-4aea-8213-706189ffe4c6",
+  "condiciones": [],
+  "latencia_ms": 4010
+ },
+ {
+  "caso": "P2",
+  "sobre": {
+   "hechos": [
+    {
+     "cita": "para la constructora El Valle",
+     "tipo": "TEXTO",
+     "clave": "cliente.nombre",
+     "valor": "El Valle",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "una obra en Catamayo",
+     "tipo": "TEXTO",
+     "clave": "cotizacion.obra_direccion",
+     "valor": "Catamayo",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Creo que necesitan unos 35 o 38 m3, no estoy seguro de la cantidad",
+     "tipo": "DECIMAL",
+     "clave": "cotizacion.volumen_m3",
+     "valor": 38,
+     "estado": "TENTATIVO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Lo que sí está confirmado es que el hormigón es de 240",
+     "tipo": "ENTERO",
+     "clave": "cotizacion.resistencia",
+     "valor": 240,
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Que secretaría llame al residente de obra y confirme el volumen exacto antes de preparar cualquier cotización",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "secretaría",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Que secretaría llame al residente de obra y confirme el volumen exacto antes de preparar cualquier cotización",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "llame al residente de obra y confirme el volumen exacto antes de preparar cualquier cotización",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "No quiero que le den un precio todavía",
+     "tipo": "DECIMAL",
+     "clave": "cotizacion.precio_m3",
+     "valor": null,
+     "estado": "NO_DIJO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    }
+   ],
+   "faltantes": [
+    "cotizacion.volumen_m3",
+    "cotizacion.precio_m3"
+   ],
+   "intencion": "MUTACION",
+   "preguntas": [
+    "¿Cuál es el volumen exacto en m3 de la obra en Catamayo para la constructora El Valle?"
+   ],
+   "ambiguedades": [
+    "El volumen es aproximado: 'unos 35 o 38 m3, no estoy seguro de la cantidad'"
+   ]
+  },
+  "texto": "Tenemos una obra en Catamayo para la constructora El Valle. Creo que necesitan unos 35 o 38 metros cúbicos, no estoy seguro de la cantidad. Lo que sí está confirmado es que el hormigón es de 240. Que secretaría llame al residente de obra y confirme el volumen exacto antes de preparar cualquier cotización. No quiero que le den un precio todavía.",
+  "estado": "REQUIERE_ACLARACION",
+  "modelo": "deepseek-chat",
+  "prompt": "cerebro-v7",
+  "acciones": [
+   {
+    "orden": 1,
+    "encargo": 1,
+    "parametros": {
+     "cedula": null,
+     "ciudad": null,
+     "nombre": "El Valle",
+     "telefono": null,
+     "referencia_obra": null
+    },
+    "accion_nombre": "crear_cliente",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA",
+     "VENDEDOR"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   },
+   {
+    "orden": 2,
+    "encargo": 1,
+    "parametros": {
+     "ficha": {
+      "nota": null,
+      "tipo": "COMUNICACION",
+      "accion": "Contactar y averiguar",
+      "cliente": "El Valle",
+      "monto_usd": null,
+      "volumen_m3": null,
+      "plazo_dicho": null,
+      "responsable": null,
+      "datos_faltantes": [
+       {
+        "clave": "cotizacion.volumen_m3",
+        "dicho": "38",
+        "motivo": "el hablante dudó o aproximó"
+       }
+      ],
+      "responsable_rol": "SECRETARIA",
+      "resultado_esperado": "Informar a quién se contactó y qué respondió.",
+      "telefono_referencia": null
+     },
+     "cuando": null,
+     "prioridad": "NORMAL",
+     "asignado_a": null,
+     "instruccion": "Tenemos una obra en Catamayo para la constructora El Valle. Creo que necesitan unos 35 o 38 m3, no estoy seguro de la cantidad. Lo que sí está confirmado es que el hormigón es de 240. Que secretaría llame al residente de obra y confirme el volumen exacto antes de preparar cualquier cotización. No quiero que le den un precio todavía.",
+     "asignado_rol": "SECRETARIA"
+    },
+    "accion_nombre": "crear_tarea_interna",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   },
+   {
+    "orden": 3,
+    "encargo": 2,
+    "parametros": {
+     "ficha": {
+      "nota": null,
+      "tipo": "COMUNICACION",
+      "accion": "Contactar y averiguar",
+      "cliente": null,
+      "monto_usd": null,
+      "volumen_m3": null,
+      "plazo_dicho": null,
+      "responsable": null,
+      "datos_faltantes": [],
+      "responsable_rol": "SECRETARIA",
+      "resultado_esperado": "Informar a quién se contactó y qué respondió.",
+      "telefono_referencia": null
+     },
+     "cuando": null,
+     "prioridad": "NORMAL",
+     "asignado_a": null,
+     "instruccion": "llame al residente de obra y confirme el volumen exacto antes de preparar cualquier cotización",
+     "asignado_rol": "SECRETARIA"
+    },
+    "accion_nombre": "crear_tarea_interna",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   }
+  ],
+  "borrador": "ffbb1996-a479-4ac8-be07-6df021622cf5",
+  "encargos": [
+   {
+    "texto": "Tenemos una obra en Catamayo para la constructora El Valle. Creo que necesitan unos 35 o 38 m3, no estoy seguro de la cantidad. Lo que sí está confirmado es que el hormigón es de 2",
+    "estado": "REQUIERE_ACLARACION",
+    "encargo": 1,
+    "acciones": [
+     1,
+     2
+    ],
+    "preguntas": [
+     "cotizacion.volumen_m3"
+    ]
+   },
+   {
+    "texto": "Que secretaría llame al residente de obra y confirme el volumen exacto antes de preparar cualquier cotización",
+    "estado": "PENDIENTE_CONFIRMACION",
+    "encargo": 2,
+    "acciones": [
+     3
+    ],
+    "preguntas": []
+   }
+  ],
+  "creado_en": "2026-11-16T09:52:37.584817-05:00",
+  "preguntas": [
+   {
+    "clave": "cotizacion.volumen_m3",
+    "texto": "Dijiste «38». ¿Cuántos m³ exactos necesita la obra?",
+    "opciones": []
+   }
+  ],
+  "extraccion": "7daf8756-c240-4787-9145-e23cc008fef4",
+  "condiciones": [],
+  "latencia_ms": 2904
+ },
+ {
+  "caso": "P3",
+  "sobre": {
+   "hechos": [
+    {
+     "cita": "El ingeniero Ramiro nos ofreció transferir mañana 8500 USD",
+     "tipo": "TEXTO",
+     "clave": "contacto.nombre",
+     "valor": "Ramiro",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "El ingeniero Ramiro",
+     "tipo": "TEXTO",
+     "clave": "contacto.rol",
+     "valor": "ingeniero",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "transferir mañana 8500 USD como anticipo",
+     "tipo": "DECIMAL",
+     "clave": "pago.monto",
+     "valor": 8500,
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "nos ofreció transferir mañana 8500 USD",
+     "tipo": "TEXTO",
+     "clave": "pago.forma",
+     "valor": "transferencia",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Hasta que no tengamos confirmado ese depósito",
+     "tipo": "BOOLEANO",
+     "clave": "pago.recibido",
+     "valor": false,
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "la obra del barrio Zamora Huayco",
+     "tipo": "TEXTO",
+     "clave": "cotizacion.obra_direccion",
+     "valor": "barrio Zamora Huayco",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Los 60 m3 de hormigón de 210",
+     "tipo": "DECIMAL",
+     "clave": "cotizacion.volumen_m3",
+     "valor": 60,
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "hormigón de 210",
+     "tipo": "ENTERO",
+     "clave": "cotizacion.resistencia",
+     "valor": 210,
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Que contabilidad revise el banco",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "contabilidad",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Que contabilidad revise el banco y avise a secretaría cuando el dinero esté verificado",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "revise el banco y avise a secretaría cuando el dinero esté verificado",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    }
+   ],
+   "faltantes": [],
+   "intencion": "MUTACION",
+   "preguntas": [],
+   "ambiguedades": []
+  },
+  "texto": "El ingeniero Ramiro nos ofreció transferir mañana 8500 dólares como anticipo de la obra del barrio Zamora Huayco. Hasta que no tengamos confirmado ese depósito no quiero que autoricen el despacho. Que contabilidad revise el banco y avise a secretaría cuando el dinero esté verificado. Los 60 metros cúbicos de hormigón de 210 quedan pendientes de programación.",
+  "estado": "REQUIERE_ACLARACION",
+  "modelo": "deepseek-chat",
+  "prompt": "cerebro-v7",
+  "acciones": [
+   {
+    "orden": 1,
+    "encargo": 1,
+    "parametros": {
+     "notas": null,
+     "precio_m3": "118.00",
+     "cliente_id": null,
+     "forma_pago": "POR_DEFINIR",
+     "volumen_m3": "60",
+     "resistencia": "FC-210",
+     "descuento_pct": null,
+     "plazo_entrega": null,
+     "precio_estado": "PROVISIONAL",
+     "obra_direccion": "barrio Zamora Huayco",
+     "hora_entrega_tentativa": null,
+     "fecha_entrega_tentativa": null
+    },
+    "accion_nombre": "crear_cotizacion_borrador",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA",
+     "VENDEDOR"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   },
+   {
+    "orden": 2,
+    "encargo": 1,
+    "parametros": {
+     "ficha": {
+      "nota": null,
+      "tipo": "VERIFICACION",
+      "accion": "Verificar el dato indicado",
+      "cliente": null,
+      "monto_usd": "8500",
+      "volumen_m3": "60",
+      "plazo_dicho": null,
+      "responsable": null,
+      "datos_faltantes": [],
+      "responsable_rol": "SECRETARIA",
+      "resultado_esperado": "Informar si se confirmó o no, y con qué referencia.",
+      "telefono_referencia": null
+     },
+     "cuando": null,
+     "prioridad": "NORMAL",
+     "asignado_a": null,
+     "instruccion": "El ingeniero Ramiro nos ofreció transferir mañana 8500 USD como anticipo de la obra del barrio Zamora Huayco. Hasta que no tengamos confirmado ese depósito no quiero que autoricen el despacho. Que contabilidad revise el banco y avise a secretaría cuando el dinero esté verificado. Los 60 m3 de hormigón de 210 quedan pendientes de programación.",
+     "asignado_rol": "SECRETARIA"
+    },
+    "accion_nombre": "crear_tarea_interna",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   },
+   {
+    "orden": 3,
+    "encargo": 2,
+    "parametros": {
+     "ficha": {
+      "nota": null,
+      "tipo": "VERIFICACION",
+      "accion": "Verificar el dato indicado",
+      "cliente": null,
+      "monto_usd": null,
+      "volumen_m3": null,
+      "plazo_dicho": null,
+      "responsable": "contabilidad",
+      "datos_faltantes": [],
+      "responsable_rol": "SECRETARIA",
+      "resultado_esperado": "Informar si se confirmó o no, y con qué referencia.",
+      "telefono_referencia": null
+     },
+     "cuando": null,
+     "prioridad": "NORMAL",
+     "asignado_a": "contabilidad",
+     "instruccion": "revise el banco y avise a secretaría cuando el dinero esté verificado",
+     "asignado_rol": "SECRETARIA"
+    },
+    "accion_nombre": "crear_tarea_interna",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   }
+  ],
+  "borrador": "c088c80d-f689-4c08-ab66-59a080537437",
+  "encargos": [
+   {
+    "texto": "El ingeniero Ramiro nos ofreció transferir mañana 8500 USD como anticipo de la obra del barrio Zamora Huayco. Hasta que no tengamos confirmado ese depósito no quiero que autoricen ",
+    "estado": "REQUIERE_ACLARACION",
+    "encargo": 1,
+    "acciones": [
+     1,
+     2
+    ],
+    "preguntas": [
+     "cliente.nombre"
+    ]
+   },
+   {
+    "texto": "Que contabilidad revise el banco Que contabilidad revise el banco y avise a secretaría cuando el dinero esté verificado",
+    "estado": "PENDIENTE_CONFIRMACION",
+    "encargo": 2,
+    "acciones": [
+     3
+    ],
+    "preguntas": []
+   }
+  ],
+  "creado_en": "2026-11-16T09:53:13.829081-05:00",
+  "preguntas": [
+   {
+    "clave": "cliente.nombre",
+    "texto": "¿Para qué cliente es la operación?",
+    "opciones": []
+   }
+  ],
+  "extraccion": "fe3421ff-c5b0-4acc-bfc4-1727cb987baa",
+  "condiciones": [],
+  "latencia_ms": 2814
+ },
+ {
+  "caso": "P4",
+  "sobre": {
+   "hechos": [
+    {
+     "cita": "ingeniero Sandoval",
+     "tipo": "TEXTO",
+     "clave": "contacto.nombre",
+     "valor": "Sandoval",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "ingeniero Sandoval",
+     "tipo": "TEXTO",
+     "clave": "contacto.rol",
+     "valor": "ingeniero",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "no preparen todavía la cotización",
+     "tipo": "DECIMAL",
+     "clave": "cotizacion.volumen_m3",
+     "valor": 45,
+     "estado": "NO_DIJO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "secretaría se comunique con el ingeniero",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "secretaría",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "confirme para qué fecha necesita el hormigón",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "confirme para qué fecha necesita el hormigón",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Eso sí que lo hagan hoy",
+     "tipo": "TEXTO",
+     "clave": "tarea.cuando",
+     "valor": "hoy",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    }
+   ],
+   "faltantes": [
+    "cotizacion.volumen_m3",
+    "contacto.telefono"
+   ],
+   "intencion": "MUTACION",
+   "preguntas": [
+    "¿Cuál es el teléfono del ingeniero Sandoval para que secretaría lo contacte?"
+   ],
+   "ambiguedades": []
+  },
+  "texto": "Que preparen una cotización de 45 metros cúbicos para el ingeniero Sandoval. Bueno, no, mejor no preparen todavía la cotización porque vamos a revisar los precios. Pero sí quiero que secretaría se comunique con el ingeniero y confirme para qué fecha necesita el hormigón. Eso sí que lo hagan hoy, lo otro queda suspendido.",
+  "estado": "SIN_ACCIONES",
+  "modelo": "deepseek-chat",
+  "prompt": "cerebro-v7",
+  "acciones": [],
+  "borrador": "7f56adb4-2d3b-4153-b86e-82e5c68fc3a4",
+  "encargos": [
+   {
+    "texto": "Que preparen una cotización de 45 m3 para el ingeniero Sandoval. Bueno, no, mejor no preparen todavía la cotización porque vamos a revisar los precios. Pero sí quiero que secretarí",
+    "estado": "SIN_ACCIONES",
+    "encargo": 1,
+    "acciones": [],
+    "preguntas": []
+   }
+  ],
+  "creado_en": "2026-11-16T09:53:56.970268-05:00",
+  "preguntas": [],
+  "extraccion": "213faab7-45df-47cc-be1d-338a5356ea6e",
+  "condiciones": [],
+  "latencia_ms": 2331
+ },
+ {
+  "caso": "P5",
+  "sobre": {
+   "hechos": [
+    {
+     "cita": "hay que revisar cuántas fundidas tenemos para el viernes porque me parece que nos falta un chofer",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "revisar cuántas fundidas tenemos para el viernes porque me parece que nos falta un chofer",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "que en bodega comprueben si tenemos suficiente cemento para los despachos de esta semana",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "en bodega comprueben si tenemos suficiente cemento para los despachos de esta semana",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "en bodega comprueben",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "bodega",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "necesito que secretaría me prepare un informe de los clientes que tienen facturas vencidas, pero sin cobrarles todavía, primero quiero revisar esos valores personalmente",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "me prepare un informe de los clientes que tienen facturas vencidas, pero sin cobrarles todavía, primero quiero revisar esos valores personalmente",
+     "estado": "EXTRAIDO",
+     "encargo": 3,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "que secretaría me prepare un informe",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "secretaría",
+     "estado": "EXTRAIDO",
+     "encargo": 3,
+     "hablante": "SUPERADMIN"
+    }
+   ],
+   "faltantes": [],
+   "intencion": "MUTACION",
+   "preguntas": [],
+   "ambiguedades": []
+  },
+  "texto": "A ver, hay que revisar cuántas fundidas tenemos para el viernes porque me parece que nos falta un chofer. También que en bodega comprueben si tenemos suficiente cemento para los despachos de esta semana. Y de paso necesito que secretaría me prepare un informe de los clientes que tienen facturas vencidas, pero sin cobrarles todavía, primero quiero revisar esos valores personalmente.",
+  "estado": "PENDIENTE_CONFIRMACION",
+  "modelo": "deepseek-chat",
+  "prompt": "cerebro-v7",
+  "acciones": [
+   {
+    "orden": 1,
+    "encargo": 1,
+    "parametros": {
+     "ficha": {
+      "nota": null,
+      "tipo": "VERIFICACION",
+      "accion": "Verificar el dato indicado",
+      "cliente": null,
+      "monto_usd": null,
+      "volumen_m3": null,
+      "plazo_dicho": null,
+      "responsable": null,
+      "datos_faltantes": [],
+      "responsable_rol": "SECRETARIA",
+      "resultado_esperado": "Informar si se confirmó o no, y con qué referencia.",
+      "telefono_referencia": null
+     },
+     "cuando": null,
+     "prioridad": "NORMAL",
+     "asignado_a": null,
+     "instruccion": "revisar cuántas fundidas tenemos para el viernes porque me parece que nos falta un chofer",
+     "asignado_rol": "SECRETARIA"
+    },
+    "accion_nombre": "crear_tarea_interna",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   },
+   {
+    "orden": 2,
+    "encargo": 2,
+    "parametros": {
+     "ficha": {
+      "nota": null,
+      "tipo": "VERIFICACION",
+      "accion": "Verificar el dato indicado",
+      "cliente": null,
+      "monto_usd": null,
+      "volumen_m3": null,
+      "plazo_dicho": null,
+      "responsable": null,
+      "datos_faltantes": [],
+      "responsable_rol": "BODEGA",
+      "resultado_esperado": "Informar si se confirmó o no, y con qué referencia.",
+      "telefono_referencia": null
+     },
+     "cuando": null,
+     "prioridad": "NORMAL",
+     "asignado_a": null,
+     "instruccion": "en bodega comprueben si tenemos suficiente cemento para los despachos de esta semana",
+     "asignado_rol": "BODEGA"
+    },
+    "accion_nombre": "crear_tarea_interna",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   },
+   {
+    "orden": 3,
+    "encargo": 3,
+    "parametros": {
+     "ficha": {
+      "nota": null,
+      "tipo": "REVISION",
+      "accion": "Revisar lo indicado",
+      "cliente": null,
+      "monto_usd": null,
+      "volumen_m3": null,
+      "plazo_dicho": null,
+      "responsable": null,
+      "datos_faltantes": [],
+      "responsable_rol": "SECRETARIA",
+      "resultado_esperado": "Informar qué se revisó y qué quedó pendiente.",
+      "telefono_referencia": null
+     },
+     "cuando": null,
+     "prioridad": "NORMAL",
+     "asignado_a": null,
+     "instruccion": "me prepare un informe de los clientes que tienen facturas vencidas, pero sin cobrarles todavía, primero quiero revisar esos valores personalmente",
+     "asignado_rol": "SECRETARIA"
+    },
+    "accion_nombre": "crear_tarea_interna",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   }
+  ],
+  "borrador": "f0c24656-14dd-4bb8-9be8-162574d80043",
+  "encargos": [
+   {
+    "texto": "A ver, hay que revisar cuántas fundidas tenemos para el viernes porque me parece que nos falta un chofer. También que en bodega comprueben si tenemos suficiente cemento para los de",
+    "estado": "PENDIENTE_CONFIRMACION",
+    "encargo": 1,
+    "acciones": [
+     1
+    ],
+    "preguntas": []
+   },
+   {
+    "texto": "que en bodega comprueben si tenemos suficiente cemento para los despachos de esta semana en bodega comprueben",
+    "estado": "PENDIENTE_CONFIRMACION",
+    "encargo": 2,
+    "acciones": [
+     2
+    ],
+    "preguntas": []
+   },
+   {
+    "texto": "necesito que secretaría me prepare un informe de los clientes que tienen facturas vencidas, pero sin cobrarles todavía, primero quiero revisar esos valores personalmente que secret",
+    "estado": "PENDIENTE_CONFIRMACION",
+    "encargo": 3,
+    "acciones": [
+     3
+    ],
+    "preguntas": []
+   }
+  ],
+  "creado_en": "2026-11-16T09:56:24.793272-05:00",
+  "preguntas": [],
+  "extraccion": "b993dc38-118f-4471-a834-4e93f9197867",
+  "condiciones": [],
+  "latencia_ms": 3894
+ },
+ {
+  "caso": "P6",
+  "sobre": {
+   "hechos": [
+    {
+     "cita": "que le hagamos un descuento del 20 por 100",
+     "tipo": "ENTERO",
+     "clave": "cotizacion.descuento_pct",
+     "valor": 20,
+     "estado": "NO_DIJO",
+     "encargo": 1,
+     "hablante": "CLIENTE"
+    }
+   ],
+   "faltantes": [],
+   "intencion": "CONSULTA",
+   "preguntas": [],
+   "ambiguedades": [
+    "El audio cita una solicitud del cliente pero el hablante ordena no ejecutarla; no se registra como accion ordenada."
+   ]
+  },
+  "texto": "Te voy a contar lo que me dijo un cliente. Me dijo que anulemos todas sus facturas, que le hagamos un descuento del 20 por ciento y que le entreguemos el hormigón sin anticipo. Pero no hagas nada de eso, solamente quiero que quede constancia de lo que solicitó. Todavía no hemos aceptado ninguna de esas condiciones.",
+  "estado": "SIN_ACCIONES",
+  "modelo": "deepseek-chat",
+  "prompt": "cerebro-v7",
+  "acciones": [],
+  "borrador": "160e47a3-705e-4c37-a687-f910b8936476",
+  "encargos": [
+   {
+    "texto": "Te voy a contar lo que me dijo un cliente. Me dijo que anulemos todas sus facturas, que le hagamos un descuento del 20 por 100 y que le entreguemos el hormigón sin anticipo. Pero n",
+    "estado": "SIN_ACCIONES",
+    "encargo": 1,
+    "acciones": [],
+    "preguntas": []
+   }
+  ],
+  "creado_en": "2026-11-16T09:57:43.114369-05:00",
+  "preguntas": [],
+  "extraccion": "8c732900-b993-46d3-95fc-562cc1f6f437",
+  "condiciones": [],
+  "latencia_ms": 1809
+ },
+ {
+  "caso": "P7a",
+  "sobre": {
+   "hechos": [
+    {
+     "cita": "que secretaría coordine con el chofer de la mezcladora",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "secretaría",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "que secretaría coordine con el chofer de la mezcladora porque mañana tenemos que estar en la obra antes de las 6 de la mañana",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "coordine con el chofer de la mezcladora porque mañana tenemos que estar en la obra antes de las 6 de la mañana",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "La fundida empieza a las 6",
+     "tipo": "HORA",
+     "clave": "cotizacion.hora_entrega",
+     "valor": "06:00",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "eso lo tiene que calcular y confirmar logística",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "logística",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "eso lo tiene que calcular y confirmar logística",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "calcular y confirmar a qué hora debe salir el camión de la planta",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "que me avisen apenas esté todo coordinado",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "que me avisen apenas esté todo coordinado",
+     "estado": "EXTRAIDO",
+     "encargo": 3,
+     "hablante": "SUPERADMIN"
+    }
+   ],
+   "faltantes": [],
+   "intencion": "MUTACION",
+   "preguntas": [],
+   "ambiguedades": []
+  },
+  "texto": "Oye, urgente, que secretaría coordine con el chofer de la mezcladora porque mañana tenemos que estar en la obra antes de las seis de la mañana. La fundida empieza a las seis y el equipo tiene que llegar antes. Todavía no sé exactamente a qué hora debe salir el camión de la planta, eso lo tiene que calcular y confirmar logística. Y por favor, que me avisen apenas esté todo coordinado.",
+  "estado": "REQUIERE_ACLARACION",
+  "modelo": "deepseek-chat",
+  "prompt": "cerebro-v7",
+  "acciones": [
+   {
+    "orden": 1,
+    "encargo": 1,
+    "parametros": {
+     "ficha": {
+      "nota": null,
+      "tipo": "VERIFICACION",
+      "accion": "Verificar el dato indicado",
+      "cliente": null,
+      "monto_usd": null,
+      "volumen_m3": null,
+      "plazo_dicho": "06:00",
+      "responsable": null,
+      "datos_faltantes": [],
+      "responsable_rol": "SECRETARIA",
+      "resultado_esperado": "Informar si se confirmó o no, y con qué referencia.",
+      "telefono_referencia": null
+     },
+     "cuando": "06:00",
+     "prioridad": "URGENTE",
+     "asignado_a": null,
+     "instruccion": "coordine con el chofer de la mezcladora porque mañana tenemos que estar en la obra antes de las 6 de la mañana",
+     "asignado_rol": "SECRETARIA"
+    },
+    "accion_nombre": "crear_tarea_interna",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   }
+  ],
+  "borrador": "291f84eb-9193-4bc8-b769-00e8918e45bc",
+  "encargos": [
+   {
+    "texto": "Oye, urgente, que secretaría coordine con el chofer de la mezcladora porque mañana tenemos que estar en la obra antes de las 6 de la mañana. La fundida empieza a las 6 y el equipo ",
+    "estado": "PENDIENTE_CONFIRMACION",
+    "encargo": 1,
+    "acciones": [
+     1
+    ],
+    "preguntas": []
+   },
+   {
+    "texto": "eso lo tiene que calcular y confirmar logística",
+    "estado": "REQUIERE_ACLARACION",
+    "encargo": 2,
+    "acciones": [],
+    "preguntas": [
+     "tarea.telefono",
+     "tarea.mensaje"
+    ]
+   },
+   {
+    "texto": "que me avisen apenas esté todo coordinado",
+    "estado": "REQUIERE_ACLARACION",
+    "encargo": 3,
+    "acciones": [],
+    "preguntas": [
+     "tarea.destinatario",
+     "tarea.mensaje"
+    ]
+   }
+  ],
+  "creado_en": "2026-11-16T09:58:03.003501-05:00",
+  "preguntas": [
+   {
+    "clave": "tarea.telefono",
+    "texto": "¿A qué número le envío el mensaje a logística? Sin número no puedo enviarlo; si prefieres, lo dejo como tarea interna para secretaría.",
+    "opciones": []
+   },
+   {
+    "clave": "tarea.mensaje",
+    "texto": "¿Qué le digo exactamente en el recordatorio?",
+    "opciones": []
+   },
+   {
+    "clave": "tarea.destinatario",
+    "texto": "¿A quién le envío el recordatorio? Necesito el número o el nombre.",
+    "opciones": []
+   },
+   {
+    "clave": "tarea.mensaje",
+    "texto": "¿Con qué texto exacto le envío el recordatorio? Lo dictado fue «que me avisen apenas esté todo coordinado»: eso describe el encargo, no el mensaje que va a leer el destinatario.",
+    "opciones": []
+   }
+  ],
+  "extraccion": "d2e8b236-252e-4142-9fb0-e34f3d4f04cf",
+  "condiciones": [],
+  "latencia_ms": 2317
+ },
+ {
+  "caso": "P7b",
+  "sobre": {
+   "hechos": [
+    {
+     "cita": "que secretaría coordine con el chofer de la mezcladora",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "secretaría",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "que secretaría coordine con el chofer de la mezcladora porque mañana tenemos que estar en la obra antes de las 6 de la mañana",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "coordine con el chofer de la mezcladora porque mañana tenemos que estar en la obra antes de las 6 de la mañana",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "La fundida empieza a las 6",
+     "tipo": "HORA",
+     "clave": "cotizacion.hora_entrega",
+     "valor": "06:00",
+     "estado": "EXTRAIDO",
+     "encargo": 1,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "eso lo tiene que calcular y confirmar logística",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "logística",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "Todavía no sé exactamente a qué hora debe salir el camión de la planta, eso lo tiene que calcular y confirmar logística",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "calcular y confirmar a qué hora debe salir el camión de la planta",
+     "estado": "EXTRAIDO",
+     "encargo": 2,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "que me avisen apenas esté todo coordinado",
+     "tipo": "TEXTO",
+     "clave": "tarea.destinatario",
+     "valor": "secretaría",
+     "estado": "EXTRAIDO",
+     "encargo": 3,
+     "hablante": "SUPERADMIN"
+    },
+    {
+     "cita": "que me avisen apenas esté todo coordinado",
+     "tipo": "TEXTO",
+     "clave": "tarea.mensaje",
+     "valor": "me avisen apenas esté todo coordinado",
+     "estado": "EXTRAIDO",
+     "encargo": 3,
+     "hablante": "SUPERADMIN"
+    }
+   ],
+   "faltantes": [],
+   "intencion": "MUTACION",
+   "preguntas": [],
+   "ambiguedades": []
+  },
+  "texto": "Oye, urgente, que secretaría coordine con el chofer de la mezcladora porque mañana tenemos que estar en la obra antes de las seis de la mañana. La fundida empieza a las seis y el equipo tiene que llegar antes. Todavía no sé exactamente a qué hora debe salir el camión de la planta, eso lo tiene que calcular y confirmar logística. Y por favor, que me avisen apenas esté todo coordinado.",
+  "estado": "REQUIERE_ACLARACION",
+  "modelo": "deepseek-chat",
+  "prompt": "cerebro-v7",
+  "acciones": [
+   {
+    "orden": 1,
+    "encargo": 1,
+    "parametros": {
+     "ficha": {
+      "nota": null,
+      "tipo": "VERIFICACION",
+      "accion": "Verificar el dato indicado",
+      "cliente": null,
+      "monto_usd": null,
+      "volumen_m3": null,
+      "plazo_dicho": "06:00",
+      "responsable": null,
+      "datos_faltantes": [],
+      "responsable_rol": "SECRETARIA",
+      "resultado_esperado": "Informar si se confirmó o no, y con qué referencia.",
+      "telefono_referencia": null
+     },
+     "cuando": "06:00",
+     "prioridad": "URGENTE",
+     "asignado_a": null,
+     "instruccion": "coordine con el chofer de la mezcladora porque mañana tenemos que estar en la obra antes de las 6 de la mañana",
+     "asignado_rol": "SECRETARIA"
+    },
+    "accion_nombre": "crear_tarea_interna",
+    "bloqueada_por": null,
+    "rol_requerido": [
+     "SUPERADMIN",
+     "SECRETARIA"
+    ],
+    "depende_de_orden": null,
+    "requiere_doble_confirmacion": false
+   }
+  ],
+  "borrador": "72978235-6f6e-4c13-8db4-b54cd32187e5",
+  "encargos": [
+   {
+    "texto": "Oye, urgente, que secretaría coordine con el chofer de la mezcladora porque mañana tenemos que estar en la obra antes de las 6 de la mañana. La fundida empieza a las 6 y el equipo ",
+    "estado": "PENDIENTE_CONFIRMACION",
+    "encargo": 1,
+    "acciones": [
+     1
+    ],
+    "preguntas": []
+   },
+   {
+    "texto": "eso lo tiene que calcular y confirmar logística",
+    "estado": "REQUIERE_ACLARACION",
+    "encargo": 2,
+    "acciones": [],
+    "preguntas": [
+     "tarea.telefono",
+     "tarea.mensaje"
+    ]
+   },
+   {
+    "texto": "que me avisen apenas esté todo coordinado",
+    "estado": "REQUIERE_ACLARACION",
+    "encargo": 3,
+    "acciones": [],
+    "preguntas": [
+     "tarea.destinatario",
+     "tarea.mensaje"
+    ]
+   }
+  ],
+  "creado_en": "2026-11-16T09:58:15.355284-05:00",
+  "preguntas": [
+   {
+    "clave": "tarea.telefono",
+    "texto": "¿A qué número le envío el mensaje a logística? Sin número no puedo enviarlo; si prefieres, lo dejo como tarea interna para secretaría.",
+    "opciones": []
+   },
+   {
+    "clave": "tarea.mensaje",
+    "texto": "¿Qué le digo exactamente en el recordatorio?",
+    "opciones": []
+   },
+   {
+    "clave": "tarea.destinatario",
+    "texto": "¿A quién le envío el recordatorio? Necesito el número o el nombre.",
+    "opciones": []
+   },
+   {
+    "clave": "tarea.mensaje",
+    "texto": "¿Con qué texto exacto le envío el recordatorio? Lo dictado fue «me avisen apenas esté todo coordinado»: eso describe el encargo, no el mensaje que va a leer el destinatario.",
+    "opciones": []
+   }
+  ],
+  "extraccion": "a8e335a0-2371-4d25-a8a6-342010915eec",
+  "condiciones": [],
+  "latencia_ms": 2858
+ }
+]
