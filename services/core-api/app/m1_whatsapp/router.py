@@ -75,14 +75,28 @@ async def webhook(request: Request) -> dict[str, Any]:
     except Exception as exc:  # payload malformado: no se rompe el webhook
         raise HTTPException(status_code=422, detail="payload JSON invalido") from exc
 
+    # v9.7: el espejo se procesa primero y en su propio try. Asi un fallo de
+    # Redis en el debounce del Modulo 1 no impide guardar el mensaje, y el
+    # espejo nunca puede tumbar el webhook (ni al reves).
+    espejo_resumen: dict[str, int] | None = None
+    espejo = getattr(request.app.state, "espejo", None)
+    if espejo is not None and isinstance(payload, dict):
+        try:
+            espejo_resumen = await espejo.procesar_payload(payload)
+        except Exception:
+            log.exception("espejo WhatsApp: no se pudo procesar el evento")
+
     mensajes = normalizar_evento(payload if isinstance(payload, dict) else {})
     for mensaje in mensajes:
         await runtime.accumulator.agregar(mensaje)
 
-    return {
+    respuesta: dict[str, Any] = {
         "recibidos": len(mensajes),
         "ventana_segundos": runtime.ventana_segundos,
     }
+    if espejo_resumen is not None:
+        respuesta["espejo"] = espejo_resumen
+    return respuesta
 
 
 @router.post("/simulate")

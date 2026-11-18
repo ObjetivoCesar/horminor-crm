@@ -3,7 +3,8 @@
 > **Vivo:** se actualiza, no se archiva. Cada tarea tiene criterio de cierre
 > verificable. Si una tarea no tiene criterio, no está lista para empezar.
 >
-> Última actualización: 2026-11-13 (sesión de cotizaciones y contratos).
+> Última actualización: 2026-11-17 (multimedia de WhatsApp y Bunny por cliente;
+> cierre del espejo v9.7 en el VPS).
 
 ## 1. Dashboard operativo
 
@@ -50,7 +51,38 @@
 | T2 | Revisar los tests del panel que dependen de textos del HTML | Cambiar pestañas puede romper asserts por cadena | `pytest` en verde después de D3 |
 | T3 | Actualizar `AGENTS.md` §7 cuando una skill propuesta exista | Hoy lista 5 skills; el mapa de pilares propone 14 | La tabla coincide con `.agents/skills/` |
 
-## 6. Preguntas abiertas (no se decide por Julio)
+## 6. Multimedia de WhatsApp (espejo v9.7)
+
+> Alcance añadido por Julio el **2026-11-17**: recibir **audio, imagen, video,
+> documento y sticker**, y acumular la media de cada cliente en su **carpeta
+> independiente en Bunny.net**. W1 y W2 están hechos (2026-11-18): la media se
+> descarga y se guarda en la carpeta del cliente en el sandbox local. Falta
+> Bunny (W3) y el resto.
+
+| # | Tarea | Depende de | Criterio de cierre |
+|---|---|---|---|
+| W1 | Recibir media entrante completa — ✅ **hecho 2026-11-18** | webhook del espejo | Un audio, una imagen y un video enviados desde el número autorizado quedan en `chat_mensajes.adjuntos` con su `whatsapp_media`, `mimetype`, tamaño y nombre; ninguno se pierde |
+| W2 | Descarga real desde Evolution — ✅ **hecho 2026-11-18** | W1 | El espejo obtiene el binario (`base64`/`media` de Evolution) con timeout y reintento; un fallo se marca `pendiente_descarga` y **no** bloquea el texto |
+| W3 | Carpeta independiente por cliente en Bunny | W2, credenciales Bunny | Ruta `clientes/<cliente_id>/<canal>/<aaaa-mm>/<mensaje_id>.<ext>`; dos clientes distintos nunca comparten prefijo; el prefijo se verifica con una subida real |
+| W4 | Enlazar la media al expediente | W3 | El Chat muestra la imagen/audio/video desde la URL de Bunny y `v_chat_conversacion` devuelve la URL; el archivo se abre desde la carpeta del cliente |
+| W5 | Multimedia saliente desde el CRM | W3 | Adjuntar desde el Chat sube a la carpeta del cliente y envía por Evolution con `whatsapp_msg_id` conciliado, sin duplicar |
+| W6 | Cuota, formatos y retención | W3 | Límite por archivo y por cliente definido; formatos aceptados documentados; política de borrado/retención escrita antes de producción |
+
+Criterio de cierre de la sección: con el número autorizado, enviar audio,
+imagen y video desde el teléfono y verlos en la carpeta del cliente del CRM,
+cada uno en la carpeta del cliente correcto de Bunny, sin duplicados y sin
+afectar a otros números.
+
+## 6.1 Chat en vivo (espejo v9.8)
+
+| # | Tarea | Estado |
+|---|---|---|
+| S1 | Aviso SSE del espejo al panel (`BusEventos`, `/whatsapp/espejo/eventos`) | ✅ **hecho 2026-11-18** — verificado con el webhook real |
+| S2 | Desplegar el cambio en el VPS | ✅ **hecho 2026-11-18** — SSE responde, Caddy sin buffering (38 ms), webhook llega al aviso |
+| S3 | Si algún día hay varios workers, mover el fan-out a Redis | ⏳ sin fecha |
+| S4 | Confirmación humana en el VPS: WhatsApp real al 0967491847 y verlo aparecer sin recargar | ⏳ pendiente (única comprobación que falta) |
+
+## 7. Preguntas abiertas (no se decide por Julio)
 
 Cerradas el 2026-11-13:
 

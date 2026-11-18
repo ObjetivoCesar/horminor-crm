@@ -13,6 +13,7 @@ no existe, 404.
 from __future__ import annotations
 
 import json
+import logging
 import time
 from datetime import datetime
 from decimal import Decimal
@@ -37,8 +38,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..m1_whatsapp.bunny import BunnyError, BunnyHttpStorageClient
 from ..panel_acl import exigir_modulo
 from ..services import media as media_svc
+from ..whatsapp_espejo.evolution import EvolutionNoConfigurado as EspejoNoConfigurado
 
 router = APIRouter(prefix="/api/v1", tags=["chat"])
+
+log = logging.getLogger(__name__)
 
 CANALES = ("PANEL", "WHATSAPP", "CRM", "NOTA")
 DIRECCIONES = ("ENTRANTE", "SALIENTE")
@@ -235,7 +239,7 @@ async def _config_bunny(pool: asyncpg.Pool, settings: Any) -> dict[str, Any]:
         fila = await pool.fetchval("SELECT value FROM system_settings WHERE key = $1", "integraciones.bunny")
         datos = _jsonb(fila, {})
         if isinstance(datos, dict):
-            for campo in ("storage_zone", "api_key", "cdn_host", "token_key", "sandbox"):
+            for campo in ("storage_zone", "api_key", "cdn_host", "token_key", "sandbox", "prefijo"):
                 if datos.get(campo) not in (None, ""):
                     cfg[campo] = datos[campo]
     except Exception:
@@ -322,6 +326,18 @@ def _whatsapp_estado(request: Request) -> dict[str, Any]:
     }
 
 
+async def _estado_espejo(request: Request, cliente_id: str) -> dict[str, Any]:
+    """Indica si el cliente tiene un numero autorizado para el espejo."""
+    espejo = getattr(request.app.state, "espejo", None)
+    if espejo is None:
+        return {"disponible": False, "autorizado": False}
+    try:
+        return await espejo.estado_cliente(cliente_id)
+    except Exception:
+        log.warning("no se pudo leer el estado del espejo para %s", cliente_id)
+        return {"disponible": False, "autorizado": False}
+
+
 @router.get("/clients/{cliente_id}/chat")
 async def leer_chat(
     request: Request,
@@ -353,6 +369,7 @@ async def leer_chat(
             "hay_mas": False,
             "siguiente_antes_de": None,
             "whatsapp": _whatsapp_estado(request),
+            "espejo": await _estado_espejo(request, cliente_id),
         }
 
     parametros: list[Any] = [conversacion_id]
@@ -384,6 +401,7 @@ async def leer_chat(
         "hay_mas": hay_mas,
         "siguiente_antes_de": visibles[0]["created_at"] if hay_mas and visibles else None,
         "whatsapp": _whatsapp_estado(request),
+        "espejo": await _estado_espejo(request, cliente_id),
     }
 
 
@@ -429,21 +447,85 @@ async def enviar_mensaje(
     saliente = payload.direccion == "SALIENTE"
     estado = payload.estado_entrega
     metadata: dict[str, Any] = {}
+    whatsapp_msg_id = payload.whatsapp_msg_id
     if saliente and payload.canal == "WHATSAPP" and estado is None:
         runtime = getattr(request.app.state, "whatsapp", None)
         telefono = (cliente["telefono_whatsapp"] or "").strip()
+        # El espejo manda: si el cliente tiene un numero autorizado, la
+        # respuesta debe ir a ese numero y no al telefono de la ficha.
+        espejo = getattr(request.app.state, "espejo", None)
+        autorizado: str | None = None
+        if espejo is not None:
+            try:
+                autorizado = await espejo.telefono_de_cliente(cliente_id)
+            except Exception:
+                autorizado = None
+            if autorizado:
+                telefono = autorizado
+                metadata["espejo"] = "numero_autorizado"
         conectado = bool(runtime and getattr(runtime.notifier, "nombre", "") == "evolution")
         if not telefono:
             estado = "FALLIDO"
             metadata["motivo"] = "cliente_sin_whatsapp"
+        elif autorizado and espejo is not None:
+            # Numero autorizado: responde el espejo con su propio cliente, sin
+            # encender el bot informativo ni el switch SANDBOX global.
+            detalle: dict[str, Any] = {}
+            try:
+                detalle = await espejo.enviar_texto(telefono, cuerpo)
+            except EspejoNoConfigurado:
+                estado = "PENDIENTE"
+                metadata["motivo"] = "evolution_no_configurado"
+            except Exception as exc:  # noqa: BLE001
+                log.warning("espejo: fallo enviando a %s: %s", telefono, exc)
+                estado = "FALLIDO"
+                metadata["motivo"] = "evolution_error"
+            else:
+                estado = detalle.get("estado") or (
+                    "ENVIADO" if detalle.get("ok") else "FALLIDO"
+                )
+                if detalle.get("message_id"):
+                    whatsapp_msg_id = whatsapp_msg_id or str(detalle["message_id"])
+                    metadata["evolution_msg_id"] = str(detalle["message_id"])
+                if not detalle.get("ok"):
+                    metadata["motivo"] = "evolution_rechazo"
         elif conectado:
-            enviado = await runtime.notifier.enviar_texto(telefono, cuerpo)
-            estado = "ENVIADO" if enviado else "FALLIDO"
-            if not enviado:
-                metadata["motivo"] = "evolution_rechazo"
+            enviar_detalle = getattr(runtime.notifier, "enviar_texto_detalle", None)
+            if callable(enviar_detalle):
+                detalle = await enviar_detalle(telefono, cuerpo)
+                estado = detalle.get("estado") or (
+                    "ENVIADO" if detalle.get("ok") else "FALLIDO"
+                )
+                if detalle.get("message_id"):
+                    whatsapp_msg_id = whatsapp_msg_id or str(detalle["message_id"])
+                    metadata["evolution_msg_id"] = str(detalle["message_id"])
+                if not detalle.get("ok"):
+                    metadata["motivo"] = "evolution_rechazo"
+            else:
+                enviado = await runtime.notifier.enviar_texto(telefono, cuerpo)
+                estado = "ENVIADO" if enviado else "FALLIDO"
+                if not enviado:
+                    metadata["motivo"] = "evolution_rechazo"
         else:
             estado = "PENDIENTE"
             metadata["motivo"] = "whatsapp_no_conectado"
+
+        # El eco fromMe puede llegar por webhook antes de que responda este
+        # POST. Si ya existe con el key.id de Evolution, no se duplica.
+        if whatsapp_msg_id and not payload.whatsapp_msg_id:
+            existente = await pool.fetchrow(
+                f"SELECT {_CAMPOS_MENSAJE} FROM chat_mensajes WHERE whatsapp_msg_id = $1",
+                whatsapp_msg_id,
+            )
+            if existente is not None:
+                mensaje = _mensaje(existente)
+                await _enriquecer_adjuntos(pool, [mensaje], _settings(request))
+                return {
+                    "conversacion_id": conversacion_id,
+                    "mensaje": mensaje,
+                    "duplicado": True,
+                    "resumen": await _resumen(pool, conversacion_id),
+                }
     if estado is None:
         estado = "ENVIADO" if saliente else "ENTREGADO"
 
@@ -470,7 +552,7 @@ async def enviar_mensaje(
         autor_usuario_id,
         cuerpo,
         json.dumps(payload.adjuntos or []),
-        payload.whatsapp_msg_id,
+        whatsapp_msg_id,
         estado,
         json.dumps(metadata),
     )
@@ -562,7 +644,12 @@ async def enviar_adjunto(
     carpeta = media_svc.carpeta_cliente(
         cliente["nombre"], cliente["cedula"], cliente["ruc"], cliente_id
     )
-    storage_path = media_svc.ruta_media(carpeta, procesado.tipo, procesado.extension)
+    storage_path = media_svc.ruta_media(
+        carpeta,
+        procesado.tipo,
+        procesado.extension,
+        prefijo=str(cfg.get("prefijo") or ""),
+    )
     if not cfg["configurado"]:
         try:
             media_svc.guardar_sandbox(settings.media_dir, storage_path, procesado.datos)
@@ -678,6 +765,59 @@ async def enviar_adjunto(
                 fila["id"],
                 media_id,
             )
+
+    # Envio real por WhatsApp cuando el numero esta autorizado: usa el cliente
+    # propio del espejo, sin encender el bot informativo ni el switch SANDBOX.
+    estado_final = estado
+    msg_id_whatsapp: str | None = None
+    if canal == "WHATSAPP":
+        espejo = getattr(request.app.state, "espejo", None)
+        autorizado: str | None = None
+        if espejo is not None:
+            try:
+                autorizado = await espejo.telefono_de_cliente(cliente_id)
+            except Exception:
+                autorizado = None
+        if not autorizado:
+            metadata["motivo"] = "cliente_sin_numero_autorizado"
+        else:
+            try:
+                detalle = await espejo.enviar_media(
+                    autorizado,
+                    tipo=procesado.tipo,
+                    datos=procesado.datos,
+                    mime=procesado.mime,
+                    nombre=nombre,
+                    caption=(cuerpo.strip() or None),
+                )
+            except Exception:
+                log.warning("espejo: fallo enviando multimedia", exc_info=True)
+                estado_final = "FALLIDO"
+                metadata["motivo"] = "evolution_error"
+            else:
+                estado_final = detalle.get("estado") or "ENVIADO"
+                msg_id_whatsapp = detalle.get("message_id")
+                metadata.pop("motivo", None)
+                metadata["evolution_msg_id"] = msg_id_whatsapp
+
+    if estado_final != estado or msg_id_whatsapp:
+        await pool.execute(
+            """
+            UPDATE chat_mensajes
+               SET estado_entrega = $2,
+                   whatsapp_msg_id = COALESCE($3, whatsapp_msg_id),
+                   metadata = $4::jsonb
+             WHERE id = $1::uuid
+            """,
+            fila["id"],
+            estado_final,
+            msg_id_whatsapp,
+            json.dumps(metadata),
+        )
+        fila = await pool.fetchrow(
+            f"SELECT {_CAMPOS_MENSAJE} FROM chat_mensajes WHERE id = $1::uuid",
+            fila["id"],
+        )
 
     mensaje = _mensaje(fila)
     await _enriquecer_adjuntos(pool, [mensaje], settings)

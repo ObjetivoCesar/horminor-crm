@@ -1,8 +1,12 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-16** (lenguaje natural, duda acotada y audio;
-> 620 pruebas).
+> Última actualización: **2026-11-18** (espejo v9.8: **chat en vivo por SSE** —
+> el hilo se actualiza solo, sin pulsar Sincronizar; multimedia entrante real;
+> sesión LID reparada, número de prueba 0967491847, corte de historial y altura
+> fija del chat; **674 pruebas**. **Desplegado en el VPS** con parche
+> quirúrgico: el endpoint SSE responde y Caddy lo entrega sin buffering
+> (38 ms); falta solo la confirmación con un WhatsApp real desde el celular).
 > Base v6.17: Custodio v4.4.0 + HTTP, agenda única `HorminorAgenda`,
 > compras/caja chica, perfiles ACL, Superadmin por Action Cards, Carpetas de
 > Clientes con buscador Sabueso, bancos con color de marca, **facturas
@@ -38,6 +42,7 @@
 | 4l | v6.12 - Logos de bancos con color de marca | OK **Cerrado** (2026-11-12) | Tres placas SVG 96x96: Pichincha amarillo `#FFD100`, Guayaquil rosado `#C7007E`, Internacional naranja `#F39200`; isotipos oficiales, símbolo Pichincha a 56/96; `.banco-logo` de 46 px sin caja blanca; evidencias/panel_v612_bancos_dark_2026-11-12.png, _light_ y logos_zoom; pytest (**296 tests**) | Nada bloqueante. Aceptado por Dirección; si pide el lockup completo, placas 92x40 |
 | 4k | v6.11 - Banco activo + detalle de cuenta | OK **Cerrado** (2026-11-12) | Migracion 072 (`bank_accounts`, hijas `1102.01-03`, `saldo_informado`); tarjetas seleccionables en amarillo; detalle con saldo contable/informado, prestamos y movimientos; `PUT /api/v1/dashboard/bancos/{slug}`; evidencias/panel_v611_banca_2026-11-12.jpeg; pytest_v611_2026-11-12.txt (**296 tests**) | Cargar cuentas y saldos reales; asignar pagos a la cuenta hija del banco |
 | 4j | v6.10 - Fondo de Planta + cabecera de Banca | OK **Cerrado** (2026-11-12) | Foto `planta-agenda.webp` como fondo de la agenda con overlay; cabecera de Banca con tarjetas Pichincha/Guayaquil/Internacional y logos; endpoint `GET /api/v1/dashboard/bancos`; tarea `.agents/tareas/2026-11-12_ABEL.md`; evidencias/panel_v610_*.jpeg; pytest_v610_2026-11-12.txt (**295 tests**) | Confirmar cuentas Guayaquil/Internacional y reemplazar foto con marca Vecteezy |
+| 4r | v9.8 - Espejo de WhatsApp por lista blanca + **chat en vivo** | 🟢 **Funcionando en local y en el VPS con el número 0967491847** (2026-11-18) | Migraciones **093/094/095**; módulo `app/whatsapp_espejo/` (identidad PN/LID/ALT, **aprendizaje del teléfono desde el historial cuando falta `remoteJidAlt`**, backfill paginado idempotente **con corte desde el alta del cliente**, envío con `key.id`); webhook del M1 con hook propio; Chat con **Sincronizar**, altura fija de 520 px. **Multimedia entrante real** (imagen, audio, video). **Chat en vivo:** `BusEventos` + `GET /api/v1/whatsapp/espejo/eventos` (SSE) y `chatEventosConectar()` en el panel: el hilo abierto se refresca en **menos de un segundo**, el sondeo de 15 s queda de respaldo. **Sesión de WhatsApp revincada con QR** (el `SessionError` de Evolution impedía descifrar). Prueba real: mensaje enviado **desde el celular del cliente** aparece en el chat del CRM; entrantes y salientes correctos; `pytest` **674** | Confirmar en el VPS con un WhatsApp real desde el celular (el SSE ya responde y Caddy lo entrega sin buffering); conectar Bunny para la media entrante (W3); evaluar actualizar Evolution v2.3.7 por el fallo LID; commit del código |
 | 4i | v6.9 - Chat espejo WhatsApp + multimedia Bunny | OK **Cerrado** (2026-11-11) | Chat con estetica WhatsApp (clip, camara, audio, ubicacion), canal `WHATSAPP` y estado de conexion; migracion 071 (`media_assets`, `clients.cedula`); compresion WebP/video; tokens Bunny; limites y rate limit; `docs/WHATSAPP_Y_MEDIA.md`; evidencias/media_v69_check_2026-11-11.txt (**MEDIA V6.9: OK**) y pytest_v69_2026-11-11.txt (**291 tests**) | Conectar Evolution y persistir entrantes; cargar cedula y credenciales Bunny |
 | 4h | v6.8 - CHAT por cliente en PostgreSQL | OK **Cerrado** (2026-11-11) | Migracion 070 (`chat_conversaciones`, `chat_mensajes`, `v_chat_conversacion`); API `routers/chat_clientes.py`; pestana `💬 Chat` con badge, burbujas y compositor; idempotencia `whatsapp_msg_id`; busqueda full-text; docs/BASE_DE_DATOS.md §9; evidencias/chat_v68_check_2026-11-11.txt (**CHAT V6.8: OK**) y pytest_v68_2026-11-11.txt (**283 tests**) | Conectar envio real por WhatsApp (Evolution) |
 | 4g | v6.7 - Filtros plegables + fotos reales | OK **Cerrado** (2026-11-11) | Boton `Filtros` con contador y panel desplegable; chips de filtros activos; fix global de `[hidden]`; fotos en `static/brand/fotos/` para Obras; evidencias/pytest_v67_2026-11-11.txt (**277 tests**) | Confirmar foto del mixer (recortada u original) |
@@ -59,12 +64,108 @@ Leyenda: âšª no iniciado Â· ðŸŸ¡ en curso / candado abierto Â· ðŸŸ
 | Core API | http://localhost:8000 (contenedor orminorth-core-api) | 127.0.0.1:8012 en el VPS; público solo /health y webhook |
 | Panel (M3 + M4 + Superadmin) | http://localhost:8000/panel · **SANDBOX: no envía WhatsApp** | http://localhost:8012/panel por túnel SSH (`ssh -i ..\vps-entrada\horminor_vps -N -L 8012:127.0.0.1:8012 root@178.238.238.158`); `envio: evolution`, sí envía |
 
+> **Espejo v9.7 en local (2026-11-17):** cliente `PRUEBA - Alejandra WhatsApp`
+> (`a6dfca33…`) con el número autorizado `593986962872` y **5 mensajes
+> sincronizados**. Matiz importante: local muestra "WhatsApp: no conectado"
+> porque el **bot del M1** sigue en SANDBOX; el **espejo** del número autorizado
+> sí envía de verdad con su propio cliente Evolution. Son dos canales distintos.
+
 Datos de demo en local: Ã³rdenes del Ing. Reyes (320 mÂ³ FC-210 y 52 mÂ³ FC-350),
 orden del candado del Hito 3 (16 mÂ³) y clientes de fixture con provincia
 Orellana/SucumbÃ­os para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
 
 ## Evidencia de la última sesión
+
+### 2026-11-18 - Chat en vivo: el espejo avisa al panel en segundos
+
+- **Qué cambió:** el Chat del expediente ya no espera el sondeo de 15 s. El
+  espejo publica un aviso (`BusEventos`) cuando importa un mensaje, cuando el
+  webhook adelanta su estado y cuando termina una sincronización; el panel lo
+  recibe por **SSE** (`GET /api/v1/whatsapp/espejo/eventos`) y refresca el hilo
+  abierto en menos de un segundo.
+- **Permisos:** `EventSource` no manda cabeceras, así que el perfil simulado va
+  por `?usuario=`; el módulo se valida igual y el aviso solo lleva
+  identificadores, nunca el texto.
+- **Respaldo:** el sondeo de 15 s sigue activo por si la conexión en vivo se
+  cae.
+- **Bug corregido en la prueba:** `enviado_at` viajaba como `datetime` y
+  `json.dumps` cerraba el stream; ahora va en ISO-8601 y `_sse` usa
+  `default=str`.
+- **Verificado:** `curl` recibe `listo` y luego el `mensaje` del webhook real
+  con el número autorizado; en el navegador el hilo pasa de 14 a 15 mensajes
+  **sin pulsar Sincronizar** y el texto aparece en **462 ms**; panel sin errores
+  de sintaxis (`bloques=3 errores=0`); `674 passed`. Evidencia:
+  `.agents/evidencias/sse_chat_vivo_2026-11-18.txt`.
+- **VPS (2026-11-18):** desplegado con parche quirúrgico sobre el linaje que
+  corre allí (`0cfa9fc`): `BusEventos` en `main.py`, `usuario` opcional en
+  `panel_acl.py`, el bloque SSE + sondeo en su `panel.html` y los cuatro
+  archivos del espejo desde local. El endpoint responde `listo` y un webhook
+  real llega al SSE; Caddy entrega el primer bloque en **38 ms** (sin
+  buffering); respaldo de los archivos originales en
+  `/root/backup_sse_chat_20261117_214843`. Evidencia:
+  `.agents/evidencias/sse_chat_vivo_vps_2026-11-18.txt`.
+- **Pendiente:** confirmar en el VPS con un WhatsApp real desde el celular;
+  Bunny (W3).
+
+### 2026-11-18 - Multimedia entrante: imagen, audio y video
+
+- **La estructura de WhatsApp se aprovecha completa:** el mensaje ya dice el
+  tipo (`imageMessage`, `audioMessage`, `videoMessage`, `documentMessage`) y
+  Evolution entrega el binario con `getBase64FromMediaMessage`.
+- **Se guarda por cliente** en `clientes/<cliente>_<id>/…` dentro de
+  `media_dir`, con fila en `media_assets` y `media_id` en el mensaje.
+- **Verificado con envío real** desde el celular: imagen (69 KB), audio (4 KB)
+  y video (6 MB) descargados y visibles en el chat del expediente.
+- **Un fallo de media no pierde el texto** del mensaje.
+- **Pendiente:** enviar multimedia desde el CRM (`sendMedia` de Evolution) y
+  conectar Bunny al mismo esquema de carpetas.
+
+### 2026-11-18 - Por qué no llegaba al CRM (y número nuevo de prueba)
+
+- **Causa real:** la sesión de WhatsApp estaba **sin poder descifrar** mensajes
+  (`SessionError: No matching sessions found` en chats `@lid`, `stream:error
+  503`). Los mensajes no entraban ni a Evolution. Se reparó **revincando el
+  dispositivo con QR** (sin tocar el contenedor compartido). Después:
+  `state: open` y **0 errores**.
+- **Segundo defecto:** WhatsApp omite `remoteJidAlt` en muchos `@lid`; el
+  espejo ahora **aprende el teléfono del historial de Evolution** y lo registra
+  como alias. Sin dato, el mensaje sigue pendiente (no se inventa identidad).
+- **Regla de historial (migración 095):** la sincronización solo copia desde el
+  **alta del cliente** (`whatsapp_espejo_numeros.desde`, configurable). Se
+  limpió el exceso: Abelito pasó de **1.807 a 1** mensaje.
+- **Número de prueba:** **0967491847** autorizado en local y VPS; Alejandra
+  desactivada (tenía otra automatización).
+- **Interfaz:** el chat de la carpeta tiene **altura fija de 520 px** y solo
+  desplaza la lista de mensajes.
+- **Prueba real:** un mensaje enviado **desde el celular del cliente** al
+  0967491847 aparece en el chat del CRM como saliente, junto con los entrantes.
+- **Pruebas:** `660 passed`.
+- **Pendiente:** descargar multimedia y subirla a Bunny por cliente (W1–W3).
+
+### 2026-11-17 - Espejo v9.7 desplegado en el VPS (conversación real)
+
+- **Qué se logró:** la pestaña **Chat** del expediente **Alejandra** muestra la
+  conversación real de WhatsApp del número autorizado `+593 98 696 2872`
+  directamente en el VPS. Historial de 3 mensajes importado una sola vez, en
+  orden y con estados reales.
+- **Envío real desde el CRM:** el texto sale por Evolution con el cliente propio
+  del espejo, sin apagar el switch SANDBOX global ni activar el bot informativo.
+  Llegó al teléfono.
+- **Webhook en vivo:** `MESSAGES_UPDATE` suscrito; entraron en tiempo real el
+  texto "probando" y una imagen, guardados sin duplicar.
+- **Correcciones mínimas:** `API_PORT` 8010→8012 (Caddy), `extra_hosts`
+  `host.docker.internal:host-gateway`, y normalización del estado de envío
+  (`PENDING`→`PENDIENTE`) que causaba un 500 después de enviar.
+- **Bloqueo:** el **entrante** desde el teléfono de Alejandra nunca llegó a
+  Evolution (ni por PN ni por su LID `153459886145727@lid`). No es un descarte
+  del espejo.
+- **Pruebas:** `655 passed`; archivo del espejo `32 passed`.
+- **Evidencia:** `.agents/evidencias/espejo_v97_vps_2026-11-17.txt`.
+- **Alcance añadido por Julio:** recibir **audio, imagen, video y documento**, y
+  acumular la media de cada cliente en su **carpeta independiente en Bunny.net**
+  (`.agents/tareas/PENDIENTES.md` §6, W1–W6). Aún no implementado.
+- **Intacto:** bot informativo, Cerebro, Gato, voz y demás números.
 
 ### 2026-11-16 - Corrección de revocación y audio de Díaz Sur
 

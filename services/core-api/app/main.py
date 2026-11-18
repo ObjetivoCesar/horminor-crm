@@ -36,6 +36,8 @@ from .routers import (
 from .services.ordenes import OrdenInvalidaError
 from .settings import get_settings
 from .voz.router import router as voz_router
+from .whatsapp_espejo import BusEventos, EspejoWhatsApp, PostgresRepositorioEspejo
+from .whatsapp_espejo.router import router as espejo_router
 from .superadmin.operacion import router as operacion_router
 from .superadmin.router import router as superadmin_router
 from .superadmin.store import PostgresConfigStore
@@ -70,6 +72,17 @@ async def lifespan(app: FastAPI):
             log.info("migraciones aplicadas: %s", ", ".join(aplicadas))
 
     app.state.config_store = PostgresConfigStore(pool)
+
+    # v9.7: el espejo de WhatsApp usa las mismas tablas del expediente y su
+    # propia lista blanca. Se arma aunque el worker del Modulo 1 este apagado:
+    # el backfill es lectura y no evalua compuertas.
+    # El bus avisa al panel en vivo (SSE) cuando entra o cambia un mensaje.
+    app.state.eventos_espejo = BusEventos()
+    app.state.espejo = EspejoWhatsApp(
+        PostgresRepositorioEspejo(pool),
+        settings=settings,
+        eventos=app.state.eventos_espejo,
+    )
 
     runtime: WhatsAppRuntime | None = None
     if settings.whatsapp_worker_enabled:
@@ -145,6 +158,7 @@ app.include_router(cotizaciones.router)
 app.include_router(voz_router)
 app.include_router(cerebro_router)
 app.include_router(whatsapp_router)
+app.include_router(espejo_router)
 app.include_router(superadmin_router)
 app.include_router(operacion_router)
 app.include_router(usuarios_router)

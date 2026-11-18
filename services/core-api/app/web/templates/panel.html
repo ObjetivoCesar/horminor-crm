@@ -701,9 +701,12 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
 .clientes-col .paginacion { margin-top: auto; }
 .stack { height: 100%; display: flex; flex-direction: column; }
 #carpeta-card { display: flex; flex-direction: column; flex: 1 1 auto; }
-#carpeta-tab.carpeta-tab-chat { flex: 1 1 auto; display: flex; flex-direction: column; }
-#carpeta-tab.carpeta-tab-chat .chat-panel { flex: 1 1 auto; min-height: 420px; }
-#carpeta-tab.carpeta-tab-chat .chat-hilo { flex: 1 1 auto; height: auto; max-height: none; }
+#carpeta-tab.carpeta-tab-chat { display: flex; flex-direction: column; }
+#carpeta-tab.carpeta-tab-chat .chat-panel { flex: 0 0 auto; height: 520px; min-height: 0; }
+#carpeta-tab.carpeta-tab-chat .chat-hilo { flex: 1 1 auto; height: auto; min-height: 0; max-height: none; overflow-y: auto; }
+@media (max-width: 720px) {
+  #carpeta-tab.carpeta-tab-chat .chat-panel { height: 70vh; }
+}
 .chat-badge {
   display: inline-grid; place-items: center; min-width: 16px; height: 16px;
   padding: 0 5px; margin-left: 2px; border-radius: 999px;
@@ -749,6 +752,12 @@ label.field { display: block; font-size: 10.5px; color: var(--text-muted); margi
   background: rgba(245,158,11,.10); color: var(--accent-cat-amber);
   border-bottom: var(--border-subtle);
 }
+.chat-espejo {
+  padding: 5px 12px; font-size: 10px; color: var(--text-muted);
+  border-bottom: var(--border-subtle);
+}
+.chat-espejo.ok { color: var(--status-ok); }
+.chat-sync { margin-left: auto; }
 .chat-hilo {
   display: flex; flex-direction: column; gap: 8px;
   padding: 16px 12px; min-height: 260px; height: clamp(280px, 44vh, 460px);
@@ -4451,6 +4460,7 @@ async function cambiarPerfilSimulado(id) {
   } catch(e) {
     toast('No se pudo cambiar la vista: ' + e.message, 'bad');
   }
+  chatEventosConectar();  // el aviso en vivo respeta el perfil simulado
 }
 
 async function cargarSalud() {
@@ -6986,8 +6996,8 @@ let chatRecordSeg = 0;
 function chatReset(clienteId) {
   state.chat = {
     clienteId: clienteId || null, conversacionId: null, canal: 'WHATSAPP',
-    mensajes: [], resumen: null, whatsapp: null, cargando: false, enviando: false,
-    subiendo: false, error: null, seq: 0
+    mensajes: [], resumen: null, whatsapp: null, espejo: null, cargando: false,
+    enviando: false, subiendo: false, error: null, seq: 0
   };
 }
 
@@ -7043,6 +7053,7 @@ async function chatCargar(clienteId) {
     chat.mensajes = r.mensajes || [];
     chat.resumen = r.resumen || null;
     chat.whatsapp = r.whatsapp || null;
+    chat.espejo = r.espejo || null;
   } catch(e) {
     if (seq !== chat.seq) return;
     chat.error = e.message;
@@ -7065,6 +7076,127 @@ function renderChatBadge() {
   badge.setAttribute('aria-label', n > 0 ? `${n} mensaje(s) sin leer` : 'sin mensajes sin leer');
 }
 
+function renderChatEspejo() {
+  const e = state.chat.espejo || {};
+  if (e.autorizado) {
+    const cuando = e.ultima_sincronizacion_at
+      ? new Date(e.ultima_sincronizacion_at).toLocaleString('es-EC')
+      : 'sin sincronizar todavía';
+    return `<div class="chat-espejo ok">🔗 Espejo autorizado · +${esc(e.telefono || '')} · ${esc(cuando)}</div>`;
+  }
+  if (e.disponible) {
+    return '<div class="chat-espejo">Este número no está autorizado para el espejo de WhatsApp.</div>';
+  }
+  return '';
+}
+
+async function chatSincronizar() {
+  const clienteId = state.chat.clienteId;
+  if (!clienteId) return;
+  const boton = $('#chat-sync');
+  if (boton) { boton.disabled = true; boton.textContent = 'Sincronizando…'; }
+  try {
+    const r = await api(`/api/v1/whatsapp/espejo/clientes/${encodeURIComponent(clienteId)}/sincronizar`, { method: 'POST' });
+    const nuevos = Number(r.importados || 0);
+    toast(nuevos ? `Se importaron ${nuevos} mensaje(s) nuevo(s).` : 'El historial ya estaba al día.', 'ok');
+    await chatCargar(clienteId);
+  } catch(e) {
+    toast('No se pudo sincronizar: ' + e.message, 'bad');
+  } finally {
+    if (boton) { boton.disabled = false; boton.textContent = 'Sincronizar'; }
+  }
+}
+
+let chatPollTimer = null;
+
+function chatPollIniciar() {
+  chatPollDetener();
+  chatPollTimer = setInterval(() => {
+    if (state.carpetaTab !== 'chat') { chatPollDetener(); return; }
+    if (document.hidden || state.chat.enviando || state.chat.subiendo) return;
+    const clienteId = state.chat.clienteId;
+    if (clienteId) chatRefrescar(clienteId);
+  }, 15000);
+}
+
+function chatPollDetener() {
+  if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+}
+
+/* --- Aviso en vivo (SSE): el mensaje aparece sin esperar el sondeo --- */
+let chatEventosFuente = null;
+let chatEventosPendiente = null;
+
+function chatEventosConectar() {
+  if (chatEventosFuente) {
+    try { chatEventosFuente.close(); } catch(e) {}
+    chatEventosFuente = null;
+  }
+  if (typeof EventSource === 'undefined') return;
+  const usuario = localStorage.getItem('horminor.panel.user') || '';
+  const url = '/api/v1/whatsapp/espejo/eventos' + (usuario ? '?usuario=' + encodeURIComponent(usuario) : '');
+  try { chatEventosFuente = new EventSource(url); } catch(e) { chatEventosFuente = null; return; }
+  chatEventosFuente.onmessage = ev => {
+    let dato = null;
+    try { dato = JSON.parse(ev.data || '{}'); } catch(e) { return; }
+    chatEventosRecibir(dato);
+  };
+  // EventSource reintenta solo; el sondeo de 15 s queda como respaldo.
+  chatEventosFuente.onerror = () => {};
+}
+
+function chatEventosRecibir(dato) {
+  if (!dato || !dato.tipo || dato.tipo === 'listo') return;
+  const clienteId = state.chat.clienteId;
+  if (!clienteId) return;
+  const coincide = dato.cliente_id ? dato.cliente_id === clienteId : true;
+  if (dato.tipo === 'mensaje' || dato.tipo === 'sincronizado') {
+    if (!coincide) return;
+    clearTimeout(chatEventosPendiente);
+    chatEventosPendiente = setTimeout(() => {
+      if (state.chat.clienteId !== clienteId || state.chat.enviando || state.chat.subiendo) return;
+      chatRefrescar(clienteId);
+    }, 250);
+  } else if (dato.tipo === 'estado') {
+    if (state.chat.enviando) return;
+    chatRefrescar(clienteId);
+  }
+}
+
+function chatEventosDesconectar() {
+  clearTimeout(chatEventosPendiente);
+  chatEventosPendiente = null;
+  if (chatEventosFuente) {
+    try { chatEventosFuente.close(); } catch(e) {}
+    chatEventosFuente = null;
+  }
+}
+
+async function chatRefrescar(clienteId) {
+  if (!clienteId || state.chat.clienteId !== clienteId) return;
+  const chat = state.chat;
+  const ultimoAntes = chat.mensajes.length ? chat.mensajes[chat.mensajes.length - 1].id : null;
+  const totalAntes = Number((chat.resumen && chat.resumen.total_mensajes) || 0);
+  try {
+    const r = await api(`/api/v1/clients/${encodeURIComponent(clienteId)}/chat?canal=WHATSAPP&limite=100`);
+    if (chat.clienteId !== clienteId) return;
+    chat.conversacionId = r.conversacion_id;
+    chat.mensajes = r.mensajes || [];
+    chat.resumen = r.resumen || null;
+    chat.whatsapp = r.whatsapp || null;
+    chat.espejo = r.espejo || null;
+    const ultimoAhora = chat.mensajes.length ? chat.mensajes[chat.mensajes.length - 1].id : null;
+    const totalAhora = Number((chat.resumen && chat.resumen.total_mensajes) || 0);
+    if (ultimoAhora === ultimoAntes && totalAhora === totalAntes) return;
+    const hilo = $('#chat-hilo');
+    const abajo = !hilo || (hilo.scrollHeight - hilo.scrollTop - hilo.clientHeight < 90);
+    renderChatHilo();
+    if (abajo) chatScrollAbajo();
+    renderChatBadge();
+    if (state.carpetaTab === 'chat' && !document.hidden) chatMarcarLeido();
+  } catch(e) { /* el refresco automatico nunca interrumpe al operador */ }
+}
+
 function renderTabChat(c) {
   const nombre = (c && c.cliente && c.cliente.nombre) || 'este cliente';
   const wa = state.chat.whatsapp || {};
@@ -7076,8 +7208,10 @@ function renderTabChat(c) {
         <strong>${esc(nombre)}</strong>
         <div class="chat-estado"><span class="chat-punto ${conectado ? 'ok' : ''}"></span>${conectado ? 'En línea · WhatsApp' : 'WhatsApp no conectado'}</div>
       </div>
+      <button class="btn small ghost chat-sync" type="button" id="chat-sync" onclick="chatSincronizar()" title="Traer el historial disponible de WhatsApp">Sincronizar</button>
       <span class="chat-canal">WhatsApp</span>
     </div>
+    ${renderChatEspejo()}
     ${conectado ? '' : '<div class="chat-aviso">⚠ Los mensajes quedan en cola hasta que conectes Evolution API.</div>'}
     <div class="chat-hilo" id="chat-hilo" role="log" aria-live="polite" aria-label="Conversación con ${esc(nombre)}">${renderChatCuerpo()}</div>
     <div class="chat-subiendo" id="chat-subiendo" ${state.chat.subiendo ? '' : 'hidden'}>⏳ Subiendo archivo…</div>
@@ -7447,6 +7581,9 @@ function cambiarTabCarpeta(tab) {
     chatScrollAbajo();
     actualizarBotonChat();
     chatMarcarLeido();
+    chatPollIniciar();
+  } else {
+    chatPollDetener();
   }
 }
 
@@ -9176,6 +9313,7 @@ cargarTareas();
 setInterval(cargarTareas, 60000);
 cargarSalud();
 setInterval(cargarSalud, 60000);
+chatEventosConectar();
 </script>
 
 <button class="gato-fab" id="gato-fab" type="button" onclick="gatoToggle()" aria-expanded="false" aria-controls="gato-panel">

@@ -155,7 +155,12 @@ def carpeta_cliente(
 
 
 def ruta_media(
-    carpeta: str, tipo: str, ext: str, *, ahora: datetime | None = None
+    carpeta: str,
+    tipo: str,
+    ext: str,
+    *,
+    ahora: datetime | None = None,
+    prefijo: str | None = None,
 ) -> str:
     if ahora is None:
         try:
@@ -167,7 +172,9 @@ def ruta_media(
     fecha = ahora.strftime("%Y-%m-%d")
     azar = secrets.token_hex(4)
     ext = re.sub(r"[^a-z0-9]", "", (ext or "bin").lower()) or "bin"
-    return f"clientes/{carpeta}/{fecha}_{tipo.lower()}_{azar}.{ext}"
+    relativa = f"clientes/{carpeta}/{fecha}_{tipo.lower()}_{azar}.{ext}"
+    marca = re.sub(r"[^A-Za-z0-9._/-]", "", (prefijo or "")).strip("/")
+    return f"{marca}/{relativa}" if marca else relativa
 
 
 def sha256(datos: bytes) -> str:

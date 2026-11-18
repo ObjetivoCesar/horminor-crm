@@ -29,11 +29,29 @@ ESTADO_ENVIADO = "ENVIADO"
 ESTADO_NO_CONFIGURADO = "NO_CONFIGURADO"
 ESTADO_FALLIDO = "FALLIDO"
 
+_ESTADOS_EVOLUTION = {
+    "PENDING": "PENDIENTE",
+    "SERVER_ACK": "ENVIADO",
+    "DELIVERY_ACK": "ENTREGADO",
+    "READ": "LEIDO",
+    "PLAYED": "LEIDO",
+    "ERROR": "FALLIDO",
+}
+
+
+def _estado_evolution(valor: Any) -> str:
+    """Estado de entrega tal como lo nombra Evolution."""
+    return _ESTADOS_EVOLUTION.get(str(valor or "").strip().upper(), "PENDIENTE")
+
 
 class Notifier(Protocol):
     nombre: str
 
     async def enviar_texto(self, telefono: str, texto: str) -> bool: ...
+
+    async def enviar_texto_detalle(
+        self, telefono: str, texto: str
+    ) -> dict[str, Any]: ...
 
     async def enviar_documento(
         self,
@@ -56,6 +74,19 @@ class RecordingNotifier:
     async def enviar_texto(self, telefono: str, texto: str) -> bool:
         self.enviados.append({"telefono": telefono, "texto": texto})
         return True
+
+    async def enviar_texto_detalle(
+        self, telefono: str, texto: str
+    ) -> dict[str, Any]:
+        antes = len(self.enviados)
+        await self.enviar_texto(telefono, texto)
+        return {
+            "ok": True,
+            "message_id": f"memoria-{antes + 1}",
+            "estado": "PENDIENTE",
+            "http_status": None,
+            "detalle": "doble de prueba",
+        }
 
     async def enviar_documento(
         self,
@@ -101,9 +132,26 @@ class EvolutionNotifier:
         return bool(self._url and self._instancia and self._api_key)
 
     async def enviar_texto(self, telefono: str, texto: str) -> bool:
+        detalle = await self.enviar_texto_detalle(telefono, texto)
+        return bool(detalle.get("ok"))
+
+    async def enviar_texto_detalle(
+        self, telefono: str, texto: str
+    ) -> dict[str, Any]:
+        """Envia texto y devuelve el ``key.id`` de Evolution.
+
+        El id es lo que permite conciliar el eco ``fromMe`` del telefono con
+        el mensaje que acaba de escribir el CRM, sin duplicarlo.
+        """
         if not self.configurado():
             log.warning("Evolution API sin configurar: no se envia el WhatsApp")
-            return False
+            return {
+                "ok": False,
+                "message_id": None,
+                "estado": "FALLIDO",
+                "http_status": None,
+                "detalle": "evolution_no_configurado",
+            }
         endpoint = f"{self._url}/message/sendText/{self._instancia}"
         cuerpo = {"number": formato_whatsapp(telefono), "text": texto}
         try:
@@ -123,8 +171,31 @@ class EvolutionNotifier:
                     )
         except httpx.HTTPError as exc:
             log.warning("fallo enviando WhatsApp a %s: %s", telefono, exc)
-            return False
-        return 200 <= respuesta.status_code < 300
+            return {
+                "ok": False,
+                "message_id": None,
+                "estado": "FALLIDO",
+                "http_status": None,
+                "detalle": f"{type(exc).__name__}: {exc}",
+            }
+        ok = 200 <= respuesta.status_code < 300
+        datos: Any = {}
+        try:
+            datos = respuesta.json()
+        except ValueError:
+            datos = {}
+        clave = datos.get("key") if isinstance(datos, dict) else None
+        message_id = clave.get("id") if isinstance(clave, dict) else None
+        estado = _estado_evolution(
+            datos.get("status") if isinstance(datos, dict) else None
+        )
+        return {
+            "ok": ok,
+            "message_id": str(message_id) if message_id else None,
+            "estado": estado if ok else "FALLIDO",
+            "http_status": respuesta.status_code,
+            "detalle": f"HTTP {respuesta.status_code}",
+        }
 
     async def enviar_documento(
         self,
@@ -175,6 +246,17 @@ class NullNotifier:
 
     async def enviar_texto(self, telefono: str, texto: str) -> bool:
         return False
+
+    async def enviar_texto_detalle(
+        self, telefono: str, texto: str
+    ) -> dict[str, Any]:
+        return {
+            "ok": False,
+            "message_id": None,
+            "estado": "FALLIDO",
+            "http_status": None,
+            "detalle": "notifier_no_configurado",
+        }
 
     async def enviar_documento(
         self,

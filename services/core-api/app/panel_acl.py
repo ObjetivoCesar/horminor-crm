@@ -348,9 +348,16 @@ def _store(request: Request) -> PanelUserStore:
     return store
 
 
-async def resolver_perfil(request: Request) -> dict[str, Any]:
-    """Perfil simulado por ``X-Panel-User``; sin header usa el perfil base."""
-    usuario_id = (request.headers.get("X-Panel-User") or "").strip()
+async def resolver_perfil(
+    request: Request, usuario: str | None = None
+) -> dict[str, Any]:
+    """Perfil simulado por ``X-Panel-User``; sin header usa el perfil base.
+
+    ``usuario`` permite pasar el perfil por query string en conexiones que no
+    pueden enviar cabeceras (por ejemplo, EventSource para el aviso en vivo).
+    La cabecera siempre tiene prioridad.
+    """
+    usuario_id = (request.headers.get("X-Panel-User") or usuario or "").strip()
     if not usuario_id:
         return PERFIL_DEFECTO
     perfil = await _store(request).obtener(usuario_id)
@@ -371,9 +378,10 @@ async def exigir_modulos(
     *,
     mutacion: bool = False,
     requiere_todos: bool = False,
+    usuario: str | None = None,
 ) -> dict[str, Any]:
     """Valida el perfil activo contra uno o varios modulos."""
-    perfil = await resolver_perfil(request)
+    perfil = await resolver_perfil(request, usuario=usuario)
     if mutacion and perfil.get("modo_acceso") == "SOLO_LECTURA":
         raise HTTPException(
             status_code=403,
@@ -402,6 +410,12 @@ async def exigir_modulos(
 
 
 async def exigir_modulo(
-    request: Request, modulo: str, *, mutacion: bool = False
+    request: Request,
+    modulo: str,
+    *,
+    mutacion: bool = False,
+    usuario: str | None = None,
 ) -> dict[str, Any]:
-    return await exigir_modulos(request, modulo, mutacion=mutacion)
+    return await exigir_modulos(
+        request, modulo, mutacion=mutacion, usuario=usuario
+    )

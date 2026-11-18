@@ -754,6 +754,41 @@ El detalle técnico, las limitaciones y el backlog están en
 
 ---
 
+### Término: Espejo de WhatsApp autorizado
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `app/whatsapp_espejo/`, `whatsapp_espejo_numeros`, `/api/v1/whatsapp/espejo/…` |
+| **Nombre para el usuario** | Espejo de WhatsApp · botón «Sincronizar» |
+| **Qué significa** | La pestaña Chat de la Carpeta del Cliente muestra la conversación real de WhatsApp de un número **expresamente autorizado**, con sus mensajes entrantes y salientes, incluidas las respuestas que Julio o secretaría escriben desde el teléfono. |
+| **Para qué existe** | Atender desde el CRM el mismo hilo que ve el cliente, sin mezclar los contactos personales de la cuenta de WhatsApp. |
+| **Quién lo utiliza** | Julio y secretaría. |
+| **Qué lo activa** | El número se registra en la lista blanca (`POST /api/v1/whatsapp/espejo/numeros`). Desde ahí, cada mensaje que llega por el webhook y el botón **Sincronizar** lo copian al hilo. |
+| **Qué sucede después** | Los mensajes quedan en `chat_mensajes` con su identificador de WhatsApp y el estado que entrega Evolution (`ENVIADO` al salir, `PENDIENTE` mientras no haya confirmación, `ENTREGADO` cuando llega). **El hilo se actualiza solo, en segundos**, apenas entra o cambia un mensaje (ver *Chat en vivo*). **Sincronizar solo copia desde que el contacto es cliente o lead**; lo anterior se omite (se cuenta como «omitidos»). Responder desde el Chat sale por Evolution API y el eco del teléfono no se duplica. Retirar el número corta la copia pero conserva el historial. |
+| **Qué NO significa** | No autoriza al resto de la cuenta: cualquier otro contacto queda fuera y no se guarda. No enciende el bot, el Cerebro conversacional ni respuestas automáticas. No recupera el historial anterior al alta del cliente. |
+| **Ejemplo** | Se autoriza un número de prueba; al abrir su carpeta aparece el hilo con lo que el cliente escribió y lo que se respondió desde el teléfono. Un mensaje de otro contacto no aparece. |
+| **Dónde se encuentra** | Pestaña **Chat** de la Carpeta del Cliente; la API `/api/v1/whatsapp/espejo/`. |
+| **Referencia técnica** | migraciones 093 a 095; v9.7 y v9.8; 2026-11-16 / 2026-11-18. Desplegado y probado en el VPS con Evolution real el 2026-11-17. |
+
+### Término: Chat en vivo (actualización inmediata)
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `whatsapp_espejo/eventos.py` (`BusEventos`), `GET /api/v1/whatsapp/espejo/eventos` (SSE), `chatEventosConectar()` en el panel |
+| **Nombre para el usuario** | Chat en vivo |
+| **Qué significa** | Cuando entra un mensaje, cambia su estado de entrega (✓✓) o termina una sincronización, el Chat que está abierto se actualiza **sin pulsar nada** y sin recargar la página. |
+| **Para qué existe** | Atender a tiempo: antes había que esperar hasta 15 segundos o pulsar **Sincronizar**. |
+| **Quién lo utiliza** | Julio y secretaría. |
+| **Qué lo activa** | El webhook de Evolution guarda el mensaje y publica un aviso interno; el panel lo recibe por una conexión abierta (SSE). También aplica al botón **Sincronizar**. |
+| **Qué sucede después** | El panel vuelve a leer el hilo del cliente abierto y lo pinta; si el mensaje es de otro cliente, no cambia el hilo que se está leyendo. El sondeo de 15 segundos **sigue activo como respaldo** si la conexión en vivo se cae. El aviso lleva solo identificadores (cliente, conversación, mensaje), nunca el texto. |
+| **Qué NO significa** | No envía notificaciones al escritorio ni al teléfono. No muestra conversaciones de números no autorizados. No cambia quién puede ver el módulo: el permiso de cartera se valida igual, también en el perfil simulado. |
+| **Ejemplo** | El cliente escribe desde su celular; el mensaje aparece en la pestaña Chat en menos de un segundo, sin tocar «Sincronizar». Los ticks cambian de ✓ a ✓✓ cuando el cliente recibe y lee. |
+| **Dónde se encuentra** | Pestaña **Chat** de la Carpeta del Cliente, en el panel. |
+| **Dónde funciona** | Igual en la instalación local y en el servidor del CRM (`horminor.178.238.238.158.sslip.io`), siempre dentro de la sesión con usuario y contraseña del panel. |
+| **Referencia técnica** | v9.8; 2026-11-18. Evidencia `.agents/evidencias/sse_chat_vivo_2026-11-18.txt` (local) y `sse_chat_vivo_vps_2026-11-18.txt` (servidor). |
+
+---
+
 ## 7. Términos de apoyo (consulta rápida)
 
 | Término técnico | Nombre visible | Qué es |
@@ -776,6 +811,7 @@ El detalle técnico, las limitaciones y el backlog están en
 | `bóveda de correcciones` | Memoria de correcciones | historial de lo que el sistema aprendió |
 | `M1` | Módulo de WhatsApp | webhook, identidad, envío y multimedia |
 | `Evolution API` | Proveedor de WhatsApp | conexión real con WhatsApp (hoy en SANDBOX) |
+| `whatsapp_espejo_numeros` | Lista blanca | números autorizados a copiarse al Chat |
 
 ---
 
@@ -905,10 +941,12 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 `NOTIFICADA` §5 · `pago.recibido` (INFERIDO) §4 · `REGISTRADA` §5 ·
 `REQUIERE_ACLARACION` §7 · `RESUELTA` §5 · `router-1.7` §3.5 ·
 `SANDBOX` §6 · `SIN_ACCIONES` §7 ·
-`SUPERADO_POR_CORRECCION` §4 · `TENTATIVO` §4 · `VISTA` §5.
+`SUPERADO_POR_CORRECCION` §4 · `TENTATIVO` §4 · `VISTA` §5 ·
+`whatsapp_espejo_numeros` §6 · `BusEventos` / SSE §6.
 ### Por nombre visible
 
 Aviso dejado §5 · Aclaración respondible §4 · Cancelación de un encargo §4 ·
+**Chat en vivo §6** ·
 Cierre con justificación §5 · Compilador §4 · Condición conservada §4 ·
 Confirmación doble §6 · Corrección registrada §4 ·
 Dato sin confirmar §4 · Duda asociada al dato §4 · Elevada al supervisor §5 ·
@@ -918,7 +956,7 @@ Gato §6 · Hecho citado §4 · Ingreso sin confirmar §4 ·
 Mensaje autorizado del recordatorio §4 · Prioridad y plazo §5 ·
 Recepción confirmada §5 · Recordatorio programado §6 · Resultado registrado §5 ·
 Retención de audio §6 · Router conversacional §4 · Tarea consultada §5 ·
-Trabajo realizado §5.
+Trabajo realizado §5 · Espejo de WhatsApp autorizado §6.
 
 ### Por sinónimo
 
@@ -966,3 +1004,8 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v1.5 | 2026-11-16 | Duda asociada al dato (§4); separación de encargos en lenguaje natural sin ordinales; etiquetas «Acciones ejecutadas» frente a «Trabajo realizado». |
 | v1.6 | 2026-11-16 | Cierre de la fase del router conversacional (§3.5): Router conversacional, Corrección registrada, Aclaración respondible y Encargo sugerido (§4); límites del laboratorio frente al CRM; Jev en backlog. |
 | v1.7 | 2026-11-16 | Negación y revocación: marcas como palabras completas y revocación por encargo; «mejor nos abastecemos» ya no revoca el dictado. |
+| v1.8 | 2026-11-16 | Espejo de WhatsApp autorizado (§6): lista blanca, botón «Sincronizar» y respuesta desde el Chat; límites (solo números autorizados, multimedia pendiente, sin bot). |
+| v1.9 | 2026-11-17 | Espejo desplegado y probado en el VPS con Evolution real: estados reales del mensaje (`ENVIADO`, `PENDIENTE`, `ENTREGADO`), respuesta desde el Chat por el cliente propio del espejo y webhook en vivo. |
+| v2.0 | 2026-11-18 | Espejo: la sincronización copia **solo desde el alta del cliente** (§6); identidad de chats `@lid` aprendida del historial; chat de la carpeta con altura fija y scroll interno. |
+| v2.1 | 2026-11-18 | **Chat en vivo** (§6): el hilo se actualiza solo en segundos con aviso SSE; se descargan y muestran imagen, audio, video y documento entrantes. |
+| v2.2 | 2026-11-18 | **Chat en vivo desplegado en el servidor**: mismo comportamiento en local y en `horminor.178.238.238.158.sslip.io`; Caddy entrega el aviso sin acumularlo. |

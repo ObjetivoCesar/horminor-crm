@@ -48,6 +48,19 @@ class SandboxNotifier:
         )
         return True
 
+    async def enviar_texto_detalle(
+        self, telefono: str, texto: str
+    ) -> dict[str, Any]:
+        """En SANDBOX no hay key.id real: queda encolado, nunca 'enviado'."""
+        await self.enviar_texto(telefono, texto)
+        return {
+            "ok": True,
+            "message_id": None,
+            "estado": "PENDIENTE",
+            "http_status": None,
+            "detalle": "SANDBOX: encolado sin envio real",
+        }
+
     async def enviar_documento(
         self,
         telefono: str,
