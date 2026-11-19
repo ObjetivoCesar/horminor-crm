@@ -1618,6 +1618,7 @@ details summary { cursor: pointer; color: var(--text-muted); font-size: 12.5px; 
   border: 2px solid var(--bg-void);
 }
 .notif-wrap { position: relative; }
+.icon-button.is-off { opacity: 0.55; }
 .notif-popover {
   position: absolute;
   top: calc(100% + 10px);
@@ -2746,6 +2747,18 @@ tbody tr:last-child td { border-bottom: 0; }
         <div class="notif-list" id="notif-list"></div>
       </div>
     </div>
+    <div class="notif-wrap">
+      <button class="icon-button" id="btn-wa" type="button" onclick="abrirAlertaWhatsApp()" aria-label="Mensajes de WhatsApp sin leer" title="WhatsApp sin mensajes nuevos">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+        <span class="notif-badge" id="wa-badge" hidden>0</span>
+      </button>
+    </div>
+    <div class="notif-wrap">
+      <button class="icon-button is-off" id="btn-gmail" type="button" onclick="avisoGmail()" aria-label="Gmail (por conectar)" title="Gmail: se habilitará con la integración de correo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M2.5 6.8A1.5 1.5 0 0 1 4 5.3h.6L12 10.6l7.4-5.3h.6a1.5 1.5 0 0 1 1.5 1.5L12 13.9z"/><path fill="#34A853" d="M2.5 6.8V18A1.5 1.5 0 0 0 4 19.5h2.3V10.9z"/><path fill="#FBBC05" d="M21.5 6.8V18a1.5 1.5 0 0 1-1.5 1.5h-2.3V10.9z"/><path fill="#EA4335" d="M2.5 6.8 12 13.9l9.5-7.1V18a1.5 1.5 0 0 1-1.5 1.5h-2.3V10.9L12 15.6 6.3 10.9v8.6H4A1.5 1.5 0 0 1 2.5 18z"/></svg>
+        <span class="notif-badge" id="gmail-badge" hidden>0</span>
+      </button>
+    </div>
     <button class="theme-toggle" id="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Cambiar entre modo día y noche" aria-pressed="false">
       <span class="icon" id="theme-icon">🌙</span><span id="theme-label">Noche</span>
     </button>
@@ -3263,6 +3276,41 @@ tbody tr:last-child td { border-bottom: 0; }
     <div class="card" style="margin-top:16px" data-modulo="clientes_cartera">
       <div class="spread">
         <div>
+          <h2 style="margin-bottom:2px">Leads y citas comerciales</h2>
+          <p class="small muted" style="margin:0">Un solo módulo: el mismo desde WhatsApp, Gato o el panel.</p>
+        </div>
+        <div class="row" style="gap:6px">
+          <button class="btn small ghost" id="com-tab-leads" onclick="cambiarTabComercial('leads')">Leads</button>
+          <button class="btn small ghost" id="com-tab-citas" onclick="cambiarTabComercial('citas')">Citas</button>
+          <button class="btn small ghost" onclick="cargarComercial()">Actualizar</button>
+        </div>
+      </div>
+
+      <div id="com-panel-leads">
+        <form class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px" onsubmit="guardarLead(event)">
+          <input id="com-lead-nombre" placeholder="Nombre" style="max-width:180px">
+          <input id="com-lead-telefono" placeholder="Telefono" required style="max-width:160px">
+          <button class="btn small" type="submit">+ Lead</button>
+        </form>
+        <div id="com-leads" class="table-wrap" style="margin-top:10px"></div>
+      </div>
+
+      <div id="com-panel-citas" hidden>
+        <form class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px" onsubmit="guardarCita(event)">
+          <select id="com-cita-tipo"><option>VISITA</option><option>REUNION</option><option>MEDICION</option><option>ENTREGA</option></select>
+          <input id="com-cita-fecha" type="date" required>
+          <input id="com-cita-hora" type="time" required>
+          <select id="com-cita-lead" required></select>
+          <input id="com-cita-notas" placeholder="Notas" style="max-width:220px">
+          <button class="btn small" type="submit">+ Cita</button>
+        </form>
+        <div id="com-citas" class="table-wrap" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px" data-modulo="clientes_cartera">
+      <div class="spread">
+        <div>
           <h2 style="margin-bottom:2px">Cartera de clientes</h2>
           <p class="small muted" style="margin:0">Cobra directo desde la fila del cliente.</p>
         </div>
@@ -3350,7 +3398,7 @@ tbody tr:last-child td { border-bottom: 0; }
           <div><label class="field">m³ desde</label><input type="number" id="filtro-m3-min" min="0" step="0.5" oninput="aplicarFiltrosClientes()"></div>
           <div><label class="field">m³ hasta</label><input type="number" id="filtro-m3-max" min="0" step="0.5" oninput="aplicarFiltrosClientes()"></div>
           <div><label class="field">Ordenar por</label><select id="filtro-orden" onchange="aplicarFiltrosClientes()">
-            <option value="DEUDA">Mayor deuda</option><option value="ACTIVIDAD">Actividad más reciente</option><option value="VOLUMEN">Mayor volumen m³</option><option value="NOMBRE">Nombre A-Z</option>
+            <option value="MENSAJES">Ultimos mensajes</option><option value="DEUDA">Mayor deuda</option><option value="ACTIVIDAD">Actividad más reciente</option><option value="VOLUMEN">Mayor volumen m³</option><option value="NOMBRE">Nombre A-Z</option>
           </select></div>
         </div>
         <div id="filtro-fechas-custom" hidden class="field-row" style="margin-top:8px">
@@ -4208,10 +4256,10 @@ const state = {
   ordenes:[], detalle:{}, inventario:[], donutMode:0, catalogo:null,
   proveedores:[], inventarioOverview:null, agenda:[], agendaY:null, agendaM:null,
   reglasPago:{}, agendaParams:null, perfil:null, perfiles:[], operacionConfig:null,
-  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], operacion:null, cotizaciones:[], cotizacion:null, cotExtras:[], notifs:[], tareas:[], cargando:false,
+  usuariosACL:[], aclEditId:null, recetasSuper:[], flotaSuper:[], operacion:null, cotizaciones:[], cotizacion:null, cotExtras:[], notifs:[], alertas:{total:0, conversaciones:[]}, tareas:[], cargando:false,
   clientesBusqueda:[], cliGrupo:'TODOS', cliPagina:1, cliPaginas:1, cliTotal:0,
   cliResumen:null, cliFiltrosMeta:{ciudades:[],resistencias:[]}, cliTimer:null, cliSeq:0,
-  carpetaTab:'ordenes', ordenExpandida:null,
+  carpetaTab:'chat', ordenExpandida:null,
   chat:{ clienteId:null, conversacionId:null, canal:'WHATSAPP', mensajes:[], resumen:null,
          whatsapp:null, cargando:false, enviando:false, subiendo:false, error:null, seq:0 },
   bancoActivo:null, bancoDetalle:null
@@ -4523,6 +4571,45 @@ async function irACliente(id) {
   state.view = 'clientes';
   _activarVista('clientes');
   await cargarClientes(id);
+}
+
+/* ----------------------------- AVISOS DE CABECERA ----------------------------- */
+async function cargarAlertas() {
+  try {
+    const r = await api('/api/v1/chat/resumen');
+    state.alertas = r || { total: 0, conversaciones: [] };
+  } catch (e) {
+    return;
+  }
+  renderAlertas();
+}
+
+function renderAlertas() {
+  const total = Number((state.alertas && state.alertas.total) || 0);
+  const badge = $('#wa-badge');
+  if (badge) {
+    badge.textContent = total > 99 ? '99+' : String(total);
+    badge.hidden = total <= 0;
+  }
+  const boton = $('#btn-wa');
+  if (boton) {
+    boton.title = total > 0
+      ? `${total} mensaje(s) de WhatsApp sin leer`
+      : 'WhatsApp sin mensajes nuevos';
+  }
+}
+
+function abrirAlertaWhatsApp() {
+  const lista = (state.alertas && state.alertas.conversaciones) || [];
+  if (!lista.length) {
+    toast('No hay mensajes de WhatsApp sin leer.', 'ok');
+    return;
+  }
+  irACliente(lista[0].cliente_id);
+}
+
+function avisoGmail() {
+  toast('Gmail todavia no esta conectado. Se habilitara con la integracion de correo.', 'warn');
 }
 
 async function irAOrden(nombreCliente) {
@@ -6232,7 +6319,7 @@ async function buscarClientes() {
   } else if (fecha) {
     params.set('periodo', fecha);
   }
-  const orden = _valorFiltro('#filtro-orden') || 'DEUDA';
+  const orden = _valorFiltro('#filtro-orden') || 'MENSAJES';
   params.set('orden', orden);
   params.set('pagina', state.cliPagina || 1);
   params.set('por_pagina', '12');
@@ -6357,7 +6444,7 @@ const FILTROS_CLIENTES_DEF = [
   { sel: '#filtro-m3-max', etiqueta: 'm³ hasta' },
   { sel: '#filtro-desde', etiqueta: 'Desde' },
   { sel: '#filtro-hasta', etiqueta: 'Hasta' },
-  { sel: '#filtro-orden', etiqueta: 'Orden', defecto: 'DEUDA' },
+  { sel: '#filtro-orden', etiqueta: 'Orden', defecto: 'MENSAJES' },
 ];
 
 function actualizarFiltrosClientes() {
@@ -6389,7 +6476,7 @@ function actualizarFiltrosClientes() {
 function quitarFiltroCliente(sel) {
   const el = $(sel);
   if (!el) return;
-  el.value = (sel === '#filtro-orden') ? 'DEUDA' : '';
+  el.value = (sel === '#filtro-orden') ? 'MENSAJES' : '';
   if (sel === '#filtro-fecha') {
     const box = $('#filtro-fechas-custom');
     if (box) box.hidden = true;
@@ -6414,7 +6501,7 @@ function limpiarFiltrosClientes() {
   ['#buscar-cliente','#filtro-ciudad','#filtro-pago','#filtro-fecha','#filtro-resistencia','#filtro-m3-min','#filtro-m3-max','#filtro-desde','#filtro-hasta'].forEach(id => {
     const el = $(id); if (el) el.value = '';
   });
-  const orden = $('#filtro-orden'); if (orden) orden.value = 'DEUDA';
+  const orden = $('#filtro-orden'); if (orden) orden.value = 'MENSAJES';
   const custom = $('#filtro-fechas-custom'); if (custom) custom.hidden = true;
   state.cliGrupo = 'TODOS';
   state.cliPagina = 1;
@@ -6507,10 +6594,123 @@ function elegirSugerenciaCliente(id) {
   seleccionarCliente(id);
 }
 
+const COM = { leads: [], citas: [], hoy: null, tab: 'leads' };
+
+function cambiarTabComercial(tab) {
+  COM.tab = tab === 'citas' ? 'citas' : 'leads';
+  const leads = $('#com-panel-leads');
+  const citas = $('#com-panel-citas');
+  if (leads) leads.hidden = COM.tab !== 'leads';
+  if (citas) citas.hidden = COM.tab !== 'citas';
+  const bL = $('#com-tab-leads');
+  const bC = $('#com-tab-citas');
+  if (bL) bL.classList.toggle('primary', COM.tab === 'leads');
+  if (bC) bC.classList.toggle('primary', COM.tab === 'citas');
+}
+
+function _horaCorta(valor) {
+  return String(valor || '').slice(0, 5);
+}
+
+async function cargarComercial() {
+  try {
+    const h = await api('/api/v1/comercial/hoy');
+    COM.hoy = h.fecha;
+    const [leads, citas] = await Promise.all([
+      api('/api/v1/comercial/leads'),
+      api('/api/v1/comercial/citas?desde=' + encodeURIComponent(h.fecha)),
+    ]);
+    COM.leads = (leads && leads.leads) || [];
+    COM.citas = (citas && citas.citas) || [];
+    const f = $('#com-cita-fecha');
+    if (f && !f.value) f.value = COM.hoy;
+    renderComercial();
+  } catch (e) { /* no bloquea secretaria */ }
+}
+
+function renderComercial() {
+  const hostL = $('#com-leads');
+  if (hostL) {
+    hostL.innerHTML = COM.leads.length
+      ? `<table class="tabla-editor"><thead><tr><th>Cliente</th><th>Telefono</th><th>Origen</th><th>Estado</th><th>Ultimo</th></tr></thead><tbody>${COM.leads.map(l => `<tr><td>${esc(l.nombre || '-')}</td><td>${esc(l.telefono_e164)}</td><td>${esc(l.origen)}</td><td>${esc(l.estado)}${l.motivo_caida ? ' / ' + esc(l.motivo_caida) : ''}</td><td>${l.ultimo_contacto_at ? new Date(l.ultimo_contacto_at).toLocaleString('es-EC') : '-'}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="muted small">Sin leads todavia.</p>';
+  }
+  const hostC = $('#com-citas');
+  if (hostC) {
+    hostC.innerHTML = COM.citas.length
+      ? `<table class="tabla-editor"><thead><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Estado</th><th></th></tr></thead><tbody>${COM.citas.map(c => `<tr><td>${esc(c.fecha)}</td><td>${esc(_horaCorta(c.hora_inicio))}</td><td>${esc(c.tipo)}</td><td>${esc(c.estado)}</td><td>${c.estado === 'SOLICITADA' ? `<button class="btn small" onclick="confirmarCita('${c.id}')">Confirmar</button> ` : ''}${['SOLICITADA', 'CONFIRMADA'].includes(c.estado) ? `<button class="btn small ghost" onclick="cancelarCita('${c.id}')">Cancelar</button>` : ''}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="muted small">Sin citas desde hoy.</p>';
+  }
+  const sel = $('#com-cita-lead');
+  if (sel) {
+    sel.innerHTML = COM.leads.map(l => `<option value="${l.id}">${esc(l.nombre || l.telefono_e164)}</option>`).join('')
+      || '<option value="">Sin leads</option>';
+  }
+  cambiarTabComercial(COM.tab);
+}
+
+async function guardarLead(e) {
+  e.preventDefault();
+  const telefono = ($('#com-lead-telefono') || {}).value || '';
+  const nombre = ($('#com-lead-nombre') || {}).value || null;
+  try {
+    await api('/api/v1/comercial/leads', { method: 'POST', body: { telefono, nombre } });
+    $('#com-lead-nombre').value = '';
+    $('#com-lead-telefono').value = '';
+    await cargarComercial();
+    toast('Lead registrado.', 'ok');
+  } catch (err) {
+    toast('No pude registrar el lead: ' + err.message, 'bad');
+  }
+}
+
+async function guardarCita(e) {
+  e.preventDefault();
+  const lead_id = ($('#com-cita-lead') || {}).value || '';
+  if (!lead_id) { toast('Primero registra un lead.', 'bad'); return; }
+  const body = {
+    tipo: ($('#com-cita-tipo') || {}).value,
+    fecha: ($('#com-cita-fecha') || {}).value,
+    hora_inicio: ($('#com-cita-hora') || {}).value,
+    lead_id,
+    origen: 'PANEL',
+    notas: ($('#com-cita-notas') || {}).value || null,
+  };
+  try {
+    await api('/api/v1/comercial/citas', { method: 'POST', body });
+    $('#com-cita-notas').value = '';
+    await cargarComercial();
+    toast('Cita solicitada.', 'ok');
+  } catch (err) {
+    toast('No pude agendar: ' + err.message, 'bad');
+  }
+}
+
+async function confirmarCita(id) {
+  try {
+    await api('/api/v1/comercial/citas/' + encodeURIComponent(id) + '/confirmar', { method: 'POST' });
+    await cargarComercial();
+    toast('Cita confirmada.', 'ok');
+  } catch (err) {
+    toast('No pude confirmar: ' + err.message, 'bad');
+  }
+}
+
+async function cancelarCita(id) {
+  try {
+    await api('/api/v1/comercial/citas/' + encodeURIComponent(id) + '/cancelar', { method: 'POST' });
+    await cargarComercial();
+    toast('Cita cancelada.', 'ok');
+  } catch (err) {
+    toast('No pude cancelar: ' + err.message, 'bad');
+  }
+}
+
 async function cargarSecretaria() {
   const f = $('#cierre-fecha');
   if (f && !f.value) f.value = hoy();
   if (puedeModulo('clientes_cartera')) await cargarClientes();
+  if (puedeModulo('clientes_cartera')) cargarComercial();
   if (puedeModulo('secretaria_ventanilla')) renderSecretariaOrdenes();
   if (puedeModulo('secretaria_cobros_gastos')) cargarReglasPago();
   if (puedeModulo('secretaria_cierre_caja')) cargarCierre();
@@ -6778,12 +6978,14 @@ async function registrarGasto() {
 async function seleccionarCliente(id) {
   try {
     state.carpeta = await api('/api/v1/secretaria/clientes/' + id + '/carpeta');
-    state.carpetaTab = 'ordenes';
+    state.carpetaTab = 'chat';
     state.ordenExpandida = null;
     chatReset(id);
     renderCarpeta();
     renderClientes();
     chatCargar(id);  // precarga el hilo y el contador de no leidos
+    chatPollIniciar();
+    chatMarcarLeido();
   } catch(e) { toast('No se pudo abrir la carpeta: ' + e.message, 'bad'); }
 }
 
@@ -6800,7 +7002,7 @@ function renderCarpeta() {
   const textoJuez = semaforoJuez === 'bad' ? 'Incidencia detectada' : semaforoJuez === 'ok' ? 'Despachos validados' : 'Sin veredicto';
   const host = $('#carpeta-card');
   if (!host) return;
-  const tab = state.carpetaTab || 'ordenes';
+  const tab = state.carpetaTab || 'chat';
   host.innerHTML = `
     <div class="spread">
       <div>
@@ -6819,11 +7021,11 @@ function renderCarpeta() {
       <div><div class="kpi-label">Cobrado</div><div class="big">${money(saldo.total_cobrado)}</div><div class="kpi-sub">Fiado ${money(saldo.total_fiado)}</div></div>
     </div>
     <div class="tabs-cliente">
+      <button class="${tab === 'chat' ? 'active' : ''}" onclick="cambiarTabCarpeta('chat')">💬 Chat<span class="chat-badge" id="chat-badge" hidden></span></button>
       <button class="${tab === 'ordenes' ? 'active' : ''}" onclick="cambiarTabCarpeta('ordenes')">📦 Órdenes y Viajes</button>
       <button class="${tab === 'pagos' ? 'active' : ''}" onclick="cambiarTabCarpeta('pagos')">💵 Pagos y Estado de Cuenta</button>
       <button class="${tab === 'ficha' ? 'active' : ''}" onclick="cambiarTabCarpeta('ficha')">📋 Ficha y Datos</button>
       <button class="${tab === 'facturas' ? 'active' : ''}" onclick="cambiarTabCarpeta('facturas')">🧾 Facturas</button>
-      <button class="${tab === 'chat' ? 'active' : ''}" onclick="cambiarTabCarpeta('chat')">💬 Chat<span class="chat-badge" id="chat-badge" hidden></span></button>
     </div>
     <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap">
       <button class="btn small" data-modulo="secretaria_ventanilla" data-mutacion="1" onclick="abrirOrden()">+ Nueva orden</button>
@@ -7147,6 +7349,7 @@ function chatEventosConectar() {
 
 function chatEventosRecibir(dato) {
   if (!dato || !dato.tipo || dato.tipo === 'listo') return;
+  cargarAlertas();
   const clienteId = state.chat.clienteId;
   if (!clienteId) return;
   const coincide = dato.cliente_id ? dato.cliente_id === clienteId : true;
@@ -7565,6 +7768,7 @@ async function chatMarcarLeido() {
     if (state.chat.clienteId !== clienteId) return;
     state.chat.resumen = r.resumen || state.chat.resumen;
     renderChatBadge();
+    cargarAlertas();
   } catch(e) { /* marcar leido nunca bloquea la lectura */ }
 }
 
@@ -9311,6 +9515,8 @@ cargarPerfilesUI().finally(() => {
 });
 cargarTareas();
 setInterval(cargarTareas, 60000);
+cargarAlertas();
+setInterval(cargarAlertas, 60000);
 cargarSalud();
 setInterval(cargarSalud, 60000);
 chatEventosConectar();

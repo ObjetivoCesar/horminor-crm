@@ -32,7 +32,8 @@ decorativa: son reglas operativas.
 
 ## 2. Arranque de sesión (obligatorio, en este orden)
 
-1. `.agents/ESTADO.md` → qué está hecho, qué está bloqueado, próximo paso.
+1. **`docs/HITOS.md`** → orden de trabajo vigente (hitos y prioridad).
+2. `.agents/ESTADO.md` → qué está hecho, qué está bloqueado, próximo paso.
 2. Últimas 3 entradas de `.agents/BITACORA.md` → qué pasó la última vez.
 3. Según la tarea:
    - **retomar el proyecto o abrir una conversación nueva** → `docs/CONTINUIDAD_CEREBRO.md` (estado, arquitectura y prioridades)
@@ -70,6 +71,7 @@ decorativa: son reglas operativas.
     comportamiento, usuarios afectados, componente y fecha) y su índice. No se
     considera terminada una funcionalidad sin esa explicación. El manual es la
     única fuente oficial de definiciones; no crees glosarios paralelos.
+11. **Una sola verdad documental.** Si un documento contradice el codigo o una decision nueva, se actualiza en la misma sesion y el documento viejo se borra (o se mueve a `.agents/archivo/` si tiene valor historico). No se dejan dos fuentes que se contradigan: una sesion nueva leera la equivocada y rompera codigo. Antes de crear un documento, revisa si ya existe uno que deba actualizarse. Procedimiento: `.agents/skills/orminorth-documentos/SKILL.md`.
 
 ## 4. Cierre de sesión (obligatorio)
 

@@ -176,6 +176,82 @@ class BunnyHttpStorageClient:
         respuesta.raise_for_status()
         return respuesta.content
 
+    # -- manos: listar, mover, borrar (2026-11-18) -----------------------
+    def _url_storage(self, ruta: str) -> str:
+        limpia = (ruta or "").strip().lstrip("/")
+        if not limpia or ".." in limpia.split("/"):
+            raise BunnyError(f"ruta de Bunny invalida: {ruta!r}")
+        return f"{self._endpoint}/{self._zone}/{limpia}"
+
+    async def _pedir(self, metodo: str, url: str, **kwargs: Any) -> httpx.Response:
+        cabeceras = {"AccessKey": self._api_key}
+        if self._http is not None:
+            return await self._http.request(
+                metodo, url, headers=cabeceras, timeout=self._timeout, **kwargs
+            )
+        async with httpx.AsyncClient(timeout=self._timeout) as cliente:
+            return await cliente.request(metodo, url, headers=cabeceras, **kwargs)
+
+    async def listar(self, prefijo: str) -> list[dict[str, Any]]:
+        """Lista el contenido de una carpeta del Storage Zone."""
+        ruta = (prefijo or "").strip().strip("/")
+        respuesta = await self._pedir(
+            "GET", f"{self._url_storage(ruta)}/"
+        )
+        if respuesta.status_code == 404:
+            return []
+        if respuesta.status_code != 200:
+            raise BunnyError(
+                f"Bunny.net respondio HTTP {respuesta.status_code} al listar {ruta}"
+            )
+        datos = respuesta.json()
+        if not isinstance(datos, list):
+            return []
+        salida = []
+        for item in datos:
+            if not isinstance(item, dict):
+                continue
+            salida.append(
+                {
+                    "nombre": item.get("ObjectName"),
+                    "es_directorio": bool(item.get("IsDirectory")),
+                    "bytes": item.get("Length"),
+                    "modificado": item.get("LastChanged"),
+                }
+            )
+        return salida
+
+    async def descargar_archivo(self, ruta: str) -> bytes:
+        respuesta = await self._pedir("GET", self._url_storage(ruta))
+        if respuesta.status_code == 404:
+            raise BunnyError(f"no existe en Bunny: {ruta}")
+        if respuesta.status_code != 200:
+            raise BunnyError(
+                f"Bunny.net respondio HTTP {respuesta.status_code} al leer {ruta}"
+            )
+        return respuesta.content
+
+    async def borrar(self, ruta: str) -> bool:
+        respuesta = await self._pedir("DELETE", self._url_storage(ruta))
+        if respuesta.status_code in (200, 204):
+            return True
+        if respuesta.status_code == 404:
+            return False
+        raise BunnyError(
+            f"Bunny.net respondio HTTP {respuesta.status_code} al borrar {ruta}"
+        )
+
+    async def mover(self, origen: str, destino: str) -> str:
+        """Copia el archivo al destino y borra el original (Bunny no tiene MOVE)."""
+        datos = await self.descargar_archivo(origen)
+        url = await self.subir(
+            nombre_archivo=destino,
+            contenido=datos,
+            mimetype="application/octet-stream",
+        )
+        await self.borrar(origen)
+        return url
+
 
 def decodificar_base64(crudo: str | None) -> bytes | None:
     """Acepta base64 plano o data URI (``data:image/jpeg;base64,...``)."""

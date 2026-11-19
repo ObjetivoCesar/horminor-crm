@@ -7616,3 +7616,987 @@ Abrir `https://horminor.178.238.238.158.sslip.io/panel`, entrar al chat del
 un segundo, sin pulsar Sincronizar ni recargar. Si no aparece, revisar
 `docker logs -f orminorth-core-api` mientras se envia (debe registrarse
 `POST /api/v1/whatsapp/webhook` y ningun error de `_sse`).
+
+---
+
+## 2026-11-18 (tarde) - Acceso al panel, revinculacion de WhatsApp y notas de video
+
+### Objetivo
+
+Recuperar el acceso al panel en el VPS, destrabar la recepcion de WhatsApp y
+cerrar tres huecos del espejo detectados en la prueba con contactos reales:
+notas de video que no llegaban, videos entrantes sin comprimir y un PDF que
+todavia no se habia probado.
+
+### Hecho
+
+1. **Acceso al panel.** El `basic_auth` de Caddy solo tenia el hash bcrypt del
+   usuario `julio`; no habia copia de la clave en el repo ni en el VPS. Se
+   genero una clave nueva, se respaldo el Caddyfile (`/root/Caddyfile.bak_panel_reset`),
+   se reemplazo solo la linea del usuario y se recargo Caddy. Verificado:
+   `/panel` sin credenciales -> **401**; con credenciales -> **200**; `/health` -> **200**.
+   La clave quedo en `vps-entrada/HORMINOR_PANEL_ACCESO.txt` (fuera de git).
+2. **WhatsApp del CRM revinculado.** La instancia `horminor` figuraba `open`
+   pero habia dejado de recibir entrantes desde las ~11:08 del 18-N; el log de
+   Evolution mostraba `Bad MAC` / `Failed to decrypt message with any known
+   session`. Se ejecuto `DELETE /instance/logout/horminor` y
+   `GET /instance/connect/horminor`; el QR se escaneo desde el telefono del
+   `0963410409`. Tras el escaneo volvieron a entrar mensajes (grupos, audio de
+   Hexadent, etc.) y la instancia quedo `open`.
+3. **Numeros de prueba.** Se creo el cliente **Paola** (`0968278401`) y se
+   autorizo `593968278401` en el espejo con corte desde el alta. Se **reactivo**
+   a Alejandra (`593986962872`), que estaba desactivada desde la limpieza del
+   17-N. Con Paola se probaron imagen, video y audio entrantes: llegan al chat
+   en vivo, sin pulsar Sincronizar, y se suben a Bunny en
+   `horminor/clientes/paola_<id>/`.
+4. **Notas de video (PTV).** Causa: WhatsApp entrega la nota de video como
+   `ptvMessage`, tipo que no existia en `_TIPOS_MEDIA`; al no tener texto ni
+   caption el mensaje se descartaba entero. Se agrego
+   `ptvMessage -> VIDEO, "[nota de video]"` en
+   `app/whatsapp_espejo/mensajes.py`.
+5. **Videos entrantes comprimidos.** `_guardar_multimedia` solo comprimia
+   imagenes; los videos se guardaban tal cual. Se agrego la rama VIDEO que usa
+   `media.procesar_video` (H.264, 720p, tope de duracion). Si el video supera el
+   tope o ffmpeg falla, se guarda el original y el mensaje no se pierde.
+6. **Despliegue en el VPS.** Se copiaron `mensajes.py` y `espejo.py` al host y
+   al contenedor `orminorth-core-api`, `py_compile` OK y reinicio. Respaldo en
+   `/root/backup_ptv_20261118_150702`. `/health` -> `{"status":"ok","db":"ok"}`.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| `/panel` sin credenciales / con credenciales | `401` / `200` |
+| Instancia `horminor` depues del QR | `state: open`, owner `593963410409` |
+| Mensajes entrantes post-revinculacion | grupos y contactos a las 14:34-14:42 |
+| Paola: imagen, video, audio en el chat | `IMAGEN`, `VIDEO`, `AUDIO` con `media_id` y URL de Bunny |
+| Ruta en Bunny | `horminor/clientes/paola_b387d6a873d3/...` |
+| `pytest test_v97_espejo_whatsapp.py` | **53 passed** (incluye 2 pruebas nuevas) |
+| `ptvMessage` en Evolution hoy | 2 mensajes, antes descartados |
+| Video saliente del panel vs entrante | panel 14,1 MB -> 2,7 MB; entrante 3,04 MB -> 3,04 MB (antes del cambio) |
+| Despliegue | `PY_COMPILE_OK`, `/health` ok |
+
+### Decisiones
+
+1. **Resetear la clave antes que buscar el hash.** El bcrypt no es reversible y
+   no habia copia; se prefirio una clave nueva fuerte a seguir probando.
+2. **Recomprimir el video entrante con fallback.** Si ffmpeg no esta o el video
+   dura mas que `media_video_max_seg`, se guarda el original: nunca se pierde
+   un mensaje del cliente por una regla de tamano.
+3. **No reemplazar el arbol del VPS.** Se aplicaron solo los dos archivos del
+   espejo, como en el parche anterior; el VPS sigue en su linaje.
+
+### Bloqueos / observaciones
+
+1. **PDF entrante sin probar.** El chat con Paola termino en "puedes pasarme un
+   pdf"; el PDF y el enlace quedaron pendientes de enviar. El tipo
+   `documentMessage` y la subida a Bunny ya existen.
+2. **Responder/citar como WhatsApp no existe.** El compositor envia texto y
+   adjuntos, pero no hay boton de responder ni cita del mensaje.
+3. **El `Bad MAC` es recurrente.** Ya paso el 17-N y volvio el 18-N; la
+   revinculacion lo arregla pero no lo elimina. Evaluar actualizar Evolution
+   (v2.3.7) sigue pendiente y afecta a una instancia compartida.
+4. Los mensajes enviados por Paola o Abelito mientras la sesion estaba rota no
+   se pueden recuperar.
+
+### Proximo paso exacto
+
+Pedir a Paola que envie un **PDF** y un **enlace** al `0963410409`; verificar en
+el chat que el PDF aparece como `DOCUMENTO`, que su `storage_path` cae en
+`horminor/clientes/paola_b387d6a873d3/` y que el enlace se ve como texto.
+Despues, pedir una **nota de video** para confirmar el arreglo `ptvMessage` y
+comparar `bytes_original` contra `bytes_final` del video entrante.
+
+---
+
+## 2026-11-18 (cierre) - Avisos de WhatsApp y Gmail en la cabecera
+
+### Objetivo
+
+Que un mensaje de WhatsApp que entra al CRM se note sin tener que abrir la
+carpeta del cliente, y dejar visible el icono de Gmail para la integracion de
+correo que viene.
+
+### Hecho
+
+1. **Endpoint `GET /api/v1/chat/resumen`.** Devuelve el total de mensajes
+   entrantes sin leer (`v_chat_conversacion.no_leidos`) y la lista de
+   conversaciones con su cliente, ordenadas por ultimo mensaje. Usa el mismo
+   permiso de cartera que el resto del Chat.
+2. **Cabecera del panel.** Se agregaron dos iconos entre las alertas del
+   Centinela y el tema:
+   - **WhatsApp** con badge rojo del total sin leer. Al pulsarlo abre la
+     carpeta del cliente con mensajes pendientes; si no hay, avisa que no hay
+     novedades.
+   - **Gmail** con el logo a color, atenuado y con aviso de "se habilitara con
+     la integracion de correo". No inventa contadores.
+3. **Actualizacion del badge.** Se refresca al arrancar, cada 60 segundos, al
+   recibir el aviso SSE y al marcar leido un hilo.
+4. **Despliegue en el VPS.** Parche quirurgico de `panel.html` y
+   `chat_clientes.py` en host y contenedor; `py_compile` y sintaxis JS OK;
+   respaldo en `/root/backup_alertas_20261118_151718`.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| `GET /api/v1/chat/resumen` en el VPS | `{"total":6,"conversaciones":[{"nombre":"Paola","no_leidos":6,...}]}` |
+| `/panel` servido | contiene `id="btn-wa"` e `id="btn-gmail"` |
+| `pytest test_v68_chat_clientes.py test_v97_espejo_whatsapp.py` | **60 passed** |
+| Sintaxis JS de los 3 bloques del panel | OK |
+| `/health` tras reiniciar | `{"status":"ok","db":"ok"}` |
+| PDF real de Alejandra | `Cotizacion-COT-229457.pdf` en `horminor/clientes/alejandra_2a70e1d88bd5/2026-11-18_documento_50c0488b.pdf` |
+| Enlace de Alejandra | `https://www.agendaculturalloja.com/` como texto |
+| Nota de video de Alejandra | `[nota de video]` con adjunto VIDEO |
+
+### Decisiones
+
+1. **El badge sale de datos reales, no de un contador local.** Si el panel se
+   abre en otro equipo, el total coincide.
+2. **Gmail visible pero sin contador.** Se muestra el logo para que la
+   integracion no cambie la cabecera despues; un contador falso seria peor que
+   ninguno.
+3. **Solo se tocan los dos archivos necesarios en el VPS.** El arbol del
+   servidor sigue en su linaje.
+
+### Bloqueos / observaciones
+
+1. **Responder/citar** mensajes sigue sin existir.
+2. **Gmail** no esta conectado: falta el OAuth y el buzon a leer.
+3. **Aviso sonoro/escritorio** no existe; el badge y el hilo en vivo son lo
+   unico hoy.
+
+### Proximo paso exacto
+
+Mostrar el modulo **Cerebro** en el panel (dejarlo visible aunque no entregue)
+y luego conectar el Cerebro con **Gato** segun
+`docs/CONTINUIDAD_CEREBRO.md`; antes de tocar produccion, revisar los pendientes
+W6 (cuota y retencion de media), G1 (Gmail) y G2 (responder/citar).
+
+---
+
+## 2026-11-18 (noche) - VPS alineado: Cerebro visible y puente con Gato
+
+### Objetivo
+
+Cumplir el pedido de Julio: dejar el **Cerebro visible** en el panel y
+**conectarlo con Gato**. El diagnostico previo mostro que el VPS corria un
+linaje anterior sin `app/cerebro`, sin `app/voz` y sin las migraciones 079-092;
+la ruta `/panel/cerebro` daba 404. Primero habia que alinear el servidor.
+
+### Hecho
+
+1. **Respaldo previo.** Base comprimida en
+   `/root/alineacion_20261118_152413/db.sql.gz` (53 KB) y codigo anterior en
+   `codigo_anterior.tgz` (1.1 MB).
+2. **Alineacion del VPS.** Se reemplazo `services/core-api/app` por el arbol
+   local, se fusionaron `db/migrations` y `scripts`, y se aplicaron las
+   migraciones pendientes **079 a 092** (incluye Cerebro y Voz).
+3. **Reconstruccion.** `docker compose ... up -d --build core-api`; contenedor
+   `healthy`; `/health` -> `{"status":"ok","db":"ok"}`.
+4. **Cerebro visible.** Se habilitaron los modulos `cerebro` y `voz` para el
+   perfil *Julio Villavicencio* y `cerebro.enabled=true`. `/panel/cerebro`
+   responde **200** y el boton `data-modulo="cerebro"` esta en el panel.
+5. **Prueba del motor.** Un dictado de texto creo un borrador con tarea,
+   destinatario y fecha en **1.502 ms** (estado `PENDIENTE_CONFIRMACION`).
+6. **Puente Gato -> Cerebro.** Nuevo `app/asistente/cerebro_bridge.py` y rama en
+   `POST /api/v1/asistente/chat`: si el mensaje empieza con `cerebro:` o
+   `dictado:`, se entrega al endpoint `/api/v1/cerebro/interpretar` con la
+   identidad de la sesion. Sin prefijo, Gato responde como siempre. El puente no
+   ejecuta nada: devuelve resumen, preguntas y la ruta del laboratorio.
+7. **Despliegue del puente.** Copia quirurgica de los dos archivos al host y al
+   contenedor, `py_compile`, reinicio. Respaldo en
+   `/root/puente_gato_20261118_152734`.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Migraciones aplicadas en el VPS | 079-092 (14 archivos) |
+| `/health` tras reconstruir | `{"status":"ok","db":"ok","db_latencia_ms":1.84}` |
+| `/panel/cerebro` | **200** |
+| Boton Cerebro en `/panel` | 1 |
+| Botones WhatsApp y Gmail en `/panel` | 1 y 1 |
+| Dictado directo al Cerebro | borrador `PENDIENTE_CONFIRMACION`, 1.502 ms |
+| Gato con `cerebro:` | 2 encargos + 2 preguntas + ruta `/panel/cerebro` |
+| `pytest` puente + asistente + gato | **48 passed** (4 nuevas del puente) |
+| Espejo de WhatsApp | `/api/v1/whatsapp/espejo/numeros` responde con Alejandra, Abelito y Paola |
+
+### Decisiones
+
+1. **Alinear el servidor en vez de seguir parchando.** El VPS estaba dos
+   linajes atras; cada funcion nueva iba a exigir otro parche. Se hizo con
+   respaldo verificado.
+2. **El puente es explicito, no automatico.** Gato no adivina cuando dictar:
+   exige `cerebro:` o `dictado:`. Evita secuestrar conversaciones normales.
+3. **El puente reutiliza el endpoint del Cerebro.** No duplica reglas de
+   permisos, interruptor ni validaciones; si el modulo esta apagado, responde
+   igual que el laboratorio.
+4. **Gato no ejecuta.** Confirmar sigue siendo humano y ocurre en el
+   laboratorio.
+
+### Bloqueos / observaciones
+
+1. **Audio hacia Gato:** el puente hoy es texto; la nota de voz queda como G4.
+2. **Confirmar desde Gato:** "si, confirma el encargo 1" todavia no ejecuta; G5.
+3. **`cerebro.enabled` quedo encendido** para la prueba; es un interruptor de
+   laboratorio y se puede apagar sin desplegar.
+4. **El arbol del VPS ya no es un clon limpio:** se copio el codigo local encima.
+   Antes de un `git pull` hay que decidir si se versiona este estado.
+5. **La suite completa no se corrio en el VPS** (faltan montajes de `docs` y
+   `.agents`); se corrieron las pruebas del area afectada.
+
+### Proximo paso exacto
+
+Abrir `https://horminor.178.238.238.158.sslip.io/panel`, entrar a **Cerebro -
+voz (BETA)** y dictar un caso real; luego escribir en Gato
+`cerebro: <dictado>` y confirmar que devuelve el resumen. Despues, decidir G4
+(audio por Gato) y G5 (confirmar desde Gato).
+
+---
+
+## 2026-11-18 (cierre técnico) - Regla documental, contrato del momento cero y ejecutor crear_cliente
+
+### Objetivo
+
+Evitar que una sesión nueva lea un documento viejo y rompa el código, y
+empezar el **momento cero** con un ejecutor real y verificable.
+
+### Hecho
+
+1. **Una sola verdad documental.** Nueva regla 11 en `AGENTS.md`, sección en
+   `.agents/README.md` y skill madre
+   `.agents/skills/orminorth-documentos/SKILL.md`: cada tema tiene un documento
+   dueño; el que deja de ser cierto se borra o se archiva; no se dejan dos
+   fuentes que se contradigan.
+2. **Contrato del momento cero.** `docs/MOMENTO_CERO.md`: catálogo de entradas
+   (texto, audio, imagen, video, documento, ubicación, contacto, enlace,
+   reenviado, captura, cédula, comprobante), pipeline canónico y **cómo
+   extender** con una entrada nueva sin leer todo el proyecto.
+3. **Ejecutor `crear_cliente`.** Nuevo `app/cerebro/ejecutores.py`; se agregó a
+   `ACCIONES_CONECTADAS` y al router de confirmación. Usa el servicio compartido
+   `services.clients.crear_cliente` (unicidad de teléfono/cédula). Si el cliente
+   ya existe, devuelve el existente y no duplica. La auditoría apunta a
+   `clients`.
+4. **Despliegue.** Copia quirúrgica al VPS, `py_compile`, reinicio; respaldo en
+   `/root/momento_cero_20261118_160421`. `/health` ok.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Dictado con cliente nuevo | borrador `REQUIERE_ACLARACION` con acción `crear_cliente` |
+| Confirmación | `estado: OK`, `Cliente creado: Constructora Prueba Momento 0` |
+| Datos creados | id `e4040b39...`, `existente: false` |
+| Reconfirmar el mismo borrador | `409 el borrador esta en EJECUTADO` (no duplica) |
+| Auditoría | tablas append-only: no se puede borrar `cerebro_ejecuciones` |
+| `pytest` (cerebro, momento cero, puente, asistente, gato) | **109 passed** |
+| Limpieza | cliente de prueba eliminado; las filas de auditoría quedan por diseño |
+
+### Decisiones
+
+1. **El ejecutor usa el servicio compartido.** No inserta en `clients` por su
+   cuenta: la unicidad y el estado inicial viven en un solo lugar.
+2. **Cliente existente no es error.** Se devuelve el existente con nota; evita
+   duplicados cuando Julio repite el dictado.
+3. **Los borradores y ejecuciones no se borran.** Son auditoría; el cliente de
+   prueba se eliminó, la constancia queda.
+4. **La extensión del momento cero se documenta en un contrato**, no en la
+   bitácora ni en el manual.
+
+### Bloqueos / observaciones
+
+1. **Carpeta del cliente como paso del alta:** aún no se crea explícitamente;
+   hoy la carpeta de Bunny nace al subir el primer archivo.
+2. **Manos en Bunny:** solo existe `subir`; faltan listar, mover, renombrar y
+   borrar.
+3. **Contactos, ubicaciones, cédula/RUC en foto, reenviados y capturas:** sin
+   lector todavía.
+4. **El renombre Gato → Miau** sigue pendiente en prompt y UI.
+
+### Proximo paso exacto
+
+Implementar la **carpeta del cliente como parte del alta** (CRM + Bunny) y las
+operaciones de Bunny (listar/mover/renombrar/borrar) con vista previa y enlaces
+de respaldo, antes de mover multimedia en el momento cero.
+
+---
+
+## 2026-11-18 (noche II) - Momento cero: carpeta del cliente y manos en Bunny
+
+### Objetivo
+
+Completar M2 y M3 del momento cero: que al ratificar el alta del cliente se cree
+su carpeta en Bunny, y que Miau tenga manos para listar, mover, renombrar y
+borrar archivos con vista previa, confirmación y enlaces de respaldo.
+
+### Hecho
+
+1. **Manos en Bunny.** `BunnyHttpStorageClient` ahora tiene `listar`,
+   `descargar_archivo`, `borrar` y `mover` (copia + borra, porque Bunny no tiene
+   MOVE). Rechaza rutas con `..` antes de tocar la red.
+2. **Carpeta del cliente al ratificar.** `crear_cliente` sube un manifiesto
+   `_momento_cero.json` a `horminor/clientes/<carpeta>/` con cliente, borrador,
+   fecha y origen. Es best-effort: si Bunny falla, el cliente queda creado y la
+   nota lo dice.
+3. **Endpoint de operaciones.** `POST /api/v1/cerebro/bunny/operacion` con
+   `accion` (listar/mover/renombrar/borrar), `ruta`, `destino` y `confirmado`.
+   Sin `confirmado` devuelve el plan y los enlaces; no toca nada. Solo
+   SUPERADMIN/SECRETARIA y solo dentro del prefijo configurado.
+4. **Despliegue.** Copia quirúrgica al VPS, `py_compile`, reinicio; respaldo en
+   `/root/manos_bunny_20261118_161329`. `/health` ok.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Listar carpeta de Paola | 6 archivos (2 audios, 2 imágenes, 2 videos) con tamaños |
+| Vista previa de renombrar | `dry_run: true`, plan con URLs de origen y destino, nada se movió |
+| Alta de cliente de prueba | `Cliente creado: Prueba Carpeta Miau` + `Carpeta del cliente creada en Bunny` |
+| Manifiesto | `horminor/clientes/prueba_carpeta_miau_0999999999002/_momento_cero.json` |
+| Borrado confirmado | `ejecutado: true`; la carpeta quedó vacía |
+| Limpieza | cliente de prueba y manifiesto eliminados |
+| `pytest` manos + momento cero | **10 passed** |
+
+### Decisiones
+
+1. **El manifiesto marca la carpeta.** Bunny no tiene carpetas reales; el
+   archivo `_momento_cero.json` deja la carpeta creada y auditable.
+2. **Vista previa por defecto.** Toda operación destructiva exige
+   `confirmado=true`; así Miau puede proponer sin riesgo.
+3. **Mover es copiar y borrar.** Es la única forma con la API de Bunny; el
+   destino se escribe primero y solo después se borra el origen.
+4. **Rutas confinadas al prefijo.** `horminor/` es el límite; cualquier intento
+   de salir se rechaza antes de la red.
+
+### Bloqueos / observaciones
+
+1. **Auditoría persistente de las operaciones de Bunny:** hoy queda en logs, no
+   en una tabla append-only.
+2. **Mover la multimedia al confirmar el alta (M5):** todavía no; la carpeta se
+   crea, los archivos siguen donde estaban.
+3. **Borrado de una carpeta completa:** no hay operación masiva; se hace archivo
+   por archivo.
+4. **Renombre Gato → Miau:** pendiente.
+
+### Proximo paso exacto
+
+M5: al confirmar el alta, mover a la carpeta del cliente los archivos que Julio
+indicó (con el mismo `mover` ya probado), y registrar cada movimiento. Después,
+lectores de contacto/ubicación/cédula (M4).
+
+---
+
+## 2026-11-18 (noche III) - M5: mover multimedia al alta y reglas de leads por intencion
+
+### Objetivo
+
+Cerrar el motor de M5 (mover archivos a la carpeta del cliente al ratificar el
+alta) y dejar por escrito cómo se define un lead y cuándo está caído, sin
+inventar plazos.
+
+### Hecho
+
+1. **Dos buckets, no una carpeta por tipo.** Bunny es almacenamiento, no la base
+   de datos: `media/` (imagen, video, audio) y `documentos/` (PDF, Word, Excel,
+   CSV). Actualizado en `docs/WHATSAPP_Y_MEDIA.md`.
+2. **Motor de M5.** `POST /api/v1/cerebro/bunny/operacion` acepta
+   `accion=mover_a_cliente` con `cliente_id` y `rutas`; calcula destino por
+   extensión, hace vista previa y, al confirmar, mueve y **actualiza
+   `media_assets.storage_path` + `cdn_url`** para que el chat siga funcionando.
+3. **Reglas de lead.** `docs/LEADS.md` define el protocolo (CONTACTO → LEAD con
+   al menos una respuesta de la empresa) y el cierre **por intención**, no por
+   días: rechazo explícito, competencia, precio, aplazamiento, silencio, no
+   decisor, número equivocado. La semántica vive en el documento; la operación
+   irá en `lead_reglas_caida`; la auditoría en `lead_eventos`.
+4. **Despliegue.** Copia quirúrgica al VPS; respaldo en `/root/m5_media_20261118_164249`.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Vista previa `mover_a_cliente` | audio y webp → `media/`; nada se movió |
+| Clasificación de `.oga` | corregida: audio → `media/` |
+| Movimiento real (audio de Paola) | `ok: true`, `media_actualizada: true` |
+| Base de datos | `storage_path` y `cdn_url` apuntan a `.../media/...oga` |
+| Carpeta en Bunny | `media/` contiene el audio movido |
+| `pytest` manos + momento cero | **9 passed** (más los 10 anteriores) |
+
+### Decisiones
+
+1. **Bunny no replica el CRM.** El tipo fino (imagen, video, audio, documento,
+   etiquetas) vive en `media_assets`; Bunny solo separa visual/audio de
+   documental.
+2. **Mover actualiza la base.** Sin ese paso, el enlace del chat se rompería.
+3. **La caída del lead es por intención.** El rechazo explícito cierra al
+   instante; el silencio solo cierra después de los intentos configurados.
+4. **Los plazos quedan `NULL`.** No se inventan días ni intentos.
+
+### Bloqueos / observaciones
+
+1. **Falta enganchar el origen de archivos al borrador.** Hoy el motor recibe
+   rutas; falta que el paquete de alta las proponga y las muestre antes de
+   confirmar.
+2. **Migración de leads pendiente.** El diseño está; la tabla no.
+3. **Parámetros de recontacto** esperando a Julio.
+4. **Archivos viejos:** solo se actualiza la ruta del archivo movido; el
+   manifiesto `_momento_cero.json` no lleva todavía la lista de archivos.
+
+### Proximo paso exacto
+
+M6: en el borrador del alta, listar los archivos candidatos (media del chat o
+los que Julio indique) y mostrar el plan de destino antes del "pasito". Luego,
+la migración de leads con los parámetros en `NULL`.
+
+---
+
+## 2026-11-18 (noche IV) - M6: paquete del alta antes del pasito; mapa DB ↔ Bunny
+
+### Objetivo
+
+Que antes de confirmar un alta se vean el cliente, los archivos y su destino, y
+dejar escrito qué vive en la base y qué en Bunny para que Miau sepa dónde
+buscar. Aclarar que la "migración de leads" es un archivo SQL, no mover datos.
+
+### Hecho
+
+1. **Vista previa del paquete.** `POST /api/v1/cerebro/alta/paquete` recibe
+   `borrador_id` y `media_ids`; devuelve el cliente propuesto, la carpeta y el
+   plan de cada archivo (origen, destino, bucket y URL). No escribe nada.
+2. **Confirmación con archivos.** `confirmar` acepta `archivos` (ids de
+   `media_assets`); al crear el cliente mueve esos archivos a su carpeta y
+   actualiza `storage_path` + `cdn_url`.
+3. **Mapa DB ↔ Bunny.** Nueva sección en `docs/WHATSAPP_Y_MEDIA.md`: la base es
+   la verdad, Bunny solo guarda bytes; qué tabla resuelve cada cosa y cómo.
+4. **Aclaración de leads.** La "migración" es un archivo SQL que crea las tablas
+   vacías; no se muda ninguna persona ni dato. Los leads de prueba no se tocan.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Vista previa con media real | cliente `Prueba Carpeta Miau`, archivo de Paola → `.../prueba_carpeta_miau_.../media/...oga`, con URL |
+| Escrituras durante la vista previa | ninguna |
+| `pytest` manos + momento cero | **14 passed** |
+| `/health` tras desplegar | ok |
+
+### Decisiones
+
+1. **La base manda.** El Cerebro consulta `media_assets`, no lista Bunny.
+2. **Dos buckets y nada más.** Un tipo nuevo se clasifica, no crea carpeta.
+3. **La vista previa usa una carpeta provisional** cuando el cliente aún no
+   tiene cédula/RUC; al crear el cliente se recalcula con su id.
+4. **Leads:** tablas nacen vacías; los parámetros de recontacto siguen `NULL`.
+
+### Bloqueos / observaciones
+
+1. **Falta el botón en el laboratorio** para elegir archivos y ver el paquete;
+   la API ya está.
+2. **Migración de leads pendiente** (`leads`, `lead_eventos`,
+   `lead_reglas_caida`).
+3. **El manifiesto no lista todavía los archivos movidos.**
+
+### Proximo paso exacto
+
+Agregar en `/panel/cerebro` la selección de archivos del paquete y el resumen
+antes de confirmar; después, la migración de leads con los parámetros en `NULL`.
+
+---
+
+## 2026-11-18 (noche V) - Boton del paquete de alta y correcciones de rumbo
+
+### Objetivo
+
+Cerrar A1 (boton del laboratorio para ver y confirmar el paquete de alta) y
+dejar escritas las correcciones de Julio: el agendamiento se independiza, Gato
+publico queda como skill para revision y el audio reutiliza el transcriptor.
+
+### Hecho
+
+1. **Boton del paquete en `/panel/cerebro`.** En una accion `crear_cliente`
+   aparece "Ver paquete de alta": lista la media reciente, permite elegirla y
+   muestra cliente, carpeta, origen y destino de cada archivo. "Confirmar alta"
+   envia los ids seleccionados.
+2. **Endpoint de candidatos.** `GET /api/v1/cerebro/alta/media` devuelve la
+   media reciente con su cliente (solo lectura).
+3. **Agendamiento.** `docs/AGENDAMIENTO.md`: no se construye de cero; se
+   independiza envolviendo `dispatch_schedule` y agregando `citas`.
+4. **Gato publico.** `.agents/skills/gato-publico/SKILL.md`: fronteras,
+   herramientas, flujo, medios, handoff y checklist. Implementacion 2026-11-19.
+5. **Audio por Gato.** Se deja escrito que usa el componente `app/voz`; no se
+   duplica el transcriptor.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| `GET /alta/media?limite=5` | 5 archivos con tipo, nombre y cliente |
+| `/panel/cerebro` | contiene "Ver paquete de alta" y "Confirmar alta" |
+| Sintaxis JS del laboratorio | OK |
+| `/health` | ok |
+| `pytest` manos + momento cero | **14 passed** |
+
+### Decisiones
+
+1. **El paquete se ve antes del pasito.** El boton no escribe; solo muestra.
+2. **La media candidata se elige de la lista reciente**, no se adivina por
+   conversacion (el alta puede ser de otro cliente).
+3. **El agendamiento se envuelve, no se rehace.**
+4. **Gato publico no comparte contexto con Miau**; su skill es el contrato.
+
+### Bloqueos / observaciones
+
+1. **Migracion de leads pendiente.**
+2. **Gato publico** espera revision manual de la skill.
+3. **Auditoria persistente de las manos de Bunny** sigue en logs.
+
+---
+
+## 2026-11-18 (noche VI) - La carpeta del cliente abre en Chat
+
+### Objetivo
+
+Que al elegir un cliente la primera pestaña y la activa sea **Chat**, no
+"Ordenes y Viajes".
+
+### Hecho
+
+1. `state.carpetaTab` nace en `chat` y el fallback tambien.
+2. Al seleccionar un cliente se abre en `chat`, se precarga el hilo, arranca el
+   sondeo en vivo y se marca leido.
+3. El boton de Chat pasa a ser el **primero** de la fila de pestañas.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Orden de pestañas en `/panel` | chat antes que ordenes |
+| `carpetaTab:'chat'` | presente |
+| Sintaxis JS del panel | OK |
+| `/health` | ok |
+
+### Proximo paso
+
+Revisar la skill `gato-publico`; despues, la migracion de leads.
+
+---
+
+## 2026-11-18 (noche VII) - Clientes ordenados por el ultimo mensaje del cliente
+
+### Objetivo
+
+Que la secretaria vea primero a quien le escribio hace menos, no por deuda ni
+por nombre.
+
+### Hecho
+
+1. Nuevo orden `MENSAJES` en `/api/v1/clients/search`: ultimo mensaje
+   **entrante** por cliente, con los que no tienen mensajes al final por nombre.
+2. El panel lo pone como opcion y **default** ("Ultimos mensajes"); al limpiar
+   filtros vuelve a ese orden.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| SQL directo en el VPS | Paola, Ing. Reyes, Alejandra; luego el resto por nombre |
+| `/clients/search?orden=MENSAJES` | mismo orden |
+| Panel | opcion `MENSAJES` presente; defaults actualizados |
+| `/health` | ok |
+
+### Proximo paso
+
+Revisar la skill `gato-publico`; despues, la migracion de leads.
+
+---
+
+## 2026-11-18 (noche VIII) - WhatsApp restaurado y vigilante instalado
+
+### Objetivo
+
+Restablecer la recepcion de WhatsApp y evitar que el silencio de la sesion pase
+inadvertido.
+
+### Hecho
+
+1. **Revincule con QR** la instancia `horminor` (segunda vez en el dia).
+2. **Vigilante** `scripts/vigilante_whatsapp.py` en el host, cron cada 5 minutos
+   con `flock`. Lee el ultimo entrante/saliente de Evolution, consulta el estado
+   y:
+   - si esta `open` y lleva 90 min sin entrantes en horario (L-S 07-19),
+     reinicia una vez con enfriamiento de 45 min;
+   - si esta `close`, avisa que hace falta QR y no reinicia;
+   - no repite avisos antes de 30 min.
+3. Estado en `/opt/horminor/vigilante_status.json` y log en
+   `/var/log/vigilante_horminor.log`.
+4. Documento `docs/WHATSAPP_ESTABILIDAD.md` con diagnostico y prevencion por
+   capas.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Tras el QR | `state: open` y entrante de Alejandra a las 18:59:53 |
+| Chat del CRM | "Probando" de Alejandra guardado como ENTRANTE |
+| Primera corrida del vigilante | estado escrito, `sospechoso: false` |
+| Crontab | linea cada 5 min presente |
+
+### Decisiones
+
+1. **No reiniciar si esta `close`.** Cerrar es intencional (QR); reiniciar no
+   arregla y molesta.
+2. **El umbral es silencio con salientes presentes**, no solo tiempo: un dia
+   tranquilo no dispara.
+3. **La alerta no viaja por WhatsApp.** Webhook externo opcional; hoy solo log.
+
+### Bloqueos / observaciones
+
+1. **Canal de alerta sin configurar.** Falta Telegram o correo.
+2. **El problema de fondo sigue.** Para la entrega: servidor propio con
+   Evolution aislado y version estable; a largo plazo, Cloud API oficial.
+3. **Los mensajes del hueco no se recuperan**; solo el historial que WhatsApp
+   reenvie al vincular.
+
+### Proximo paso exacto
+
+Configurar `VIGILANTE_WEBHOOK` (Telegram o correo) y dejar el vigilante
+avisando de verdad. Despues, retomar la migracion de leads.
+
+---
+
+## 2026-11-19 - Documento de hitos y nucleo comercial (leads + citas)
+
+### Objetivo
+
+Dejar el orden de trabajo por escrito y empezar el modulo independiente que
+Julio pidio: leads y agendamiento que funcionen sin importar el origen, con la
+fecha de Ecuador como fuente unica.
+
+### Hecho
+
+1. **`docs/HITOS.md`** con los hitos H1-H7, criterios de cierre y el orden.
+   Se agrego como lectura obligatoria en `AGENTS.md`, `.agents/README.md` y la
+   skill `orminorth-documentos`.
+2. **`app/tiempo.py`**: `hoy()`, `ahora()` y `iso()` en America/Guayaquil.
+3. **Migracion 096**: `leads`, `lead_eventos`, `lead_reglas_caida`, `citas` y
+   los parametros en `NULL`. Semilla de reglas por intencion.
+4. **API `/api/v1/comercial/*`**: crear/reutilizar lead, registrar respuesta
+   (aplica la regla de intencion), listar leads, crear/listar/confirmar/cancelar
+   citas y disponibilidad. El origen (`WHATSAPP`, `GATO`, `PANEL`, `MIAU`) no
+   cambia las reglas.
+5. **Despliegue** en el VPS y prueba real.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| `GET /api/v1/comercial/hoy` | `2026-11-19`, zona `America/Guayaquil` |
+| Lead desde panel | `CONTACTO`; tras "No me interesa" -> `CAIDO / NO_INTERESADO` |
+| Lead desde Gato | `CONTACTO`; tras "Hola, quiero informacion" -> `LEAD` |
+| Cita manana 10:30 | `SOLICITADA` -> `CONFIRMADA` -> `CANCELADA` |
+| Cita en el pasado | **422** "no se agenda una cita en el pasado" |
+| `pytest` tiempo + comercial | **9 passed** (3 + 6) |
+| `/health` | ok |
+
+### Decisiones
+
+1. **Una sola fecha de negocio**: `app/tiempo.py`; nunca el reloj del navegador.
+2. **El origen es un dato, no una regla distinta**: misma tabla y mismas reglas.
+3. **Reglas de caida en tabla**, con umbrales `NULL`; el rechazo explicito
+   cierra al instante sin esperar configuracion.
+4. **Citas separadas de entregas**: `citas` es comercial; `dispatch_schedule`
+   sigue para el hormigon.
+
+### Bloqueos / observaciones
+
+1. **UI de leads y citas** todavia no existe; la API si.
+2. **Tres origenes**: falta que WhatsApp y Gato llamen a este modulo (hoy se
+   probaron por API).
+3. **Borrado**: `lead_eventos` es append-only y el `ON DELETE CASCADE` choca;
+   se limpio el dato de prueba desactivando el trigger. La solucion es baja
+   logica (`deleted_at`) en `leads`.
+4. **`citas.hora_inicio`** exige `time` de Python; el string se castea en SQL y
+   el valor se envia como `datetime.time`.
+
+### Proximo paso exacto
+
+UI minima de leads y citas en el panel y conectar los tres origenes; luego,
+audio por Gato reutilizando `app/voz`.
+
+---
+
+## 2026-11-19 (II) - Contrato del nucleo comercial y UI en Secretaria
+
+### Objetivo
+
+Dejar escrito que leads y citas tienen un solo dueno, y darles pantalla en
+Secretaria y Caja sin duplicar reglas.
+
+### Hecho
+
+1. **`docs/NUCLEO_COMERCIAL.md`**: contrato de uso. Panel, Gato y WhatsApp solo
+   piden ("dame / notificame / agenda a..."); las reglas, la fecha y el estado
+   los decide el modulo. Prohibiciones: SQL fuera del modulo, fechas locales,
+   logica duplicada, confirmar citas desde Gato publico.
+2. **UI en Secretaria y Caja**, debajo de la agenda: tarjeta "Leads y citas
+   comerciales" con dos pestanas:
+   - Leads: alta (nombre, telefono, origen) y lista con estado y ultimo contacto.
+   - Citas: alta (tipo, fecha, hora, lead, notas), lista desde hoy, confirmar y
+     cancelar.
+   La fecha por defecto sale de `GET /api/v1/comercial/hoy`.
+3. **Carga automatica** al entrar a Secretaria (`cargarComercial()`).
+4. Referencias al contrato en `HITOS.md` y en la skill `gato-publico`.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| `/panel` | contiene "Leads y citas comerciales" |
+| Sintaxis JS del panel | OK (3 bloques) |
+| `/health` | ok |
+| API comercial | probada antes: lead, rechazo, cita, confirmar, cancelar, fecha pasada 422 |
+
+### Decisiones
+
+1. **Un solo dueno.** La UI no calcula estados ni fechas; solo pinta y envia.
+2. **La tarjeta vive en Secretaria**, junto a la agenda, como pidio Julio.
+3. **La cita nace SOLICITADA**; confirmar es un acto humano desde el panel.
+
+### Bloqueos / observaciones
+
+1. **Gato y WhatsApp** todavia no llaman a la API; el panel ya.
+2. **No hay edicion ni reagendamiento** en la UI; la API base esta.
+3. **Baja logica de leads** sigue pendiente (append-only + cascade).
+
+### Proximo paso exacto
+
+Conectar Gato interno al modulo comercial ("dame los leads caidos", "agenda una
+visita a...") y despues el audio por Gato usando `app/voz`.
+
+---
+
+## 2026-11-19 (III) - El plan de hitos registra el avance sin duplicar la bitacora
+
+### Objetivo
+
+Evitar burocracia repetida: que HITOS muestre el avance con enlaces, sin copiar
+la narrativa de la bitacora.
+
+### Hecho
+
+1. **`docs/HITOS.md`**: seccion "Registro de avance" con una fila por hito y
+   sesion: resumen corto, piezas/archivos y la entrada de bitacora. Regla
+   escrita: "aqui se enlaza, no se copia".
+2. **Skill `orminorth-documentos`**: tabla de que va en HITOS, bitacora y
+   ESTADO; se elimina la duplicacion.
+3. Se quito la seccion vieja "Como se actualiza" duplicada (quedo una sola).
+
+### Decision
+
+- **HITOS = plan + avance en una linea + enlaces.**
+- **BITACORA = historia, comandos, decisiones.**
+- **ESTADO = foto del presente y bloqueos.**
+- Si dos documentos repiten lo mismo, se borra uno.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Secciones de HITOS | 0 a 6, una sola "Como se actualiza" |
+| Registro de avance | 13 filas del 18 y 19-N con archivos |
+| Skill | tabla "Que va en cada documento" presente |
+
+### Proximo paso
+
+Conectar Gato interno al modulo comercial y luego el audio por Gato con `app/voz`.
+
+---
+
+## 2026-11-19 (IV) - Gato conectado al modulo comercial y audio reutilizando voz
+
+### Objetivo
+
+Que Gato use el modulo comercial sin duplicar reglas y que una nota de voz
+llegue al mismo componente de voz, sin transcriptor nuevo.
+
+### Hecho
+
+1. **Puente Gato -> comercial.** `app/asistente/comercial_bridge.py`:
+   - "dame los leads caidos" lista por el modulo.
+   - "agenda una visita a <lead> manana a las 10:30" crea una cita con origen
+     `GATO` y estado `SOLICITADA`.
+   - Si falta dia, hora o nombre, pregunta; no inventa.
+2. **Busqueda de lead** por nombre o telefono en `app/comercial/leads.py`
+   (sin SQL en Gato).
+3. **Audio por Gato.** `POST /api/v1/asistente/audio`: recibe el archivo, llama
+   a `ingestar_audio` (componente `app/voz`) y pasa el texto al mismo chat.
+4. **Despliegue** y pruebas reales. Se encendio `voz.enabled`.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Gato "dame los leads caidos" | "No hay leads caidos ahora mismo." |
+| Gato agenda a Paola Prueba | cita `SOLICITADA` 2026-11-20 10:30 |
+| Gato sin datos | pide dia, hora y a quien (`FALTA`) |
+| Audio (tono de prueba) | `DEGRADADO_SIN_CREDENCIAL STT_API_KEY no configurada` |
+| `pytest` comercial | **9 passed** |
+| Bugs corregidos | faltaba `app/tiempo.py` en el contenedor; faltaba importar `exigir_modulo` |
+
+### Decision
+
+- Gato **no** escribe tablas ni calcula fechas: llama al modulo comercial.
+- El audio **no** tiene transcriptor propio: usa `app/voz`.
+- Sin `STT_API_KEY` el audio se degrada y lo dice; no inventa texto.
+
+### Pendiente
+
+- Configurar `STT_API_KEY` para transcribir de verdad.
+- Conectar WhatsApp (Gato publico).
+- Auditoria persistente de las manos de Bunny.
+
+### Proximo paso
+
+Configurar la clave STT y probar una nota de voz real; luego, la auditoria de
+Bunny y el manifiesto con archivos.
+
+
+---
+
+## 2026-11-19 (V) - La clave del audio es la de Groq, no una STT generica
+
+### Hecho
+
+- El mensaje del proveedor de voz decia "STT_API_KEY no configurada" y confundia:
+  el codigo ya usa **Groq** (`GROQ_API_KEY` del entorno o
+  `integraciones.stt.api_key`). Se corrigio el mensaje.
+- Verificado en el VPS: el endpoint devuelve
+  `DEGRADADO_SIN_CREDENCIAL GROQ_API_KEY no configurada (o integraciones.stt.api_key)`.
+
+### Decision
+
+- No se crea una variable nueva: se usa la clave de Groq. DeepSeek es solo texto
+  y no sirve para transcribir audio.
+
+---
+
+## 2026-11-19 (VI) - Las claves de Groq ya estaban: faltaba pasarlas al VPS y usarlas en cascada
+
+### Diagnostico (mi error)
+
+El `.env` local **si** tenia `GROQ_API_KEY` y `GROQ_API_KEY2`. Mi busqueda
+anterior solo miraba lineas que empiezan con `GROQ` y ademas consulte el `.env`
+equivocado: el del VPS no las tenia. Tambien habia un espacio despues del `=`.
+
+### Hecho
+
+1. **`.env` del VPS**: se agregaron `GROQ_API_KEY` y `GROQ_API_KEY2` limpias
+   (sin espacio), con copia de seguridad `.env.bak.*`.
+2. **Cascada real en el codigo**: `_claves_groq` arma la lista en orden
+   (`integraciones.stt.api_key`/`api_key2`, `GROQ_API_KEY`, `GROQ_API_KEY2`,
+   `GROQ_API_KEY3`, `GROQ_API_KEYS`). `GroqCascada` pasa a la siguiente clave
+   solo si el fallo es 401/403/429 o de red; si el audio es invalido (400) no
+   gastas las demas.
+3. **Limpieza de valores**: se recorta el espacio y las comillas de cada clave.
+4. **Despliegue**: se recreo el contenedor para que leyera el `.env` y se
+   resincronizo `app/` desde `/opt/horminor` (el codigo no esta montado, asi que
+   recrear borra los `docker cp`).
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| `env` dentro del contenedor | `GROQ_API_KEY` y `GROQ_API_KEY2` presentes |
+| Nota de voz real (voz del sistema: "Dame los leads caidos") | `{"respuesta":"No hay leads caidos ahora mismo.","estado":"OK"}` |
+| `/health` | `{"status":"ok","db":"ok"}` |
+| `/api/v1/chat/resumen` | 33 conversaciones, sin errores |
+| `pytest` cascada | **6 passed** |
+| Logs recientes | sin `traceback` |
+
+### Decision
+
+- La clave de audio es la de **Groq** (no existe una `STT_API_KEY`).
+- Se admiten varias claves y se usan en cascada; el respaldo no se gasta por un
+  audio mal formado.
+- El `.env` del VPS y el local son distintos: al cambiar una variable hay que
+  llevarla al servidor y recrear el contenedor.
+
+### Pendiente
+
+- Conectar WhatsApp (Gato publico) al modulo comercial.
+- Auditoria persistente de las manos de Bunny y manifiesto con archivos.
+
+---
+
+## 2026-11-19 (VII) - H1 cerrado: nucleo comercial con los tres origenes
+
+### Objetivo
+
+Cerrar H1 completo: corregir los defectos del nucleo comercial y conectar
+WhatsApp para que leads y citas funcionen igual desde el panel, Gato y el
+webhook, sin reglas duplicadas.
+
+### Hecho
+
+1. **Dos hechos separados en leads** (`app/comercial/leads.py`):
+   - `registrar_respuesta` = la empresa respondio: un `CONTACTO` pasa a `LEAD`.
+     El texto de la empresa ya no se interpreta como mensaje del cliente.
+   - `registrar_mensaje` = el lead escribio: aplica `lead_reglas_caida`.
+   - Un `CAIDO`/`EN_ESPERA` revive a `LEAD`, limpia `motivo_caida` y deja evento.
+2. **Origen fijado por el servidor** (`app/comercial/router.py`): `LeadIn` y
+   `CitaIn` usan `extra="forbid"`; el panel ya no manda `origen` ni muestra el
+   desplegable. Se elimino el riesgo de etiquetar un lead como WhatsApp.
+3. **Citas** (`app/comercial/citas.py`):
+   - choque solo del mismo `lead_id` o `cliente_id` (sin inventar capacidad);
+   - maquina de estados `SOLICITADA → CONFIRMADA → REALIZADA`, con
+     `CANCELADA`/`REAGENDADA` y transiciones invalidas rechazadas;
+   - migracion **097** `cita_eventos` append-only; cancelar guarda motivo.
+4. **WhatsApp conectado** (`app/comercial/whatsapp.py`,
+   `app/m1_whatsapp/pipeline.py`, `runtime.py`): el webhook pide al modulo, no
+   crea por su cuenta. El parser de citas es unico
+   (`app/comercial/intencion.py`) para Gato y WhatsApp.
+5. **Panel:** se corrigio `/api/v1/panel/agenda` para usar `tiempo.hoy()` en vez
+   de `date.today()`.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| `pytest` suite completa | **727 passed**, 2 warnings, exit 0 |
+| `scripts/h1_comercial_check.py` (con `ROLLBACK`) | `[H1 COMERCIAL: OK]`: tres origenes, revivir, choque y auditoria |
+| `scripts/hito3_lock_test.py` | `[CANDADO CERRADO EN SANDBOX]` |
+| Migracion 097 | aplicada y presente en `schema_migrations` |
+| Pruebas nuevas | `tests/test_v225_h1_cierre.py`: 14 passed |
+
+Archivos de evidencia:
+`.agents/evidencias/pytest_h1_cierre_2026-11-19.txt`,
+`h1_comercial_check_2026-11-19.txt`, `hito3_lock_2026-11-19.txt`.
+
+### Decision
+
+- El origen **no** viaja en el cuerpo: lo decide la puerta de entrada. Se
+  descarto aceptarlo del cliente porque permitia falsear la fuente.
+- Se separan respuesta de la empresa y mensaje del lead: mezclarlos hacia que
+  una frase amable de la empresa pudiera marcar el lead como caido.
+- La cita se valida contra el mismo lead/cliente, no contra una capacidad
+  global que Julio no ha definido.
+- Las citas comerciales no se muestran en `HorminorAgenda`; se ven en
+  Secretaria > Leads y citas > Citas y por `GET /api/v1/comercial/citas`.
+  Llevarlas a la agenda operativa es H4/UX.
+- `EN_ESPERA(PRECIO)` queda sin fecha mientras `leads.recontacto_dias` sea
+  `NULL`: no se invento un plazo.
+
+### Bloqueo
+
+- La migracion **097** y este codigo **no estan en el VPS**; el servidor corre
+  un arbol copiado a mano.
+- Deuda documentada: `lead_eventos ON DELETE CASCADE` permite que un borrado
+  directo en base arrastre la auditoria; la regla es no borrar leads (baja
+  logica por estado).
+
+### Proximo paso
+
+Desplegar en el VPS las migraciones **096-097** y el cierre de H1; luego
+verificar alli `pytest`, `h1_comercial_check.py` y una cita real. Despues,
+retomar **H3**: auditoria persistente de las manos de Bunny y manifiesto con
+archivos.

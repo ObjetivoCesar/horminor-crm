@@ -124,7 +124,15 @@ def test_construir_proveedor_degrada_sin_clave(monkeypatch) -> None:
         return {}
 
     monkeypatch.setattr("app.voz.stt.setting", _setting)
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    for nombre in (
+        "GROQ_API_KEY",
+        "GROQ_API_KEY2",
+        "GROQ_API_KEY3",
+        "GROQ_API_KEY_2",
+        "GROQ_KEY",
+        "GROQ_API_KEYS",
+    ):
+        monkeypatch.delenv(nombre, raising=False)
 
     proveedor = asyncio.run(construir_proveedor(None, None))
     assert proveedor.nombre == "NO_CONFIGURADO"

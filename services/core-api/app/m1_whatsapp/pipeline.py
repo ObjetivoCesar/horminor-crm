@@ -39,6 +39,7 @@ from .notifications import Notifier, SentinelAlerter
 from .repositorio import RepositorioWhatsApp, ViajeObjetivo
 
 from ..superadmin.secciones import componer_respuesta_lead
+from ..comercial.intencion import es_peticion_cita
 
 log = logging.getLogger(__name__)
 
@@ -182,6 +183,7 @@ class WhatsAppPipeline:
         notifier: Notifier,
         alerter: SentinelAlerter,
         reloj: Any = None,
+        comercial: Any = None,
     ) -> None:
         self.repo = repo
         self.identidad = identidad
@@ -190,6 +192,8 @@ class WhatsAppPipeline:
         self.notifier = notifier
         self.alerter = alerter
         self._reloj = reloj or _reloj_utc
+        # Nucleo comercial: opcional para no romper los dobles de prueba.
+        self.comercial = comercial
 
     # -- helpers ----------------------------------------------------------
     async def _zona(self) -> ZoneInfo:
@@ -730,6 +734,12 @@ class WhatsAppPipeline:
         if cliente_id:
             resultado.acciones.append("CLIENTE_EXISTENTE_ACTUALIZADO")
 
+        # Nucleo comercial: el canal pide, el modulo decide. Un solo telefono
+        # = un lead; el mensaje del lead aplica las reglas de intencion.
+        lead_id: str | None = None
+        if self.comercial is not None:
+            lead_id = await self._registrar_comercial(lote, nombre, resultado)
+
         # Gate #4 responde con el ADN publico y las recetas confirmadas leidas
         # en vivo de PostgreSQL. El Juez solo decidio que era una cotizacion;
         # el texto lo arma el codigo con datos de negocio, no el LLM.
@@ -741,6 +751,43 @@ class WhatsAppPipeline:
         resultado.acciones.append(
             "RESPUESTA_BOT_ENVIADA" if enviado else "RESPUESTA_BOT_NO_ENVIADA"
         )
+        if enviado and lead_id and self.comercial is not None:
+            try:
+                await self.comercial.respuesta(lead_id=lead_id, texto=respuesta)
+                resultado.acciones.append("LEAD_COMERCIAL_RESPONDIDO")
+            except Exception:
+                resultado.acciones.append("LEAD_COMERCIAL_RESPUESTA_FALLIDA")
+
+    async def _registrar_comercial(
+        self, lote: MessageBatch, nombre: str | None, resultado: ResultadoLote
+    ) -> str | None:
+        """Pide al nucleo comercial el alta del contacto y, si aplica, la cita."""
+        try:
+            contacto = await self.comercial.entrante(
+                telefono=lote.telefono,
+                nombre=nombre or lote.nombre_contacto,
+                texto=lote.texto,
+            )
+        except Exception:
+            resultado.acciones.append("COMERCIAL_NO_DISPONIBLE")
+            return None
+        lead_id = str(contacto.get("id") or "") or None
+        resultado.acciones.append(
+            "LEAD_COMERCIAL_CREADO"
+            if contacto.get("creado")
+            else "LEAD_COMERCIAL_REUTILIZADO"
+        )
+        if lead_id and es_peticion_cita(lote.texto):
+            try:
+                cita = await self.comercial.solicitar_cita(
+                    lead_id=lead_id, texto=lote.texto
+                )
+            except ValueError:
+                resultado.acciones.append("CITA_NO_CREADA")
+            else:
+                if cita is not None:
+                    resultado.acciones.append("CITA_SOLICITADA")
+        return lead_id
 
 
 __all__ = [

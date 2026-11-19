@@ -16,6 +16,7 @@ from redis import asyncio as redis_asyncio
 
 from ..settings import Settings
 from ..sandbox import SandboxBunnyStorageClient, SandboxNotifier
+from ..comercial.whatsapp import ComercialWhatsApp
 from .bunny import BunnyHttpStorageClient, BunnyStorageClient
 from .debounce import (
     BufferStore,
@@ -33,7 +34,6 @@ from .notifications import (
 from .pipeline import WhatsAppPipeline
 from .repositorio import PostgresRepositorio, RepositorioWhatsApp
 from .worker import DebounceWorker
-
 log = logging.getLogger(__name__)
 
 DEBOUNCE_POR_DEFECTO = 14.0
@@ -249,6 +249,7 @@ async def construir_runtime(pool: asyncpg.Pool, settings: Settings) -> WhatsAppR
         bunny=bunny,
         notifier=notifier,
         alerter=alerter,
+        comercial=ComercialWhatsApp(pool),
     )
     accumulator = DebounceAccumulator(
         store, ventana_segundos=ventana, maximo_segundos=tope

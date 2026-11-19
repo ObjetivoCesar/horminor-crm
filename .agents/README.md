@@ -12,6 +12,7 @@ repositorio.
 
 | Ruta | Para qué | Cuándo se lee |
 |---|---|---|
+| `../docs/HITOS.md` | Orden de trabajo: hitos y prioridad | **Al empezar toda sesión** |
 | `ESTADO.md` | Tablero: hitos, bloqueos, próximo paso | **Al empezar toda sesión** |
 | `MAPA_MODULOS.md` | Qué módulo existe, dónde está su diseño y qué skill lo gobierna | Al tocar un módulo, documento o pantalla |
 | `BITACORA.md` | Registro append-only de sesiones y decisiones | Al empezar (últimas 3) y al cerrar (añadir) |
@@ -20,6 +21,15 @@ repositorio.
 | `skills/` | Instrucciones autocontenidas para tareas repetibles | Cuando la tarea coincide |
 | `plantillas/` | Formatos para no improvisar | Al escribir |
 | `evidencias/` | Salidas reales de comandos y tests | Cuando hace falta probar algo |
+
+## Una sola verdad documental
+
+Cada tema tiene **un** documento dueño. Si una decision cambia, se actualiza el
+dueño en la misma sesion y el documento viejo se **borra** o se mueve a
+`.agents/archivo/`. No se dejan dos documentos que se contradigan: una sesion
+nueva leera el equivocado y escribira codigo que rompe lo que ya funciona.
+
+Procedimiento completo: `.agents/skills/orminorth-documentos/SKILL.md`.
 
 ## El ciclo (la parte que evita perder la cordura)
 

@@ -16,6 +16,7 @@ import base64
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable
 
 from ..services import media as media_svc
@@ -474,6 +475,24 @@ class EspejoWhatsApp:
                 extension = procesada.extension
             except Exception:
                 pass  # se guarda el original
+        elif tipo == "VIDEO":
+            # El video entrante se recomprime igual que el que sube el panel.
+            # Si dura mas que el tope, o ffmpeg no esta, se guarda el original:
+            # perder el video es peor que guardarlo pesado.
+            try:
+                with media_svc.directorio_temporal() as tmp:
+                    entrada = Path(tmp) / "entrada.bin"
+                    entrada.write_bytes(binario)
+                    procesada = await media_svc.procesar_video(entrada, self.settings)
+                guardado = procesada.datos
+                mime_final = procesada.mime
+                extension = procesada.extension
+            except Exception:
+                log.info(
+                    "espejo: el video %s se guarda sin recomprimir",
+                    mensaje.mensaje_id,
+                    exc_info=True,
+                )
 
         carpeta = media_svc.carpeta_cliente(
             str(datos_cliente.get("nombre") or ""),

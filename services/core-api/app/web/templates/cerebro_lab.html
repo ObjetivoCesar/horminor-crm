@@ -805,6 +805,31 @@
         });
         li.appendChild(dl);
       }
+      if (nombre === 'crear_cliente' && datos.borrador_id) {
+        const bloque = document.createElement('div');
+        const btnVer = document.createElement('button');
+        btnVer.className = 'primary';
+        btnVer.textContent = 'Ver paquete de alta';
+        const cont = document.createElement('div');
+        btnVer.addEventListener('click', () => cargarPaqueteAlta(datos.borrador_id, cont));
+        bloque.append(btnVer, cont);
+        li.appendChild(bloque);
+
+        const btn = document.createElement('button');
+        btn.className = 'primary';
+        btn.textContent = 'Confirmar alta';
+        btn.addEventListener('click', () => {
+          confirmarAccion(
+            datos.borrador_id,
+            a.orden,
+            btn,
+            null,
+            false,
+            idsAlta(datos.borrador_id),
+          );
+        });
+        li.appendChild(btn);
+      }
       if (nombre === 'crear_tarea_recordatorio' && datos.borrador_id) {
         // El texto que va a leer la persona y el momento se autorizan aquí,
         // no se heredan de una suposición del dictado.
@@ -873,10 +898,81 @@
     $('json').textContent = JSON.stringify(datos, null, 2);
   }
 
+  const altaSel = {};
+
+  function idsAlta(borradorId) {
+    const mapa = altaSel[borradorId] || {};
+    return Object.keys(mapa).filter((id) => mapa[id]);
+  }
+
+  async function cargarPaqueteAlta(borradorId, cont) {
+    cont.innerHTML = '';
+    try {
+      const datos = await pedir('/api/v1/cerebro/alta/media?limite=20');
+      const lista = document.createElement('div');
+      lista.className = 'sub';
+      (datos.media || []).forEach((m) => {
+        const fila = document.createElement('label');
+        fila.className = 'sub';
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.value = m.id;
+        chk.checked = Boolean((altaSel[borradorId] || {})[m.id]);
+        chk.addEventListener('change', () => {
+          altaSel[borradorId] = altaSel[borradorId] || {};
+          altaSel[borradorId][m.id] = chk.checked;
+        });
+        const texto = ` ${m.tipo || ''} - ${m.nombre_original || m.storage_path} (${m.cliente || 'sin cliente'})`;
+        fila.append(chk, document.createTextNode(texto));
+        lista.appendChild(fila);
+      });
+      cont.appendChild(lista);
+      const ver = document.createElement('button');
+      ver.className = 'primary';
+      ver.textContent = 'Ver plan del alta';
+      ver.addEventListener('click', () => verPlanAlta(borradorId, cont));
+      cont.appendChild(ver);
+    } catch (e) {
+      mostrarError(e.message);
+    }
+  }
+
+  async function verPlanAlta(borradorId, cont) {
+    try {
+      const datos = await pedir('/api/v1/cerebro/alta/paquete', {
+        method: 'POST',
+        headers: cabeceras({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          borrador_id: borradorId,
+          media_ids: idsAlta(borradorId),
+        }),
+      });
+      const caja = document.createElement('div');
+      caja.className = 'sub';
+      const c = datos.cliente || {};
+      const titulo = document.createElement('b');
+      titulo.textContent = `Alta: ${c.nombre || ''} - carpeta ${datos.carpeta || ''}`;
+      caja.appendChild(titulo);
+      (datos.archivos || []).forEach((a) => {
+        const p = document.createElement('div');
+        p.textContent = `${a.bucket}: ${a.origen} -> ${a.destino}`;
+        caja.appendChild(p);
+      });
+      if (!(datos.archivos || []).length) {
+        const p = document.createElement('div');
+        p.textContent = 'Sin archivos seleccionados; el alta crea solo la carpeta.';
+        caja.appendChild(p);
+      }
+      cont.appendChild(caja);
+    } catch (e) {
+      mostrarError(e.message);
+    }
+  }
+
   // ------------------------------------------------------------------
   // Confirmar una acción conectada
   // ------------------------------------------------------------------
-  async function confirmarAccion(borradorId, orden, boton, mensajeFinal, enviarAhora) {
+  async function confirmarAccion(borradorId, orden, boton, mensajeFinal, enviarAhora, archivos) {
     limpiarAvisos();
     ocupado(boton, true);
     try {
@@ -884,16 +980,21 @@
       if (mensajeFinal && String(mensajeFinal).trim()) {
         cuerpo.mensaje_final = String(mensajeFinal).trim();
       }
+      if (Array.isArray(archivos) && archivos.length) {
+        cuerpo.archivos = archivos;
+      }
       const datos = await pedir(`/api/v1/cerebro/borradores/${borradorId}/confirmar`, {
         method: 'POST',
         headers: cabeceras({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(cuerpo),
       });
       const etiqueta = datos.repetido
-        ? 'Ya estaba programado'
-        : (datos.estado_borrador === 'EJECUTADO'
-            ? 'Programado'
-            : 'Programado · quedan preguntas');
+        ? 'Ya estaba ejecutado'
+        : (datos.datos && datos.datos.nombre && datos.datos.carpeta
+            ? 'Alta ejecutada'
+            : (datos.estado_borrador === 'EJECUTADO'
+                ? 'Programado'
+                : 'Programado - quedan preguntas'));
       boton.textContent = etiqueta;
       boton.disabled = true;
       const nota = document.createElement('span');

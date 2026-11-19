@@ -117,6 +117,11 @@ def parsear_respuesta(payload: dict[str, Any], modelo: str) -> ResultadoSTT:
     )
 
 
+def _limpiar_clave(valor: Any) -> str:
+    """Quita el espacio que suele quedar despues del ``=`` en el .env."""
+    return str(valor or "").strip().strip('"').strip("'").strip()
+
+
 class GroqSTT:
     """Proveedor Groq/Whisper. No inventa texto si falla."""
 
@@ -130,7 +135,7 @@ class GroqSTT:
         timeout: float | None = None,
         http_client: Any = None,
     ) -> None:
-        self.api_key = api_key
+        self.api_key = _limpiar_clave(api_key)
         self.modelo = modelo or MODELO_POR_DEFECTO
         self.timeout = timeout if timeout is not None else TIMEOUT
         self._http = http_client
@@ -198,3 +203,73 @@ class GroqSTT:
                 error="GROQ_JSON_INVALIDO",
             )
         return parsear_respuesta(payload, self.modelo)
+
+
+# Errores donde tiene sentido probar la siguiente clave: credencial invalida,
+# limite de uso o red caida. Un 400/413/415 es del audio y se repite igual.
+_REINTENTABLES = ("GROQ_HTTP_401", "GROQ_HTTP_403", "GROQ_HTTP_429", "GROQ_RED")
+
+
+class GroqCascada:
+    """Prueba varias claves de Groq en orden hasta que una responda.
+
+    Existe porque el operador puede dejar una clave principal y una de respaldo
+    (``GROQ_API_KEY`` y ``GROQ_API_KEY2``). Solo se pasa a la siguiente cuando
+    el fallo es de credencial, cuota o red; si el audio es invalido se devuelve
+    el error sin gastar las demas claves.
+    """
+
+    nombre = "groq"
+
+    def __init__(
+        self,
+        api_keys: list[str],
+        *,
+        modelo: str | None = None,
+        timeout: float | None = None,
+        http_client: Any = None,
+    ) -> None:
+        claves = [c for c in (_limpiar_clave(k) for k in api_keys) if c]
+        # Sin duplicados, conservando el orden de prioridad.
+        vistas: set[str] = set()
+        self.api_keys = [c for c in claves if not (c in vistas or vistas.add(c))]
+        self.modelo = modelo or MODELO_POR_DEFECTO
+        self.timeout = timeout
+        self._http = http_client
+
+    def __repr__(self) -> str:  # sin exponer las claves
+        return f"GroqCascada(claves={len(self.api_keys)}, modelo={self.modelo!r})"
+
+    async def transcribir(
+        self, datos: bytes, mime: str, *, idioma: str = "es-EC"
+    ) -> ResultadoSTT:
+        if not self.api_keys:
+            return ResultadoSTT(
+                estado="DEGRADADO_SIN_CREDENCIAL",
+                proveedor=self.nombre,
+                modelo=self.modelo,
+                error="GROQ_API_KEY no configurada",
+            )
+        errores: list[str] = []
+        for indice, clave in enumerate(self.api_keys, start=1):
+            proveedor = GroqSTT(
+                api_key=clave,
+                modelo=self.modelo,
+                timeout=self.timeout,
+                http_client=self._http,
+            )
+            resultado = await proveedor.transcribir(datos, mime, idioma=idioma)
+            if resultado.estado == "COMPLETADO":
+                return resultado
+            error = resultado.error or ""
+            if not any(marca in error for marca in _REINTENTABLES):
+                return resultado
+            errores.append(f"clave {indice}: {error}")
+            if indice < len(self.api_keys):
+                continue
+        return ResultadoSTT(
+            estado="FALLIDO",
+            proveedor=self.nombre,
+            modelo=self.modelo,
+            error="GROQ_TODAS_LAS_CLAVES_FALLARON: " + " | ".join(errores),
+        )

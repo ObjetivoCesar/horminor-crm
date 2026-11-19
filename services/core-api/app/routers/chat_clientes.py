@@ -939,6 +939,42 @@ async def marcar_leido(
     }
 
 
+@router.get("/chat/resumen")
+async def resumen_chat(request: Request) -> dict[str, Any]:
+    """Totales de mensajes sin leer para los avisos de la cabecera."""
+    await exigir_modulo(request, "clientes_cartera")
+    pool = _pool(request)
+    filas = await pool.fetch(
+        """
+        SELECT v.cliente_id::text      AS cliente_id,
+               v.conversacion_id::text AS conversacion_id,
+               c.nombre,
+               v.no_leidos,
+               v.ultimo_mensaje_at,
+               v.ultimo_mensaje_preview
+          FROM v_chat_conversacion v
+          JOIN clients c ON c.id = v.cliente_id
+         WHERE v.no_leidos > 0
+         ORDER BY v.ultimo_mensaje_at DESC NULLS LAST
+        """
+    )
+    conversaciones = [
+        {
+            "cliente_id": fila["cliente_id"],
+            "conversacion_id": fila["conversacion_id"],
+            "nombre": fila["nombre"],
+            "no_leidos": int(fila["no_leidos"] or 0),
+            "ultimo_mensaje_at": fila["ultimo_mensaje_at"],
+            "preview": fila["ultimo_mensaje_preview"],
+        }
+        for fila in filas
+    ]
+    return {
+        "total": sum(item["no_leidos"] for item in conversaciones),
+        "conversaciones": conversaciones,
+    }
+
+
 @router.get("/chat/buscar")
 async def buscar_mensajes(
     request: Request,

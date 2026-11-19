@@ -22,6 +22,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Body, Header, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from .. import tiempo
 from ..agenda import (
     PostgresAgendaStore,
     conflicto_mixer,
@@ -604,7 +605,7 @@ async def listar_agenda(
     hasta: date | None = Query(default=None),
 ):
     await exigir_modulo(request, "agenda_despachos")
-    hoy = date.today()
+    hoy = tiempo.hoy()
     desde = desde or hoy
     hasta = hasta or (hoy + timedelta(days=14))
     if hasta < desde:

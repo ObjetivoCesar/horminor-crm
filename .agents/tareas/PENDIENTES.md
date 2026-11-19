@@ -63,9 +63,9 @@
 |---|---|---|---|
 | W1 | Recibir media entrante completa — ✅ **hecho 2026-11-18** | webhook del espejo | Un audio, una imagen y un video enviados desde el número autorizado quedan en `chat_mensajes.adjuntos` con su `whatsapp_media`, `mimetype`, tamaño y nombre; ninguno se pierde |
 | W2 | Descarga real desde Evolution — ✅ **hecho 2026-11-18** | W1 | El espejo obtiene el binario (`base64`/`media` de Evolution) con timeout y reintento; un fallo se marca `pendiente_descarga` y **no** bloquea el texto |
-| W3 | Carpeta independiente por cliente en Bunny | W2, credenciales Bunny | Ruta `clientes/<cliente_id>/<canal>/<aaaa-mm>/<mensaje_id>.<ext>`; dos clientes distintos nunca comparten prefijo; el prefijo se verifica con una subida real |
-| W4 | Enlazar la media al expediente | W3 | El Chat muestra la imagen/audio/video desde la URL de Bunny y `v_chat_conversacion` devuelve la URL; el archivo se abre desde la carpeta del cliente |
-| W5 | Multimedia saliente desde el CRM | W3 | Adjuntar desde el Chat sube a la carpeta del cliente y envía por Evolution con `whatsapp_msg_id` conciliado, sin duplicar |
+| W3 | Carpeta independiente por cliente en Bunny - ok. **hecho 2026-11-18** | W2, credenciales Bunny | Ruta `clientes/<cliente_id>/<canal>/<aaaa-mm>/<mensaje_id>.<ext>`; dos clientes distintos nunca comparten prefijo; el prefijo se verifica con una subida real |
+| W4 | Enlazar la media al expediente - ok. **hecho 2026-11-18** | W3 | El Chat muestra la imagen/audio/video desde la URL de Bunny y `v_chat_conversacion` devuelve la URL; el archivo se abre desde la carpeta del cliente |
+| W5 | Multimedia saliente desde el CRM - ok. **hecho 2026-11-18** | W3 | Adjuntar desde el Chat sube a la carpeta del cliente y envía por Evolution con `whatsapp_msg_id` conciliado, sin duplicar |
 | W6 | Cuota, formatos y retención | W3 | Límite por archivo y por cliente definido; formatos aceptados documentados; política de borrado/retención escrita antes de producción |
 
 Criterio de cierre de la sección: con el número autorizado, enviar audio,
@@ -100,3 +100,72 @@ Siguen abiertas:
 
 Mientras no haya respuesta, el sistema deja el campo `NULL` y lo marca
 `PENDIENTE`. No se rellena con un valor “razonable”.
+
+## 8. Correo y avisos de cabecera
+
+| # | Tarea | Depende de | Criterio de cierre |
+|---|---|---|---|
+| G1 | Conectar Gmail al CRM | credenciales OAuth de Julio | El icono de Gmail de la cabecera muestra el total de correos sin leer y abre la bandeja del cliente |
+| G2 | Responder/citar mensajes de WhatsApp como en WhatsApp | - | Citar un mensaje desde el Chat, guardar `quoted_msg_id` y verlo en el telefono del cliente |
+| G3 | Aviso sonoro o de escritorio al entrar un mensaje | G1/G2 | Con el panel abierto en otra pestana, entra un WhatsApp y se avisa sin recargar |
+| G4 | Dictado por audio desde Gato | puente actual (texto) | Gato recibe una nota de voz, la transcribe y devuelve el borrador del Cerebro sin salir del chat |
+| G5 | Confirmar y ejecutar desde Gato | G4 | Un "sí, confirma el encargo 1" en Gato ejecuta lo que el Cerebro ya tiene aprobado, con registro y sin doble ejecución |
+
+## 9. Momento cero (Miau)
+
+| # | Tarea | Estado |
+|---|---|---|
+| M1 | Ejecutor crear_cliente con ratificacion y auditoria | hecho 2026-11-18 |
+| M2 | Carpeta del cliente (CRM + Bunny) como paso del alta | hecho 2026-11-18 |
+| M3 | Manos en Bunny: listar, mover, renombrar y borrar con vista previa y enlaces de respaldo | hecho 2026-11-18 (sin auditoria persistente aun) |
+| M4 | Lectores de contacto, ubicacion, cedula/RUC, reenviados y capturas | pendiente |
+| M5 | Mover la multimedia al confirmar el alta | hecho 2026-11-18 (motor; falta enganchar el origen de archivos al borrador) |
+
+| M6 | Paquete de archivos al borrador (vista previa y confirmacion) | hecho 2026-11-18 (API + boton en el laboratorio) |
+| L1 | Migracion leads + lead_eventos + lead_reglas_caida | **hecho 2026-11-19** (096) |
+| L2 | Reglas de caida por intencion (rechazo, competencia, precio, aplazamiento, silencio) | **hecho 2026-11-19**; reglas en `lead_reglas_caida` |
+| L3 | Parametros de recontacto en system_settings (leads.recontacto_dias, leads.max_intentos) | creados en `NULL`; esperando a Julio |
+
+## 10. Gato publico y agendamiento
+
+| # | Tarea | Estado |
+|---|---|---|
+| P1 | Independizar el agendamiento: `citas` propia, sin tocar `dispatch_schedule` | **hecho 2026-11-19** (`docs/AGENDAMIENTO.md`) |
+| P2 | Gato publico: revisar la skill antes de implementar | skill `.agents/skills/gato-publico/SKILL.md`; implementacion 2026-11-19 |
+| P3 | Audio por Gato: reutilizar el componente de voz (`app/voz`), no duplicarlo | **hecho 2026-11-19** (`POST /api/v1/asistente/audio`) |
+
+## 11. Acceso, correo y deuda
+
+| # | Tarea | Estado |
+|---|---|---|
+| B1 | Login propio del CRM (hoy solo basic auth de Caddy) | pendiente |
+| B2 | Actualizar Evolution / contenedor propio (el silencio de sesion se repite) | pendiente para la entrega |
+| B3 | Backups programados y prueba de restauracion | pendiente |
+| B4 | Decidir versionado del arbol del VPS | pendiente |
+| B5 | Correr la suite completa en el VPS | pendiente |
+| C1 | Responder/citar mensajes como WhatsApp | pendiente |
+| C2 | Aviso sonoro o de escritorio | pendiente |
+| C3 | Conectar Gmail | pendiente |
+| C4 | Cuota y retencion de multimedia (W6) | pendiente |
+| D1 | Limpiar documentos que contradigan el plan | pendiente |
+| D2 | Normalizar encoding de ESTADO y BITACORA | pendiente |
+| D3 | Probar restauracion de un backup | pendiente |
+| E1-E4 | Decisiones de negocio (leads, precios, merma) | esperando a Julio |
+
+| B6 | Vigilante de WhatsApp (cron + reinicio + estado) | hecho 2026-11-18 |
+| B7 | Configurar canal de alerta del vigilante (Telegram o correo) | pendiente |
+
+## 12. Núcleo comercial (H1)
+
+| # | Tarea | Estado |
+|---|---|---|
+| N1 | Migración 096: `leads`, `lead_eventos`, `lead_reglas_caida`, `citas` | hecho 2026-11-19 |
+| N2 | `app/tiempo.py` (fecha de Ecuador en una sola fuente) | hecho 2026-11-19 |
+| N3 | API `/api/v1/comercial/*` (leads, respuesta, citas, disponibilidad) | hecho 2026-11-19 |
+| N4 | UI de leads y citas en Secretaria (lista + alta + confirmar/cancelar) | hecho 2026-11-19 (basica) |
+| N5 | Conectar los tres origenes (WhatsApp, Gato, panel) al mismo modulo: panel, Gato y WhatsApp | **hecho 2026-11-19** |
+| N6 | Borrado de leads: no hay endpoint de baja fisica; se usa baja logica por estado (`CAIDO`/`CONVERTIDO`). La cascada `lead_eventos ON DELETE CASCADE` queda documentada como deuda | **hecho como regla 2026-11-19** |
+| N7 | Claves Groq en el `.env` del VPS y cascada principal/respaldo | hecho |
+| N8 | Conectar WhatsApp (Gato publico) al modulo comercial: `ComercialWhatsApp` + parser compartido | **hecho 2026-11-19** |
+| N9 | Auditoria de citas (`cita_eventos`) y maquina de estados | **hecho 2026-11-19** |
+| N10 | Desplegar migraciones 096-097 y el cierre H1 en el VPS | pendiente |

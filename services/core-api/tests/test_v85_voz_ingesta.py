@@ -53,7 +53,7 @@ def test_sin_proveedor_no_inventa_texto() -> None:
     assert resultado.estado == "DEGRADADO_SIN_CREDENCIAL"
     assert resultado.texto_crudo is None
     assert resultado.segmentos == []
-    assert "STT_API_KEY" in (resultado.error or "")
+    assert "GROQ_API_KEY" in (resultado.error or "")
 
 
 def test_adaptador_pendiente_falla_explicito() -> None:

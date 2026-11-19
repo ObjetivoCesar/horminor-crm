@@ -34,17 +34,29 @@ La carpeta raíz es `clientes/` y cada cliente tiene **una carpeta estable**:
 
 ```text
 clientes/<nombre_cliente>_<cedula>/
-    2026-11-11_imagen_9f3a1c2b.webp
-    2026-11-11_video_44d0ab71.mp4
-    2026-11-11_audio_1c9e77aa.webm
-    2026-11-11_documento_77b2e901.pdf
+    media/          imagenes, videos y audios
+    documentos/     PDF, Word, Excel, CSV
+    _momento_cero.json
 ```
+
+**Dos carpetas, no una por tipo (2026-11-18).** Bunny es almacenamiento, no la
+base de datos: el CRM ya sabe si algo es imagen, video, audio o documento
+(`media_assets.tipo`, `mime`, etiquetas). Solo se separa lo **visual/audio** de
+lo **documental** para que la secretaria encuentre rapido. Los archivos que ya
+existen conservan su ruta plana y siguen funcionando; los nuevos van a su
+bucket.
+
+**Subcarpetas por tipo de archivo (2026-11-18):** cada cliente tiene las mismas
+carpetas, para que la secretaria encuentre rapido. Los archivos que ya existen
+conservan su ruta plana (`clientes/<carpeta>/2026-..._imagen.webp`) y siguen
+funcionando: el enlace vive en `media_assets.storage_path`, no en la carpeta.
+Los archivos nuevos se guardan en la subcarpeta que corresponde a su tipo.
 
 - **Nombre + cédula** evita homónimos, como pediste.
 - Si la cédula no está cargada, se usa el **RUC**; si tampoco existe, el
   **id del cliente**. Nunca se inventa un documento.
 - El nombre se normaliza a minúsculas y sin tildes (`ing_reyes_velez_1712345678`).
-- **No hay subcarpetas por obra o viaje**: eso serían etiquetas, y las etiquetas
+- **No hay subcarpetas por obra o viaje** (solo por tipo de archivo): eso serían etiquetas, y las etiquetas
   van en la base. Una carpeta que cambia de nombre cuando corriges la razón
   social rompe enlaces; el id no cambia.
 
@@ -60,6 +72,36 @@ etiquetas en `media_assets.etiquetas`:
 Así una foto puede pertenecer al chat, a la obra y al viaje sin duplicar el
 archivo ni moverlo de carpeta. Si más adelante quieres ver “solo fotos de la
 obra de Loreto”, se filtra por etiqueta, no se navega otra carpeta.
+
+### 2.3 Qué vive en la base y qué en Bunny (mapa para el Cerebro)
+
+**La base de datos es la verdad; Bunny es solo el almacén de bytes.** El
+Cerebro nunca lista Bunny para responder una consulta: busca en la base y
+resuelve la URL.
+
+| Qué | Dónde vive | Cómo se resuelve |
+|---|---|---|
+| Cliente y su carpeta | `clients` | `media_svc.carpeta_cliente(nombre, cedula, ruc, id)` |
+| Archivo y su tipo | `media_assets` (`tipo`, `mime_final`, `bytes`, `etiquetas`) | por `cliente_id`, `tipo` o etiqueta |
+| Ruta real del archivo | `media_assets.storage_path` | se abre con `cdn_url` o se firma |
+| Conversación y mensaje | `chat_mensajes`, `chat_conversaciones` | el adjunto guarda `media_id` |
+| Imagen, video y audio | Bunny `clientes/<carpeta>/media/` | `storage_path` + `cdn_url` |
+| PDF, Word, Excel, CSV | Bunny `clientes/<carpeta>/documentos/` | `storage_path` + `cdn_url` |
+| Cotizaciones y facturas generadas | `documentos/` (son documentos) | `media_assets` |
+| Manifiesto del alta | `_momento_cero.json` en la raíz de la carpeta | solo auditoría |
+| Leads, tareas, auditoría | PostgreSQL | no tocan Bunny |
+
+**Reglas de coherencia:**
+
+1. Mover un archivo **siempre** actualiza `storage_path` y `cdn_url` en la misma
+   operación (lo hace `mover_a_cliente`). Si no se actualiza, el chat se rompe.
+2. El tipo fino (imagen, video, audio, documento) **no** se replica en carpetas:
+   vive en `media_assets`. Bunny solo separa `media/` de `documentos/`.
+3. Para agregar un tipo nuevo: se clasifica en `_EXT_MEDIA` o queda en
+   `documentos/`; **no** se crea otra carpeta.
+4. El Cerebro consulta la base y usa `storage_path` para pedir el binario; si
+   necesita listar (por ejemplo para una limpieza), usa las manos de Bunny con
+   vista previa.
 
 ### 2.3 Evidencia forense del viaje
 

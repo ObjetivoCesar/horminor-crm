@@ -26,6 +26,8 @@ _TIPOS_MEDIA: dict[str, tuple[str, str, str]] = {
     # clave whatsapp: (tipo media, mime por defecto, texto de respaldo)
     "imageMessage": ("IMAGEN", "image/jpeg", "[imagen]"),
     "videoMessage": ("VIDEO", "video/mp4", "[video]"),
+    # Nota de video (PTV): WhatsApp la manda como ptvMessage, no como videoMessage.
+    "ptvMessage": ("VIDEO", "video/mp4", "[nota de video]"),
     "audioMessage": ("AUDIO", "audio/ogg", "[audio]"),
     "documentMessage": ("DOCUMENTO", "application/octet-stream", "[documento]"),
     "stickerMessage": ("IMAGEN", "image/webp", "[sticker]"),

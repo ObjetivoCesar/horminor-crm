@@ -21,6 +21,7 @@ from app.routers.chat_clientes import _id_cliente, _jsonb, limpiar_cuerpo  # noq
 
 PANEL = RAIZ_SERVICIO / "app" / "web" / "templates" / "panel.html"
 MAIN = RAIZ_SERVICIO / "app" / "main.py"
+ROUTER = RAIZ_SERVICIO / "app" / "routers" / "chat_clientes.py"
 
 
 def _ruta_migracion() -> Path:
@@ -91,3 +92,16 @@ def test_panel_tiene_la_pestana_chat_y_su_compositor() -> None:
     assert "/chat/leido" in html
     assert ".chat-burbuja" in html
     assert "renderChatBadge()" in html
+
+
+def test_resumen_de_sin_leer_para_la_cabecera() -> None:
+    fuente = ROUTER.read_text(encoding="utf-8")
+    assert '@router.get("/chat/resumen")' in fuente
+    assert "v_chat_conversacion" in fuente
+    assert "WHERE v.no_leidos > 0" in fuente
+    html = PANEL.read_text(encoding="utf-8")
+    assert 'id="wa-badge"' in html
+    assert 'id="btn-gmail"' in html
+    assert "async function cargarAlertas(" in html
+    assert "/api/v1/chat/resumen" in html
+    assert "function abrirAlertaWhatsApp(" in html

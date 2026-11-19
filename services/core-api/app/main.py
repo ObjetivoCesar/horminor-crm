@@ -22,6 +22,7 @@ from .m1_whatsapp.router import router as whatsapp_router
 from .m1_whatsapp.runtime import WhatsAppRuntime, construir_runtime
 from .m2_planta import ErrorPlanta
 from .m3_secretaria.router import router as secretaria_router
+from .comercial.router import router as comercial_router
 from .m4_dashboard.router import router as dashboard_router
 from .m5_sentinel.router import router as sentinel_router
 from .routers import (
@@ -152,6 +153,7 @@ app.include_router(health.router)
 app.include_router(catalog.router)
 app.include_router(clients_search.router)
 app.include_router(chat_clientes.router)
+app.include_router(comercial_router)
 app.include_router(facturas.router)
 app.include_router(orders.router)
 app.include_router(cotizaciones.router)

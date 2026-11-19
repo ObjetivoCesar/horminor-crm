@@ -47,7 +47,10 @@ class SinProveedor:
     nombre = "NO_CONFIGURADO"
     modelo = "ninguno"
 
-    def __init__(self, motivo: str = "STT_API_KEY no configurada") -> None:
+    def __init__(
+        self,
+        motivo: str = "GROQ_API_KEY no configurada (o integraciones.stt.api_key)",
+    ) -> None:
         self.motivo = motivo
 
     async def transcribir(
@@ -83,29 +86,56 @@ class AdaptadorPendiente:
         )
 
 
+def _claves_groq(cfg: dict[str, Any]) -> list[str]:
+    """Claves de Groq en orden de prioridad, sin vacias ni repetidas.
+
+    1. ``integraciones.stt.api_key`` (panel) y ``api_key2``.
+    2. ``GROQ_API_KEY``, ``GROQ_API_KEY2``, ``GROQ_API_KEY3``... del entorno.
+    3. ``GROQ_API_KEYS`` como lista separada por comas.
+    """
+    crudas: list[Any] = [cfg.get("api_key"), cfg.get("api_key2")]
+    for nombre in (
+        "GROQ_API_KEY",
+        "GROQ_API_KEY2",
+        "GROQ_API_KEY3",
+        "GROQ_API_KEY_2",
+        "GROQ_KEY",
+    ):
+        crudas.append(os.getenv(nombre))
+    crudas.extend((os.getenv("GROQ_API_KEYS") or "").split(","))
+
+    vistas: set[str] = set()
+    claves: list[str] = []
+    for valor in crudas:
+        clave = str(valor or "").strip().strip('"').strip("'").strip()
+        if clave and clave not in vistas:
+            vistas.add(clave)
+            claves.append(clave)
+    return claves
+
+
 async def construir_proveedor(pool: Any, settings: Any) -> ProveedorSTT:
     """Devuelve el proveedor configurado o el camino degradado.
 
-    La configuración vive en ``integraciones.stt``; si no hay, se usa
-    ``GROQ_API_KEY`` del entorno. Si hay clave pero el proveedor no está
-    implementado, se responde FALLIDO con un motivo explícito.
+    La configuración vive en ``integraciones.stt``; si no hay, se usan las
+    claves del entorno (``GROQ_API_KEY`` y su respaldo ``GROQ_API_KEY2``). Si
+    hay claves, se usan en cascada: si la primera falla por credencial, cuota o
+    red, se prueba la siguiente.
     """
     cfg = await setting(pool, "integraciones.stt", {}) or {}
     if not isinstance(cfg, dict):
         cfg = {}
     proveedor = str(cfg.get("proveedor") or "").strip().lower() or None
-    clave = str(cfg.get("api_key") or "").strip() or (
-        os.getenv("GROQ_API_KEY") or ""
-    ).strip()
+    claves = _claves_groq(cfg)
     modelo = (
         str(cfg.get("modelo") or "").strip()
         or os.getenv("GROQ_MODEL")
         or "whisper-large-v3"
     )
-    if not clave:
+    if not claves:
         return SinProveedor()
     if proveedor in (None, "groq"):
-        from .proveedores.groq import GroqSTT
+        from .proveedores.groq import GroqCascada
 
-        return GroqSTT(api_key=clave, modelo=modelo)
+        return GroqCascada(claves, modelo=modelo)
     return AdaptadorPendiente()

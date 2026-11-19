@@ -5,8 +5,9 @@
 > es el documento que permite a Julio, a la secretaría, a administración y a
 > cualquier agente de IA entender el sistema sin preguntarle al programador.
 >
-> **Estado:** v1 — 2026-11-15. Cubre el **Cerebro** y su relación con el CRM, las
-> tareas, secretaría, WhatsApp y los módulos ejecutores.
+> **Estado:** v2.6 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
+> las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas) y los
+> módulos ejecutores.
 >
 > **Regla de oro:** acá solo se documenta lo que **existe y funciona**. Si una
 > función no está implementada, se dice explícitamente en «Todavía no existe».
@@ -764,7 +765,7 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Para qué existe** | Atender desde el CRM el mismo hilo que ve el cliente, sin mezclar los contactos personales de la cuenta de WhatsApp. |
 | **Quién lo utiliza** | Julio y secretaría. |
 | **Qué lo activa** | El número se registra en la lista blanca (`POST /api/v1/whatsapp/espejo/numeros`). Desde ahí, cada mensaje que llega por el webhook y el botón **Sincronizar** lo copian al hilo. |
-| **Qué sucede después** | Los mensajes quedan en `chat_mensajes` con su identificador de WhatsApp y el estado que entrega Evolution (`ENVIADO` al salir, `PENDIENTE` mientras no haya confirmación, `ENTREGADO` cuando llega). **El hilo se actualiza solo, en segundos**, apenas entra o cambia un mensaje (ver *Chat en vivo*). **Sincronizar solo copia desde que el contacto es cliente o lead**; lo anterior se omite (se cuenta como «omitidos»). Responder desde el Chat sale por Evolution API y el eco del teléfono no se duplica. Retirar el número corta la copia pero conserva el historial. |
+| **Qué sucede después** | Los mensajes quedan en `chat_mensajes` con su identificador de WhatsApp y el estado que entrega Evolution (`ENVIADO` al salir, `PENDIENTE` mientras no haya confirmación, `ENTREGADO` cuando llega). **El hilo se actualiza solo, en segundos**, apenas entra o cambia un mensaje (ver *Chat en vivo*). Las **notas de video** de WhatsApp se copian como video y **los videos entrantes se recomprimen a H.264 720p** antes de subirse a Bunny; si superan el tope de duracion o falla el compresor, se guarda el original y el mensaje no se pierde. **Sincronizar solo copia desde que el contacto es cliente o lead**; lo anterior se omite (se cuenta como «omitidos»). Responder desde el Chat sale por Evolution API y el eco del teléfono no se duplica. Retirar el número corta la copia pero conserva el historial. |
 | **Qué NO significa** | No autoriza al resto de la cuenta: cualquier otro contacto queda fuera y no se guarda. No enciende el bot, el Cerebro conversacional ni respuestas automáticas. No recupera el historial anterior al alta del cliente. |
 | **Ejemplo** | Se autoriza un número de prueba; al abrir su carpeta aparece el hilo con lo que el cliente escribió y lo que se respondió desde el teléfono. Un mensaje de otro contacto no aparece. |
 | **Dónde se encuentra** | Pestaña **Chat** de la Carpeta del Cliente; la API `/api/v1/whatsapp/espejo/`. |
@@ -788,6 +789,105 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Referencia técnica** | v9.8; 2026-11-18. Evidencia `.agents/evidencias/sse_chat_vivo_2026-11-18.txt` (local) y `sse_chat_vivo_vps_2026-11-18.txt` (servidor). |
 
 ---
+
+### Término: Cerebro visible (BETA)
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `data-modulo="cerebro"`, `/panel/cerebro`, `cerebro.enabled` |
+| **Nombre para el usuario** | Cerebro – voz (BETA) |
+| **Qué significa** | El laboratorio del Cerebro queda visible en el menú del panel aunque todavía no entregue producción completa, para probarlo con dictados reales. |
+| **Para qué existe** | Convertir un dictado en un borrador con hechos, acciones y preguntas antes de ejecutar cualquier cosa. |
+| **Quién lo utiliza** | Julio (perfil con el módulo `cerebro` habilitado). |
+| **Qué lo activa** | El módulo `cerebro` en el perfil y el interruptor `cerebro.enabled` en `system_settings`. |
+| **Qué NO significa** | No ejecuta pagos, no crea clientes ni cotizaciones por sí solo y no responde a clientes. Todo queda como borrador hasta la confirmación humana. |
+| **Dónde se encuentra** | Menú lateral, *Cerebro – voz (BETA)*; ruta `/panel/cerebro`. |
+| **Referencia técnica** | 2026-11-18. El servidor se alineó con la versión local y se aplicaron las migraciones 079–092. |
+
+### Término: Puente Gato ↔ Cerebro
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `app/asistente/cerebro_bridge.py`; prefijos `cerebro:` y `dictado:` |
+| **Nombre para el usuario** | Pasar un dictado al Cerebro desde Gato |
+| **Qué significa** | En el chat de Gato, un mensaje que empiece con `cerebro:` o `dictado:` se entrega al Cerebro, que devuelve el resumen de lo entendido y deja un borrador. |
+| **Para qué existe** | Usar una sola interfaz (Gato) para consultar y para dictar, sin abrir el laboratorio a mano. |
+| **Quién lo utiliza** | Julio y perfiles internos con el módulo `cerebro`. |
+| **Qué lo activa** | El prefijo explícito. Sin prefijo, Gato responde como siempre: el puente no secuestra conversaciones normales. |
+| **Qué sucede después** | Gato responde con el resumen, las preguntas pendientes y la ruta `/panel/cerebro` para revisar y confirmar. Nada se ejecuta desde Gato todavía. |
+| **Qué NO significa** | No confirma ni ejecuta acciones, no manda audios y no expone el contexto interno al flujo de clientes. |
+| **Ejemplo** | `cerebro: mañana hay que llamar a Paola para confirmar el pdf y avisar a secretaría.` → dos encargos, las preguntas de número y texto, y el borrador para revisar. |
+| **Referencia técnica** | 2026-11-18. Prueba real en el VPS: Gato devolvió dos encargos y dos preguntas; el Cerebro respondió en 1,5 s. |
+
+### Término: Carpeta del cliente en el alta
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `crear_carpeta_cliente`, `_momento_cero.json` |
+| **Nombre para el usuario** | Carpeta del cliente creada al confirmar el alta |
+| **Qué significa** | Al ratificar el alta de un cliente, Miau deja su carpeta en Bunny con un manifiesto que dice quién la creó y con qué borrador. |
+| **Para qué existe** | Que el momento cero empiece con un lugar único para los archivos del cliente, y que la carpeta se pueda auditar. |
+| **Qué NO significa** | No mueve todavía los archivos; eso es el paso siguiente. Si Bunny falla, el cliente igual queda creado y se avisa. |
+| **Dónde se encuentra** | Bunny: `horminor/clientes/<carpeta>/_momento_cero.json`. |
+| **Referencia técnica** | 2026-11-18, ejecutor `crear_cliente`. |
+
+### Término: Manos de Miau en Bunny
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `POST /api/v1/cerebro/bunny/operacion` |
+| **Nombre para el usuario** | Listar, mover, renombrar o borrar archivos del cliente |
+| **Qué significa** | Miau puede revisar la carpeta del cliente en Bunny y proponer un cambio de archivo. Sin confirmación solo muestra el plan y los enlaces; con `confirmado=true` lo ejecuta. |
+| **Para qué existe** | Prever el contratiempo: si un archivo quedó mal, se corrige desde el CRM o se abren los enlaces para que la secretaría lo haga. |
+| **Qué NO significa** | No borra nada sin confirmación explícita, no sale de la carpeta del cliente y no toca otras zonas del Storage. |
+| **Ejemplo** | Renombrar un audio: primero devuelve origen, destino y enlaces; al confirmar, copia y borra el original. |
+| **Referencia técnica** | 2026-11-18. `BunnyHttpStorageClient.listar/mover/borrar`; prueba real con la carpeta de Paola. |
+
+### Término: Lead
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `leads`, `lead_eventos`, `POST /api/v1/comercial/leads` |
+| **Nombre para el usuario** | Lead · Contacto interesado |
+| **Qué significa** | Un número que ya recibió **al menos una respuesta de la empresa**. Antes de esa respuesta es solo un `CONTACTO`: escribió, pero nadie le contestó. |
+| **Para qué existe** | Separar un contacto de un cliente y no ensuciar la cartera con números que nunca contestaron. |
+| **Quién lo utiliza** | Julio, secretaría y Gato; el canal de WhatsApp lo alimenta. |
+| **Qué lo activa** | Dos hechos distintos: **la empresa responde** (`/respuesta`) hace nacer el `LEAD`; **el lead escribe** (`/mensaje`) aplica las reglas de intención. El texto de la empresa no se interpreta como si fuera del cliente. |
+| **Qué sucede después** | El lead avanza a `CALIFICADO`, `EN_ESPERA`, `HANDOFF`, `CAIDO` o `CONVERTIDO`. Cada cambio deja un evento en `lead_eventos` con su actor. Un teléfono reutiliza el mismo lead. |
+| **Qué NO significa** | No es un cliente: no tiene carpeta ni contrato. No se borra: se marca. Un entrante sin respuesta de la empresa **no** es lead. |
+| **Ejemplo** | Un número pregunta el precio; la secretaría responde → nace el lead. Si después dice «no me interesa», queda `CAIDO(NO_INTERESADO)` con el motivo. |
+| **Dónde se encuentra** | **Secretaría → Leads y citas**; API `/api/v1/comercial/leads`. |
+| **Referencia técnica** | Migración 096; `app/comercial/leads.py`, `whatsapp.py`, `intencion.py`; 2026-11-19. |
+
+### Término: Reactivación de un lead
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `registrar_mensaje` / `registrar_respuesta` → `estado_tras_intencion`; evento `REVIVIDO` |
+| **Nombre para el usuario** | Volvió a escribir · Lead reactivado |
+| **Qué significa** | Un lead que estaba `CAIDO` o `EN_ESPERA` vuelve a `LEAD` cuando el cliente escribe otra vez o cuando la empresa le responde. |
+| **Para qué existe** | Que una caída no sea definitiva: si el cliente retoma el interés, se atiende con su mismo historial. |
+| **Qué lo activa** | Un mensaje nuevo del lead sin una señal de rechazo, o una respuesta de la empresa. La señal de intención manda: un «no me interesa» nuevo vuelve a caer. |
+| **Qué sucede después** | Se limpia el `motivo_caida` anterior y se agrega un evento; el historial no se borra. |
+| **Qué NO significa** | No convierte al lead en cliente ni borra la caída anterior: la deja auditada. |
+| **Ejemplo** | Estaba `CAIDO(PRECIO)`; tres semanas después escribe «¿sigue el precio?» → vuelve a `LEAD`. |
+| **Referencia técnica** | `app/comercial/leads.py`; prueba real `[H1 COMERCIAL: OK]`, 2026-11-19. |
+
+### Término: Cita comercial
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `citas`, `cita_eventos`, `/api/v1/comercial/citas` |
+| **Nombre para el usuario** | Cita · Visita · Reunión · Medición |
+| **Qué significa** | Un compromiso comercial con fecha, hora y duración (visita, reunión o medición). Es distinto de la **entrega de hormigón**, que sigue en la agenda operativa. |
+| **Para qué existe** | Agendar sin mezclar la venta con el despacho, y dejar constancia de quién solicitó, confirmó o canceló. |
+| **Quién lo utiliza** | Julio, secretaría, Gato interno y WhatsApp. |
+| **Qué lo activa** | Se crea `SOLICITADA`. Pasa a `CONFIRMADA`, `REALIZADA`, `CANCELADA` o `REAGENDADA` solo por transiciones permitidas. |
+| **Qué sucede después** | Se rechaza si se solapa con otra cita del **mismo lead o cliente**. Cancelar guarda el motivo en `cita_eventos`. |
+| **Qué NO significa** | Gato público no confirma citas: solo solicita. No reserva capacidad de planta ni valida contra la agenda de entregas. |
+| **Ejemplo** | El cliente pide visita el viernes a las 10:00; queda `SOLICITADA`; la secretaría la confirma y después la marca `REALIZADA`. |
+| **Dónde se encuentra** | **Secretaría → Leads y citas → Citas**; API `/api/v1/comercial/citas`. |
+| **Referencia técnica** | Migraciones 096–097; `app/comercial/citas.py`; 2026-11-19. |
 
 ## 7. Términos de apoyo (consulta rápida)
 
@@ -869,6 +969,19 @@ Gato **responde consultas** de solo lectura y gestiona recordatorios. El Cerebro
 **interpreta dictados**, propone acciones y delega tareas. Comparten datos, no
 funciones.
 
+**¿Cuándo un contacto pasa a ser lead?**
+Cuando la **empresa le responde** al menos una vez. Un mensaje entrante sin
+respuesta se queda como contacto y no entra a la cartera de leads.
+
+**¿Un lead caído puede volver?**
+Sí. Si vuelve a escribir o si la empresa le responde, regresa a `LEAD` con su
+mismo historial; el motivo de la caída anterior queda auditado.
+
+**¿Gato puede confirmar una cita?**
+No. Gato **solicita** la cita (`SOLICITADA`). Confirmar, cancelar o marcar
+realizada lo hace una persona desde Secretaría, salvo la regla que Julio defina
+más adelante.
+
 **¿El router conversacional ya está dentro del CRM?**
 No. Existe solo en el laboratorio interno `:8055`, con la versión `router-1.7`.
 No crea clientes, tareas ni cotizaciones, y no envía nada. `/panel/cerebro`
@@ -917,7 +1030,8 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 - **Gato consultando el Manual Vivo**: registrado como pendiente; no es motivo
   para conectar antes el Cerebro.
 - **Flujo comercial externo de WhatsApp** con permisos limitados y transferencia
-  a un humano: definido en la arquitectura, no implementado.
+  a un humano: el registro del lead y la solicitud de cita ya entran por el
+  módulo; falta el flujo público completo (H5).
 - El Cerebro como **módulo visible**: el laboratorio es de prueba; en producción
   la cara será Gato.
 - **Router conversacional conectado al CRM**: existe solo en el laboratorio; no
@@ -942,19 +1056,21 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 `REQUIERE_ACLARACION` §7 · `RESUELTA` §5 · `router-1.7` §3.5 ·
 `SANDBOX` §6 · `SIN_ACCIONES` §7 ·
 `SUPERADO_POR_CORRECCION` §4 · `TENTATIVO` §4 · `VISTA` §5 ·
-`whatsapp_espejo_numeros` §6 · `BusEventos` / SSE §6.
+`whatsapp_espejo_numeros` §6 · `BusEventos` / SSE §6 ·
+`leads` / `lead_eventos` §6 · `citas` / `cita_eventos` §6 ·
+`ComercialWhatsApp` §6.
 ### Por nombre visible
 
 Aviso dejado §5 · Aclaración respondible §4 · Cancelación de un encargo §4 ·
-**Chat en vivo §6** ·
+**Chat en vivo §6** · **Cita comercial §6** ·
 Cierre con justificación §5 · Compilador §4 · Condición conservada §4 ·
 Confirmación doble §6 · Corrección registrada §4 ·
 Dato sin confirmar §4 · Duda asociada al dato §4 · Elevada al supervisor §5 ·
 Encargo §4 · Encargo sugerido §4 · Ficha de la tarea §5 ·
 Guarda de «el dinero ya entró» §6 ·
-Gato §6 · Hecho citado §4 · Ingreso sin confirmar §4 ·
+Gato §6 · Hecho citado §4 · Ingreso sin confirmar §4 · **Lead §6** ·
 Mensaje autorizado del recordatorio §4 · Prioridad y plazo §5 ·
-Recepción confirmada §5 · Recordatorio programado §6 · Resultado registrado §5 ·
+Recepción confirmada §5 · Recordatorio programado §6 · **Reactivación de un lead §6** · Resultado registrado §5 ·
 Retención de audio §6 · Router conversacional §4 · Tarea consultada §5 ·
 Trabajo realizado §5 · Espejo de WhatsApp autorizado §6.
 
@@ -962,16 +1078,16 @@ Trabajo realizado §5 · Espejo de WhatsApp autorizado §6.
 
 «acuse» → Recepción confirmada §5 · «asistente» → Router conversacional §4 ·
 «asunto» → Encargo §4 ·
-«avisada» → Aviso dejado §5 · «cita» → Hecho citado §4 ·
+«avisada» → Aviso dejado §5 · «cita» → Hecho citado §4 · «cita comercial» → Cita comercial §6 · «contacto» → Lead §6 ·
 «condición» → Condición conservada §4 · «corregir» → Corrección registrada §4 ·
 «creo» → Duda asociada al dato §4 ·
 «duda» → Dato sin confirmar §4 · «escalar» → Elevada al supervisor §5 ·
-«expediente» → Condición conservada §4 · «marcar hecho» → Trabajo realizado §5 ·
+«expediente» → Condición conservada §4 · «lead» → Lead §6 · «marcar hecho» → Trabajo realizado §5 ·
 «me parece» → Duda asociada al dato §4 ·
 «no ha pagado» → Ingreso sin confirmar §4 · «plazo» → Condición conservada §4 ·
-«pregunta» → Aclaración respondible §4 ·
+«pregunta» → Aclaración respondible §4 · «reactivar» → Reactivación de un lead §6 ·
 «registrar» → Resultado registrado §5 · «responsable» → Encargo sugerido §4 ·
-«revisada» → Tarea consultada §5 ·
+«revisada» → Tarea consultada §5 · «volvió a escribir» → Reactivación de un lead §6 ·
 «sin ordinales» → Encargo §4 · «tres cosas» → Encargo §4 ·
 «vencida» → Prioridad y plazo §5.
 
@@ -1009,3 +1125,7 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.0 | 2026-11-18 | Espejo: la sincronización copia **solo desde el alta del cliente** (§6); identidad de chats `@lid` aprendida del historial; chat de la carpeta con altura fija y scroll interno. |
 | v2.1 | 2026-11-18 | **Chat en vivo** (§6): el hilo se actualiza solo en segundos con aviso SSE; se descargan y muestran imagen, audio, video y documento entrantes. |
 | v2.2 | 2026-11-18 | **Chat en vivo desplegado en el servidor**: mismo comportamiento en local y en `horminor.178.238.238.158.sslip.io`; Caddy entrega el aviso sin acumularlo. |
+| v2.3 | 2026-11-18 | Espejo (seccion 6): las **notas de video** (PTV) se copian al hilo y los videos entrantes se recomprimen antes de subirse a Bunny. |
+| v2.4 | 2026-11-18 | Cerebro visible (BETA) y puente Gato↔Cerebro con prefijo explícito (sección 6); VPS alineado con la versión local. |
+| v2.5 | 2026-11-18 | Momento cero: carpeta del cliente al ratificar el alta y manos de Miau en Bunny con vista previa y enlaces. |
+| v2.6 | 2026-11-19 | Núcleo comercial (H1): **Lead**, **Reactivación de un lead** y **Cita comercial** (§6); dos hechos separados (la empresa responde / el lead escribe), origen fijado por el servidor y citas con estados y auditoría. |

@@ -273,7 +273,16 @@ def _where_filtros(
 
 
 def _orden_sql(orden: str) -> str:
-    orden = (orden or "DEUDA").upper()
+    orden = (orden or "MENSAJES").upper()
+    if orden == "MENSAJES":
+        # Lo que la secretaria necesita ver primero: el ultimo mensaje que
+        # escribio el cliente (entrante), sin importar la deuda.
+        return (
+            "(SELECT max(m.created_at) FROM chat_mensajes m "
+            "JOIN chat_conversaciones cv ON cv.id = m.conversacion_id "
+            "WHERE cv.cliente_id = c.id AND m.direccion = 'ENTRANTE') "
+            "DESC NULLS LAST, c.nombre"
+        )
     if orden == "ACTIVIDAD":
         return f"({_ULTIMA_ACTIVIDAD}) DESC NULLS LAST, c.nombre"
     if orden == "VOLUMEN":

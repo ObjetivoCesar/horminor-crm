@@ -120,6 +120,69 @@ no con frentes individuales:
 
 ---
 
+## 2.4 Decisión 2026-11-18: Cerebro visible y conexión con Gato
+
+> **Pedido explícito de Julio.** Cambia dos reglas anteriores de este documento
+> (2.1 y el invariante 8). Se registra aquí el porqué y el alcance.
+
+- **Cerebro visible.** Se deja visible en el panel aunque todavía no entregue
+  producción completa, para probarlo con casos reales. Sigue marcado **BETA**.
+- **Conectar Cerebro con Gato.** Gato será la única interfaz conversacional.
+  La conexión es **controlada**: solo perfiles internos con el módulo `cerebro`
+  habilitado, sin exponer el contexto interno al flujo comercial externo.
+- **Qué NO cambia.** El Cerebro no ejecuta dinero, no escribe negocio sin
+  confirmación humana y no reemplaza las herramientas de Gato. El flujo externo
+  de clientes sigue sin acceso.
+- **Requisito de entorno.** El VPS corre un linaje anterior sin `app/cerebro`,
+  sin `app/voz` y sin las migraciones 079–092. Para verlo en producción hay que
+  alinear el servidor con la versión local, en una ventana con respaldo.
+
+## 2.5 Modelo Gato / Miau (2026-11-18, iteración de Julio)
+
+> Nombres definitivos: **Gato** es la cara pública en WhatsApp; **Miau** es el
+> Cerebro interno. El asistente del panel se llamaba "Gato" por historia; debe
+> renombrarse a **Miau**.
+
+| Pieza | Quién le habla | Qué sabe | Qué NO hace |
+|---|---|---|---|
+| **Gato** (público) | Clientes por WhatsApp | Empresa, productos, precios oficiales, horarios, agenda disponible | No ve contexto interno, cartera, tareas ni memoria del Cerebro |
+| **Miau** (Cerebro interno) | Julio, secretaría, planta | Todo lo de la empresa según permisos; aprende cómo habla Julio; organiza tareas; análisis financiero (futuro) | No conversa con clientes ni envía mensajes comerciales |
+| **Agendamiento** (componente compartido) | Miau, Julio, secretaría y Gato (cliente) | Disponibilidad, citas, entregas y avisos | No decide precios ni crédito |
+
+### El momento cero (Julio como input del cliente)
+
+1. Julio envía audios, videos y documentos y pide: "registra esto en el cliente X".
+2. Miau interpreta, separa los archivos y propone un **paquete de alta**:
+   cliente en el CRM, carpeta del cliente, carpeta en Bunny y clasificación de
+   cada archivo.
+3. **El pasito:** Julio ratifica el paquete. Sin ratificación no se escribe nada.
+4. Al confirmar, Miau ejecuta: crea/reutiliza el cliente, crea la carpeta en
+   Bunny, mueve la multimedia y deja la auditoría en `cerebro_ejecuciones`.
+
+### Manos y contingencias
+
+- Miau debe poder **mover, renombrar y retirar** archivos de Bunny, siempre con
+  vista previa (dry-run), confirmación humana y registro.
+- Si una operación falla o es riesgosa, Miau **abre los enlaces** exactos para
+  que la secretaría lo haga a mano. Prever el contratiempo es parte del diseño.
+- Toda corrección se agrega; nunca se reescribe el historial.
+
+### Fronteras que no se cruzan
+
+- Gato no recibe el contexto interno; Miau no atiende clientes.
+- El aviso al cliente sale por Gato, aunque el agendamiento lo haya creado Miau.
+- La separación es por permisos, herramientas y fuentes, no por prompt.
+
+### Brecha actual (verificada en código)
+
+- `dispatch_schedule` agenda **entregas/mixers**, no citas comerciales: el
+  agendamiento de citas es nuevo.
+- `crear_cliente` y `crear_cotizacion_borrador` compilan, pero su ejecución
+  responde **501**: falta el ejecutor.
+- El cliente de Bunny solo tiene `subir`; no hay listar, mover, renombrar ni
+  borrar.
+- El flujo público de WhatsApp (Gato) no existe.
+
 ## 3. Qué está implementado y qué es arquitectura futura
 
 | Tema | Implementado hoy | Arquitectura futura |
@@ -231,8 +294,11 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 4. Ninguna corrección reescribe el pasado: se agrega.
 5. Ninguna tarea se duplica por reintento o mensaje repetido.
 6. Un dictado revocado no genera trabajo para nadie.
-7. **El Cerebro no es visible para el usuario final.** El laboratorio es de prueba.
-8. **No conectar Gato con el Cerebro** ni duplicar las herramientas de Gato hasta que se decida.
+7. **El Cerebro se ve como laboratorio BETA.** Desde el 2026-11-18 Julio pidió
+   dejarlo visible en el panel; sigue marcado BETA y no ejecuta producción.
+8. **Gato puede invocar al Cerebro solo de forma explícita y controlada.**
+   Desde el 2026-11-18 existe un puente con prefijo (`cerebro:`, `dictado:`);
+   no duplica herramientas de Gato y exige el módulo `cerebro`.
 9. **El flujo externo no accede al contexto interno**, y la separación es por permisos y herramientas, no por prompt.
 10. Si el sistema no sabe, pregunta. Si no puede, lo dice.
 
@@ -264,3 +330,6 @@ skill (`docker-compose.yml`). Los cambios de `app/` requieren
 | v1.4 | 2026-11-16 | Cierre de la fase del router conversacional (`router-1.7`, laboratorio): estado, límites, correcciones, backlog de Jev y siguiente paso (defecto de producción y audio real). 620 + 21 pruebas en verde. |
 | v1.5 | 2026-11-16 | Corrección de `dictado_revocado`: expresiones completas y revocación por encargo. Audio de Díaz Sur verificado (2 encargos, 1 acción, preguntas pendientes). 623 pruebas. |
 | v1.6 | 2026-11-16 | Cierre aceptado del Cerebro experimental (commit `c43c5c7`). Limitaciones del motor antiguo documentadas: cliente no pedido, nombres confundidos y encargos no separados. El siguiente trabajo es el resto del ERP. |
+| v1.7 | 2026-11-18 | Decision de Julio: Cerebro visible en el panel (BETA) y conexion controlada con Gato. Se documenta que el VPS aun no tiene el modulo y que la alineacion del servidor es requisito previo. |
+| v1.8 | 2026-11-18 | VPS alineado con la version local (migraciones 079-092). Cerebro visible como BETA para Julio y puente controlado Gato -> Cerebro con prefijo explicito. |
+| v1.9 | 2026-11-18 | Modelo Gato/Miau: Gato duena del WhatsApp publico, Miau cerebro interno; agendamiento compartido; momento cero con ratificacion; manos en Bunny con contingencias. |

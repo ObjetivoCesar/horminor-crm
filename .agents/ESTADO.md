@@ -1,7 +1,10 @@
 # ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
-> Última actualización: **2026-11-18** (espejo v9.8: **chat en vivo por SSE** —
+> Última actualización: **2026-11-19** (cierre de **H1**: núcleo comercial con
+> leads y citas independientes del canal; panel, Gato y WhatsApp entran por el
+> mismo módulo; migración **097**; **727 pruebas**).
+> Antes: 2026-11-18 (espejo v9.8: **chat en vivo por SSE** —
 > el hilo se actualiza solo, sin pulsar Sincronizar; multimedia entrante real;
 > sesión LID reparada, número de prueba 0967491847, corte de historial y altura
 > fija del chat; **674 pruebas**. **Desplegado en el VPS** con parche
@@ -76,6 +79,33 @@ Orellana/SucumbÃ­os para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
 
 ## Evidencia de la última sesión
+
+### 2026-11-19 - H1 cerrado: núcleo comercial completo con los tres orígenes
+
+- **Qué cambió:** el módulo comercial ya no depende del canal. Panel, Gato
+  interno y el webhook de WhatsApp entran por `/api/v1/comercial/*`; **el origen
+  lo fija el servidor** y el cuerpo no lo acepta (422 si se intenta).
+- **Dos hechos separados:** `POST /leads/{id}/respuesta` (la empresa respondió,
+  nace el `LEAD`) y `POST /leads/{id}/mensaje` (el lead escribió, aplica
+  intención). Un `CAIDO`/`EN_ESPERA` **revive a `LEAD`** con evento y sin
+  borrar el historial.
+- **Citas:** choque del mismo lead/cliente, máquina de estados
+  (`SOLICITADA → CONFIRMADA → REALIZADA`, con `CANCELADA`/`REAGENDADA`) y
+  auditoría append-only en `cita_eventos` (migración **097**, aplicada).
+- **Panel:** se quitó el selector de origen y el envío de `origen`; la agenda
+  dejó de usar `date.today()` y usa `app/tiempo.py`.
+- **WhatsApp:** `ComercialWhatsApp` registra el entrante y solicita citas; el
+  webhook ya no crea leads ni citas por su cuenta. El parser de citas es único
+  (`app/comercial/intencion.py`) para Gato y WhatsApp.
+- **Verificado:** `pytest` **727 passed** (14 nuevas en
+  `test_v225_h1_cierre.py`); `scripts/h1_comercial_check.py` →
+  `[H1 COMERCIAL: OK]` con las tres orígenes, revivir, choque y auditoría;
+  candado del Hito 3 → `[CANDADO CERRADO EN SANDBOX]`.
+- **Evidencia:** `.agents/evidencias/pytest_h1_cierre_2026-11-19.txt`,
+  `h1_comercial_check_2026-11-19.txt`, `hito3_lock_2026-11-19.txt`.
+- **Bloqueo:** la migración **097** y este código aún no están en el VPS.
+- **Decisión abierta:** `EN_ESPERA(PRECIO)` sin fecha de recontacto mientras
+  `leads.recontacto_dias` sea `NULL`; no se inventó plazo.
 
 ### 2026-11-18 - Chat en vivo: el espejo avisa al panel en segundos
 
@@ -829,3 +859,41 @@ desconectado, Jev en backlog). El siguiente trabajo es el resto del ERP:
   reemplazarlas por datos reales antes de operar.
 - La primera llamada al Centinela puede tardar mÃ¡s por apertura del pool; en
   caliente medimos ~100 ms con 12 checks (el PDR exige <200 ms).
+
+## Actualizacion 2026-11-18 (tarde)
+
+> Esta seccion reemplaza lo que digan arriba los puntos sobre "tunel SSH" y
+> "panel no expuesto": el panel ya esta publicado.
+
+- **Panel publico con basic auth.** `https://horminor.178.238.238.158.sslip.io/panel`
+  responde 200 con el usuario `julio` y la clave nueva; sin credenciales da 401.
+  El hash vive en `/etc/caddy/Caddyfile`. La clave esta en
+  `vps-entrada/HORMINOR_PANEL_ACCESO.txt` (fuera de git). Sigue pendiente el
+  login propio del CRM.
+- **WhatsApp revinculado el 18-N.** La instancia `horminor` habia dejado de
+  recibir entrantes por sesiones rotas (`Bad MAC`); se revinculo con QR desde el
+  `0963410409` y volvio a recibir. Es un parche: el defecto puede repetirse.
+- **Espejo probado con contactos reales.** Paola (`0968278401`) autorizada y con
+  cliente creado; Alejandra (`593986962872`) reactivada. Imagen, video y audio
+  entrantes llegan en vivo y se guardan en Bunny dentro de
+  `horminor/clientes/<cliente>/`.
+- **Notas de video y compresion.** `ptvMessage` ahora se copia como VIDEO y los
+  videos entrantes se recomprimen a H.264 720p antes de subirse (con fallback al
+  original). `pytest test_v97_espejo_whatsapp.py` -> **53 passed**.
+- **Pendiente de probar:** PDF y enlace entrantes; y responder/citar mensajes
+  como en WhatsApp (no existe todavia).
+
+## Actualizacion 2026-11-18 (noche)
+
+- **El VPS quedo alineado con la version local.** Se respaldo la base
+  (`/root/alineacion_20261118_152413/db.sql.gz`) y el codigo anterior
+  (`codigo_anterior.tgz`); se aplicaron las migraciones **079-092** y se
+  reconstruyo `core-api`. `/health` ok y `/panel/cerebro` responde **200**.
+- **Cerebro visible (BETA).** El modulo `cerebro` y `voz` quedaron habilitados
+  para Julio y `cerebro.enabled=true`. El dictado de prueba genero un borrador
+  con tarea, destinatario y fecha en 1,5 s.
+- **Puente Gato -> Cerebro.** Un mensaje que empieza con `cerebro:` o `dictado:`
+  se entrega al Cerebro y Gato devuelve el resumen + preguntas + ruta del
+  laboratorio. Probado en el VPS: devolvio dos encargos y dos preguntas.
+- **Sigue pendiente:** audio por Gato, confirmar/ejecutar desde Gato, aviso
+  sonoro, Gmail y responder/citar.

@@ -18,8 +18,11 @@ from ..asistente import recordatorios
 from ..asistente.bibliotecario import Bibliotecario
 from ..asistente.orquestador import Actor
 from ..db import setting
+from ..m1_whatsapp.bunny import BunnyError, BunnyHttpStorageClient
 from ..panel_acl import exigir_modulo
+from ..services import media as media_svc
 from ..voz import localizar_palabras, normalizar_con_mapa
+from . import ejecutores
 from .extractor import (
     CLAVES,
     MODELO,
@@ -58,6 +61,8 @@ class InterpretarIn(BaseModel):
 
 class ConfirmarIn(BaseModel):
     accion_orden: int = Field(ge=1)
+    # Archivos (media_assets) que se mueven a la carpeta del cliente al confirmar.
+    archivos: list[str] = Field(default_factory=list, max_length=50)
     # Texto que el humano autoriza para el recordatorio. Si la acción nace con
     # `mensaje_por_confirmar`, sin esto no se programa nada: la instrucción
     # dictada no es el mensaje que lee el destinatario.
@@ -329,7 +334,11 @@ async def obtener_borrador(request: Request, borrador_id: str) -> dict[str, Any]
 
 # Acciones con ejecutor conectado. Las demas se proponen, pero todavia no se
 # pueden ejecutar desde el Cerebro: el endpoint lo dice en vez de simularlo.
-ACCIONES_CONECTADAS = ("crear_tarea_recordatorio", "crear_tarea_interna")
+ACCIONES_CONECTADAS = (
+    "crear_tarea_recordatorio",
+    "crear_tarea_interna",
+    "crear_cliente",
+)
 
 
 async def _hechos_reconstruidos(
@@ -899,6 +908,24 @@ async def confirmar_accion(
             rol=rol,
             nombre_actor=str(perfil.get("nombre") or ""),
         )
+    elif nombre == "crear_cliente":
+        resultado = await ejecutores.crear_cliente_desde_accion(
+            pool,
+            parametros=parametros,
+            borrador_id=borrador_id,
+            settings=getattr(request.app.state, "settings", None),
+        )
+        if resultado.estado == "OK" and body.archivos:
+            carpeta = ((resultado.datos or {}).get("carpeta") or {}).get("carpeta")
+            if carpeta:
+                movidos = await ejecutores.mover_archivos_a_cliente(
+                    pool,
+                    getattr(request.app.state, "settings", None),
+                    carpeta=str(carpeta),
+                    media_ids=list(body.archivos),
+                    confirmado=True,
+                )
+                resultado.datos["archivos"] = movidos
     else:  # pragma: no cover - guardado por ACCIONES_CONECTADAS
         raise HTTPException(status_code=501, detail="accion sin ejecutor")
 
@@ -938,6 +965,8 @@ async def confirmar_accion(
                     "gato_recordatorios"
                     if nombre == "crear_tarea_recordatorio"
                     else "cerebro_tareas_internas"
+                    if nombre == "crear_tarea_interna"
+                    else "clients"
                 )
                 if resultado.estado == "OK"
                 else None,
@@ -1381,6 +1410,273 @@ async def escalar_tarea(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except TareaInternaInvalida as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class BunnyOperacionIn(BaseModel):
+    """Operacion sobre la carpeta del cliente en Bunny (M3).
+
+    Sin `confirmado`, solo devuelve el plan y los enlaces: el "pasito".
+    """
+
+    accion: Literal["listar", "mover", "renombrar", "borrar", "mover_a_cliente"]
+    ruta: str = Field(default="", max_length=600)
+    destino: str | None = Field(default=None, max_length=600)
+    cliente_id: str | None = Field(default=None, max_length=80)
+    rutas: list[str] | None = Field(default=None, max_length=50)
+    confirmado: bool = False
+
+
+def _ruta_permitida(prefijo: str, ruta: str) -> bool:
+    limpia = (ruta or "").strip()
+    if not limpia or limpia.startswith("/") or ".." in limpia.split("/"):
+        return False
+    marca = (prefijo or "").strip("/")
+    return not marca or limpia == marca or limpia.startswith(marca + "/")
+
+
+class PaqueteAltaIn(BaseModel):
+    borrador_id: str = Field(min_length=1, max_length=80)
+    media_ids: list[str] = Field(default_factory=list, max_length=50)
+
+
+@router.get("/alta/media")
+async def alta_media(request: Request, limite: int = 20) -> dict[str, Any]:
+    """Media reciente para armar el paquete de alta (solo lectura)."""
+    await exigir_modulo(request, "cerebro", mutacion=True)
+    pool = _pool(request)
+    tope = max(1, min(int(limite), 50))
+    filas = await pool.fetch(
+        """
+        SELECT m.id::text AS id, m.tipo, m.nombre_original, m.storage_path,
+               m.created_at, c.id::text AS cliente_id, c.nombre AS cliente
+          FROM media_assets m
+          LEFT JOIN clients c ON c.id = m.cliente_id
+         ORDER BY m.created_at DESC
+         LIMIT $1
+        """,
+        tope,
+    )
+    return {"media": [dict(fila) for fila in filas]}
+
+
+@router.post("/alta/paquete")
+async def paquete_alta(request: Request, body: PaqueteAltaIn) -> dict[str, Any]:
+    """Vista previa del alta: cliente + archivos y su destino (sin escribir)."""
+    await exigir_modulo(request, "cerebro", mutacion=True)
+    pool = _pool(request)
+    try:
+        uuid.UUID(body.borrador_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="borrador_id invalido") from exc
+    fila = await pool.fetchrow(
+        "SELECT acciones_propuestas_json FROM cerebro_borradores WHERE id = $1::uuid",
+        body.borrador_id,
+    )
+    if fila is None:
+        raise HTTPException(status_code=404, detail="borrador no encontrado")
+    acciones = _jsonb(fila["acciones_propuestas_json"]) or []
+    accion = next(
+        (a for a in acciones if a.get("accion_nombre") == "crear_cliente"), None
+    )
+    if accion is None:
+        raise HTTPException(
+            status_code=409, detail="el borrador no tiene un alta de cliente"
+        )
+    datos = ejecutores.datos_cliente(
+        accion.get("parametros") or {}, body.borrador_id
+    )
+    cfg = await ejecutores.config_bunny(
+        pool, getattr(request.app.state, "settings", None)
+    )
+    prefijo = str((cfg or {}).get("prefijo") or "")
+    carpeta = media_svc.carpeta_cliente(
+        datos["nombre"], datos["cedula"], None, f"nuevo_{body.borrador_id[:8]}"
+    )
+    filas = await ejecutores.archivos_de_media(pool, body.media_ids)
+    plan = ejecutores.plan_alta(prefijo, carpeta, filas)
+    cdn = str((cfg or {}).get("cdn_host") or "").strip().strip("/")
+    if cdn:
+        for paso in plan:
+            paso["url_destino"] = f"https://{cdn}/{paso['destino']}"
+    return {
+        "cliente": datos,
+        "carpeta": carpeta,
+        "archivos": plan,
+        "aviso": None if cfg else "Bunny no esta configurado; el plan es informativo.",
+    }
+
+
+@router.post("/bunny/operacion")
+async def bunny_operacion(request: Request, body: BunnyOperacionIn) -> dict[str, Any]:
+    """Manos de Miau en Bunny: listar, mover, renombrar y borrar con vista previa."""
+    perfil = await exigir_modulo(request, "cerebro", mutacion=True)
+    rol = str(perfil.get("rol_base") or "")
+    if rol not in ("SUPERADMIN", "SECRETARIA"):
+        raise HTTPException(
+            status_code=403, detail="tu perfil no puede operar archivos de Bunny"
+        )
+    pool = _pool(request)
+    cfg = await ejecutores.config_bunny(
+        pool, getattr(request.app.state, "settings", None)
+    )
+    if cfg is None:
+        raise HTTPException(status_code=503, detail="Bunny no esta configurado")
+    prefijo = str(cfg.get("prefijo") or "")
+    if body.accion != "mover_a_cliente" and not _ruta_permitida(prefijo, body.ruta):
+        raise HTTPException(
+            status_code=422,
+            detail=f"la ruta debe estar dentro de {prefijo or 'la zona'}",
+        )
+    if body.destino is not None and not _ruta_permitida(prefijo, body.destino):
+        raise HTTPException(
+            status_code=422, detail="la ruta de destino no es valida"
+        )
+
+    cliente = BunnyHttpStorageClient(
+        storage_zone=str(cfg["storage_zone"]),
+        api_key=str(cfg["api_key"]),
+        cdn_host=str(cfg["cdn_host"]),
+        endpoint=str(cfg.get("endpoint") or "https://storage.bunnycdn.com"),
+    )
+    cdn = str(cfg["cdn_host"]).strip().strip("/")
+    url = lambda ruta: f"https://{cdn}/{ruta.lstrip('/')}"  # noqa: E731
+
+    try:
+        if body.accion == "mover_a_cliente":
+            if not body.cliente_id or not body.rutas:
+                raise HTTPException(
+                    status_code=422,
+                    detail="indica cliente_id y al menos una ruta",
+                )
+            fila = await pool.fetchrow(
+                """
+                SELECT id::text AS id, nombre, cedula, ruc
+                  FROM clients WHERE id = $1
+                """,
+                body.cliente_id,
+            )
+            if fila is None:
+                raise HTTPException(status_code=404, detail="cliente no encontrado")
+            carpeta = media_svc.carpeta_cliente(
+                str(fila["nombre"] or ""),
+                fila["cedula"],
+                fila["ruc"],
+                str(fila["id"]),
+            )
+            plan = ejecutores.plan_mover_a_cliente(prefijo, carpeta, body.rutas)
+            for paso in plan:
+                if not _ruta_permitida(prefijo, paso["origen"]) or not _ruta_permitida(
+                    prefijo, paso["destino"]
+                ):
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"ruta fuera de la zona: {paso['origen']}",
+                    )
+            if not plan:
+                raise HTTPException(status_code=422, detail="no hay rutas validas")
+            if not body.confirmado:
+                return {
+                    "accion": "mover_a_cliente",
+                    "dry_run": True,
+                    "carpeta": carpeta,
+                    "plan": [
+                        {
+                            **paso,
+                            "url_origen": url(paso["origen"]),
+                            "url_destino": url(paso["destino"]),
+                        }
+                        for paso in plan
+                    ],
+                    "nota": "nada se movio; confirma con confirmado=true",
+                }
+            resultados = []
+            for paso in plan:
+                try:
+                    nueva = await cliente.mover(paso["origen"], paso["destino"])
+                    # El enlace del chat vive en media_assets: se mueve con el archivo.
+                    cambiados = await pool.execute(
+                        """
+                        UPDATE media_assets
+                           SET storage_path = $2, cdn_url = $3
+                         WHERE storage_path = $1
+                        """,
+                        paso["origen"],
+                        paso["destino"],
+                        nueva,
+                    )
+                    resultados.append(
+                        {
+                            **paso,
+                            "ok": True,
+                            "url": nueva,
+                            "media_actualizada": cambiados.endswith(" 1"),
+                        }
+                    )
+                except BunnyError as exc:
+                    resultados.append({**paso, "ok": False, "error": str(exc)})
+            return {
+                "accion": "mover_a_cliente",
+                "dry_run": False,
+                "carpeta": carpeta,
+                "resultados": resultados,
+            }
+
+        if body.accion == "listar":
+            entradas = await cliente.listar(body.ruta)
+            return {
+                "accion": "listar",
+                "ruta": body.ruta,
+                "entradas": entradas,
+                "url_carpeta": url(body.ruta) + "/",
+                "dry_run": False,
+            }
+
+        if body.accion in ("mover", "renombrar"):
+            if not body.destino:
+                raise HTTPException(
+                    status_code=422, detail="falta la ruta de destino"
+                )
+            plan = {
+                "origen": body.ruta,
+                "destino": body.destino,
+                "url_origen": url(body.ruta),
+                "url_destino": url(body.destino),
+            }
+            if not body.confirmado:
+                return {
+                    "accion": body.accion,
+                    "dry_run": True,
+                    "plan": plan,
+                    "nota": "nada se movio; confirma con confirmado=true",
+                }
+            nueva = await cliente.mover(body.ruta, body.destino)
+            return {
+                "accion": body.accion,
+                "dry_run": False,
+                "ejecutado": True,
+                "url": nueva,
+                "plan": plan,
+            }
+
+        # borrar
+        plan = {"ruta": body.ruta, "url": url(body.ruta)}
+        if not body.confirmado:
+            return {
+                "accion": "borrar",
+                "dry_run": True,
+                "plan": plan,
+                "nota": "nada se borro; confirma con confirmado=true",
+            }
+        hecho = await cliente.borrar(body.ruta)
+        return {
+            "accion": "borrar",
+            "dry_run": False,
+            "ejecutado": hecho,
+            "existia": hecho,
+            "plan": plan,
+        }
+    except BunnyError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.post("/vocabulario/retirar")

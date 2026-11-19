@@ -1009,3 +1009,83 @@ def test_el_panel_escucha_el_aviso_en_vivo() -> None:
     assert "function chatEventosRecibir(" in html
     # Sigue existiendo el sondeo como respaldo si el SSE se cae.
     assert "function chatPollIniciar(" in html
+
+
+def test_nota_de_video_ptv_se_mapea_como_video() -> None:
+    """La nota de video de WhatsApp llega como ptvMessage, no videoMessage."""
+    registro = {
+        "key": {
+            "id": "ptv-1",
+            "remoteJid": "593991234567@s.whatsapp.net",
+            "fromMe": False,
+            "messageTimestamp": 1_763_000_000,
+        },
+        "message": {"ptvMessage": {"mimetype": "video/mp4", "fileLength": 2048}},
+        "messageType": "ptvMessage",
+        "status": "DELIVERY_ACK",
+        "pushName": "Contacto",
+    }
+
+    mensaje = desde_registro(registro)
+
+    assert mensaje is not None, "la nota de video no puede descartarse"
+    assert mensaje.cuerpo == "[nota de video]"
+    assert mensaje.adjuntos[0]["tipo"] == "VIDEO"
+    assert mensaje.adjuntos[0]["whatsapp_media"] == "ptvMessage"
+
+
+@pytest.mark.asyncio
+async def test_video_entrante_se_recomprime_antes_de_subir(tmp_path, monkeypatch) -> None:
+    """El video que llega por WhatsApp pasa por ffmpeg igual que el del panel."""
+
+    class EvolutionConVideo:
+        async def obtener_media_base64(self, mensaje_id: str, jid: str, from_me: bool):
+            return {
+                "base64": base64.b64encode(b"video-original").decode(),
+                "mimetype": "video/mp4",
+                "nombre": "nota.mp4",
+            }
+
+    repo = MemoryRepositorioEspejo()
+    repo.clientes["c1"] = True
+    repo.numeros["593991234567"] = NumeroEspejo(
+        telefono="593991234567", cliente_id="c1", activo=True
+    )
+    espejo = EspejoWhatsApp(
+        repo,
+        evolution=EvolutionConVideo(),
+        settings=SimpleNamespace(media_dir=str(tmp_path), media_max_pixeles=50_000_000),
+    )
+
+    from app.services import media as media_svc
+
+    recibido: dict[str, bytes] = {}
+
+    async def falso_procesar_video(ruta, settings, *, max_lado=None):
+        recibido["entrada"] = ruta.read_bytes()
+        return media_svc.ArchivoProcesado(
+            datos=b"video-comprimido",
+            tipo="VIDEO",
+            mime="video/mp4",
+            extension="mp4",
+        )
+
+    monkeypatch.setattr(media_svc, "procesar_video", falso_procesar_video)
+
+    registro = {
+        "key": {
+            "id": "vid-1",
+            "remoteJid": "593991234567@s.whatsapp.net",
+            "fromMe": False,
+            "messageTimestamp": 1_763_000_000,
+        },
+        "message": {"videoMessage": {"mimetype": "video/mp4", "fileLength": 14}},
+        "messageType": "videoMessage",
+        "status": "DELIVERY_ACK",
+    }
+
+    assert await espejo.ingerir(registro) == "IMPORTADO"
+    assert recibido["entrada"] == b"video-original"
+    assert repo.media[0]["bytes"] == len(b"video-comprimido")
+    assert repo.media[0]["mime_final"] == "video/mp4"
+    assert repo.adjuntos_actualizados[0]["adjuntos"][0]["pendiente_descarga"] is False
