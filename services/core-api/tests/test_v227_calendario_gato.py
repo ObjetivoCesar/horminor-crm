@@ -83,6 +83,21 @@ def test_el_prompt_de_gato_dice_hoy_y_el_pais() -> None:
     assert "Hoy: 2026-11-19" in prompt
 
 
+def test_el_contexto_pendiente_usa_el_texto_del_borrador_aunque_sea_largo() -> None:
+    largo = " ".join(["palabra"] * 80)
+
+    contexto = _contexto_dictado(
+        [],
+        largo,
+        texto_previo="cliente Jefferson, 5 m3 de 180, Juan José Peña y Mercadillo",
+        pendiente=True,
+    )
+
+    assert contexto is not None
+    assert "Jefferson" in contexto
+    assert "5 m3" in contexto
+
+
 def test_la_guarda_acepta_cifras_del_dictado() -> None:
     verificar(
         "El dictado habla de 70 m³ y 4000 USD.",

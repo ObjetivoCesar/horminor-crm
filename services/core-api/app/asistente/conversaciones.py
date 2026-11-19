@@ -7,6 +7,7 @@ transacción corta; el trabajo pesado (STT/LLM) ocurre fuera.
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 
@@ -224,12 +225,64 @@ async def turno_por_client_id(
     return _fila(fila)
 
 
+async def texto_ultimo_borrador(
+    pool: asyncpg.Pool, conversacion_id: str
+) -> str | None:
+    """Texto completo del último borrador de la conversación.
+
+    Se usa como contexto cuando el borrador anterior quedó esperando una
+    aclaración. No es el último mensaje suelto: es el texto acumulado que el
+    Cerebro ya compiló.
+    """
+    fila = await pool.fetchrow(
+        """
+        SELECT e.texto_directo
+          FROM cerebro_borradores b
+          JOIN cerebro_extracciones e ON e.id = b.extraccion_id
+         WHERE b.conversacion_id = $1::uuid
+         ORDER BY b.creado_en DESC
+         LIMIT 1
+        """,
+        conversacion_id,
+    )
+    if fila is None or not fila["texto_directo"]:
+        return None
+    return str(fila["texto_directo"])
+
+
+async def actualizar_estado(
+    pool: asyncpg.Pool,
+    conversacion_id: str,
+    *,
+    estado: str,
+    borrador_id: str | None = None,
+    preguntas: Any = None,
+) -> None:
+    payload: dict[str, Any] = {"estado": estado}
+    if borrador_id:
+        payload["borrador_id"] = borrador_id
+    if preguntas:
+        payload["preguntas"] = preguntas
+    await pool.execute(
+        """
+        UPDATE gato_conversaciones
+           SET estado_dialogo_json = $2::jsonb,
+               lock_version = lock_version + 1
+         WHERE id = $1::uuid
+        """,
+        conversacion_id,
+        json.dumps(payload, ensure_ascii=False),
+    )
+
+
 __all__ = [
     "ConversacionCerrada",
     "ConversacionNoEncontrada",
     "actual",
+    "actualizar_estado",
     "asegurar_abierta",
     "cerrar_y_abrir",
+    "texto_ultimo_borrador",
     "tocar",
     "turno_por_client_id",
     "turnos",

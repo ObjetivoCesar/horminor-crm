@@ -89,7 +89,10 @@ scripts de candado.
   `localStorage`.
 - **Contexto deliberado:** se eliminó el arrastre de los últimos cinco dictados.
   Solo se incluye el dictado anterior si el mensaje es una respuesta corta a una
-  pregunta pendiente o pide corregir/agregar.
+  pregunta pendiente o pide corregir/agregar. **Si el borrador quedó esperando
+  aclaración o confirmación, el siguiente dictado usa el texto completo del
+  borrador, aunque sea largo**; así una corrección no vuelve a preguntar cliente,
+  volumen o dirección.
 - **Enlaces:** `cerebro_borradores.conversacion_id`, `cerebro_extracciones.conversacion_id`,
   `cerebro_tareas_internas.cliente_id` y puente `gato_turno_borradores`.
 - **Idempotencia:** `gato_turnos.client_turn_id`; dos envíos del mismo turno
@@ -108,6 +111,11 @@ scripts de candado.
   conservaron **2 ejecuciones de auditoría** y sus extracciones/transcripciones
   porque son append-only; no se ven en el hilo. No se tocaron clientes, pagos ni
   órdenes.
+- **Seguimiento (2026-11-19):** el contexto se perdía en respuestas largas. Se
+  persistió el estado de aclaración/confirmación y ahora el siguiente dictado
+  usa el texto completo del borrador; el tercer mensaje conserva cliente, 5 m³,
+  180 y dirección. **745 passed**; VPS **11 passed**. Nueva conversación de
+  Julio: `fc29cf49-...`.
 - **Pendiente:** historial completo y búsqueda (Fase 4); autenticación real
   (H6).
 

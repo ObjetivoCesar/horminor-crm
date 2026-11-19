@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 from uuid import UUID, uuid4
@@ -139,14 +140,21 @@ def _es_continuacion(mensaje: str) -> bool:
 
 
 def _contexto_dictado(
-    historial: list[dict[str, str]] | None, mensaje: str
+    historial: list[dict[str, str]] | None,
+    mensaje: str,
+    *,
+    texto_previo: str | None = None,
+    pendiente: bool = False,
 ) -> str | None:
     """Contexto deliberado: solo el dictado anterior si se está continuando.
 
-    No se arrastran los últimos cinco dictados. Un dictado nuevo, largo o con
-    otro cliente abre una operación nueva. Se conserva el hilo solo cuando el
-    mensaje responde una pregunta pendiente o pide corregir/agregar.
+    Si el borrador anterior quedó esperando una aclaración, se usa su texto
+    completo (no el último mensaje suelto), aunque la respuesta sea larga.
+    Si no hay pendiente, solo se continúa con una respuesta corta o una
+    corrección explícita.
     """
+    if pendiente and texto_previo:
+        return texto_previo
     if not _es_continuacion(mensaje):
         return None
 
@@ -244,6 +252,8 @@ async def chat(
     memoria_activa = isinstance(pool, asyncpg.Pool)
     conversacion_id = (body.conversacion_id or "").strip()
     perfil_id = _perfil_id(actor)
+    pendiente = False
+    texto_previo: str | None = None
 
     if memoria_activa:
         try:
@@ -259,6 +269,22 @@ async def chat(
                     perfil_id=perfil_id,
                 )
             conversacion_id = str(conv["id"])
+            estado_crudo = conv.get("estado_dialogo_json") or "{}"
+            if isinstance(estado_crudo, str):
+                try:
+                    estado_dialogo = json.loads(estado_crudo)
+                except json.JSONDecodeError:
+                    estado_dialogo = {}
+            else:
+                estado_dialogo = estado_crudo if isinstance(estado_crudo, dict) else {}
+            pendiente = estado_dialogo.get("estado") in (
+                "ESPERANDO_ACLARACION",
+                "ESPERANDO_CONFIRMACION",
+            )
+            if pendiente:
+                texto_previo = await conversaciones.texto_ultimo_borrador(
+                    pool, conversacion_id
+                )
         except conversaciones.ConversacionCerrada as exc:
             raise HTTPException(
                 status_code=409,
@@ -334,11 +360,37 @@ async def chat(
                 usuario=actor.actor_id,
                 rol=actor.rol,
                 nombre=actor.nombre,
-                contexto=_contexto_dictado(historial, body.mensaje),
+                contexto=_contexto_dictado(
+                    historial,
+                    body.mensaje,
+                    texto_previo=texto_previo,
+                    pendiente=pendiente,
+                ),
                 conversacion_id=conversacion_id,
             )
             texto = cerebro_bridge.mensaje_de_resumen(datos)
             estado = "OK"
+            preguntas = (datos.get("borrador") or {}).get("preguntas") or []
+            acciones = (datos.get("borrador") or {}).get("acciones") or []
+            if datos.get("estado") == "REQUIERE_ACLARACION" or preguntas:
+                await conversaciones.actualizar_estado(
+                    pool,
+                    conversacion_id,
+                    estado="ESPERANDO_ACLARACION",
+                    borrador_id=str(datos.get("borrador_id") or "") or None,
+                    preguntas=preguntas,
+                )
+            elif acciones:
+                await conversaciones.actualizar_estado(
+                    pool,
+                    conversacion_id,
+                    estado="ESPERANDO_CONFIRMACION",
+                    borrador_id=str(datos.get("borrador_id") or "") or None,
+                )
+            else:
+                await conversaciones.actualizar_estado(
+                    pool, conversacion_id, estado="LIBRE"
+                )
         except HTTPException as exc:
             texto = f"No pude pasarlo al Cerebro: {exc.detail}"
             estado = "ERROR"

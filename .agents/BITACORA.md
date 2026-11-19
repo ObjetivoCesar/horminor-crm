@@ -9188,3 +9188,44 @@ ventana de mantenimiento y una decisión explícita; no se hizo.
 
 Que Julio recargue el panel con Ctrl+F5 y use Gato desde el navegador. Después,
 Fase 2.
+
+
+---
+
+## 2026-11-19 (XXI) - El contexto se perdía al responder preguntas
+
+### Diagnóstico
+
+La base estaba conectada: los tres borradores de la prueba (70f843b3, 9c7fa711,
+d5219f74) estaban en la misma conversación. El problema era que
+`gato_conversaciones.estado_dialogo_json` seguía en LIBRE. El contexto solo se
+incluía si el mensaje era corto; las correcciones largas se trataban como un
+dictado nuevo. Por eso el segundo borrador perdió el volumen y el tercero volvió
+a preguntar cliente, dirección y resistencia.
+
+### Hecho
+
+- Al volver el Cerebro con preguntas, la conversación pasa a
+  `ESPERANDO_ACLARACION`; si hay acciones, a `ESPERANDO_CONFIRMACION`.
+- En ambos estados, el siguiente mensaje usa el **texto completo del último
+  borrador** (`cerebro_extracciones.texto_directo`) como contexto, aunque la
+  respuesta sea larga.
+- Se agregó `texto_ultimo_borrador` y `actualizar_estado` en
+  `app/asistente/conversaciones.py`.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Suite local | **745 passed**, 2 warnings |
+| Paso 2 | cliente Jefferson, 5 m³, 180, dirección y Pedro |
+| Paso 3 | conserva cliente, 5 m³, 180, dirección y Pedro; sin repetir preguntas |
+| VPS: pruebas v227 | **11 passed** |
+| VPS: conversación nueva Julio | `fc29cf49-...` |
+
+Archivo: `.agents/evidencias/gato_seguimiento_preguntas_2026-11-19.txt`.
+
+### Próximo paso
+
+Que Julio recargue el panel con Ctrl+F5 y repita la prueba desde cero. Después,
+Fase 2: conectar «confirmado» de Gato al ejecutor del Cerebro.

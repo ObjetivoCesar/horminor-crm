@@ -850,7 +850,7 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Para qué existe** | Que el historial no viva solo en el navegador y que un dictado viejo no contamine una operación nueva. |
 | **Quién lo utiliza** | Julio y secretaría; cada uno ve su propia conversación. |
 | **Qué lo activa** | Abrir el widget o pulsar el botón circular de refresh. |
-| **Qué sucede después** | La conversación cerrada queda guardada; la nueva empieza vacía. Una conversación cerrada es de solo lectura. |
+| **Qué sucede después** | La conversación cerrada queda guardada; la nueva empieza vacía. Una conversación cerrada es de solo lectura. Si el borrador quedó esperando una aclaración o confirmación, el siguiente dictado se toma como continuación y usa el **texto completo del borrador** como contexto, aunque la respuesta sea larga. |
 | **Qué NO significa** | No borra clientes, borradores, tareas ni pagos. No abre el historial completo de otros usuarios. La búsqueda del historial completo para Julio llega en una fase posterior. |
 | **Ejemplo** | Julio dicta una operación, pulsa refresh y la ventana queda vacía; al recargar la página sigue la conversación nueva, no la anterior. |
 | **Dónde se encuentra** | Chat flotante de Gato y API `/api/v1/gato/`. |
