@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from . import cerebro_bridge, comercial_bridge, memoria, recordatorios
 from ..db import setting
-from ..panel_acl import exigir_modulo
+from ..panel_acl import exigir_modulo, resolver_perfil
 from ..services import media as media_svc
 from ..voz.ingesta import ingestar_audio
 from .bibliotecario import Bibliotecario
@@ -308,7 +308,28 @@ async def chat_audio(
     """
     if modo not in ("dictado", "pregunta"):
         raise HTTPException(status_code=422, detail="modo invalido: dictado|pregunta")
-    perfil = await exigir_modulo(request, "voz", mutacion=True)
+    try:
+        perfil = await exigir_modulo(request, "voz", mutacion=True)
+    except HTTPException as exc:
+        detalle = exc.detail if isinstance(exc.detail, dict) else {}
+        if exc.status_code == 403 and detalle.get("code") == "MODULE_NOT_ALLOWED":
+            try:
+                quien = await resolver_perfil(request)
+                nombre = str(quien.get("nombre") or "el perfil seleccionado")
+            except HTTPException:
+                nombre = "el perfil seleccionado"
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "VOZ_NO_HABILITADA",
+                    "message": (
+                        f"«{nombre}» no tiene el módulo Voz. Cambia a Julio en "
+                        "«Viendo como» o pide que habiliten Voz y Cerebro."
+                    ),
+                    "perfil": nombre,
+                },
+            ) from exc
+        raise
     pool = getattr(request.app.state, "pool", None)
     if not isinstance(pool, asyncpg.Pool):
         raise HTTPException(status_code=503, detail="Base de datos no disponible")

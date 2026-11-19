@@ -82,6 +82,20 @@ scripts de candado.
 
 ## Evidencia de la última sesión
 
+### 2026-11-19 - Gato: aviso claro cuando el perfil no tiene Voz
+
+- **Qué pasó:** el audio falló con `MODULE_NOT_ALLOWED` porque el panel estaba
+  en **Secretaria Ventanilla**, que no tiene Voz ni Cerebro. Julio sí los tiene.
+- **Corregido:** el endpoint devuelve un mensaje accionable («Secretaria
+  Ventanilla no tiene el módulo Voz. Cambia a Julio…») y el panel lo muestra
+  limpio, sin JSON crudo.
+- **Verificado:** con Julio el mismo audio responde `HTTP 200` y `estado=OK`;
+  con Secretaría, `403` con el aviso. No se cambiaron permisos.
+- **Pruebas:** **744 passed**, 2 warnings; panel con 3 bloques `<script>` OK.
+- **Evidencia:** `.agents/evidencias/gato_audio_permiso_2026-11-19.txt`.
+- **VPS (2026-11-19):** desplegado con respaldo en
+  `/root/backup_gato_permiso_20261119`.
+
 ### 2026-11-19 - Gato recupera la memoria entre dictados
 
 - **Qué pasó:** cada audio se entregaba al Cerebro como un dictado aislado. El

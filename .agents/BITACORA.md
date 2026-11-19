@@ -8942,6 +8942,47 @@ definicion de la accion de agendar entrega o H3, sin ampliar el alcance.
 
 ---
 
+## 2026-11-19 (XVI) - Aviso de permiso de Voz en el audio de Gato
+
+### Diagnostico
+
+El audio fallo con `MODULE_NOT_ALLOWED` y `modulos:["voz"]`. El perfil del
+panel era **Secretaria Ventanilla**, que no tiene Voz ni Cerebro. Julio si los
+tiene. El flujo de audio (transcribir → Cerebro) era correcto; el permiso lo
+detuvo.
+
+### Hecho
+
+- `chat_audio` atrapa el 403 de modulo y responde `VOZ_NO_HABILITADA` con el
+  nombre del perfil y la salida («Cambia a Julio…»).
+- El panel muestra `detail.message`, no el JSON crudo.
+- **No se cambiaron permisos** ni se relajo el control de acceso.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Suite local | **744 passed**, 2 warnings |
+| Panel | 3 bloques `<script>` OK |
+| Secretaria Ventanilla | `403 VOZ_NO_HABILITADA` con mensaje claro |
+| Julio Villavicencio | `HTTP 200`, `estado=OK`, transcripcion |
+| VPS | desplegado, `/health` ok |
+
+Archivo: `.agents/evidencias/gato_audio_permiso_2026-11-19.txt`.
+
+### Decision
+
+- No se habilita Voz a Secretaria por cuenta propia: es una decision de Julio.
+- El perfil con Voz y Cerebro (hoy Julio) puede dictar; los demas reciben el
+  aviso.
+
+### Proximo paso
+
+Que Julio pruebe el audio con «Viendo como: Julio». Si quiere que secretaria
+tambien dicte, habilitarle Voz y Cerebro y repetir la prueba.
+
+---
+
 ## 2026-11-19 (X) - Audio de Gato desplegado en el VPS
 
 ### Hecho

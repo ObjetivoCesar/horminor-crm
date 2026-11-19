@@ -5,7 +5,7 @@
 > es el documento que permite a Julio, a la secretaría, a administración y a
 > cualquier agente de IA entender el sistema sin preguntarle al programador.
 >
-> **Estado:** v2.11 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
+> **Estado:** v2.12 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
 > las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas), el
 > dictado por audio desde Gato y los módulos ejecutores.
 >
@@ -833,6 +833,7 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Qué lo activa** | El botón de micrófono del compositor de Gato. Se graba, se detiene y se envía como `multipart/form-data` con `modo=dictado`. |
 | **Qué sucede después** | El backend reutiliza `app/voz` (Groq) para transcribir; el texto se pasa al **mismo endpoint del Cerebro** que usa el prefijo `dictado:` y vuelve el resumen con sus preguntas. La burbuja del usuario se reemplaza por la transcripción para que se vea qué se entendió. El resumen se pinta con **negritas, viñetas y saltos**: una viñeta por encargo, las preguntas aparte y el borrador con su enlace. Las citas largas se recortan. |
 | **Memoria entre dictados** | El dictado nuevo recibe como contexto los **dictados previos de la misma conversación**. Un seguimiento como «me acaba de dar el efectivo» actualiza el mismo cliente y monto, no crea una operación nueva. Si confirma el pago, queda «que ya entró». |
+| **Permisos** | El perfil debe tener los módulos **Voz** y **Cerebro**. Si no, se avisa con el nombre del perfil y se sugiere cambiar a Julio en «Viendo como»; no se transcribe a escondidas ni se salta el permiso. |
 | **Qué NO significa** | No ejecuta nada: deja un borrador para revisar y confirmar en `/panel/cerebro`. Si el audio está mal transcrito, se corrige en el laboratorio. |
 | **Ejemplo** | «Dame preparando una entrega de 25 m3 … confírmame con el chofer y con Julio» → un encargo, una tarea interna para «chofer y Julio» y 3 preguntas (cliente, dirección, resistencia). |
 | **Dónde se encuentra** | Chat flotante de **Gato**, botón de micrófono a la izquierda del campo de texto. |
@@ -1156,3 +1157,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.9 | 2026-11-19 | **Calendario de Gato**: fecha de Ecuador explícita («hoy», «este sábado», «domingo»); el prefijo `dictado:` gana sobre el atajo comercial y la disponibilidad acepta fechas ISO. |
 | v2.10 | 2026-11-19 | **Cifras dictadas**: Gato puede repetir una cifra que el usuario dictó (70 m³, 4 mil dólares) sin confundirla con una cifra inventada; las cifras sin fuente siguen bloqueadas. |
 | v2.11 | 2026-11-19 | **Memoria entre dictados** (§6): el Cerebro recibe los dictados previos de la misma conversación; un seguimiento conserva cliente, volumen y pago, y «me acaba de dar el efectivo» marca el ingreso como recibido. |
+| v2.12 | 2026-11-19 | **Permiso de Voz en Gato** (§6): si el perfil seleccionado no tiene Voz, el panel dice qué perfil es y que cambie a Julio; no se muestra el JSON crudo. |

@@ -9759,7 +9759,9 @@ async function gatoEnviarAudio(file) {
     try { data = texto ? JSON.parse(texto) : null; } catch (e) { data = texto; }
     if (!res.ok) {
       const detalle = data && data.detail
-        ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail))
+        ? (typeof data.detail === 'string'
+            ? data.detail
+            : (data.detail.message || JSON.stringify(data.detail)))
         : texto;
       throw new Error(detalle || ('HTTP ' + res.status));
     }
