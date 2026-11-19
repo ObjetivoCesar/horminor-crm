@@ -4494,7 +4494,10 @@ async function cargarPerfilesUI() {
   } catch(e) { perfiles = []; }
   state.perfiles = perfiles;
   if (sel) {
-    sel.innerHTML = '<option value="">Julio (base Superadmin)</option>' + perfiles.map(p =>
+    const julio = perfiles.find(p => /julio/i.test(p.nombre || ''))
+      || perfiles.find(p => p.rol_base === 'SUPERADMIN');
+    const baseId = julio ? julio.id : '';
+    sel.innerHTML = `<option value="${esc(baseId)}">Julio (base Superadmin)</option>` + perfiles.map(p =>
       `<option value="${esc(p.id)}">${esc(p.nombre)} · ${esc(p.rol_base)}${p.modo_acceso === 'SOLO_LECTURA' ? ' · lectura' : ''}</option>`
     ).join('');
     sel.innerHTML += '<option value="__gestionar__">+ Crear / gestionar usuarios…</option>';

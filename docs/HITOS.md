@@ -124,6 +124,7 @@ una regresión.
 | 2026-11-19 | H2 | **Cifras dictadas y despliegue**: la guarda acepta cifras de un `dictado:` y sigue bloqueando las inventadas; VPS con `7 passed` y seguimiento `OK` (sábado 21 / domingo 22) | `app/asistente/guardas.py`, `proveedores.py`, `.agents/evidencias/gato_calendario_vps_seguimiento_2026-11-19.json` | 2026-11-19 (XIV) |
 | 2026-11-19 | H2 | **Memoria entre dictados**: el Cerebro recibe los dictados previos de la misma conversación; el seguimiento conserva cliente/volumen/pago y «me acaba de dar en efectivo» marca el ingreso | `app/asistente/router.py`, `cerebro_bridge.py`, `app/cerebro/router.py`, `extractor.py`, `dinero.py`, `.agents/evidencias/gato_memoria_dictados_2026-11-19.txt` | 2026-11-19 (XV) |
 | 2026-11-19 | H2 | **Aviso de permiso de Voz**: el audio con un perfil sin Voz devuelve un mensaje claro con el perfil y la salida (cambiar a Julio); Julio verificado con audio `HTTP 200` | `app/asistente/router.py`, `templates/panel.html`, `.agents/evidencias/gato_audio_permiso_2026-11-19.txt` | 2026-11-19 (XVI) |
+| 2026-11-19 | H2 | **Perfil base «Julio» sin UUID**: la opción base lleva su UUID; si una pestaña vieja manda solo el rol `SUPERADMIN`, el Cerebro usa el perfil base. Audio y dictado `HTTP 200` | `templates/panel.html`, `app/asistente/cerebro_bridge.py`, `.agents/evidencias/gato_audio_permiso_2026-11-19.txt` | 2026-11-19 (XVII) |
 
 ## 6. Cómo se actualiza
 

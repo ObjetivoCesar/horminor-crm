@@ -10,6 +10,7 @@ permisos. Solo se activa cuando el mensaje lo pide de forma explicita
 from __future__ import annotations
 
 import re
+import uuid
 from typing import Any
 
 import httpx
@@ -118,6 +119,21 @@ async def interpretar(
         "X-Panel-Role": (rol or "").lower(),
         "X-Panel-Name": nombre,
     }
+    try:
+        uuid.UUID(str(usuario))
+    except (ValueError, AttributeError):
+        # La opción «Julio (base Superadmin)» puede llegar solo con el rol.
+        # Se usa el perfil base; para cualquier otro rol se exige un perfil
+        # real para no escalar permisos.
+        if (rol or "").upper() != "SUPERADMIN":
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Selecciona un perfil real en «Viendo como» para dictar al "
+                    "Cerebro."
+                ),
+            )
+        headers.pop("X-Panel-User", None)
     cuerpo_json: dict[str, Any] = {"texto": cuerpo}
     if contexto and contexto.strip():
         cuerpo_json["contexto"] = contexto.strip()[:8000]

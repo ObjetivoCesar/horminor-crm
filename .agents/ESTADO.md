@@ -89,6 +89,9 @@ scripts de candado.
 - **Corregido:** el endpoint devuelve un mensaje accionable («Secretaria
   Ventanilla no tiene el módulo Voz. Cambia a Julio…») y el panel lo muestra
   limpio, sin JSON crudo.
+- **Perfil base:** la opción «Julio (base Superadmin)» ahora lleva su UUID. Si
+  una pestaña vieja manda solo el rol, el Cerebro usa el perfil base y no
+  escala a otros roles.
 - **Verificado:** con Julio el mismo audio responde `HTTP 200` y `estado=OK`;
   con Secretaría, `403` con el aviso. No se cambiaron permisos.
 - **Pruebas:** **744 passed**, 2 warnings; panel con 3 bloques `<script>` OK.

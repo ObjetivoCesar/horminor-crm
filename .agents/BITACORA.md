@@ -8983,6 +8983,41 @@ tambien dicte, habilitarle Voz y Cerebro y repetir la prueba.
 
 ---
 
+## 2026-11-19 (XVII) - La opcion base «Julio» viajaba sin UUID
+
+### Diagnostico
+
+El panel estaba en «Julio (base Superadmin)», pero esa opcion tenia `value=""`.
+El frontend mandaba solo `X-Panel-Role: julio`; el actor quedaba con
+`actor_id="julio"` y el puente lo enviaba al Cerebro como `X-Panel-User: julio`.
+El Cerebro espera un UUID y respondio `INVALID_PANEL_USER`.
+
+### Hecho
+
+- `cargarPerfilesUI` pone el UUID real de Julio en la opcion base.
+- Red de seguridad en `cerebro_bridge`: si el rol es `SUPERADMIN` y no hay UUID,
+  no se envia `X-Panel-User` y se usa el perfil base. Para otros roles se exige
+  un perfil real (no se escala).
+- El aviso de modulo Voz sigue igual.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Suite local | **744 passed**, 2 warnings |
+| Panel | 3 bloques `<script>` OK |
+| Audio con rol base (sin UUID) | `HTTP 200`, `estado=OK` |
+| Chat `dictado:` con rol base | `HTTP 200`, borrador con cliente y 70 m3 |
+| VPS | desplegado en `/root/backup_gato_permiso_20261119` |
+
+Archivo: `.agents/evidencias/gato_audio_permiso_2026-11-19.txt`.
+
+### Proximo paso
+
+Que Julio recargue el panel y pruebe el microfono con «Viendo como: Julio».
+
+---
+
 ## 2026-11-19 (X) - Audio de Gato desplegado en el VPS
 
 ### Hecho
