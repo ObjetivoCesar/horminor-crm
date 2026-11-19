@@ -92,6 +92,21 @@ async def actor_actual(request: Request) -> Actor:
     return Actor(nombre=fila["nombre"], rol=fila["rol_base"], actor_id=usuario)
 
 
+def _puente(mensaje: str) -> str | None:
+    """Precedencia de los puentes de Gato.
+
+    El prefijo explícito del Cerebro gana sobre los atajos comerciales: un
+    dictado puede decir «agendar» o «entrega» sin ser una cita comercial.
+    """
+    if cerebro_bridge.es_dictado(mensaje):
+        return "cerebro"
+    if comercial_bridge.es_leads_caidos(mensaje):
+        return "leads"
+    if comercial_bridge.es_agendar(mensaje):
+        return "agenda"
+    return None
+
+
 def _modo_envio(request: Request) -> str:
     """Canal real de salida: 'evolution' o 'sandbox'.
 
@@ -190,24 +205,11 @@ async def chat(
             respuesta=texto, estado=estado, conversacion_id=conversacion_id
         )
 
-    # Modulo comercial: Gato solo pide, no reimplementa reglas.
-    if comercial_bridge.es_leads_caidos(body.mensaje):
-        texto = await comercial_bridge.listar_caidos(pool)
-        return await cerrar(texto, "OK")
-    if comercial_bridge.es_agendar(body.mensaje):
-        try:
-            resultado = await comercial_bridge.agendar(
-                pool, body.mensaje, actor=actor.nombre
-            )
-            return await cerrar(
-                str(resultado.get("mensaje") or "Listo."),
-                "OK" if resultado.get("estado") == "OK" else "FALTA",
-            )
-        except Exception as exc:  # noqa: BLE001
-            return await cerrar(f"No pude agendar: {exc}", "ERROR")
-
-    # Puente controlado con el Cerebro: solo si el mensaje lo pide explicito.
-    if cerebro_bridge.es_dictado(body.mensaje):
+    # Puente controlado con el Cerebro: el prefijo explicito manda. Debe ir
+    # antes del atajo comercial porque un dictado puede contener «agendar» y
+    # «entrega» sin ser una cita comercial.
+    puente = _puente(body.mensaje)
+    if puente == "cerebro":
         try:
             datos = await cerebro_bridge.interpretar(
                 body.mensaje,
@@ -233,6 +235,22 @@ async def chat(
         return MensajeOut(
             respuesta=texto, estado=estado, conversacion_id=conversacion_id
         )
+
+    # Modulo comercial: Gato solo pide, no reimplementa reglas.
+    if puente == "leads":
+        texto = await comercial_bridge.listar_caidos(pool)
+        return await cerrar(texto, "OK")
+    if puente == "agenda":
+        try:
+            resultado = await comercial_bridge.agendar(
+                pool, body.mensaje, actor=actor.nombre
+            )
+            return await cerrar(
+                str(resultado.get("mensaje") or "Listo."),
+                "OK" if resultado.get("estado") == "OK" else "FALTA",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return await cerrar(f"No pude agendar: {exc}", "ERROR")
 
     respuesta = await _respuesta_con_ratificacion(
         body.mensaje, actor, biblio, historial

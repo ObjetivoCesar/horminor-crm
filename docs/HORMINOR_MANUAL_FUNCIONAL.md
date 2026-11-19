@@ -5,7 +5,7 @@
 > es el documento que permite a Julio, a la secretaría, a administración y a
 > cualquier agente de IA entender el sistema sin preguntarle al programador.
 >
-> **Estado:** v2.8 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
+> **Estado:** v2.10 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
 > las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas), el
 > dictado por audio desde Gato y los módulos ejecutores.
 >
@@ -716,7 +716,9 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Quién lo utiliza** | Julio, secretaría, administración. |
 | **Qué lo activa** | Una pregunta en el chat. |
 | **Qué sucede después** | Responde con datos reales y su fuente; no modifica el negocio. |
-| **Qué NO significa** | No interpreta audios ni crea borradores: eso es el Cerebro. |
+| **Fecha y país** | Usa la fecha de **Ecuador** (`America/Guayaquil`) que inyecta el backend. «Hoy», «mañana», «este sábado» y «el domingo» se calculan desde esa fecha, nunca desde el navegador. |
+| **Cifras** | Solo repite cifras que vengan de una ficha de la base o de un **dictado explícito** del usuario. Una cifra sin fuente se rechaza y se avisa; no se inventa. |
+| **Qué NO significa** | No interpreta audios por su cuenta ni crea borradores: el micrófono entrega el audio al Cerebro, que es quien interpreta. |
 | **Ejemplo** | «¿Cuánto vendimos en El Coca?» → responde con la cifra y su fuente. |
 | **Dónde se encuentra** | Widget de chat en `/panel`. |
 | **Referencia técnica** | `app/asistente/`, catálogo de consultas. |
@@ -1150,3 +1152,5 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.6 | 2026-11-19 | Núcleo comercial (H1): **Lead**, **Reactivación de un lead** y **Cita comercial** (§6); dos hechos separados (la empresa responde / el lead escribe), origen fijado por el servidor y citas con estados y auditoría. |
 | v2.7 | 2026-11-19 | **Dictado por Gato** (§6): botón de micrófono que transcribe y entrega el audio al Cerebro; la coordinación con dos destinatarios deja un solo encargo. |
 | v2.8 | 2026-11-19 | **Formato del resumen de Gato**: negritas, viñetas y saltos; citas largas recortadas. Se aclara que el Cerebro **no reserva mixes ni entregas** en la agenda operativa. |
+| v2.9 | 2026-11-19 | **Calendario de Gato**: fecha de Ecuador explícita («hoy», «este sábado», «domingo»); el prefijo `dictado:` gana sobre el atajo comercial y la disponibilidad acepta fechas ISO. |
+| v2.10 | 2026-11-19 | **Cifras dictadas**: Gato puede repetir una cifra que el usuario dictó (70 m³, 4 mil dólares) sin confundirla con una cifra inventada; las cifras sin fuente siguen bloqueadas. |

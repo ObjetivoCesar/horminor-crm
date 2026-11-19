@@ -44,6 +44,22 @@ def parse_cita(texto: str) -> dict[str, Any]:
     elif "hoy" in t:
         fecha = hoy
 
+    if fecha is None:
+        # «este sábado», «el domingo», «el lunes que viene»: el calendario se
+        # calcula desde la fecha de Ecuador, no desde el navegador.
+        for nombre_dia, indice in (
+            ("sabado", 5),
+            ("domingo", 6),
+            ("lunes", 0),
+            ("martes", 1),
+            ("miercoles", 2),
+            ("jueves", 3),
+            ("viernes", 4),
+        ):
+            if re.search(rf"\b(?:este\s+|el\s+)?{nombre_dia}\b", t):
+                fecha = hoy + timedelta(days=(indice - hoy.weekday()) % 7)
+                break
+
     hora: str | None = None
     m = _RE_HORA.search(t)
     if m:

@@ -1,4 +1,4 @@
-# BITÁCORA — Orminorth / Centinela
+﻿# BITÁCORA — Orminorth / Centinela
 
 **Registro append-only.** Se añade al final. No se borra ni se reescribe una
 entrada anterior. Si una decisión cambió, se escribe una entrada nueva que lo
@@ -8800,6 +8800,100 @@ quien confirma) antes de retomar H3.
 
 ---
 
+## 2026-11-19 (XIII) - Gato: el calendario y la precedencia del dictado
+
+### Objetivo
+
+Revisar en los logs el hilo de Pastrana y corregir por que Gato perdio el
+contexto y respondio «No entendi».
+
+### Diagnostico (logs del VPS)
+
+1. `POST /api/v1/asistente/audio` (19:23:19) devolvio «Para agendar necesito el
+   dia...»: el texto `dictado:` traia «agendar» y «entrega» y el atajo
+   `comercial_bridge.es_agendar` se evaluaba **antes** que el Cerebro.
+2. El seguimiento «este sabado y domingo...» (19:23:41) si llego al LLM, que
+   calculo `2026-11-21` y llamo a `disponibilidad_agenda`; asyncpg rechazo el
+   `str` porque la columna es `date`:
+   `DataError: 'str' object has no attribute 'toordinal'`. El fallback
+   respondio «No entendi».
+
+### Hecho
+
+- `_puente`: el prefijo `dictado:` gana sobre `leads` y `agenda`.
+- `disponibilidad_agenda`: convierte ISO a `date` antes de consultar.
+- `parse_cita`: entiende «este sabado», «domingo», «lunes»… desde
+  `app/tiempo.py`.
+- Prompt de Gato: `Pais y zona: Ecuador (America/Guayaquil) | Hoy: ...`.
+- 5 pruebas nuevas en `test_v227_calendario_gato.py`.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Suite completa | **739 passed**, 2 warnings |
+| Dictado con «agendar» | vuelve al Cerebro, no al atajo comercial |
+| Seguimiento con el mismo hilo | «sabado 2026-11-21 y domingo 2026-11-22», sin «No entendi» |
+| Fecha | calculada desde `app/tiempo.py` (America/Guayaquil) |
+
+Archivos: `.agents/evidencias/gato_calendario_2026-11-19.txt`,
+`gato_calendario_dictado_2026-11-19.json`,
+`gato_calendario_seguimiento_2026-11-19.json`.
+
+### Decision
+
+- El prefijo explicito del Cerebro siempre gana: un dictado no es una cita
+  comercial aunque diga «agendar».
+- La fecha de negocio es la de Ecuador, no la del navegador.
+- Agendar una entrega sigue **sin existir** como accion; se define con Julio.
+
+### Proximo paso
+
+Desplegar estos cambios al VPS y verificar alli el mismo hilo.
+
+---
+
+## 2026-11-19 (XIV) - Guarda de cifras dictadas y despliegue del calendario
+
+### Hecho
+
+- **Guarda de cifras** (`app/asistente/guardas.py`): `verificar` acepta
+  `textos_autorizados`; `proveedores.py` le pasa solo los mensajes que empiezan
+  con `dictado:`/`cerebro:`/`dicta:`. Asi el 70 m3 y los 4000 USD que Julio
+  dicto tienen fuente, sin abrir la puerta a cifras inventadas.
+- **Despliegue al VPS** de `router.py`, `bibliotecario.py`, `persona.py`,
+  `intencion.py`, `guardas.py`, `proveedores.py` y `test_v227`.
+- Respaldos: `/root/backup_gato_calendario_20261119` y
+  `/root/backup_gato_guardas_20261119`.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Suite local | **741 passed**, 2 warnings |
+| VPS: pruebas del calendario | **7 passed** |
+| VPS: mismo hilo | `DICTADO_ESTADO=OK`, `SEGUIMIENTO_ESTADO=OK` |
+| VPS: fechas | «sabado 2026-11-21 y domingo 2026-11-22» |
+| VPS: sin errores | ni «No entendi» ni «Cifras sin ficha» |
+
+Archivos: `.agents/evidencias/gato_calendario_2026-11-19.txt`,
+`gato_calendario_vps_dictado_2026-11-19.json`,
+`gato_calendario_vps_seguimiento_2026-11-19.json`.
+
+### Decision
+
+- Una cifra dictada por el usuario es una fuente valida para repetirla en la
+  conversacion; una cifra que no esta en ficha ni en dictado sigue bloqueada.
+- El calendario y la guarda quedan desplegados; no se toco la accion de
+  agendar, que sigue pendiente de definir con Julio.
+
+### Proximo paso
+
+Definir con Julio la accion de agendar una entrega (capacidad, horario y quien
+confirma) antes de retomar H3.
+
+---
+
 ## 2026-11-19 (X) - Audio de Gato desplegado en el VPS
 
 ### Hecho
@@ -8830,3 +8924,4 @@ Archivo: `.agents/evidencias/gato_audio_vps_2026-11-19.txt` y
 
 Retomar **H3**: auditoria persistente de las manos de Bunny (listar, mover,
 renombrar, borrar) y manifiesto con los archivos afectados.
+

@@ -14,6 +14,9 @@ WhatsApp público.
 
 CONTEXTO DE SESIÓN (lo inyecta el backend, no lo cambies):
 - Actor: {{actor_nombre}} | Rol: {{actor_rol}} | Fecha/hora: {{ahora_iso}}
+- País y zona: Ecuador (America/Guayaquil) | Hoy: {{hoy_iso}}
+- Para «hoy», «mañana», «este sábado» o «el domingo», calcula desde HOY y esa
+  zona. No uses la fecha del navegador.
 - Trato: si el rol es SUPERADMIN (Julio), trátalo de "jefe". Para CONTADORA,
   SECRETARIA o BODEGA, usa un trato cordial, directo y respetuoso por su nombre
   o cargo.
@@ -125,4 +128,5 @@ def render_prompt(actor_nombre: str, actor_rol: str, ahora: datetime) -> str:
         PROMPT_GATO.replace("{{actor_nombre}}", actor_nombre)
         .replace("{{actor_rol}}", actor_rol)
         .replace("{{ahora_iso}}", ahora.isoformat(timespec="seconds"))
+        .replace("{{hoy_iso}}", ahora.date().isoformat())
     )

@@ -252,8 +252,20 @@ async def responder_llm(
                 if not texto:
                     return None
                 fichas = [f for r in resultados for f in r.fichas]
+                autorizados = [
+                    str(turno.get("content") or "")
+                    for turno in (historial or [])
+                    if turno.get("role") == "user"
+                    and str(turno.get("content") or "").strip().lower().startswith(
+                        ("dictado:", "cerebro:", "dicta:")
+                    )
+                ]
+                if pregunta.strip().lower().startswith(
+                    ("dictado:", "cerebro:", "dicta:")
+                ):
+                    autorizados.append(pregunta)
                 try:
-                    verificar(texto, fichas)
+                    verificar(texto, fichas, autorizados)
                 except CifraNoVerificada as exc:
                     return Respuesta(
                         "No pude verificar una cifra contra la base; no te la voy "

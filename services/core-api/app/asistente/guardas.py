@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from decimal import Decimal, InvalidOperation
+from typing import Sequence
 
 from .fichas import Ficha
 
@@ -89,6 +90,30 @@ def _valores_de_fichas(fichas: list[Ficha]) -> set[Decimal]:
     return valores
 
 
+_NUM = re.compile(r"(?<![\w-])(\d[\d.,]*)")
+_MIL = re.compile(r"(\d+)\s+mil\b", re.IGNORECASE)
+
+
+def _valores_de_textos(textos: Sequence[str]) -> set[Decimal]:
+    """Cifras que el propio usuario dictó y por tanto tienen fuente.
+
+    No se autoriza cualquier frase: solo se pasan aquí los dictados explícitos
+    (``dictado:`` / ``cerebro:``). Así el modelo puede repetir el volumen que
+    Julio acaba de dictar sin que la guarda lo confunda con una cifra inventada.
+    """
+    valores: set[Decimal] = set()
+    for texto in textos:
+        crudo = str(texto or "")
+        for match in _MIL.finditer(crudo):
+            try:
+                valores.add(Decimal(match.group(1)) * 1000)
+            except InvalidOperation:
+                pass
+        for match in _NUM.finditer(crudo):
+            valores.update(_candidatos(match.group(1)))
+    return valores
+
+
 def _coincide(valor: Decimal, permitidos: set[Decimal]) -> bool:
     for p in permitidos:
         try:
@@ -99,8 +124,14 @@ def _coincide(valor: Decimal, permitidos: set[Decimal]) -> bool:
     return False
 
 
-def verificar(texto: str, fichas: list[Ficha]) -> None:
-    permitidos = _valores_de_fichas(fichas)
+def verificar(
+    texto: str,
+    fichas: list[Ficha],
+    textos_autorizados: Sequence[str] = (),
+) -> None:
+    permitidos = _valores_de_fichas(fichas) | _valores_de_textos(
+        textos_autorizados
+    )
     sin_codigos = _FC.sub(" ", texto)
     faltantes: list[str] = []
 

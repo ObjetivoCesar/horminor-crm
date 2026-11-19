@@ -1,11 +1,11 @@
-# ESTADO DEL PROYECTO
+﻿# ESTADO DEL PROYECTO
 
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
 > Última actualización: **2026-11-19** (cierre de **H1**: núcleo comercial con
 > leads y citas independientes del canal; panel, Gato y WhatsApp entran por el
 > mismo módulo; migración **097**; **desplegado y verificado en el VPS**.
 > **Gato ya dicta por audio** y una instrucción con dos destinatarios deja un
-> solo encargo; el resumen se pinta con **negritas y viñetas**; **734 pruebas**).
+> solo encargo; el resumen se pinta con **negritas y viñetas**; **741 pruebas**).
 > Antes: 2026-11-18 (espejo v9.8: **chat en vivo por SSE** —
 > el hilo se actualiza solo, sin pulsar Sincronizar; multimedia entrante real;
 > sesión LID reparada, número de prueba 0967491847, corte de historial y altura
@@ -81,6 +81,31 @@ Orellana/SucumbÃ­os para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
 
 ## Evidencia de la última sesión
+
+### 2026-11-19 - Gato: calendario y precedencia del dictado
+
+- **Qué pasó:** el audio con «agendar» lo capturó el atajo comercial antes que
+  el Cerebro, y el seguimiento «este sábado y domingo» falló porque la
+  herramienta de disponibilidad recibió la fecha como texto (`'2026-11-21'`)
+  donde la base exige `date`. El LLM cayó al modo determinista y respondió
+  «No entendí».
+- **Corregido:** el prefijo `dictado:` ahora se evalúa primero;
+  `disponibilidad_agenda` convierte ISO a `date`; `parse_cita` entiende «este
+  sábado», «domingo», «lunes»…; el prompt de Gato dice **Ecuador
+  (America/Guayaquil) | Hoy: YYYY-MM-DD**.
+- **Guarda de cifras:** Gato puede repetir una cifra que el usuario dictó
+  (70 m³, 4 mil dólares) sin tratarla como inventada; una cifra sin fuente sigue
+  bloqueada.
+- **Comprobado:** el seguimiento ya responde «sábado 2026-11-21 y domingo
+  2026-11-22», sin «No entendí» ni error de cifras, en local y en el VPS.
+- **Pruebas:** **741 passed**, 2 warnings (7 nuevas en
+  `test_v227_calendario_gato.py`); en el VPS **7 passed**.
+- **Evidencia:** `.agents/evidencias/gato_calendario_2026-11-19.txt`,
+  `gato_calendario_dictado_2026-11-19.json`,
+  `gato_calendario_seguimiento_2026-11-19.json` y los JSON del VPS.
+- **VPS (2026-11-19):** desplegado con respaldo en
+  `/root/backup_gato_calendario_20261119` y `/root/backup_gato_guardas_20261119`;
+  el mismo hilo devuelve `SEGUIMIENTO_ESTADO=OK`.
 
 ### 2026-11-19 - Gato: resumen con formato y comprobación de la orden de Pastrana
 
@@ -950,3 +975,4 @@ desconectado, Jev en backlog). El siguiente trabajo es el resto del ERP:
   laboratorio. Probado en el VPS: devolvio dos encargos y dos preguntas.
 - **Sigue pendiente:** audio por Gato, confirmar/ejecutar desde Gato, aviso
   sonoro, Gmail y responder/citar.
+

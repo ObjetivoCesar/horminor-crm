@@ -9,6 +9,18 @@ from typing import Any
 
 import asyncpg
 
+
+def _fecha(valor: str | date) -> date:
+    """La fecha puede llegar del LLM o del orquestador como ISO; asyncpg
+    exige un ``date``, no un string."""
+    if isinstance(valor, date):
+        return valor
+    texto = str(valor or "").strip()
+    try:
+        return date.fromisoformat(texto[:10])
+    except ValueError as exc:
+        raise ValueError(f"fecha invalida: {valor!r}") from exc
+
 _NOMBRE_SQL = (
     "regexp_replace("
     "translate(lower(coalesce({col}, '')), 'áéíóúüñ', 'aeiouun'), "
@@ -369,7 +381,8 @@ class Bibliotecario:
         )
         return {"datos": [dict(f) for f in filas], "fuente": "purchases + suppliers"}
 
-    async def disponibilidad_agenda(self, fecha: str) -> dict[str, Any]:
+    async def disponibilidad_agenda(self, fecha: str | date) -> dict[str, Any]:
+        fecha = _fecha(fecha)
         filas = await self.pool.fetch(
             """
             SELECT mixer_codigo, hora_inicio, hora_fin_estimada, estado
