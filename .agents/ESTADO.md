@@ -5,7 +5,7 @@
 > leads y citas independientes del canal; panel, Gato y WhatsApp entran por el
 > mismo módulo; migración **097**; **desplegado y verificado en el VPS**.
 > **Gato ya dicta por audio** y una instrucción con dos destinatarios deja un
-> solo encargo; **732 pruebas**).
+> solo encargo; el resumen se pinta con **negritas y viñetas**; **734 pruebas**).
 > Antes: 2026-11-18 (espejo v9.8: **chat en vivo por SSE** —
 > el hilo se actualiza solo, sin pulsar Sincronizar; multimedia entrante real;
 > sesión LID reparada, número de prueba 0967491847, corte de historial y altura
@@ -81,6 +81,26 @@ Orellana/SucumbÃ­os para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
 
 ## Evidencia de la última sesión
+
+### 2026-11-19 - Gato: resumen con formato y comprobación de la orden de Pastrana
+
+- **Formato:** el resumen de Gato usa markdown real (negritas, viñetas, saltos,
+  código y enlace al borrador). Las citas largas se recortan; una instrucción de
+  más de 300 caracteres se resume como «instrucción larga; revísala en el
+  borrador».
+- **Orden de Pastrana comprobada:** produce **3 encargos y 4 acciones**
+  (`crear_cliente`, dos tareas internas y un recordatorio al 0963410409) y **3
+  preguntas** (dirección, resistencia, precio). **No crea una entrega ni reserva
+  mixes** en la agenda operativa: hoy el Cerebro no tiene ese ejecutor.
+- **Pruebas:** **734 passed**, 2 warnings; los 3 bloques `<script>` del panel
+  en OK.
+- **Evidencia:** `.agents/evidencias/gato_formato_pastrana_2026-11-19.txt` y
+  `gato_pastrana_2026-11-19.json`.
+- **VPS (2026-11-19):** desplegado con respaldo en
+  `/root/backup_gato_formato_20261119`; `11 passed` y render con viñetas
+  verificado en el servidor. Evidencia:
+  `.agents/evidencias/gato_formato_vps_2026-11-19.txt` y
+  `gato_formato_render_2026-11-19.txt`.
 
 ### 2026-11-19 - Dictado por audio desde Gato y una instrucción = un encargo
 

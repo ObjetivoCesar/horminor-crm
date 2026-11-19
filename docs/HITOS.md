@@ -118,6 +118,8 @@ una regresión.
 | 2026-11-19 | H2 | **Dictado por audio desde Gato**: botón de micrófono, transcripción visible y entrega al Cerebro (`modo=dictado`) | `app/asistente/router.py`, `app/web/templates/panel.html`, `.agents/evidencias/gato_audio_2026-11-19.txt` | 2026-11-19 (IX) |
 | 2026-11-19 | H2 | **Una instrucción con dos destinatarios = un encargo**: fusión determinística de frases de coordinación y tarea interna «chofer y Julio»; de 3 encargos/7 preguntas a 1/3 | `app/cerebro/encargos.py`, `app/cerebro/compilador.py`, `app/cerebro/internas.py`, `tests/test_v226_gato_audio_encargos.py` | 2026-11-19 (IX) |
 | 2026-11-19 | H2 | **Audio de Gato desplegado en el VPS**: imagen reconstruida, `19 passed`, audio real `HTTP 200` con `estado=OK` | `.agents/evidencias/gato_audio_vps_2026-11-19.txt`, `/root/backup_gato_audio_20261119` | 2026-11-19 (X) |
+| 2026-11-19 | H2 | **Formato del resumen de Gato**: negritas, viñetas y saltos; citas largas recortadas. Comprobado que la orden de Pastrana **no agenda**, solo deja borrador y tareas | `app/asistente/cerebro_bridge.py`, `app/cerebro/revision.py`, `templates/panel.html`, `.agents/evidencias/gato_formato_pastrana_2026-11-19.txt` | 2026-11-19 (XI) |
+| 2026-11-19 | H2 | **Formato desplegado en el VPS**: respaldo, imagen reconstruida, `11 passed` y render con viñetas verificado en el servidor | `.agents/evidencias/gato_formato_vps_2026-11-19.txt`, `gato_formato_render_2026-11-19.txt`, `/root/backup_gato_formato_20261119` | 2026-11-19 (XII) |
 
 ## 6. Cómo se actualiza
 

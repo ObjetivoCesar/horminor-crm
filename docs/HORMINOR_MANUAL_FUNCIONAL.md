@@ -5,7 +5,7 @@
 > es el documento que permite a Julio, a la secretaría, a administración y a
 > cualquier agente de IA entender el sistema sin preguntarle al programador.
 >
-> **Estado:** v2.7 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
+> **Estado:** v2.8 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
 > las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas), el
 > dictado por audio desde Gato y los módulos ejecutores.
 >
@@ -829,7 +829,7 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Para qué existe** | Dictar desde el mismo lugar donde se consulta, sin abrir el laboratorio ni copiar el texto a mano. |
 | **Quién lo utiliza** | Julio y perfiles con los módulos `voz` y `cerebro`. |
 | **Qué lo activa** | El botón de micrófono del compositor de Gato. Se graba, se detiene y se envía como `multipart/form-data` con `modo=dictado`. |
-| **Qué sucede después** | El backend reutiliza `app/voz` (Groq) para transcribir; el texto se pasa al **mismo endpoint del Cerebro** que usa el prefijo `dictado:` y vuelve el resumen con sus preguntas. La burbuja del usuario se reemplaza por la transcripción para que se vea qué se entendió. |
+| **Qué sucede después** | El backend reutiliza `app/voz` (Groq) para transcribir; el texto se pasa al **mismo endpoint del Cerebro** que usa el prefijo `dictado:` y vuelve el resumen con sus preguntas. La burbuja del usuario se reemplaza por la transcripción para que se vea qué se entendió. El resumen se pinta con **negritas, viñetas y saltos**: una viñeta por encargo, las preguntas aparte y el borrador con su enlace. Las citas largas se recortan. |
 | **Qué NO significa** | No ejecuta nada: deja un borrador para revisar y confirmar en `/panel/cerebro`. Si el audio está mal transcrito, se corrige en el laboratorio. |
 | **Ejemplo** | «Dame preparando una entrega de 25 m3 … confírmame con el chofer y con Julio» → un encargo, una tarea interna para «chofer y Julio» y 3 preguntas (cliente, dirección, resistencia). |
 | **Dónde se encuentra** | Chat flotante de **Gato**, botón de micrófono a la izquierda del campo de texto. |
@@ -1034,6 +1034,9 @@ resuelta, registrada). No mide cuánto trabajó una persona.
   «¿qué pasó con lo de ayer?». **Contrato escrito, implementación pendiente.**
 - Ejecutar `crear_cliente` y `crear_cotizacion_borrador` desde el Cerebro
   (hoy responden 501 a propósito).
+- **Reservar mixes o entregas desde el Cerebro**: la orden se queda en borrador
+  y tareas internas; la agenda operativa (`dispatch_schedule` /
+  `HorminorAgenda`) no se toca.
 - Guardar los contactos del cliente (`contacto.*`) en su ficha.
 - Aprender significados («rebaja del cinco» = 5 %) y lugares («debajo del
   Cóndor»): hoy solo hay vocabulario de nombres y jerga.
@@ -1146,3 +1149,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.5 | 2026-11-18 | Momento cero: carpeta del cliente al ratificar el alta y manos de Miau en Bunny con vista previa y enlaces. |
 | v2.6 | 2026-11-19 | Núcleo comercial (H1): **Lead**, **Reactivación de un lead** y **Cita comercial** (§6); dos hechos separados (la empresa responde / el lead escribe), origen fijado por el servidor y citas con estados y auditoría. |
 | v2.7 | 2026-11-19 | **Dictado por Gato** (§6): botón de micrófono que transcribe y entrega el audio al Cerebro; la coordinación con dos destinatarios deja un solo encargo. |
+| v2.8 | 2026-11-19 | **Formato del resumen de Gato**: negritas, viñetas y saltos; citas largas recortadas. Se aclara que el Cerebro **no reserva mixes ni entregas** en la agenda operativa. |

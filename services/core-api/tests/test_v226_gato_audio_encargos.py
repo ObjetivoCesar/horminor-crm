@@ -16,6 +16,8 @@ from datetime import date
 from app.cerebro import Contexto, Evidencia, HechoCitado, compilar
 from app.cerebro.encargos import asignar, fusionar_coordinaciones, segmentar
 from app.cerebro.internas import detectar_intencion_tarea
+from app.cerebro.revision import resumen_legible
+from app.asistente.cerebro_bridge import mensaje_de_resumen
 
 TEXTO = (
     "Dame preparando una entrega de 25 m3 de hormigón en la entrada de El Coca, "
@@ -143,3 +145,63 @@ def test_un_encargo_con_datos_propios_no_se_fusiona() -> None:
     unidos = fusionar_coordinaciones(hechos)
 
     assert {hecho.encargo for hecho in unidos} == {1, 2}
+
+
+def test_el_resumen_de_gato_usa_saltos_vinetas_y_borrador() -> None:
+    datos = {
+        "resumen": (
+            "Encargo 1: Entendí: el cliente es Pastrana, 70 m3.\n"
+            "Encargo 2: Entendí: un recordatorio para 0963410409."
+        ),
+        "borrador_id": "4e2cba5e-6150",
+        "borrador": {
+            "preguntas": [
+                {"texto": "¿Cuál es la dirección o referencia de la obra?"},
+                {"texto": "¿Qué resistencia (FC-210, FC-350…)?"},
+            ]
+        },
+    }
+
+    texto = mensaje_de_resumen(datos)
+
+    assert "**Lo que entendí**" in texto
+    assert "\n- **Encargo 1:**" in texto
+    assert "\n- **Encargo 2:**" in texto
+    assert "- **Encargo 1:** Entendí" not in texto
+    assert "\n\n**Antes de ejecutar necesito:**" in texto
+    assert "\n- ¿Cuál es la dirección" in texto
+    assert "\n\n**Borrador:** `4e2cba5e-6150`" in texto
+    assert "`/panel/cerebro`" in texto
+
+
+def test_una_cita_larga_no_se_copia_entera_en_el_resumen() -> None:
+    largo = (
+        "A ver, señor Gato, hazme el favor de, acabo de reunirnos con el "
+        "ingeniero Pastrana, es el dueño de los edificios Pastranas, me acaba "
+        "de dar un contrato muy grande y nos va a aprobar en una construcción."
+    ) * 3
+    hechos = [
+        hecho("tarea.destinatario", "chofer", cita="confírmame con el chofer"),
+        HechoCitado(
+            clave="tarea.mensaje",
+            valor=largo,
+            estado="EXTRAIDO",
+            tipo="TEXTO",
+            evidencia=Evidencia(
+                cita="confírmame con el chofer",
+                sostiene="confírmame con el chofer",
+                crudo_inicio=164,
+                crudo_fin=188,
+                start_ms=None,
+                end_ms=None,
+                confianza=0.9,
+                hablante="SUPERADMIN",
+            ),
+        ),
+    ]
+
+    resumen = resumen_legible(hechos)
+
+    assert "instrucción larga" in resumen
+    assert len(resumen) < 400
+    assert largo not in resumen

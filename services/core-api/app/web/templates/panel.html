@@ -2633,6 +2633,16 @@ tbody tr:last-child td { border-bottom: 0; }
 .gato-msg.bot { align-self: flex-start; background: var(--surface-row-pill); border: var(--border-subtle); }
 .gato-msg.user { align-self: flex-end; background: #F59E0B; color: #1A1200; }
 .gato-msg.error { border-color: rgba(239, 68, 68, 0.55); color: #FCA5A5; }
+.gato-panel .chat-burbuja p { margin: 0 0 6px; }
+.gato-panel .chat-burbuja p:last-child { margin-bottom: 0; }
+.gato-panel .chat-burbuja strong { font-weight: 700; }
+.gato-panel .chat-burbuja code {
+  background: rgba(148,163,184,.18); padding: 1px 4px; border-radius: 4px;
+  font-size: 11px; overflow-wrap: anywhere;
+}
+.gato-lista { margin: 4px 0 8px; padding-left: 18px; }
+.gato-lista li { margin: 3px 0; }
+.gato-espacio { height: 6px; }
 .gato-panel .chat-msg { max-width: 88%; min-width: 0; }
 .gato-panel .chat-burbuja { max-width: 100%; min-width: 0; overflow: hidden; }
 .gato-tabla-wrap { width: 100%; max-width: 100%; overflow-x: auto; margin: 4px 0; }
@@ -9593,21 +9603,46 @@ function gatoTabla(filas) {
     '</tr></thead><tbody>' + body.map(r => '<tr>' + r.map((c, i) => '<td class="' + (i > 0 ? 'num' : '') + '">' + c + '</td>').join('') + '</tr>').join('') +
     '</tbody></table></div>';
 }
+function gatoInline(texto) {
+  return gatoLink(
+    gatoEsc(texto)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+  );
+}
 function gatoMarkdown(texto) {
-  const lineas = gatoEsc(texto).split('\n');
+  const lineas = String(texto || '').split('\n');
   const salida = [];
   let tabla = null;
+  let lista = false;
+  const cerrarLista = () => {
+    if (lista) { salida.push('</ul>'); lista = false; }
+  };
   for (const linea of lineas) {
-    if (linea.trim().startsWith('|')) {
+    const limpia = linea.trim();
+    if (limpia.startsWith('|')) {
+      cerrarLista();
       tabla = tabla || [];
-      tabla.push(linea.trim());
+      tabla.push(limpia);
       continue;
     }
     if (tabla) { salida.push(gatoTabla(tabla)); tabla = null; }
-    salida.push(gatoLink(linea.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')));
+    if (!limpia) {
+      cerrarLista();
+      salida.push('<div class="gato-espacio"></div>');
+      continue;
+    }
+    if (/^[-•]\s+/.test(limpia)) {
+      if (!lista) { salida.push('<ul class="gato-lista">'); lista = true; }
+      salida.push('<li>' + gatoInline(limpia.replace(/^[-•]\s+/, '')) + '</li>');
+      continue;
+    }
+    cerrarLista();
+    salida.push('<p>' + gatoInline(linea) + '</p>');
   }
   if (tabla) salida.push(gatoTabla(tabla));
-  return salida.join('<br>');
+  cerrarLista();
+  return salida.join('');
 }
 function gatoAgregar(clase, texto) {
   const hilo = document.getElementById('gato-hilo');

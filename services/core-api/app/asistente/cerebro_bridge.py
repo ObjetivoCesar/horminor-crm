@@ -45,25 +45,58 @@ def texto_limpio(texto: str) -> str:
 
 
 def mensaje_de_resumen(datos: dict[str, Any]) -> str:
-    """Arma la respuesta conversacional que ve Julio en Gato."""
+    """Arma la respuesta conversacional que ve Julio en Gato.
+
+    Se devuelve markdown sencillo (negritas, vinetas y saltos) porque el chat
+    lo pinta con ``gatoMarkdown``. Un resumen de varios encargos sin saltos se
+    vuelve un muro de texto.
+    """
     resumen = str(datos.get("resumen") or "").strip() or "Quedo a la espera de confirmacion."
     borrador_id = str(datos.get("borrador_id") or "").strip()
     preguntas = (datos.get("borrador") or {}).get("preguntas") or []
-    partes = [resumen]
+
+    lineas: list[str] = []
+    bloques = [
+        bloque.strip()
+        for bloque in re.split(r"(?=Encargo\s+\d+:\s*)", resumen)
+        if bloque.strip()
+    ]
+    lineas.append("**Lo que entendí**")
+    if len(bloques) > 1:
+        for bloque in bloques:
+            encabezado = re.match(r"Encargo\s+(\d+):\s*(.*)", bloque, re.S)
+            if encabezado:
+                detalle = encabezado.group(2).strip()
+                if detalle.lower().startswith("entendí:"):
+                    detalle = detalle[len("entendí:") :].strip()
+                lineas.append(
+                    f"- **Encargo {encabezado.group(1)}:** {detalle}"
+                )
+            else:
+                lineas.append(f"- {bloque}")
+    else:
+        detalle = bloques[0] if bloques else resumen
+        if detalle.lower().startswith("entendí:"):
+            detalle = detalle[len("entendí:") :].strip()
+        lineas.append(detalle)
+
     if preguntas:
         textos = [
-            str(p.get("texto") or p.get("clave") or "").strip()
-            for p in preguntas
-            if isinstance(p, dict)
+            str(pregunta.get("texto") or pregunta.get("clave") or "").strip()
+            for pregunta in preguntas
+            if isinstance(pregunta, dict)
         ]
-        textos = [t for t in textos if t]
+        textos = [texto for texto in textos if texto]
         if textos:
-            partes.append("Antes de ejecutar necesito: " + "; ".join(textos) + ".")
+            lineas.append("")
+            lineas.append("**Antes de ejecutar necesito:**")
+            lineas.extend(f"- {texto}" for texto in textos)
+
     if borrador_id:
-        partes.append(
-            "Quedo como borrador; revisalo y confirmalo en /panel/cerebro."
-        )
-    return " ".join(partes)
+        lineas.append("")
+        lineas.append(f"**Borrador:** `{borrador_id}`")
+        lineas.append("Revísalo y confírmalo en `/panel/cerebro`.")
+    return "\n".join(lineas)
 
 
 async def interpretar(

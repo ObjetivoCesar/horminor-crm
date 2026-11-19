@@ -45,11 +45,14 @@ def test_resumen_incluye_preguntas_y_borrador() -> None:
         },
     }
     texto = cerebro_bridge.mensaje_de_resumen(datos)
-    assert "Entendi: una tarea para bodega." in texto
+    assert "una tarea para bodega" in texto
     assert "para cuando es la tarea" in texto
+    assert "**Borrador:** `abc-123`" in texto
     assert "/panel/cerebro" in texto
 
 
 def test_resumen_sin_borrador_no_inventa_enlace() -> None:
     texto = cerebro_bridge.mensaje_de_resumen({"resumen": "Sin acciones."})
-    assert texto == "Sin acciones."
+    assert "Sin acciones." in texto
+    assert "/panel/cerebro" not in texto
+    assert "Borrador" not in texto

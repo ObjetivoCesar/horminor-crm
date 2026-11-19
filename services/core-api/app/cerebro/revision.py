@@ -226,6 +226,14 @@ def _primero(hechos: Sequence[HechoCitado], *claves: str) -> Any:
     return None
 
 
+def _recorte(texto: Any, limite: int = 180) -> str:
+    """Una cita larga no debe convertir el resumen en un muro de texto."""
+    limpio = _sin_espacios(str(texto if texto is not None else ""))
+    if len(limpio) <= limite:
+        return limpio
+    return limpio[:limite].rstrip(" ,.;:") + "…"
+
+
 def _personas(hechos: Sequence[HechoCitado]) -> list[str]:
     personas: list[str] = []
     for sufijo in ("", ".2", ".3", ".4"):
@@ -269,7 +277,7 @@ def resumen_legible(
                 condiciones=propias,
             )
         )
-    return " ".join(partes)
+    return "\n".join(partes)
 
 
 def _resumen_plano(
@@ -387,7 +395,12 @@ def _resumen_plano(
             else:
                 # «hoy mismo» es un plazo, no una hora: se copia tal cual.
                 tarea += f" ({cuando})"
-        tarea += f": «{mensaje}»"
+        # La cita completa puede ser un dictado entero. En el resumen se
+        # muestra un tramo corto; el texto íntegro queda en el hecho.
+        if len(_sin_espacios(str(mensaje))) > 300:
+            tarea += " (instrucción larga; revísala en el borrador)"
+        else:
+            tarea += f": «{_recorte(mensaje, 120)}»"
         partes.append(tarea)
 
     dudas = [

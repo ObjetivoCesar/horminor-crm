@@ -8723,6 +8723,83 @@ Desplegar en el VPS el audio de Gato y la fusion de encargos; luego retomar
 
 ---
 
+## 2026-11-19 (XI) - Formato del resumen de Gato y comprobacion de la orden de Pastrana
+
+### Objetivo
+
+Que el resumen del Cerebro en Gato se lea (saltos, negritas, vinetas) y
+comprobar si una orden real de entrega se ejecutaria como agendamiento.
+
+### Hecho
+
+1. **Markdown en Gato** (`app/asistente/cerebro_bridge.py`): encabezado,
+   vinetas por encargo, bloque de preguntas, borrador en codigo y enlace.
+2. **Recorte de citas** (`app/cerebro/revision.py`): una cita de mas de 300
+   caracteres se lee como «instruccion larga; revisala en el borrador»; las
+   cortas se recortan a 120.
+3. **Frontend** (`templates/panel.html`): `gatoMarkdown` pinta parrafos, listas,
+   negritas y codigo; se elimino el `<br>` unico que amontonaba todo.
+4. **Prueba de la orden de Pastrana** contra el Cerebro real.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Suite completa | **734 passed**, 2 warnings |
+| Sintaxis del panel | 3 bloques `<script>` OK |
+| Orden de Pastrana | 3 encargos, 4 acciones, 3 preguntas |
+| Acciones | `crear_cliente`, 2 tareas internas, `crear_tarea_recordatorio` |
+| Agendamiento | **no**: no crea entrega ni reserva mixes |
+
+Archivos: `.agents/evidencias/gato_formato_pastrana_2026-11-19.txt` y
+`gato_pastrana_2026-11-19.json`.
+
+### Decision
+
+- El resumen de Gato es markdown; el laboratorio conserva el texto plano.
+- **No se inventa un agendamiento**: reservar mixes exige capacidad, horario y
+  reglas que Julio no ha definido. Se documenta como inexistente en el manual.
+- La tarea interna del encargo 1 conserva el dictado completo, pero el resumen
+  ya no lo copia entero.
+
+### Bloqueo
+
+- El formato esta en local; falta desplegarlo al VPS.
+
+### Proximo paso
+
+Desplegar el formato al VPS y, antes de H3, definir con Julio la accion de
+agendar una entrega (capacidad, horario y quien confirma).
+
+---
+
+## 2026-11-19 (XII) - Formato del resumen desplegado en el VPS
+
+### Hecho
+
+- Respaldo en `/root/backup_gato_formato_20261119`.
+- Copia de `cerebro_bridge.py`, `revision.py`, `panel.html` y las pruebas
+  `test_v226` / `test_v218`.
+- Imagen reconstruida y servicio recreado.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| `/health` | `status=ok`, `db=ok` |
+| `pytest` en el VPS (formato + audio) | **11 passed** |
+| Render del resumen de Pastrana | viñetas, negritas, preguntas y borrador |
+
+Archivos: `.agents/evidencias/gato_formato_vps_2026-11-19.txt` y
+`gato_formato_render_2026-11-19.txt`.
+
+### Proximo paso
+
+Definir con Julio la accion de **agendar una entrega** (capacidad, horario y
+quien confirma) antes de retomar H3.
+
+---
+
 ## 2026-11-19 (X) - Audio de Gato desplegado en el VPS
 
 ### Hecho
