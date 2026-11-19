@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -9,7 +10,7 @@ import asyncpg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import cerebro_bridge, comercial_bridge, memoria, recordatorios
+from . import cerebro_bridge, comercial_bridge, conversaciones, memoria, recordatorios
 from ..db import setting
 from ..panel_acl import exigir_modulo, resolver_perfil
 from ..services import media as media_svc
@@ -19,6 +20,7 @@ from .gato import responder_detallado
 from .orquestador import Actor, Respuesta
 
 router = APIRouter(prefix="/api/v1/asistente", tags=["asistente"])
+gato_router = APIRouter(prefix="/api/v1/gato", tags=["gato"])
 
 ROLES = {
     "julio": "SUPERADMIN",
@@ -36,6 +38,7 @@ class MensajeIn(BaseModel):
 
     mensaje: str = Field(min_length=1, max_length=1000)
     conversacion_id: str | None = Field(default=None, max_length=80)
+    client_turn_id: str | None = Field(default=None, max_length=80)
 
 
 class MensajeOut(BaseModel):
@@ -107,24 +110,75 @@ def _puente(mensaje: str) -> str | None:
     return None
 
 
-def _contexto_dictado(historial: list[dict[str, str]] | None) -> str | None:
-    """Dictados previos de la conversación, sin el prefijo.
+def _perfil_id(actor: Actor) -> str | None:
+    try:
+        return str(UUID(str(actor.actor_id)))
+    except (ValueError, TypeError):
+        return None
 
-    El Cerebro recibe este texto como contexto para que un seguimiento como
-    «me acaba de dar el efectivo» se refiera al cliente y monto ya dictados.
+
+def _plano(texto: str) -> str:
+    import unicodedata
+
+    base = unicodedata.normalize("NFD", str(texto or "").lower())
+    return "".join(c for c in base if unicodedata.category(c) != "Mn")
+
+
+def _es_continuacion(mensaje: str) -> bool:
+    """True si el mensaje parece una respuesta corta o una corrección."""
+    plano = _plano(mensaje)
+    palabras = plano.split()
+    if not palabras or len(palabras) > 30:
+        return False
+    if any(
+        marca in plano
+        for marca in ("me acaba de", "es el mismo", "agregale", "corrige", "continua")
+    ):
+        return True
+    return bool(re.match(r"^(si|no|correcto|ya|efectivamente)\b", plano))
+
+
+def _contexto_dictado(
+    historial: list[dict[str, str]] | None, mensaje: str
+) -> str | None:
+    """Contexto deliberado: solo el dictado anterior si se está continuando.
+
+    No se arrastran los últimos cinco dictados. Un dictado nuevo, largo o con
+    otro cliente abre una operación nueva. Se conserva el hilo solo cuando el
+    mensaje responde una pregunta pendiente o pide corregir/agregar.
     """
-    previos: list[str] = []
+    if not _es_continuacion(mensaje):
+        return None
+
+    previo: str | None = None
+    ultima_respuesta = ""
     for turno in historial or []:
-        if turno.get("role") != "user":
-            continue
+        rol = turno.get("role")
         contenido = str(turno.get("content") or "").strip()
-        if contenido.lower().startswith(("dictado:", "cerebro:", "dicta:")):
+        if rol == "user" and contenido.lower().startswith(
+            ("dictado:", "cerebro:", "dicta:")
+        ):
             limpio = cerebro_bridge.texto_limpio(contenido)
             if limpio:
-                previos.append(limpio)
-    if not previos:
+                previo = limpio
+        elif rol == "assistant" and contenido:
+            ultima_respuesta = contenido
+
+    if not previo:
         return None
-    return "\n\n".join(previos[-5:])
+
+    explícito = any(
+        marca in _plano(mensaje)
+        for marca in ("es el mismo", "agregale", "corrige", "continua")
+    )
+    hay_pregunta = (
+        "?" in ultima_respuesta
+        or "antes de ejecutar" in ultima_respuesta.lower()
+        or "necesito" in ultima_respuesta.lower()
+    )
+    if explícito or hay_pregunta:
+        return previo
+    return None
 
 
 def _modo_envio(request: Request) -> str:
@@ -189,13 +243,55 @@ async def chat(
 
     memoria_activa = isinstance(pool, asyncpg.Pool)
     conversacion_id = (body.conversacion_id or "").strip()
-    if conversacion_id:
+    perfil_id = _perfil_id(actor)
+
+    if memoria_activa:
         try:
-            UUID(conversacion_id)
-        except ValueError:
-            conversacion_id = ""
-    if not conversacion_id:
-        conversacion_id = str(uuid4())
+            if conversacion_id:
+                conv = await conversaciones.asegurar_abierta(
+                    pool, conversacion_id=conversacion_id, actor_id=actor.actor_id
+                )
+            else:
+                conv = await conversaciones.actual(
+                    pool,
+                    actor_id=actor.actor_id,
+                    rol_actor=actor.rol,
+                    perfil_id=perfil_id,
+                )
+            conversacion_id = str(conv["id"])
+        except conversaciones.ConversacionCerrada as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "CONVERSACION_CERRADA",
+                    "message": "la conversacion esta cerrada; recarga la activa",
+                },
+            ) from exc
+        except conversaciones.ConversacionNoEncontrada as exc:
+            raise HTTPException(
+                status_code=404, detail="conversacion no encontrada"
+            ) from exc
+
+        if body.client_turn_id:
+            existente = await conversaciones.turno_por_client_id(
+                pool,
+                conversacion_id=conversacion_id,
+                client_turn_id=body.client_turn_id,
+            )
+            if existente is not None:
+                return MensajeOut(
+                    respuesta=str(existente["respuesta"]),
+                    estado=str(existente["estado"]),
+                    conversacion_id=conversacion_id,
+                )
+    else:
+        if conversacion_id:
+            try:
+                UUID(conversacion_id)
+            except ValueError:
+                conversacion_id = ""
+        if not conversacion_id:
+            conversacion_id = str(uuid4())
 
     historial: list[dict[str, str]] = []
     if memoria_activa:
@@ -220,7 +316,9 @@ async def chat(
                 body.mensaje,
                 texto,
                 estado,
+                client_turn_id=body.client_turn_id,
             )
+            await conversaciones.tocar(pool, conversacion_id)
         return MensajeOut(
             respuesta=texto, estado=estado, conversacion_id=conversacion_id
         )
@@ -236,7 +334,8 @@ async def chat(
                 usuario=actor.actor_id,
                 rol=actor.rol,
                 nombre=actor.nombre,
-                contexto=_contexto_dictado(historial),
+                contexto=_contexto_dictado(historial, body.mensaje),
+                conversacion_id=conversacion_id,
             )
             texto = cerebro_bridge.mensaje_de_resumen(datos)
             estado = "OK"
@@ -252,7 +351,9 @@ async def chat(
                 body.mensaje,
                 texto,
                 estado,
+                client_turn_id=body.client_turn_id,
             )
+            await conversaciones.tocar(pool, conversacion_id)
         return MensajeOut(
             respuesta=texto, estado=estado, conversacion_id=conversacion_id
         )
@@ -285,7 +386,9 @@ async def chat(
             body.mensaje,
             respuesta.texto,
             respuesta.estado,
+            client_turn_id=body.client_turn_id,
         )
+        await conversaciones.tocar(pool, conversacion_id)
     return MensajeOut(
         respuesta=respuesta.texto,
         estado=respuesta.estado,
@@ -298,6 +401,7 @@ async def chat_audio(
     request: Request,
     archivo: UploadFile = File(...),
     conversacion_id: str | None = Form(default=None),
+    client_turn_id: str | None = Form(default=None),
     modo: str = Form(default="dictado"),
 ) -> MensajeOut:
     """Nota de voz para Gato: reutiliza el componente de voz (no lo duplica).
@@ -369,7 +473,11 @@ async def chat_audio(
     # instrucciones. Escribir en Gato sigue siendo una consulta normal.
     mensaje = f"dictado: {texto}" if modo == "dictado" else texto
     salida = await chat(
-        MensajeIn(mensaje=mensaje[:1000], conversacion_id=conversacion_id),
+        MensajeIn(
+            mensaje=mensaje[:1000],
+            conversacion_id=conversacion_id,
+            client_turn_id=client_turn_id,
+        ),
         request,
         actor,
     )
@@ -444,3 +552,42 @@ async def cancelar_recordatorio(
     return RecordatorioOut(
         estado=resultado.estado, nota=resultado.nota, datos=resultado.datos
     )
+
+
+@gato_router.get("/conversacion/actual")
+async def conversacion_actual(
+    request: Request,
+    actor: Actor = Depends(actor_actual),
+) -> dict[str, Any]:
+    """Última conversación del actor, con sus turnos."""
+    pool = getattr(request.app.state, "pool", None)
+    if pool is None:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    conv = await conversaciones.actual(
+        pool,
+        actor_id=actor.actor_id,
+        rol_actor=actor.rol,
+        perfil_id=_perfil_id(actor),
+    )
+    return {
+        "conversacion": conv,
+        "turnos": await conversaciones.turnos(pool, str(conv["id"])),
+    }
+
+
+@gato_router.post("/conversacion/refresh")
+async def conversacion_refresh(
+    request: Request,
+    actor: Actor = Depends(actor_actual),
+) -> dict[str, Any]:
+    """Cierra la conversación abierta y devuelve una nueva vacía."""
+    pool = getattr(request.app.state, "pool", None)
+    if pool is None:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    conv = await conversaciones.cerrar_y_abrir(
+        pool,
+        actor_id=actor.actor_id,
+        rol_actor=actor.rol,
+        perfil_id=_perfil_id(actor),
+    )
+    return {"conversacion": conv, "turnos": []}

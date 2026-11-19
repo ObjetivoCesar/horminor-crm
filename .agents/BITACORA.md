@@ -9018,6 +9018,71 @@ Que Julio recargue el panel y pruebe el microfono con «Viendo como: Julio».
 
 ---
 
+## 2026-11-19 (XVIII) - Fase 1: conversaciones reales de Gato
+
+### Objetivo
+
+Cerrar la fuga de contexto: Gato guardaba turnos, pero no tenía cabecera de
+conversación; el refresh solo limpiaba el navegador y los dictados viejos se
+arrastraban.
+
+### Hecho
+
+1. **Migración 098** (`098_gato_conversaciones.sql`):
+   - `gato_conversaciones` con `actor_id text`, `perfil_id uuid`, apertura,
+     cierre, `estado_dialogo_json` y `lock_version`.
+   - Índice único parcial: una conversación abierta por actor.
+   - Backfill de 30 conversaciones históricas desde `gato_turnos`; 4 abiertas
+     (una por actor).
+   - `client_turn_id` en `gato_turnos` con índice único.
+   - FK de `gato_turnos` y `gato_recordatorios` a la cabecera.
+   - `gato_turno_borradores` (RESTRICT), y `conversacion_id`/`cliente_id` en
+     `cerebro_borradores`, `cerebro_extracciones` y `cerebro_tareas_internas`.
+2. **Servicio** `app/asistente/conversaciones.py`: actual, asegurar abierta,
+   cerrar y abrir, turnos, tocar, idempotencia por `client_turn_id`.
+3. **API** `GET /api/v1/gato/conversacion/actual` y
+   `POST /api/v1/gato/conversacion/refresh`.
+4. **Panel**: carga el hilo desde la base al abrir Gato; refresh real; envía
+   `conversacion_id` y `client_turn_id`; deja de usar `localStorage` como fuente.
+5. **Contexto deliberado**: `_contexto_dictado(historial, mensaje)` solo incluye
+   el dictado anterior si el mensaje es corto y responde una pregunta pendiente o
+   pide corregir/agregar. Se eliminó el arrastre de los últimos cinco dictados.
+6. **Enlace al Cerebro**: `cerebro_bridge` y `/cerebro/interpretar` reciben
+   `conversacion_id`; extracciones y borradores quedan ligados a la conversación.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Migración 098 | aplicada |
+| Conversaciones históricas | 30; 4 abiertas (una por actor) |
+| Suite completa | **744 passed**, 2 warnings |
+| Dos dictados seguidos | extracciones separadas; la segunda no contiene «Pastrana» |
+| Seguimiento «me acaba de dar 200» | conserva cliente/volumen y marca pago |
+| Idempotencia | dos envíos mismo `client_turn_id` = 1 fila |
+| Panel | carga el hilo, refresh cambia el id, recarga muestra la nueva |
+
+Archivo: `.agents/evidencias/gato_conversaciones_fase1_2026-11-19.txt`.
+
+### Decisión
+
+- El cliente no es dueño de la conversación: una conversación puede tener varios
+  clientes y operaciones. El cliente vive en el borrador/hecho/entidad.
+- El refresh cierra en PostgreSQL; no borra evidencia.
+- La conversación cerrada es de solo lectura; una respuesta tardía recibe 409.
+- No se implementó todavía el historial completo ni la búsqueda (Fase 4).
+
+### Bloqueo
+
+- La migración 098 y el código están en local; falta desplegarlos al VPS.
+
+### Próximo paso
+
+Desplegar la 098 y el código al VPS, con respaldo, y repetir los endpoints y el
+panel. Después, Fase 2: confirmación desde Gato e idempotencia de ejecuciones.
+
+---
+
 ## 2026-11-19 (X) - Audio de Gato desplegado en el VPS
 
 ### Hecho

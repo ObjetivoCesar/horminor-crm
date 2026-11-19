@@ -96,21 +96,21 @@ def test_la_guarda_sigue_bloqueando_una_cifra_sin_fuente() -> None:
         verificar("Son 70 m³.", [], ["hola, ¿cómo va todo?"])
 
 
-def test_el_contexto_lleva_los_dictados_previos_de_la_conversacion() -> None:
+def test_el_contexto_lleva_solo_el_dictado_anterior_si_se_continua() -> None:
     historial = [
         {"role": "user", "content": "dictado: cliente Pastrana, 7 m3"},
-        {"role": "assistant", "content": "resumen anterior"},
+        {"role": "assistant", "content": "Antes de ejecutar necesito: ¿los 300 USD ya entraron?"},
         {"role": "user", "content": "dictado: me dio 300 en efectivo"},
-        {"role": "user", "content": "hola, ¿cómo va la caja?"},
+        {"role": "assistant", "content": "Antes de ejecutar necesito: ¿qué cliente es?"},
     ]
 
-    contexto = _contexto_dictado(historial)
+    contexto = _contexto_dictado(historial, "si, me acaba de dar 300")
 
     assert contexto is not None
-    assert "cliente Pastrana" in contexto
-    assert "300 en efectivo" in contexto
-    assert "cómo va la caja" not in contexto
-    assert _contexto_dictado([]) is None
+    assert "me dio 300" in contexto
+    assert "Pastrana" not in contexto
+    assert _contexto_dictado(historial, "nueva operacion: escuela 7 m3 para mañana") is None
+    assert _contexto_dictado([], "si") is None
 
 
 def test_la_confirmacion_de_efectivo_se_reconoce() -> None:

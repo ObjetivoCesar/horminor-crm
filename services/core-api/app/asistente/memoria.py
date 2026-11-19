@@ -58,12 +58,14 @@ async def guardar(
     pregunta: str,
     respuesta: str,
     estado: str,
+    client_turn_id: str | None = None,
 ) -> None:
     await pool.execute(
         """
         INSERT INTO gato_turnos (
-            conversacion_id, actor_id, rol_actor, pregunta, respuesta, estado
-        ) VALUES ($1::uuid, $2, $3, $4, $5, $6)
+            conversacion_id, actor_id, rol_actor, pregunta, respuesta, estado,
+            client_turn_id
+        ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)
         """,
         conversacion_id,
         actor_id,
@@ -71,4 +73,5 @@ async def guardar(
         str(pregunta or "")[:MAX_TEXTO],
         str(respuesta or "")[:MAX_TEXTO],
         estado,
+        client_turn_id,
     )

@@ -57,6 +57,7 @@ router = APIRouter(prefix="/api/v1/cerebro", tags=["cerebro"])
 class InterpretarIn(BaseModel):
     texto: str | None = Field(default=None, max_length=8000)
     transcripcion_id: str | None = None
+    conversacion_id: str | None = Field(default=None, max_length=80)
     # Dictados anteriores de la misma conversacion. El Cerebro los usa como
     # contexto para que «me acaba de dar el efectivo» se refiera al cliente y
     # monto que se acaban de dictar, no a una operacion nueva.
@@ -140,8 +141,25 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
         )
 
     transcripcion_id = (body.transcripcion_id or "").strip() or None
+    conversacion_id = (body.conversacion_id or "").strip() or None
     texto = (body.texto or "").strip()
     palabras: list[dict[str, Any]] = []
+
+    if conversacion_id:
+        try:
+            uuid.UUID(conversacion_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="conversacion_id invalido") from exc
+        conv = await pool.fetchrow(
+            "SELECT cerrada_en FROM gato_conversaciones WHERE id = $1::uuid",
+            conversacion_id,
+        )
+        if conv is None:
+            raise HTTPException(status_code=404, detail="conversacion no encontrada")
+        if conv["cerrada_en"] is not None:
+            raise HTTPException(
+                status_code=409, detail="la conversacion esta cerrada"
+            )
 
     if transcripcion_id:
         try:
@@ -201,9 +219,10 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
                 INSERT INTO cerebro_extracciones (
                     transcripcion_id, texto_directo, idempotency_key,
                     usuario_solicitante, rol_base_solicitante, modelo_llm,
-                    version_prompt, sobre_json, latencia_ms, costo_llm_usd
+                    version_prompt, sobre_json, latencia_ms, costo_llm_usd,
+                    conversacion_id
                 ) VALUES (
-                    $1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, 0
+                    $1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, 0, $10::uuid
                 )
                 RETURNING id::text AS id
                 """,
@@ -216,16 +235,17 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
                 VERSION_PROMPT,
                 json.dumps(sobre.model_dump(), ensure_ascii=False),
                 latencia_ms,
+                conversacion_id,
             )
             guardado = await conn.fetchrow(
                 """
                 INSERT INTO cerebro_borradores (
                     extraccion_id, version, estado, acciones_propuestas_json,
                     preguntas_pendientes_json, condiciones_json, encargos_json,
-                    creado_por
+                    creado_por, conversacion_id
                 ) VALUES (
                     $1::uuid, 1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb,
-                    $7
+                    $7, $8::uuid
                 )
                 RETURNING id::text AS id
                 """,
@@ -251,6 +271,7 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
                     ensure_ascii=False,
                 ),
                 usuario,
+                conversacion_id,
             )
 
     return {

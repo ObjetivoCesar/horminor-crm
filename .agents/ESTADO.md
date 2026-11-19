@@ -82,6 +82,27 @@ scripts de candado.
 
 ## Evidencia de la última sesión
 
+### 2026-11-19 - Fase 1: conversaciones reales de Gato
+
+- **Qué cambió:** `gato_conversaciones` con apertura/cierre; una sola abierta
+  por actor; refresh atómico; el panel carga el hilo desde PostgreSQL, no desde
+  `localStorage`.
+- **Contexto deliberado:** se eliminó el arrastre de los últimos cinco dictados.
+  Solo se incluye el dictado anterior si el mensaje es una respuesta corta a una
+  pregunta pendiente o pide corregir/agregar.
+- **Enlaces:** `cerebro_borradores.conversacion_id`, `cerebro_extracciones.conversacion_id`,
+  `cerebro_tareas_internas.cliente_id` y puente `gato_turno_borradores`.
+- **Idempotencia:** `gato_turnos.client_turn_id`; dos envíos del mismo turno
+  dejan una sola fila.
+- **Comprobado:** dos dictados seguidos no se contaminan (Pastrana y Escuela
+  Miguel Rofrío quedan en extracciones separadas); «sí, me acaba de dar 200 en
+  efectivo» conserva el segundo dictado y marca el pago. El panel carga el hilo,
+  refresh lo cierra y al recargar aparece la conversación nueva.
+- **Pruebas:** **744 passed**, 2 warnings; panel con 3 bloques `<script>` OK.
+- **Evidencia:** `.agents/evidencias/gato_conversaciones_fase1_2026-11-19.txt`.
+- **Pendiente:** desplegar la 098 en el VPS; historial completo y búsqueda
+  (Fase 4); autenticación real (H6).
+
 ### 2026-11-19 - Gato: aviso claro cuando el perfil no tiene Voz
 
 - **Qué pasó:** el audio falló con `MODULE_NOT_ALLOWED` porque el panel estaba

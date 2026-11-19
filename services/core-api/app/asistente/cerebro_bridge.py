@@ -107,6 +107,7 @@ async def interpretar(
     rol: str,
     nombre: str,
     contexto: str | None = None,
+    conversacion_id: str | None = None,
 ) -> dict[str, Any]:
     """Entrega el dictado al Cerebro con la identidad y el hilo de la sesion."""
     cuerpo = texto_limpio(texto)
@@ -137,6 +138,8 @@ async def interpretar(
     cuerpo_json: dict[str, Any] = {"texto": cuerpo}
     if contexto and contexto.strip():
         cuerpo_json["contexto"] = contexto.strip()[:8000]
+    if conversacion_id:
+        cuerpo_json["conversacion_id"] = conversacion_id
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SEGUNDOS) as cliente:
             respuesta = await cliente.post(

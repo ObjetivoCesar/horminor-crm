@@ -5,9 +5,10 @@
 > es el documento que permite a Julio, a la secretaría, a administración y a
 > cualquier agente de IA entender el sistema sin preguntarle al programador.
 >
-> **Estado:** v2.12 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
+> **Estado:** v2.13 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
 > las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas), el
-> dictado por audio desde Gato y los módulos ejecutores.
+> dictado por audio desde Gato, las conversaciones de Gato y los módulos
+> ejecutores.
 >
 > **Regla de oro:** acá solo se documenta lo que **existe y funciona**. Si una
 > función no está implementada, se dice explícitamente en «Todavía no existe».
@@ -839,6 +840,22 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Dónde se encuentra** | Chat flotante de **Gato**, botón de micrófono a la izquierda del campo de texto. |
 | **Referencia técnica** | `app/asistente/router.py` (`chat_audio`), `app/asistente/cerebro_bridge.py`; 2026-11-19. Evidencia `.agents/evidencias/gato_audio_2026-11-19.txt`. |
 
+### Término: Conversación de Gato
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `gato_conversaciones`, `/api/v1/gato/conversacion/actual`, `/api/v1/gato/conversacion/refresh` |
+| **Nombre para el usuario** | Conversación de Gato · botón de refresh |
+| **Qué significa** | El hilo de Gato tiene principio y final. Al abrir Gato se carga la última conversación desde PostgreSQL; al pulsar refresh se cierra la actual y se abre una nueva vacía. |
+| **Para qué existe** | Que el historial no viva solo en el navegador y que un dictado viejo no contamine una operación nueva. |
+| **Quién lo utiliza** | Julio y secretaría; cada uno ve su propia conversación. |
+| **Qué lo activa** | Abrir el widget o pulsar el botón circular de refresh. |
+| **Qué sucede después** | La conversación cerrada queda guardada; la nueva empieza vacía. Una conversación cerrada es de solo lectura. |
+| **Qué NO significa** | No borra clientes, borradores, tareas ni pagos. No abre el historial completo de otros usuarios. La búsqueda del historial completo para Julio llega en una fase posterior. |
+| **Ejemplo** | Julio dicta una operación, pulsa refresh y la ventana queda vacía; al recargar la página sigue la conversación nueva, no la anterior. |
+| **Dónde se encuentra** | Chat flotante de Gato y API `/api/v1/gato/`. |
+| **Referencia técnica** | Migración 098; `app/asistente/conversaciones.py`; 2026-11-19. |
+
 ### Término: Carpeta del cliente en el alta
 
 | Campo | Contenido |
@@ -1081,13 +1098,14 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 `SUPERADO_POR_CORRECCION` §4 · `TENTATIVO` §4 · `VISTA` §5 ·
 `whatsapp_espejo_numeros` §6 · `BusEventos` / SSE §6 ·
 `leads` / `lead_eventos` §6 · `citas` / `cita_eventos` §6 ·
-`ComercialWhatsApp` §6 · `chat_audio` / `/api/v1/asistente/audio` §6.
+`ComercialWhatsApp` §6 · `chat_audio` / `/api/v1/asistente/audio` §6 ·
+`gato_conversaciones` §6.
 ### Por nombre visible
 
 Aviso dejado §5 · Aclaración respondible §4 · Cancelación de un encargo §4 ·
 **Chat en vivo §6** · **Cita comercial §6** ·
 Cierre con justificación §5 · Compilador §4 · Condición conservada §4 ·
-Confirmación doble §6 · Corrección registrada §4 ·
+Confirmación doble §6 · **Conversación de Gato §6** · Corrección registrada §4 ·
 Dato sin confirmar §4 · **Dictado por Gato §6** · Duda asociada al dato §4 · Elevada al supervisor §5 ·
 Encargo §4 · Encargo sugerido §4 · Ficha de la tarea §5 ·
 Guarda de «el dinero ya entró» §6 ·
@@ -1158,3 +1176,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.10 | 2026-11-19 | **Cifras dictadas**: Gato puede repetir una cifra que el usuario dictó (70 m³, 4 mil dólares) sin confundirla con una cifra inventada; las cifras sin fuente siguen bloqueadas. |
 | v2.11 | 2026-11-19 | **Memoria entre dictados** (§6): el Cerebro recibe los dictados previos de la misma conversación; un seguimiento conserva cliente, volumen y pago, y «me acaba de dar el efectivo» marca el ingreso como recibido. |
 | v2.12 | 2026-11-19 | **Permiso de Voz en Gato** (§6): si el perfil seleccionado no tiene Voz, el panel dice qué perfil es y que cambie a Julio; no se muestra el JSON crudo. |
+| v2.13 | 2026-11-19 | **Conversación de Gato** (§6): `gato_conversaciones`, carga del hilo desde PostgreSQL, refresh que cierra y abre, contexto deliberado y `client_turn_id`. |

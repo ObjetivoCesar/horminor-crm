@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .asistente.despachador import DespachadorRecordatorios
-from .asistente.router import router as asistente_router
+from .asistente.router import gato_router, router as asistente_router
 from .db import create_pool, run_migrations
 from .http_gate import custodio_router, payments_router
 from .http_gate.panel import router as panel_api_router
@@ -172,3 +172,4 @@ app.include_router(dashboard_router)
 app.include_router(sentinel_router)
 app.include_router(panel_router)
 app.include_router(asistente_router)
+app.include_router(gato_router)

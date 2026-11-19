@@ -9574,6 +9574,10 @@ chatEventosConectar();
   </form>
 </aside>
 <script>
+let gatoConversacionId = '';
+let gatoCargando = false;
+let gatoActorActual = '';
+
 function gatoToggle(force) {
   const panel = document.getElementById('gato-panel');
   const fab = document.getElementById('gato-fab');
@@ -9581,7 +9585,10 @@ function gatoToggle(force) {
   const abrir = typeof force === 'boolean' ? force : panel.hidden;
   panel.hidden = !abrir;
   fab.setAttribute('aria-expanded', String(abrir));
-  if (abrir) setTimeout(() => { const i = document.getElementById('gato-input'); if (i) i.focus(); }, 60);
+  if (abrir) {
+    gatoCargarConversacion();
+    setTimeout(() => { const i = document.getElementById('gato-input'); if (i) i.focus(); }, 60);
+  }
 }
 function gatoEsc(texto) {
   return String(texto).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -9647,7 +9654,15 @@ function gatoMarkdown(texto) {
   cerrarLista();
   return salida.join('');
 }
-function gatoAgregar(clase, texto) {
+function gatoHora(valor) {
+  if (!valor) return 'ahora';
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return 'ahora';
+  return fecha.toLocaleString('es-EC', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+  });
+}
+function gatoAgregar(clase, texto, cuando) {
   const hilo = document.getElementById('gato-hilo');
   const wrap = document.createElement('div');
   wrap.className = 'chat-msg ' + (clase === 'user' ? 'out' : 'in');
@@ -9657,20 +9672,72 @@ function gatoAgregar(clase, texto) {
   else burbuja.innerHTML = gatoMarkdown(texto);
   const meta = document.createElement('div');
   meta.className = 'chat-meta';
-  meta.textContent = clase === 'user' ? 'Tú · ahora' : 'Gato · ahora';
+  meta.textContent = clase === 'user'
+    ? 'Tú · ' + (cuando ? gatoHora(cuando) : 'ahora')
+    : 'Gato · ' + (cuando ? gatoHora(cuando) : 'ahora');
   wrap.appendChild(burbuja);
   wrap.appendChild(meta);
   hilo.appendChild(wrap);
   hilo.scrollTop = hilo.scrollHeight;
   return burbuja;
 }
-function gatoNuevaConversacion() {
-  const sel = document.getElementById('sim-user');
-  const uid = localStorage.getItem('horminor.panel.user') || (sel && sel.value) || 'julio';
-  localStorage.removeItem('horminor.gato.conv.' + uid);
-  const hilo = document.getElementById('gato-hilo');
-  if (hilo) hilo.innerHTML = '<div class="chat-dia">Hoy</div>';
-  gatoAgregar('bot', 'Listo, empezamos de cero. ¿Qué necesitas?');
+
+async function gatoCargarConversacion() {
+  if (gatoCargando) return;
+  if (gatoConversacionId) return;
+  gatoCargando = true;
+  try {
+    const {headers} = gatoSesion();
+    const res = await fetch('/api/v1/gato/conversacion/actual', {headers});
+    const texto = await res.text();
+    let data = null;
+    try { data = texto ? JSON.parse(texto) : null; } catch (e) { data = texto; }
+    if (!res.ok) {
+      const detalle = data && data.detail
+        ? (typeof data.detail === 'string' ? data.detail : (data.detail.message || JSON.stringify(data.detail)))
+        : texto;
+      throw new Error(detalle || ('HTTP ' + res.status));
+    }
+    const conv = (data && data.conversacion) || {};
+    gatoConversacionId = conv.id || '';
+    const hilo = document.getElementById('gato-hilo');
+    if (hilo) hilo.innerHTML = '<div class="chat-dia">Hoy</div>';
+    const turnos = (data && data.turnos) || [];
+    if (!turnos.length) {
+      gatoAgregar('bot', 'Listo, empezamos de cero. ¿Qué necesitas?');
+      return;
+    }
+    for (const turno of turnos) {
+      if (turno.pregunta) gatoAgregar('user', turno.pregunta, turno.created_at);
+      if (turno.respuesta) gatoAgregar('bot', turno.respuesta, turno.created_at);
+    }
+  } catch (e) {
+    gatoAgregar('error', 'No pude cargar la conversación: ' + e.message);
+  } finally {
+    gatoCargando = false;
+  }
+}
+async function gatoNuevaConversacion() {
+  try {
+    const {headers, uid} = gatoSesion();
+    const res = await fetch('/api/v1/gato/conversacion/refresh', {method: 'POST', headers});
+    const texto = await res.text();
+    let data = null;
+    try { data = texto ? JSON.parse(texto) : null; } catch (e) { data = texto; }
+    if (!res.ok) {
+      const detalle = data && data.detail
+        ? (typeof data.detail === 'string' ? data.detail : (data.detail.message || JSON.stringify(data.detail)))
+        : texto;
+      throw new Error(detalle || ('HTTP ' + res.status));
+    }
+    gatoConversacionId = (data && data.conversacion && data.conversacion.id) || '';
+    localStorage.removeItem('horminor.gato.conv.' + (uid || 'julio'));
+    const hilo = document.getElementById('gato-hilo');
+    if (hilo) hilo.innerHTML = '<div class="chat-dia">Hoy</div>';
+    gatoAgregar('bot', 'Listo, empezamos de cero. ¿Qué necesitas?');
+  } catch (e) {
+    gatoAgregar('error', 'No pude cerrar la conversación: ' + e.message);
+  }
 }
 
 function gatoSesion() {
@@ -9681,6 +9748,11 @@ function gatoSesion() {
     const julio = Array.from(sel.options).find(o => /julio/i.test(o.textContent || ''));
     uid = julio ? julio.value : '';
   }
+  const claveActor = uid || 'julio';
+  if (gatoActorActual && gatoActorActual !== claveActor) {
+    gatoConversacionId = '';
+  }
+  gatoActorActual = claveActor;
   if (uid) headers['X-Panel-User'] = uid;
   else {
     headers['X-Panel-Role'] = 'julio';
@@ -9748,13 +9820,13 @@ async function gatoGrabarAudio() {
 async function gatoEnviarAudio(file) {
   const burbuja = gatoAgregar('user', '🎤 Enviando nota de voz…');
   const esperando = gatoAgregar('bot', 'Transcribiendo…');
-  const {headers, uid} = gatoSesion();
-  const convKey = 'horminor.gato.conv.' + (uid || 'julio');
-  const conv = localStorage.getItem(convKey) || '';
+  const {headers} = gatoSesion();
+  if (!gatoConversacionId) await gatoCargarConversacion();
   const datos = new FormData();
   datos.append('archivo', file);
   datos.append('modo', 'dictado');
-  if (conv) datos.append('conversacion_id', conv);
+  datos.append('client_turn_id', gatoClientTurnId());
+  if (gatoConversacionId) datos.append('conversacion_id', gatoConversacionId);
   try {
     const res = await fetch('/api/v1/asistente/audio', {method: 'POST', headers, body: datos});
     const texto = await res.text();
@@ -9768,15 +9840,26 @@ async function gatoEnviarAudio(file) {
         : texto;
       throw new Error(detalle || ('HTTP ' + res.status));
     }
-    if (data.conversacion_id) localStorage.setItem(convKey, data.conversacion_id);
+    if (data.conversacion_id) {
+      gatoConversacionId = data.conversacion_id;
+      localStorage.setItem('horminor.gato.conv.' + (gatoActorActual || 'julio'), data.conversacion_id);
+    }
     if (data.transcripcion) burbuja.textContent = '🎤 ' + data.transcripcion;
     esperando.innerHTML = gatoMarkdown(data.respuesta);
     if (data.estado && data.estado !== 'OK') esperando.classList.add('error');
   } catch (e) {
+    if (String(e.message).includes('CONVERSACION_CERRADA') || String(e.message).includes('409')) {
+      gatoConversacionId = '';
+    }
     burbuja.textContent = '🎤 Nota de voz';
     esperando.classList.add('error');
     esperando.textContent = 'No pude procesar el audio: ' + e.message;
   }
+}
+
+function gatoClientTurnId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'turn-' + Date.now() + '-' + Math.random().toString(16).slice(2);
 }
 
 async function gatoEnviar(ev) {
@@ -9787,20 +9870,29 @@ async function gatoEnviar(ev) {
   gatoAgregar('user', texto);
   input.value = '';
   const esperando = gatoAgregar('bot', 'Consultando…');
-  const {headers, uid} = gatoSesion();
-  const convKey = 'horminor.gato.conv.' + (uid || 'julio');
-  const conv = localStorage.getItem(convKey) || '';
+  const {headers} = gatoSesion();
+  if (!gatoConversacionId) await gatoCargarConversacion();
   try {
     const r = await api('/api/v1/asistente/chat', {
       method: 'POST',
-      body: {mensaje: texto, conversacion_id: conv || null},
+      body: {
+        mensaje: texto,
+        conversacion_id: gatoConversacionId || null,
+        client_turn_id: gatoClientTurnId()
+      },
       headers
     });
-    if (r.conversacion_id) localStorage.setItem(convKey, r.conversacion_id);
+    if (r.conversacion_id) {
+      gatoConversacionId = r.conversacion_id;
+      localStorage.setItem('horminor.gato.conv.' + (gatoActorActual || 'julio'), r.conversacion_id);
+    }
     esperando.innerHTML = gatoMarkdown(r.respuesta);
     if (r.estado && r.estado !== 'OK') esperando.classList.add('error');
   } catch (e) {
-    if (String(e.message).includes('403')) localStorage.removeItem(convKey);
+    if (String(e.message).includes('CONVERSACION_CERRADA') || String(e.message).includes('409')) {
+      gatoConversacionId = '';
+      setTimeout(gatoCargarConversacion, 200);
+    }
     esperando.classList.add('error');
     esperando.textContent = e.message.includes('401')
       ? 'Elegí un perfil en «Viendo como» para usar a Gato.'
