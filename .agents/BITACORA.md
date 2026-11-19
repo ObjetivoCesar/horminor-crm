@@ -9083,6 +9083,38 @@ panel. Después, Fase 2: confirmación desde Gato e idempotencia de ejecuciones.
 
 ---
 
+## 2026-11-19 (XIX) - Fase 1 desplegada en el VPS
+
+### Hecho
+
+- Respaldo: `/root/backup_gato_fase1_20261119` y
+  `/root/backups/horminor_pre_fase1_20261119.sql.gz` (108K).
+- Copia de la migración 098, `conversaciones.py`, `router.py`,
+  `cerebro_bridge.py`, `memoria.py`, `cerebro/router.py`, `main.py`,
+  `panel.html` y la prueba v227.
+- Imagen reconstruida; migración aplicada; servicio recreado.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Migración 098 | aplicada |
+| `/health` | `ok` |
+| Conversaciones | 18 total; 3 abiertas |
+| `pytest` v227 + v225 | **24 passed** |
+| `GET /gato/conversacion/actual` | devuelve la conversación histórica y sus turnos |
+| `POST /gato/conversacion/refresh` | devuelve una conversación nueva vacía |
+
+Archivo: `.agents/evidencias/gato_conversaciones_fase1_vps_2026-11-19.txt`.
+
+### Próximo paso
+
+Fase 2: conectar «confirmado» de Gato al ejecutor del Cerebro, con idempotencia
+y control de versión. Después, Fase 3 (hechos y etiquetas) y Fase 4
+(historial/búsqueda).
+
+---
+
 ## 2026-11-19 (X) - Audio de Gato desplegado en el VPS
 
 ### Hecho

@@ -100,8 +100,11 @@ scripts de candado.
   refresh lo cierra y al recargar aparece la conversación nueva.
 - **Pruebas:** **744 passed**, 2 warnings; panel con 3 bloques `<script>` OK.
 - **Evidencia:** `.agents/evidencias/gato_conversaciones_fase1_2026-11-19.txt`.
-- **Pendiente:** desplegar la 098 en el VPS; historial completo y búsqueda
-  (Fase 4); autenticación real (H6).
+- **VPS (2026-11-19):** migración **098** aplicada y código desplegado;
+  **18** conversaciones, **3** abiertas; **24 passed**; `GET actual` y
+  `POST refresh` responden. Respaldo en `/root/backup_gato_fase1_20261119`.
+- **Pendiente:** historial completo y búsqueda (Fase 4); autenticación real
+  (H6).
 
 ### 2026-11-19 - Gato: aviso claro cuando el perfil no tiene Voz
 

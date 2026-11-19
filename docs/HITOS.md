@@ -126,6 +126,7 @@ una regresión.
 | 2026-11-19 | H2 | **Aviso de permiso de Voz**: el audio con un perfil sin Voz devuelve un mensaje claro con el perfil y la salida (cambiar a Julio); Julio verificado con audio `HTTP 200` | `app/asistente/router.py`, `templates/panel.html`, `.agents/evidencias/gato_audio_permiso_2026-11-19.txt` | 2026-11-19 (XVI) |
 | 2026-11-19 | H2 | **Perfil base «Julio» sin UUID**: la opción base lleva su UUID; si una pestaña vieja manda solo el rol `SUPERADMIN`, el Cerebro usa el perfil base. Audio y dictado `HTTP 200` | `templates/panel.html`, `app/asistente/cerebro_bridge.py`, `.agents/evidencias/gato_audio_permiso_2026-11-19.txt` | 2026-11-19 (XVII) |
 | 2026-11-19 | H2 | **Fase 1 de conversaciones**: migración 098, `gato_conversaciones`, refresh atómico, carga del hilo, `client_turn_id`, contexto deliberado y enlaces a borradores/extracciones | `db/migrations/098_gato_conversaciones.sql`, `app/asistente/conversaciones.py`, `router.py`, `cerebro/router.py`, `templates/panel.html`; `.agents/evidencias/gato_conversaciones_fase1_2026-11-19.txt` | 2026-11-19 (XVIII) |
+| 2026-11-19 | H2 | **Fase 1 desplegada en el VPS**: respaldo, 098 aplicada, 18 conversaciones / 3 abiertas, 24 pruebas, `actual` y `refresh` en verde | `.agents/evidencias/gato_conversaciones_fase1_vps_2026-11-19.txt`, `/root/backup_gato_fase1_20261119` | 2026-11-19 (XIX) |
 
 ## 6. Cómo se actualiza
 
