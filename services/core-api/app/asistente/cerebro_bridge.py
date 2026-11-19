@@ -105,8 +105,9 @@ async def interpretar(
     usuario: str,
     rol: str,
     nombre: str,
+    contexto: str | None = None,
 ) -> dict[str, Any]:
-    """Entrega el dictado al Cerebro con la identidad de la sesion."""
+    """Entrega el dictado al Cerebro con la identidad y el hilo de la sesion."""
     cuerpo = texto_limpio(texto)
     if not cuerpo:
         raise HTTPException(
@@ -117,11 +118,14 @@ async def interpretar(
         "X-Panel-Role": (rol or "").lower(),
         "X-Panel-Name": nombre,
     }
+    cuerpo_json: dict[str, Any] = {"texto": cuerpo}
+    if contexto and contexto.strip():
+        cuerpo_json["contexto"] = contexto.strip()[:8000]
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SEGUNDOS) as cliente:
             respuesta = await cliente.post(
                 f"{BASE_URL}/api/v1/cerebro/interpretar",
-                json={"texto": cuerpo},
+                json=cuerpo_json,
                 headers=headers,
             )
     except httpx.HTTPError as exc:

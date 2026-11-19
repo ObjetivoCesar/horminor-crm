@@ -107,6 +107,26 @@ def _puente(mensaje: str) -> str | None:
     return None
 
 
+def _contexto_dictado(historial: list[dict[str, str]] | None) -> str | None:
+    """Dictados previos de la conversación, sin el prefijo.
+
+    El Cerebro recibe este texto como contexto para que un seguimiento como
+    «me acaba de dar el efectivo» se refiera al cliente y monto ya dictados.
+    """
+    previos: list[str] = []
+    for turno in historial or []:
+        if turno.get("role") != "user":
+            continue
+        contenido = str(turno.get("content") or "").strip()
+        if contenido.lower().startswith(("dictado:", "cerebro:", "dicta:")):
+            limpio = cerebro_bridge.texto_limpio(contenido)
+            if limpio:
+                previos.append(limpio)
+    if not previos:
+        return None
+    return "\n\n".join(previos[-5:])
+
+
 def _modo_envio(request: Request) -> str:
     """Canal real de salida: 'evolution' o 'sandbox'.
 
@@ -216,6 +236,7 @@ async def chat(
                 usuario=actor.actor_id,
                 rol=actor.rol,
                 nombre=actor.nombre,
+                contexto=_contexto_dictado(historial),
             )
             texto = cerebro_bridge.mensaje_de_resumen(datos)
             estado = "OK"

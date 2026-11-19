@@ -60,6 +60,12 @@ MODELO = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 TIMEOUT = float(os.getenv("DEEPSEEK_TIMEOUT", "40"))
 VERSION_PROMPT = "cerebro-v7"
 
+_CONFIRMA_PAGO = re.compile(
+    r"(me acaba de dar|ya me dio|me dio|ya me pag|me pag|ya recib|recibi)"
+    r".{0,40}(efectivo|contado|transferencia|deposito)",
+    re.IGNORECASE,
+)
+
 CLAVES = (
     "cliente.nombre",
     "cliente.cedula",
@@ -981,6 +987,7 @@ async def interpretar(
     sandbox: bool = True,
     hoy: date | None = None,
     http_client: Any = None,
+    continuacion_desde: int | None = None,
 ) -> dict[str, Any]:
     """Texto → sobre verificado → borrador. No escribe en la base."""
     hoy = hoy or _hoy()
@@ -1003,6 +1010,60 @@ async def interpretar(
     hechos, notas = construir_hechos(
         sobre, texto_crudo=texto_crudo, mapa=mapa, palabras=palabras
     )
+    if continuacion_desde is not None:
+        # El texto nuevo continúa el dictado anterior. Sus hechos pertenecen al
+        # último encargo previo, no a un asunto nuevo; si no, el seguimiento
+        # vuelve a preguntar «¿para qué cliente?» aunque ya se dijo.
+        previos = [
+            hecho
+            for hecho in hechos
+            if hecho.evidencia is not None
+            and hecho.evidencia.crudo_inicio is not None
+            and hecho.evidencia.crudo_inicio < continuacion_desde
+        ]
+        nuevos = {
+            id(hecho)
+            for hecho in hechos
+            if hecho.evidencia is not None
+            and hecho.evidencia.crudo_inicio is not None
+            and hecho.evidencia.crudo_inicio >= continuacion_desde
+        }
+        if previos and nuevos:
+            ultimo = max(hecho.encargo for hecho in previos)
+            hechos = [
+                replace(hecho, encargo=ultimo) if id(hecho) in nuevos else hecho
+                for hecho in hechos
+            ]
+        # «Sí, me acaba de dar el efectivo» es una confirmación del pago que ya
+        # se dictó; sin esto se vuelve a preguntar si el dinero entró.
+        nuevo_texto = texto_crudo[continuacion_desde:]
+        plano_nuevo = normalizar_texto(nuevo_texto)
+        tiene_monto = any(
+            hecho.clave == "pago.monto" and hecho.utilizable for hecho in hechos
+        )
+        ya_recibido = any(
+            hecho.clave == "pago.recibido" and hecho.utilizable for hecho in hechos
+        )
+        if tiene_monto and not ya_recibido and _CONFIRMA_PAGO.search(plano_nuevo):
+            hechos.append(
+                HechoCitado(
+                    clave="pago.recibido",
+                    valor=True,
+                    estado="EXTRAIDO",
+                    tipo="BOOLEANO",
+                    evidencia=Evidencia(
+                        cita=nuevo_texto.strip(),
+                        sostiene=nuevo_texto.strip(),
+                        crudo_inicio=continuacion_desde,
+                        crudo_fin=len(texto_crudo),
+                        start_ms=None,
+                        end_ms=None,
+                        confianza=None,
+                        hablante="SUPERADMIN",
+                    ),
+                    encargo=max(hecho.encargo for hecho in hechos),
+                )
+            )
     borrador, notas_compiladas, cliente = await _borrador_desde_hechos(
         pool,
         hechos,

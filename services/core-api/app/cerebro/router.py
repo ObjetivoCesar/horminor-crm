@@ -57,6 +57,10 @@ router = APIRouter(prefix="/api/v1/cerebro", tags=["cerebro"])
 class InterpretarIn(BaseModel):
     texto: str | None = Field(default=None, max_length=8000)
     transcripcion_id: str | None = None
+    # Dictados anteriores de la misma conversacion. El Cerebro los usa como
+    # contexto para que «me acaba de dar el efectivo» se refiera al cliente y
+    # monto que se acaban de dictar, no a una operacion nueva.
+    contexto: str | None = Field(default=None, max_length=8000)
 
 
 class ConfirmarIn(BaseModel):
@@ -161,6 +165,15 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
     elif not texto:
         raise HTTPException(status_code=422, detail="envia texto o transcripcion_id")
 
+    # Memoria de la conversacion: los dictados previos se leen como contexto.
+    # El texto que se guarda y se compila es el mismo que se interpreta.
+    continuacion_desde: int | None = None
+    if body.contexto and not transcripcion_id:
+        contexto = body.contexto.strip()
+        if contexto:
+            texto = f"{contexto}\n\n{texto}"
+            continuacion_desde = len(contexto) + 2
+
     inicio = time.perf_counter()
     try:
         resultado = await interpretar(
@@ -168,6 +181,7 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
             texto_crudo=texto,
             palabras_crudas=palabras,
             sandbox=bool(getattr(request.app.state.settings, "sandbox_mode", True)),
+            continuacion_desde=continuacion_desde,
         )
     except ExtractorNoDisponible as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

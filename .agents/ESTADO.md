@@ -5,7 +5,7 @@
 > leads y citas independientes del canal; panel, Gato y WhatsApp entran por el
 > mismo módulo; migración **097**; **desplegado y verificado en el VPS**.
 > **Gato ya dicta por audio** y una instrucción con dos destinatarios deja un
-> solo encargo; el resumen se pinta con **negritas y viñetas**; **741 pruebas**).
+> solo encargo; el resumen se pinta con **negritas y viñetas**; **744 pruebas**).
 > Antes: 2026-11-18 (espejo v9.8: **chat en vivo por SSE** —
 > el hilo se actualiza solo, sin pulsar Sincronizar; multimedia entrante real;
 > sesión LID reparada, número de prueba 0967491847, corte de historial y altura
@@ -81,6 +81,25 @@ Orellana/SucumbÃ­os para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
 
 ## Evidencia de la última sesión
+
+### 2026-11-19 - Gato recupera la memoria entre dictados
+
+- **Qué pasó:** cada audio se entregaba al Cerebro como un dictado aislado. El
+  segundo audio («me acaba de dar en efectivo») creaba otro borrador y volvía a
+  preguntar cliente y monto; el tercero empezaba de cero. La memoria de Gato
+  (`gato_turnos`) existía, pero no se pasaba al Cerebro.
+- **Corregido:** el puente envía los **dictados previos de la misma
+  conversación** como contexto; los hechos nuevos se asignan al último encargo
+  previo; «me acaba de dar en efectivo» marca `pago.recibido=true`.
+- **Comprobado local y VPS:** el segundo dictado conserva Escuela Miguel Rofrío,
+  7 m3 de 210, la dirección y el pago de 300 USD **«que ya entró»**, sin volver
+  a preguntar cliente ni monto. El tercero conserva todo.
+- **Pruebas:** **744 passed**, 2 warnings (10 en `test_v227_calendario_gato.py`);
+  en el VPS **10 passed**.
+- **Evidencia:** `.agents/evidencias/gato_memoria_dictados_2026-11-19.txt` y los
+  JSON de los pasos 1–3 (local y VPS).
+- **VPS (2026-11-19):** desplegado con respaldo en
+  `/root/backup_gato_memoria_20261119`.
 
 ### 2026-11-19 - Gato: calendario y precedencia del dictado
 
@@ -975,4 +994,5 @@ desconectado, Jev en backlog). El siguiente trabajo es el resto del ERP:
   laboratorio. Probado en el VPS: devolvio dos encargos y dos preguntas.
 - **Sigue pendiente:** audio por Gato, confirmar/ejecutar desde Gato, aviso
   sonoro, Gmail y responder/citar.
+
 

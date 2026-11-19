@@ -122,6 +122,7 @@ una regresión.
 | 2026-11-19 | H2 | **Formato desplegado en el VPS**: respaldo, imagen reconstruida, `11 passed` y render con viñetas verificado en el servidor | `.agents/evidencias/gato_formato_vps_2026-11-19.txt`, `gato_formato_render_2026-11-19.txt`, `/root/backup_gato_formato_20261119` | 2026-11-19 (XII) |
 | 2026-11-19 | H2 | **Calendario de Gato**: el prefijo `dictado:` gana al atajo comercial; `disponibilidad` acepta ISO; «este sábado/domingo» se calcula con `app/tiempo`; prompt con país y hoy | `app/asistente/router.py`, `bibliotecario.py`, `persona.py`, `app/comercial/intencion.py`, `.agents/evidencias/gato_calendario_2026-11-19.txt` | 2026-11-19 (XIII) |
 | 2026-11-19 | H2 | **Cifras dictadas y despliegue**: la guarda acepta cifras de un `dictado:` y sigue bloqueando las inventadas; VPS con `7 passed` y seguimiento `OK` (sábado 21 / domingo 22) | `app/asistente/guardas.py`, `proveedores.py`, `.agents/evidencias/gato_calendario_vps_seguimiento_2026-11-19.json` | 2026-11-19 (XIV) |
+| 2026-11-19 | H2 | **Memoria entre dictados**: el Cerebro recibe los dictados previos de la misma conversación; el seguimiento conserva cliente/volumen/pago y «me acaba de dar en efectivo» marca el ingreso | `app/asistente/router.py`, `cerebro_bridge.py`, `app/cerebro/router.py`, `extractor.py`, `dinero.py`, `.agents/evidencias/gato_memoria_dictados_2026-11-19.txt` | 2026-11-19 (XV) |
 
 ## 6. Cómo se actualiza
 

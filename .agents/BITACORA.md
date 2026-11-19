@@ -8894,6 +8894,54 @@ confirma) antes de retomar H3.
 
 ---
 
+## 2026-11-19 (XV) - Gato recupera la memoria entre dictados
+
+### Diagnostico
+
+El audio de Gato se entregaba al Cerebro sin el dictado anterior. Gato guardaba
+los turnos en `gato_turnos`, pero `cerebro_bridge.interpretar` solo enviaba el
+texto nuevo. Por eso el segundo audio («me acaba de dar en efectivo») creaba el
+borrador 71926232 y preguntaba «¿para qué cliente?» y «¿qué monto se traslada?»;
+el tercero creaba 6fe6ddab sin datos. No era que el Cerebro hubiera perdido la
+memoria: el puente no la pasaba.
+
+### Hecho (solo el alcance pedido)
+
+1. `_contexto_dictado` toma los dictados previos de la misma conversacion.
+2. `POST /cerebro/interpretar` acepta `contexto` y compila contexto + texto
+   nuevo.
+3. Los hechos del texto nuevo se asignan al ultimo encargo previo
+   (`continuacion_desde`); no abren un asunto nuevo.
+4. «Me acaba de dar en efectivo» se reconoce como pago recibido
+   (`pago.recibido=true` y `PAGO_EN_PASADO`).
+5. No se toco nada mas.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Suite local | **744 passed**, 2 warnings |
+| VPS: pruebas calendario/memoria | **10 passed** |
+| Paso 2 local | mismo cliente, 7 m3, 300 USD «que ya entro», sin preguntas |
+| Paso 3 local | conserva cliente, volumen, direccion y pago |
+| VPS: pasos 2 y 3 | mismos datos, sin volver a preguntar |
+
+Archivos: `.agents/evidencias/gato_memoria_dictados_2026-11-19.txt`,
+`gato_memoria_paso1/2/3_2026-11-19.json` y los `gato_memoria_vps_paso*`.
+
+### Decision
+
+- La memoria se resuelve en el puente, no con una funcionalidad nueva de Gato.
+- No se implemento un sistema distinto de borradores ni se cambiaron las reglas
+  de agendamiento. Agendar una entrega sigue pendiente de definicion.
+
+### Proximo paso
+
+Confirmar con Julio una prueba real desde el panel del VPS. Despues, retomar la
+definicion de la accion de agendar entrega o H3, sin ampliar el alcance.
+
+---
+
 ## 2026-11-19 (X) - Audio de Gato desplegado en el VPS
 
 ### Hecho

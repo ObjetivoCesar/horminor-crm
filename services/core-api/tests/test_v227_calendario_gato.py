@@ -8,6 +8,7 @@ herramienta de disponibilidad recibio la fecha como texto.
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 
@@ -15,7 +16,10 @@ from app import tiempo
 from app.asistente.bibliotecario import Bibliotecario
 from app.asistente.guardas import CifraNoVerificada, verificar
 from app.asistente.persona import render_prompt
-from app.asistente.router import _puente
+from app.asistente.router import _contexto_dictado, _puente
+from app.cerebro import Evidencia, HechoCitado
+from app.cerebro.dinero import dinero_ya_entro
+from app.cerebro.extractor import _CONFIRMA_PAGO
 from app.comercial.intencion import parse_cita
 
 
@@ -90,3 +94,53 @@ def test_la_guarda_acepta_cifras_del_dictado() -> None:
 def test_la_guarda_sigue_bloqueando_una_cifra_sin_fuente() -> None:
     with pytest.raises(CifraNoVerificada):
         verificar("Son 70 m³.", [], ["hola, ¿cómo va todo?"])
+
+
+def test_el_contexto_lleva_los_dictados_previos_de_la_conversacion() -> None:
+    historial = [
+        {"role": "user", "content": "dictado: cliente Pastrana, 7 m3"},
+        {"role": "assistant", "content": "resumen anterior"},
+        {"role": "user", "content": "dictado: me dio 300 en efectivo"},
+        {"role": "user", "content": "hola, ¿cómo va la caja?"},
+    ]
+
+    contexto = _contexto_dictado(historial)
+
+    assert contexto is not None
+    assert "cliente Pastrana" in contexto
+    assert "300 en efectivo" in contexto
+    assert "cómo va la caja" not in contexto
+    assert _contexto_dictado([]) is None
+
+
+def test_la_confirmacion_de_efectivo_se_reconoce() -> None:
+    assert _CONFIRMA_PAGO.search("si efectivamente me acaba de dar en efectivo")
+    assert _CONFIRMA_PAGO.search("ya me dio el dinero en contado")
+    assert not _CONFIRMA_PAGO.search("todavia no me ha dado nada")
+
+
+def test_el_dinero_ya_entro_con_me_acaba_de_dar() -> None:
+    hechos = [
+        HechoCitado(
+            clave="pago.recibido",
+            valor=True,
+            estado="EXTRAIDO",
+            tipo="BOOLEANO",
+            evidencia=Evidencia(
+                cita="me acaba de dar en efectivo",
+                sostiene="me acaba de dar en efectivo",
+                crudo_inicio=0,
+                crudo_fin=28,
+                start_ms=None,
+                end_ms=None,
+                confianza=None,
+                hablante="SUPERADMIN",
+            ),
+        )
+    ]
+
+    assert dinero_ya_entro(
+        hechos,
+        "si efectivamente me acaba de dar en efectivo 300",
+        Decimal("300"),
+    )
