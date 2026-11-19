@@ -9146,3 +9146,45 @@ Archivo: `.agents/evidencias/gato_audio_vps_2026-11-19.txt` y
 Retomar **H3**: auditoria persistente de las manos de Bunny (listar, mover,
 renombrar, borrar) y manifiesto con los archivos afectados.
 
+
+
+---
+
+## 2026-11-19 (XX) - Limpieza del historial de Gato en el VPS
+
+### Hecho
+
+- Se borraron **34 turnos** de Gato y **17 borradores** sin ejecución.
+- Se cerraron las 19 conversaciones históricas.
+- Se conservaron 3 recordatorios ya enviados/cancelados, sin `conversacion_id`.
+- Se conservaron las **2 ejecuciones de auditoría** y sus extracciones/
+  transcripciones: `cerebro_ejecuciones` y `cerebro_extracciones` son
+  append-only. No son visibles en el hilo.
+- No se tocaron clientes, órdenes, pagos, cotizaciones ni facturas.
+- Se crearon conversaciones nuevas vacías para Julio, Secretaría y el rol base
+  «julio».
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| `gato_turnos` | 0 |
+| `gato_conversaciones` | 19, todas cerradas |
+| `cerebro_borradores` | 2 (auditoría) |
+| `cerebro_ejecuciones` | 2 (append-only) |
+| `gato_recordatorios` | 3, conservados |
+| Nuevas conversaciones | Julio, Secretaría y rol base |
+| `GET actual` Julio | abierta, sin turnos |
+
+Archivo: `.agents/evidencias/gato_limpieza_vps_2026-11-19.txt`.
+
+### Nota
+
+No se pudieron borrar las extracciones/transcripciones porque la base las
+protege como evidencia append-only. Si Julio quiere purgarlas, requiere una
+ventana de mantenimiento y una decisión explícita; no se hizo.
+
+### Próximo paso
+
+Que Julio recargue el panel con Ctrl+F5 y use Gato desde el navegador. Después,
+Fase 2.

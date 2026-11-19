@@ -103,6 +103,11 @@ scripts de candado.
 - **VPS (2026-11-19):** migración **098** aplicada y código desplegado;
   **18** conversaciones, **3** abiertas; **24 passed**; `GET actual` y
   `POST refresh` responden. Respaldo en `/root/backup_gato_fase1_20261119`.
+- **Limpieza VPS (2026-11-19):** **0 turnos** visibles, **17 borradores**
+  borrados y conversaciones nuevas vacías para Julio y Secretaría. Se
+  conservaron **2 ejecuciones de auditoría** y sus extracciones/transcripciones
+  porque son append-only; no se ven en el hilo. No se tocaron clientes, pagos ni
+  órdenes.
 - **Pendiente:** historial completo y búsqueda (Fase 4); autenticación real
   (H6).
 
