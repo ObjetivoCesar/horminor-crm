@@ -59,22 +59,40 @@ GIT_SSH_COMMAND="ssh -i /root/.ssh/horminor_github_deploy -o IdentitiesOnly=yes"
 
 ## 5. Comandos de operación
 
+> **Realidad del servidor (2026-11-19):** `/opt/horminor` corre en `0cfa9fc`
+> con **parches manuales** encima; no es un clon limpio. Un `git pull` choca con
+> esos cambios. Para cambios pequeños se copia el archivo por `scp`, se verifica
+> el hash, se reconstruye la imagen y se aplica la migración. Solo un despliegue
+> completo y planificado debe volver a un clon limpio.
+
 ```bash
 # Entrar
 ssh -i vps-entrada/horminor_vps root@178.238.238.158
 
-# Actualizar código
+# Despliegue quirúrgico (ejemplo H1, 2026-11-19)
+# 1) respaldar archivos y base
+cp -a <archivo> /root/backup_<fecha>/
+docker exec orminorth-postgres pg_dump -U orminorth -d orminorth | gzip > /root/backups/pre_<fecha>.sql.gz
+# 2) copiar desde local con scp y verificar sha256sum
+# 3) reconstruir SOLO después de copiar al árbol
 cd /opt/horminor
-git pull
-docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.vps.yml build core-api
+# 4) aplicar migraciones con la imagen nueva
+docker compose -f docker-compose.yml -f docker-compose.vps.yml run --rm --no-deps core-api python scripts/db_migrate.py
+# 5) recrear y verificar
+docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d core-api
+curl http://127.0.0.1:8012/health
 
 # Estado
 docker compose -f docker-compose.yml -f docker-compose.vps.yml ps
-curl http://127.0.0.1:8012/health
 
 # Logs
 docker compose -f docker-compose.yml -f docker-compose.vps.yml logs -f core-api
 ```
+
+`app/` está **copiado dentro de la imagen** (no montado). `db/`, `scripts/` y
+`services/core-api/tests/` sí están montados en solo lectura. Por eso un cambio
+de código exige reconstruir; un cambio de migración o de script no.
 
 ## 6. Acceso al panel (sin login)
 

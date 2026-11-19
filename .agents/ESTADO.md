@@ -3,7 +3,8 @@
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
 > Última actualización: **2026-11-19** (cierre de **H1**: núcleo comercial con
 > leads y citas independientes del canal; panel, Gato y WhatsApp entran por el
-> mismo módulo; migración **097**; **727 pruebas**).
+> mismo módulo; migración **097**; **727 pruebas**; **desplegado y verificado en
+> el VPS**).
 > Antes: 2026-11-18 (espejo v9.8: **chat en vivo por SSE** —
 > el hilo se actualiza solo, sin pulsar Sincronizar; multimedia entrante real;
 > sesión LID reparada, número de prueba 0967491847, corte de historial y altura
@@ -103,7 +104,14 @@ scripts de candado.
   candado del Hito 3 → `[CANDADO CERRADO EN SANDBOX]`.
 - **Evidencia:** `.agents/evidencias/pytest_h1_cierre_2026-11-19.txt`,
   `h1_comercial_check_2026-11-19.txt`, `hito3_lock_2026-11-19.txt`.
-- **Bloqueo:** la migración **097** y este código aún no están en el VPS.
+- **VPS (2026-11-19):** respaldo en `/root/backup_h1_20261119` y
+  `/root/backups/horminor_pre_h1_20261119.sql.gz`; migración **097** aplicada;
+  imagen reconstruida y servicio sano. Verificado allí: **26 passed** (pruebas
+  H1), `[H1 COMERCIAL: OK]`, `/api/v1/comercial/hoy` y `/panel` 200. El candado
+  del Hito 3 corrió en modo producción: 30 verificaciones OK y solo difiere en
+  `modo=PRODUCCION` frente al SANDBOX esperado. Se limpió el residuo de prueba
+  del candado. Evidencia: `.agents/evidencias/h1_vps_2026-11-19.txt`.
+- **Bloqueo:** nada técnico. Falta confirmar una cita con datos reales de Julio.
 - **Decisión abierta:** `EN_ESPERA(PRECIO)` sin fecha de recontacto mientras
   `leads.recontacto_dias` sea `NULL`; no se inventó plazo.
 

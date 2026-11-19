@@ -39,8 +39,14 @@ WhatsApp) entran por el mismo módulo; el origen lo fija el servidor. Evidencia:
 `pytest` **727 passed**, `scripts/h1_comercial_check.py` → `[H1 COMERCIAL: OK]` y
 candado del Hito 3 en verde.
 
-**Pendiente de despliegue:** la migración **097** y este código aún no están en
-el VPS.
+**Desplegado en el VPS el 2026-11-19:** migración **097** aplicada, imagen
+reconstruida y servicio sano. En el servidor: `26 passed` (pruebas H1),
+`[H1 COMERCIAL: OK]`, `/api/v1/comercial/hoy` y `/panel` responden. El candado
+del Hito 3 se ejecutó en modo producción: **30 verificaciones OK** y la única
+diferencia es `modo=PRODUCCION` frente al `SANDBOX` que espera el candado; no es
+una regresión.
+
+**Pendiente:** confirmar una cita con datos reales de Julio.
 
 ## 2. Hitos
 
@@ -108,6 +114,7 @@ el VPS.
 | 2026-11-19 | H1 | Citas: choque del mismo lead/cliente, máquina de estados y auditoría (`cita_eventos`) | `app/comercial/citas.py`, `db/migrations/097_cita_eventos.sql` | 2026-11-19 (VII) |
 | 2026-11-19 | H1 | WhatsApp conectado al módulo (webhook pide, no crea) y parser de citas compartido | `app/comercial/whatsapp.py`, `app/comercial/intencion.py`, `app/m1_whatsapp/pipeline.py`, `app/m1_whatsapp/runtime.py` | 2026-11-19 (VII) |
 | 2026-11-19 | H1 | **H1 cerrado**: `pytest` **727 passed**, `[H1 COMERCIAL: OK]`, candado Hito 3 en verde | `.agents/evidencias/pytest_h1_cierre_2026-11-19.txt`, `h1_comercial_check_2026-11-19.txt`, `hito3_lock_2026-11-19.txt` | 2026-11-19 (VII) |
+| 2026-11-19 | H1 | **Desplegado en el VPS**: respaldo, 097 aplicada, imagen reconstruida, `26 passed`, `[H1 COMERCIAL: OK]`, `/panel` 200 | `.agents/evidencias/h1_vps_2026-11-19.txt`, `/root/backup_h1_20261119`, `/root/backups/horminor_pre_h1_20261119.sql.gz` | 2026-11-19 (VIII) |
 
 ## 6. Cómo se actualiza
 

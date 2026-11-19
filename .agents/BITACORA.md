@@ -8600,3 +8600,61 @@ Desplegar en el VPS las migraciones **096-097** y el cierre de H1; luego
 verificar alli `pytest`, `h1_comercial_check.py` y una cita real. Despues,
 retomar **H3**: auditoria persistente de las manos de Bunny y manifiesto con
 archivos.
+
+---
+
+## 2026-11-19 (VIII) - H1 desplegado y verificado en el VPS
+
+### Objetivo
+
+Llevar al VPS el cierre de H1: migracion 097, codigo del modulo comercial y
+panel, sin romper el arbol con parches manuales que corre alli.
+
+### Hecho
+
+1. **Respaldo previo:** `/root/backup_h1_20261119` (archivos que se iban a
+   reemplazar) y `/root/backups/horminor_pre_h1_20261119.sql.gz` (base, 80K).
+2. **Copia quirurgica por hash**, no `git pull` (el VPS tiene 0cfa9fc con
+   modificaciones locales): `app/comercial/*`, `pipeline.py`, `runtime.py`,
+   `http_gate/panel.py`, `comercial_bridge.py`, `panel.html`,
+   `097_cita_eventos.sql`, `h1_comercial_check.py` y tres pruebas H1.
+   Se verifico que el `panel.html` del VPS solo diferia en las 3 lineas del
+   selector de origen, para no pisar parches del servidor.
+3. **Imagen reconstruida** (`docker compose ... build core-api`) y servicio
+   recreado.
+4. **Migracion 097 aplicada** con `scripts/db_migrate.py`; `cita_eventos`
+   existe y figura en `schema_migrations`.
+5. **Residuo limpiado:** el candado del Hito 3 deja una orden y un cliente
+   demo; se borraron con su misma limpieza (`HITO3-LOCK`). No habia leads ni
+   citas de prueba.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| `/health` | `{"status":"ok","db":"ok"}` |
+| `pytest` H1 en el VPS | **26 passed**, 1 warning |
+| `scripts/h1_comercial_check.py` | `[H1 COMERCIAL: OK]` |
+| `GET /api/v1/comercial/hoy` | `2026-11-19`, zona `America/Guayaquil` |
+| `/panel` | HTTP 200 |
+| Candado Hito 3 en el VPS | 30 verificaciones OK; unica diferencia `modo=PRODUCCION` (espera SANDBOX) |
+| Migracion | `097_cita_eventos.sql` |
+
+Archivo: `.agents/evidencias/h1_vps_2026-11-19.txt`.
+
+### Decision
+
+- **No se puso el VPS en SANDBOX** solo para que el candado del Hito 3 diera
+  verde: el servidor esta en produccion y el unico fallo es la expectativa de
+  modo. El candado local sigue cerrado en SANDBOX.
+- Se desplego por copia quirurgica porque el arbol del VPS no es el del repo;
+  un `git pull` habria chocado con sus parches.
+
+### Bloqueo
+
+- Ninguno tecnico. Falta que Julio confirme una cita con datos reales.
+
+### Proximo paso
+
+Retomar **H3**: auditoria persistente de las manos de Bunny (listar, mover,
+renombrar, borrar) y manifiesto con los archivos afectados.

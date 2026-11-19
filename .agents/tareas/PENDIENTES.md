@@ -168,4 +168,4 @@ Mientras no haya respuesta, el sistema deja el campo `NULL` y lo marca
 | N7 | Claves Groq en el `.env` del VPS y cascada principal/respaldo | hecho |
 | N8 | Conectar WhatsApp (Gato publico) al modulo comercial: `ComercialWhatsApp` + parser compartido | **hecho 2026-11-19** |
 | N9 | Auditoria de citas (`cita_eventos`) y maquina de estados | **hecho 2026-11-19** |
-| N10 | Desplegar migraciones 096-097 y el cierre H1 en el VPS | pendiente |
+| N10 | Desplegar migraciones 096-097 y el cierre H1 en el VPS | **hecho 2026-11-19** (097 aplicada, imagen reconstruida, 26 pruebas H1 y `[H1 COMERCIAL: OK]` en el servidor) |
