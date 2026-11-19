@@ -117,6 +117,7 @@ una regresión.
 | 2026-11-19 | H1 | **Desplegado en el VPS**: respaldo, 097 aplicada, imagen reconstruida, `26 passed`, `[H1 COMERCIAL: OK]`, `/panel` 200 | `.agents/evidencias/h1_vps_2026-11-19.txt`, `/root/backup_h1_20261119`, `/root/backups/horminor_pre_h1_20261119.sql.gz` | 2026-11-19 (VIII) |
 | 2026-11-19 | H2 | **Dictado por audio desde Gato**: botón de micrófono, transcripción visible y entrega al Cerebro (`modo=dictado`) | `app/asistente/router.py`, `app/web/templates/panel.html`, `.agents/evidencias/gato_audio_2026-11-19.txt` | 2026-11-19 (IX) |
 | 2026-11-19 | H2 | **Una instrucción con dos destinatarios = un encargo**: fusión determinística de frases de coordinación y tarea interna «chofer y Julio»; de 3 encargos/7 preguntas a 1/3 | `app/cerebro/encargos.py`, `app/cerebro/compilador.py`, `app/cerebro/internas.py`, `tests/test_v226_gato_audio_encargos.py` | 2026-11-19 (IX) |
+| 2026-11-19 | H2 | **Audio de Gato desplegado en el VPS**: imagen reconstruida, `19 passed`, audio real `HTTP 200` con `estado=OK` | `.agents/evidencias/gato_audio_vps_2026-11-19.txt`, `/root/backup_gato_audio_20261119` | 2026-11-19 (X) |
 
 ## 6. Cómo se actualiza
 

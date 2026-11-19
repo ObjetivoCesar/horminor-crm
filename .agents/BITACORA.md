@@ -8720,3 +8720,36 @@ Archivos: `.agents/evidencias/gato_audio_2026-11-19.txt`,
 
 Desplegar en el VPS el audio de Gato y la fusion de encargos; luego retomar
 **H3** (auditoria persistente de las manos de Bunny y manifiesto con archivos).
+
+---
+
+## 2026-11-19 (X) - Audio de Gato desplegado en el VPS
+
+### Hecho
+
+- Respaldo en `/root/backup_gato_audio_20261119` y copia quirurgica de
+  `asistente/router.py`, los cuatro archivos del Cerebro, `panel.html` y la
+  prueba nueva.
+- Imagen reconstruida y `orminorth-core-api` recreado.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| `/health` | `status=ok`, `db=ok` |
+| `pytest` en el VPS (v226 + v225) | **19 passed** |
+| Audio real con `modo=dictado` | `HTTP 200`, `estado=OK`, transcripcion y resumen del Cerebro |
+| Respaldo | `/root/backup_gato_audio_20261119` |
+
+Archivo: `.agents/evidencias/gato_audio_vps_2026-11-19.txt` y
+`gato_audio_vps_2026-11-19.json`.
+
+### Decision
+
+- Se reutilizo el WAV de evidencia para probar el camino real (Groq + Cerebro)
+  en el VPS. Deja un borrador de laboratorio, no un dato de negocio nuevo.
+
+### Proximo paso
+
+Retomar **H3**: auditoria persistente de las manos de Bunny (listar, mover,
+renombrar, borrar) y manifiesto con los archivos afectados.

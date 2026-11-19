@@ -101,8 +101,10 @@ scripts de candado.
 - **Evidencia:** `.agents/evidencias/gato_audio_2026-11-19.txt`,
   `gato_audio_dictado_2026-11-19.json`, `gato_jack_sparrow_2026-11-19.json`,
   `pytest_gato_audio_2026-11-19.txt`.
-- **Pendiente:** desplegar estos cambios en el VPS (el audio y los encargos aún
-  corren solo en local).
+- **VPS (2026-11-19):** desplegado con respaldo en
+  `/root/backup_gato_audio_20261119`; `19 passed` en el servidor y audio real
+  `HTTP 200` con `estado=OK`. Evidencia:
+  `.agents/evidencias/gato_audio_vps_2026-11-19.txt`.
 
 ### 2026-11-19 - H1 cerrado: núcleo comercial completo con los tres orígenes
 
