@@ -5,9 +5,9 @@
 > es el documento que permite a Julio, a la secretaría, a administración y a
 > cualquier agente de IA entender el sistema sin preguntarle al programador.
 >
-> **Estado:** v2.6 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
-> las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas) y los
-> módulos ejecutores.
+> **Estado:** v2.7 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
+> las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas), el
+> dictado por audio desde Gato y los módulos ejecutores.
 >
 > **Regla de oro:** acá solo se documenta lo que **existe y funciona**. Si una
 > función no está implementada, se dice explícitamente en «Todavía no existe».
@@ -274,7 +274,7 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Qué significa** | Cada instrucción independiente dentro de un mismo dictado. Un audio con «primero… segundo… tercero…» son tres encargos, cada uno con sus datos, sus preguntas y su estado. |
 | **Para qué existe** | Que un asunto no contamine a otro: antes, «secretaría» de un encargo convertía el recordatorio externo de otro en tarea interna, y dos mensajes se pisaban. |
 | **Quién lo utiliza** | Julio y secretaría al revisar la propuesta. |
-| **Qué lo activa** | El extractor numera cada instrucción independiente (cambia de asunto, destinatario o acción) aunque no haya ordinales. Si no las separó y el dictado trae varias, el compilador pregunta antes de proponer. Los ordinales («primero, segundo») siguen siendo el respaldo determinístico. |
+| **Qué lo activa** | El extractor numera cada instrucción independiente (cambia de asunto, destinatario o acción) aunque no haya ordinales. **Excepción:** una frase que solo confirma o coordina («confírmame con el chofer y con Julio») no crea encargos nuevos; se une al anterior y sus destinatarios se conservan juntos. Si no las separó y el dictado trae varias, el compilador pregunta antes de proponer. Los ordinales («primero, segundo») siguen siendo el respaldo determinístico. |
 | **Qué sucede después** | Cada encargo se compila con su propio texto. Se puede corregir, cancelar o confirmar uno sin tocar los demás. |
 | **Qué NO significa** | No es un hilo de conversación ni un expediente: es un asunto dentro de un dictado. |
 | **Ejemplo** | «Tres cosas: revisar medidas, recordatorio a Mauricio, revisar despachos» → encargos 1, 2 y 3. |
@@ -819,6 +819,22 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Ejemplo** | `cerebro: mañana hay que llamar a Paola para confirmar el pdf y avisar a secretaría.` → dos encargos, las preguntas de número y texto, y el borrador para revisar. |
 | **Referencia técnica** | 2026-11-18. Prueba real en el VPS: Gato devolvió dos encargos y dos preguntas; el Cerebro respondió en 1,5 s. |
 
+### Término: Dictado por Gato (audio)
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `POST /api/v1/asistente/audio`, `modo=dictado`, campo `transcripcion` |
+| **Nombre para el usuario** | Botón de micrófono en Gato · «Dictar al Cerebro por audio» |
+| **Qué significa** | Julio graba una nota de voz en el chat de Gato y el audio se transcribe y se entrega al Cerebro como un dictado, sin salir de Gato. Gato muestra la transcripción y el resumen del borrador. |
+| **Para qué existe** | Dictar desde el mismo lugar donde se consulta, sin abrir el laboratorio ni copiar el texto a mano. |
+| **Quién lo utiliza** | Julio y perfiles con los módulos `voz` y `cerebro`. |
+| **Qué lo activa** | El botón de micrófono del compositor de Gato. Se graba, se detiene y se envía como `multipart/form-data` con `modo=dictado`. |
+| **Qué sucede después** | El backend reutiliza `app/voz` (Groq) para transcribir; el texto se pasa al **mismo endpoint del Cerebro** que usa el prefijo `dictado:` y vuelve el resumen con sus preguntas. La burbuja del usuario se reemplaza por la transcripción para que se vea qué se entendió. |
+| **Qué NO significa** | No ejecuta nada: deja un borrador para revisar y confirmar en `/panel/cerebro`. Si el audio está mal transcrito, se corrige en el laboratorio. |
+| **Ejemplo** | «Dame preparando una entrega de 25 m3 … confírmame con el chofer y con Julio» → un encargo, una tarea interna para «chofer y Julio» y 3 preguntas (cliente, dirección, resistencia). |
+| **Dónde se encuentra** | Chat flotante de **Gato**, botón de micrófono a la izquierda del campo de texto. |
+| **Referencia técnica** | `app/asistente/router.py` (`chat_audio`), `app/asistente/cerebro_bridge.py`; 2026-11-19. Evidencia `.agents/evidencias/gato_audio_2026-11-19.txt`. |
+
 ### Término: Carpeta del cliente en el alta
 
 | Campo | Contenido |
@@ -1058,14 +1074,14 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 `SUPERADO_POR_CORRECCION` §4 · `TENTATIVO` §4 · `VISTA` §5 ·
 `whatsapp_espejo_numeros` §6 · `BusEventos` / SSE §6 ·
 `leads` / `lead_eventos` §6 · `citas` / `cita_eventos` §6 ·
-`ComercialWhatsApp` §6.
+`ComercialWhatsApp` §6 · `chat_audio` / `/api/v1/asistente/audio` §6.
 ### Por nombre visible
 
 Aviso dejado §5 · Aclaración respondible §4 · Cancelación de un encargo §4 ·
 **Chat en vivo §6** · **Cita comercial §6** ·
 Cierre con justificación §5 · Compilador §4 · Condición conservada §4 ·
 Confirmación doble §6 · Corrección registrada §4 ·
-Dato sin confirmar §4 · Duda asociada al dato §4 · Elevada al supervisor §5 ·
+Dato sin confirmar §4 · **Dictado por Gato §6** · Duda asociada al dato §4 · Elevada al supervisor §5 ·
 Encargo §4 · Encargo sugerido §4 · Ficha de la tarea §5 ·
 Guarda de «el dinero ya entró» §6 ·
 Gato §6 · Hecho citado §4 · Ingreso sin confirmar §4 · **Lead §6** ·
@@ -1077,10 +1093,10 @@ Trabajo realizado §5 · Espejo de WhatsApp autorizado §6.
 ### Por sinónimo
 
 «acuse» → Recepción confirmada §5 · «asistente» → Router conversacional §4 ·
-«asunto» → Encargo §4 ·
+«asunto» → Encargo §4 · «audio» → Dictado por Gato §6 ·
 «avisada» → Aviso dejado §5 · «cita» → Hecho citado §4 · «cita comercial» → Cita comercial §6 · «contacto» → Lead §6 ·
 «condición» → Condición conservada §4 · «corregir» → Corrección registrada §4 ·
-«creo» → Duda asociada al dato §4 ·
+«creo» → Duda asociada al dato §4 · «dictar» → Dictado por Gato §6 ·
 «duda» → Dato sin confirmar §4 · «escalar» → Elevada al supervisor §5 ·
 «expediente» → Condición conservada §4 · «lead» → Lead §6 · «marcar hecho» → Trabajo realizado §5 ·
 «me parece» → Duda asociada al dato §4 ·
@@ -1129,3 +1145,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.4 | 2026-11-18 | Cerebro visible (BETA) y puente Gato↔Cerebro con prefijo explícito (sección 6); VPS alineado con la versión local. |
 | v2.5 | 2026-11-18 | Momento cero: carpeta del cliente al ratificar el alta y manos de Miau en Bunny con vista previa y enlaces. |
 | v2.6 | 2026-11-19 | Núcleo comercial (H1): **Lead**, **Reactivación de un lead** y **Cita comercial** (§6); dos hechos separados (la empresa responde / el lead escribe), origen fijado por el servidor y citas con estados y auditoría. |
+| v2.7 | 2026-11-19 | **Dictado por Gato** (§6): botón de micrófono que transcribe y entrega el audio al Cerebro; la coordinación con dos destinatarios deja un solo encargo. |

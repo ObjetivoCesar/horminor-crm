@@ -1210,7 +1210,17 @@ def _compilar_asunto(
     if hay_tarea:
         contactos = _contactos(hechos)
         telefono_dictado = _texto(hechos, "tarea.telefono")
-        nombre_tarea = _texto(hechos, "tarea.destinatario")
+        destinos: list[str] = []
+        for hecho in hechos:
+            if (
+                hecho.clave == "tarea.destinatario"
+                and hecho.utilizable
+                and hecho.valor is not None
+            ):
+                valor = str(hecho.valor).strip()
+                if valor and valor not in destinos:
+                    destinos.append(valor)
+        nombre_tarea = " y ".join(destinos) if destinos else None
         # Si el modelo citó mal el nombre del destinatario, el contacto con el
         # mismo teléfono es la misma persona: se recupera sin inventar.
         if not nombre_tarea and telefono_dictado:
@@ -1221,6 +1231,28 @@ def _compilar_asunto(
                     nombre_tarea = str(contacto["nombre"])
                     break
         mensaje_tarea = _texto(hechos, "tarea.mensaje")
+        if len(destinos) > 1:
+            # «confírmame con el chofer y con Julio»: el mensaje es la propia
+            # frase que coordinó a las dos personas, no una invención. Se usa
+            # aunque el modelo haya copiado solo el tramo del primer nombre.
+            citas = [
+                hecho.evidencia.cita
+                for hecho in hechos
+                if hecho.clave == "tarea.destinatario"
+                and hecho.utilizable
+                and hecho.evidencia is not None
+                and hecho.evidencia.cita
+            ]
+            partes: list[str] = []
+            for cita in dict.fromkeys(citas):
+                limpio = str(cita).strip()
+                if partes and limpio.lower().startswith("y "):
+                    partes[-1] = partes[-1] + " " + limpio
+                else:
+                    partes.append(limpio)
+            combinado = " ".join(partes) or None
+            if combinado:
+                mensaje_tarea = combinado
         cuando_tarea = _texto(hechos, "tarea.cuando")
         rol_interno = detectar_rol_interno(contexto.texto)
         intencion_tarea = detectar_intencion_tarea(

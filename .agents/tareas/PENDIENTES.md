@@ -108,7 +108,7 @@ Mientras no haya respuesta, el sistema deja el campo `NULL` y lo marca
 | G1 | Conectar Gmail al CRM | credenciales OAuth de Julio | El icono de Gmail de la cabecera muestra el total de correos sin leer y abre la bandeja del cliente |
 | G2 | Responder/citar mensajes de WhatsApp como en WhatsApp | - | Citar un mensaje desde el Chat, guardar `quoted_msg_id` y verlo en el telefono del cliente |
 | G3 | Aviso sonoro o de escritorio al entrar un mensaje | G1/G2 | Con el panel abierto en otra pestana, entra un WhatsApp y se avisa sin recargar |
-| G4 | Dictado por audio desde Gato | puente actual (texto) | Gato recibe una nota de voz, la transcribe y devuelve el borrador del Cerebro sin salir del chat |
+| G4 | Dictado por audio desde Gato | hecho 2026-11-19 | Micrófono en Gato → `app/voz` → Cerebro; la transcripción se muestra en el hilo |
 | G5 | Confirmar y ejecutar desde Gato | G4 | Un "sí, confirma el encargo 1" en Gato ejecuta lo que el Cerebro ya tiene aprobado, con registro y sin doble ejecución |
 
 ## 9. Momento cero (Miau)

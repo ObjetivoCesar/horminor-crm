@@ -53,7 +53,7 @@ una regresión.
 | # | Hito | Alcance | Criterio de cierre | Estado |
 |---|---|---|---|---|
 | **H1** | **Núcleo comercial: leads + agendamiento independiente** | Módulo propio que funciona sin importar el origen: lead nuevo por WhatsApp, Julio desde Gato o la secretaría desde el panel. La fecha siempre sale de `app/tiempo.py`. | Un lead creado desde los tres orígenes con las mismas reglas; una cita creada desde los tres orígenes y visible en la agenda; tests de fecha y de origen | **cerrado 2026-11-19**: los tres orígenes pasan por el módulo; cita con choque, estados y auditoría; `[H1 COMERCIAL: OK]` |
-| **H2** | **Audio por Gato** | Gato recibe una nota de voz y la pasa al **transcriptor existente** (`app/voz`); no se duplica código. | Un audio real termina en el mismo borrador del Cerebro que un texto | **hecho**: audio real transcrito por Groq y respondido por Gato |
+| **H2** | **Audio por Gato** | Gato recibe una nota de voz y la pasa al **transcriptor existente** (`app/voz`); no se duplica código. | Un audio real termina en el mismo borrador del Cerebro que un texto | **cerrado 2026-11-19**: botón de micrófono en Gato → transcripción → borrador del Cerebro; `732 passed` y audio real verificado |
 | **H3** | **Manos de Bunny** | Listar, mover, renombrar y borrar con vista previa, confirmación, **auditoría persistente** y manifiesto con archivos. | Una operación destructiva deja fila de auditoría y el manifiesto lista los archivos movidos | en curso (base hecha) |
 | **H4** | **Visual / móvil** | Iterativo con las ideas de Julio: header, clientes, chat, secretaría y tablas en celular. | Las pantallas principales se usan a 390 px sin zoom ni scroll horizontal | pendiente (iterativo) |
 | **H5** | **Gato público (WhatsApp)** | Informar, vender y agendar; sin contexto interno; lead con al menos una respuesta. | Un cliente real informa, recibe precio oficial y solicita cita | pendiente (skill lista) |
@@ -115,6 +115,8 @@ una regresión.
 | 2026-11-19 | H1 | WhatsApp conectado al módulo (webhook pide, no crea) y parser de citas compartido | `app/comercial/whatsapp.py`, `app/comercial/intencion.py`, `app/m1_whatsapp/pipeline.py`, `app/m1_whatsapp/runtime.py` | 2026-11-19 (VII) |
 | 2026-11-19 | H1 | **H1 cerrado**: `pytest` **727 passed**, `[H1 COMERCIAL: OK]`, candado Hito 3 en verde | `.agents/evidencias/pytest_h1_cierre_2026-11-19.txt`, `h1_comercial_check_2026-11-19.txt`, `hito3_lock_2026-11-19.txt` | 2026-11-19 (VII) |
 | 2026-11-19 | H1 | **Desplegado en el VPS**: respaldo, 097 aplicada, imagen reconstruida, `26 passed`, `[H1 COMERCIAL: OK]`, `/panel` 200 | `.agents/evidencias/h1_vps_2026-11-19.txt`, `/root/backup_h1_20261119`, `/root/backups/horminor_pre_h1_20261119.sql.gz` | 2026-11-19 (VIII) |
+| 2026-11-19 | H2 | **Dictado por audio desde Gato**: botón de micrófono, transcripción visible y entrega al Cerebro (`modo=dictado`) | `app/asistente/router.py`, `app/web/templates/panel.html`, `.agents/evidencias/gato_audio_2026-11-19.txt` | 2026-11-19 (IX) |
+| 2026-11-19 | H2 | **Una instrucción con dos destinatarios = un encargo**: fusión determinística de frases de coordinación y tarea interna «chofer y Julio»; de 3 encargos/7 preguntas a 1/3 | `app/cerebro/encargos.py`, `app/cerebro/compilador.py`, `app/cerebro/internas.py`, `tests/test_v226_gato_audio_encargos.py` | 2026-11-19 (IX) |
 
 ## 6. Cómo se actualiza
 

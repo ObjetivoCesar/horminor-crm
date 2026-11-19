@@ -2648,6 +2648,16 @@ tbody tr:last-child td { border-bottom: 0; }
   border: var(--border-subtle); background: var(--surface); color: var(--text);
   font-size: 12.5px;
 }
+.gato-mic {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px;
+  border: var(--border-subtle); background: var(--surface); color: var(--text);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0;
+}
+.gato-mic svg { width: 17px; height: 17px; }
+.gato-mic.grabando { background: #DC2626; color: #fff; border-color: #DC2626; }
+.gato-mic.grabando svg { animation: gato-pulso 1s ease-in-out infinite; }
+@keyframes gato-pulso { 50% { opacity: .45; } }
 @media (max-width: 600px) {
   .gato-panel { right: 12px; left: 12px; width: auto; bottom: 78px; }
   .gato-fab { right: 12px; bottom: 12px; }
@@ -9543,6 +9553,9 @@ chatEventosConectar();
     </div>
   </div>
   <form class="chat-composer gato-form" onsubmit="gatoEnviar(event)">
+    <button class="gato-mic" id="gato-mic" type="button" onclick="gatoGrabarAudio()" aria-label="Dictar al Cerebro por audio" title="Dictar al Cerebro por audio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>
+    </button>
     <input id="gato-input" placeholder="¿Quién me debe?" autocomplete="off" aria-label="Mensaje para Gato">
     <button class="btn small" type="submit">Enviar</button>
   </form>
@@ -9622,14 +9635,7 @@ function gatoNuevaConversacion() {
   gatoAgregar('bot', 'Listo, empezamos de cero. ¿Qué necesitas?');
 }
 
-async function gatoEnviar(ev) {
-  ev.preventDefault();
-  const input = document.getElementById('gato-input');
-  const texto = input.value.trim();
-  if (!texto) return;
-  gatoAgregar('user', texto);
-  input.value = '';
-  const esperando = gatoAgregar('bot', 'Consultando…');
+function gatoSesion() {
   const headers = {};
   const sel = document.getElementById('sim-user');
   let uid = localStorage.getItem('horminor.panel.user') || (sel && sel.value) || '';
@@ -9642,6 +9648,106 @@ async function gatoEnviar(ev) {
     headers['X-Panel-Role'] = 'julio';
     headers['X-Panel-Name'] = 'Julio';
   }
+  return {headers, uid};
+}
+
+let gatoRecorder = null;
+let gatoChunks = [];
+let gatoRecTimer = null;
+let gatoRecSeg = 0;
+
+async function gatoGrabarAudio() {
+  const boton = document.getElementById('gato-mic');
+  if (gatoRecorder && gatoRecorder.state === 'recording') {
+    gatoRecorder.stop();
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+    gatoAgregar('error', 'Este navegador no permite grabar audio.');
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    gatoChunks = [];
+    const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+    gatoRecorder = new MediaRecorder(stream, mime ? {mimeType: mime} : undefined);
+    gatoRecorder.ondataavailable = e => { if (e.data && e.data.size) gatoChunks.push(e.data); };
+    gatoRecorder.onstop = async () => {
+      clearInterval(gatoRecTimer);
+      gatoRecTimer = null;
+      stream.getTracks().forEach(t => t.stop());
+      if (boton) {
+        boton.classList.remove('grabando');
+        boton.setAttribute('aria-label', 'Dictar al Cerebro por audio');
+        boton.setAttribute('title', 'Dictar al Cerebro por audio');
+      }
+      const tipo = gatoRecorder && gatoRecorder.mimeType ? gatoRecorder.mimeType : 'audio/webm';
+      const blob = new Blob(gatoChunks, {type: tipo});
+      gatoRecorder = null;
+      gatoChunks = [];
+      if (blob.size > 1200) {
+        await gatoEnviarAudio(new File([blob], 'audio.webm', {type: tipo}));
+      } else {
+        gatoAgregar('error', 'La nota de voz quedó demasiado corta.');
+      }
+    };
+    gatoRecorder.start();
+    gatoRecSeg = 0;
+    if (boton) {
+      boton.classList.add('grabando');
+      boton.setAttribute('aria-label', 'Detener y enviar audio');
+      boton.setAttribute('title', 'Detener y enviar audio');
+    }
+    gatoRecTimer = setInterval(() => {
+      gatoRecSeg += 1;
+      if (boton) boton.setAttribute('title', 'Detener y enviar · ' + gatoRecSeg + ' s');
+    }, 1000);
+  } catch (e) {
+    gatoAgregar('error', 'No pude usar el micrófono: ' + e.message);
+  }
+}
+
+async function gatoEnviarAudio(file) {
+  const burbuja = gatoAgregar('user', '🎤 Enviando nota de voz…');
+  const esperando = gatoAgregar('bot', 'Transcribiendo…');
+  const {headers, uid} = gatoSesion();
+  const convKey = 'horminor.gato.conv.' + (uid || 'julio');
+  const conv = localStorage.getItem(convKey) || '';
+  const datos = new FormData();
+  datos.append('archivo', file);
+  datos.append('modo', 'dictado');
+  if (conv) datos.append('conversacion_id', conv);
+  try {
+    const res = await fetch('/api/v1/asistente/audio', {method: 'POST', headers, body: datos});
+    const texto = await res.text();
+    let data = null;
+    try { data = texto ? JSON.parse(texto) : null; } catch (e) { data = texto; }
+    if (!res.ok) {
+      const detalle = data && data.detail
+        ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail))
+        : texto;
+      throw new Error(detalle || ('HTTP ' + res.status));
+    }
+    if (data.conversacion_id) localStorage.setItem(convKey, data.conversacion_id);
+    if (data.transcripcion) burbuja.textContent = '🎤 ' + data.transcripcion;
+    esperando.innerHTML = gatoMarkdown(data.respuesta);
+    if (data.estado && data.estado !== 'OK') esperando.classList.add('error');
+  } catch (e) {
+    burbuja.textContent = '🎤 Nota de voz';
+    esperando.classList.add('error');
+    esperando.textContent = 'No pude procesar el audio: ' + e.message;
+  }
+}
+
+async function gatoEnviar(ev) {
+  ev.preventDefault();
+  const input = document.getElementById('gato-input');
+  const texto = input.value.trim();
+  if (!texto) return;
+  gatoAgregar('user', texto);
+  input.value = '';
+  const esperando = gatoAgregar('bot', 'Consultando…');
+  const {headers, uid} = gatoSesion();
   const convKey = 'horminor.gato.conv.' + (uid || 'julio');
   const conv = localStorage.getItem(convKey) || '';
   try {

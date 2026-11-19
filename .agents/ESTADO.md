@@ -3,8 +3,9 @@
 > Foto del presente. Se reescribe en cada sesión. La historia está en `BITACORA.md`.
 > Última actualización: **2026-11-19** (cierre de **H1**: núcleo comercial con
 > leads y citas independientes del canal; panel, Gato y WhatsApp entran por el
-> mismo módulo; migración **097**; **727 pruebas**; **desplegado y verificado en
-> el VPS**).
+> mismo módulo; migración **097**; **desplegado y verificado en el VPS**.
+> **Gato ya dicta por audio** y una instrucción con dos destinatarios deja un
+> solo encargo; **732 pruebas**).
 > Antes: 2026-11-18 (espejo v9.8: **chat en vivo por SSE** —
 > el hilo se actualiza solo, sin pulsar Sincronizar; multimedia entrante real;
 > sesión LID reparada, número de prueba 0967491847, corte de historial y altura
@@ -80,6 +81,28 @@ Orellana/SucumbÃ­os para verificar la cuota de mercado. Se regeneran con los
 scripts de candado.
 
 ## Evidencia de la última sesión
+
+### 2026-11-19 - Dictado por audio desde Gato y una instrucción = un encargo
+
+- **Gato ya tiene micrófono:** el compositor muestra un botón para grabar una
+  nota de voz. El audio se transcribe con `app/voz` (Groq), **la transcripción
+  se pinta en el hilo** y el texto se entrega al Cerebro con `modo=dictado`.
+  Escribir en Gato sigue siendo una consulta normal.
+- **Caso Jack Sparrow corregido:** «Dame preparando una entrega de 25 m3 …
+  confírmame con el chofer y con Julio» pasó de **3 encargos, 0 acciones y 7
+  preguntas** a **1 encargo, 1 tarea interna y 3 preguntas**. La tarea queda
+  asignada a **«chofer y Julio»** y la instrucción conserva la frase completa.
+- **Por qué pasaba:** el extractor contaba cada destinatario de una misma frase
+  como un encargo distinto. Ahora una frase que solo confirma o coordina se une
+  al encargo anterior; el compilador conserva los dos destinatarios.
+- **Pruebas:** **732 passed**, 2 warnings (5 nuevas en
+  `test_v226_gato_audio_encargos.py`); sintaxis de los 3 bloques `<script>` del
+  panel en OK.
+- **Evidencia:** `.agents/evidencias/gato_audio_2026-11-19.txt`,
+  `gato_audio_dictado_2026-11-19.json`, `gato_jack_sparrow_2026-11-19.json`,
+  `pytest_gato_audio_2026-11-19.txt`.
+- **Pendiente:** desplegar estos cambios en el VPS (el audio y los encargos aún
+  corren solo en local).
 
 ### 2026-11-19 - H1 cerrado: núcleo comercial completo con los tres orígenes
 

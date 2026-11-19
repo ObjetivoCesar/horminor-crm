@@ -42,7 +42,7 @@ from .compilador import (
     normalizar_resistencia,
     textos_por_encargo,
 )
-from .encargos import asignar, segmentar
+from .encargos import asignar, fusionar_coordinaciones, segmentar
 from .hechos import (
     Evidencia,
     HechoCitado,
@@ -398,8 +398,10 @@ def construir_hechos(
     notas.extend(_completar_cuando_de_tarea(hechos, mapa.texto))
     notas.extend(_degradar_pago_no_declarado(hechos, texto_crudo))
     notas.extend(_ajustar_incertidumbre(hechos, texto_crudo))
-    # Cada hecho queda en el encargo del dictado donde está su cita.
-    return asignar(hechos, segmentar(texto_crudo)), notas
+    # Cada hecho queda en el encargo del dictado donde está su cita. Una
+    # frase que solo confirma o coordina se une al encargo anterior.
+    asignados = asignar(hechos, segmentar(texto_crudo))
+    return fusionar_coordinaciones(asignados), notas
 
 
 # «No recibido» es una afirmación financiera. Solo se acepta como dato cuando

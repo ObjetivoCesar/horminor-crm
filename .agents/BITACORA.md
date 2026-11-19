@@ -8658,3 +8658,65 @@ Archivo: `.agents/evidencias/h1_vps_2026-11-19.txt`.
 
 Retomar **H3**: auditoria persistente de las manos de Bunny (listar, mover,
 renombrar, borrar) y manifiesto con los archivos afectados.
+
+---
+
+## 2026-11-19 (IX) - Dictado por audio desde Gato y la coordinacion no parte el encargo
+
+### Objetivo
+
+Que Julio pueda dictar desde el chat de Gato (no solo desde el laboratorio) y
+corregir el caso real en que una sola instruccion con dos destinatarios se
+convirtio en tres encargos y siete preguntas.
+
+### Hecho
+
+1. **Microfono en Gato** (`app/web/templates/panel.html`): boton a la izquierda
+   del campo de texto, grabacion con `MediaRecorder`, envio `multipart` a
+   `POST /api/v1/asistente/audio` y burbuja del usuario reemplazada por la
+   transcripcion.
+2. **El audio dicta, no consulta** (`app/asistente/router.py`): `modo=dictado`
+   (por defecto) entrega el texto al **mismo puente del Cerebro** que el prefijo
+   `dictado:`; `modo=pregunta` conserva la consulta normal. La respuesta agrega
+   el campo `transcripcion`.
+3. **Fusion de coordinaciones** (`app/cerebro/encargos.py`): si un grupo solo
+   tiene `tarea.*` y sus citas solo confirman o coordinan («confírmame con…»,
+   «y con Julio»), se une al encargo anterior. No separa asuntos reales.
+4. **Dos destinatarios en una tarea** (`app/cerebro/compilador.py`): la tarea
+   interna conserva «chofer y Julio» y la instruccion completa, sin duplicar la
+   «y»; `app/cerebro/internas.py` reconoce «confírmame» como encargo interno.
+5. **Pruebas nuevas** `tests/test_v226_gato_audio_encargos.py` (5).
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Suite completa | **732 passed**, 2 warnings |
+| Audio real (WAV de evidencia, `modo=dictado`) | HTTP 200, `estado=OK`, transcripcion y resumen del Cerebro |
+| Dictado Jack Sparrow contra el Cerebro real | antes 3 encargos / 0 acciones / 7 preguntas; **ahora 1 / 1 / 3** |
+| Tarea resultante | `crear_tarea_interna`, asignada a «chofer y Julio», instruccion «confírmame con el chofer y con Julio» |
+| Sintaxis del panel | 3 bloques `<script>` en OK |
+
+Archivos: `.agents/evidencias/gato_audio_2026-11-19.txt`,
+`gato_audio_dictado_2026-11-19.json`, `gato_jack_sparrow_2026-11-19.json`,
+`pytest_gato_audio_2026-11-19.txt`.
+
+### Decision
+
+- El microfono de Gato es **dictado al Cerebro** por defecto: escribir sigue
+  siendo consulta. Se descarto que todo audio fuera pregunta porque el uso real
+  de Julio es dictar instrucciones.
+- La fusion es deterministica y conservadora: solo une grupos que no aportan
+  datos propios; tres asuntos con datos siguen separados.
+- No se inventa telefono para «chofer» ni «Julio»: la tarea queda interna para
+  secretaria.
+
+### Bloqueo
+
+- Estos cambios **no estan en el VPS**; el audio y la fusion corren solo en
+  local hasta el proximo despliegue.
+
+### Proximo paso
+
+Desplegar en el VPS el audio de Gato y la fusion de encargos; luego retomar
+**H3** (auditoria persistente de las manos de Bunny y manifiesto con archivos).

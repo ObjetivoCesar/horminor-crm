@@ -42,6 +42,7 @@ class MensajeOut(BaseModel):
     respuesta: str
     estado: str
     conversacion_id: str
+    transcripcion: str | None = None
 
 
 class RecordatorioIn(BaseModel):
@@ -258,8 +259,16 @@ async def chat_audio(
     request: Request,
     archivo: UploadFile = File(...),
     conversacion_id: str | None = Form(default=None),
+    modo: str = Form(default="dictado"),
 ) -> MensajeOut:
-    """Nota de voz para Gato: reutiliza el componente de voz (no lo duplica)."""
+    """Nota de voz para Gato: reutiliza el componente de voz (no lo duplica).
+
+    Por defecto el audio es un **dictado** y se entrega al Cerebro (mismo
+    puente que el prefijo escrito). Si el usuario elige ``modo=pregunta``, se
+    responde como una consulta normal de Gato.
+    """
+    if modo not in ("dictado", "pregunta"):
+        raise HTTPException(status_code=422, detail="modo invalido: dictado|pregunta")
     perfil = await exigir_modulo(request, "voz", mutacion=True)
     pool = getattr(request.app.state, "pool", None)
     if not isinstance(pool, asyncpg.Pool):
@@ -296,10 +305,19 @@ async def chat_audio(
             ),
         )
     actor = await actor_actual(request)
-    return await chat(
-        MensajeIn(mensaje=texto, conversacion_id=conversacion_id),
+    # El audio es dictado por defecto: el Cerebro es quien interpreta
+    # instrucciones. Escribir en Gato sigue siendo una consulta normal.
+    mensaje = f"dictado: {texto}" if modo == "dictado" else texto
+    salida = await chat(
+        MensajeIn(mensaje=mensaje[:1000], conversacion_id=conversacion_id),
         request,
         actor,
+    )
+    return MensajeOut(
+        respuesta=salida.respuesta,
+        estado=salida.estado,
+        conversacion_id=salida.conversacion_id,
+        transcripcion=texto,
     )
 
 
