@@ -189,6 +189,7 @@ async def _equipo(
           FROM v_cerebro_tareas_internas
          WHERE (COALESCE(plazo_en, notificada_en) AT TIME ZONE $3)::date
                BETWEEN $1 AND $2
+           AND estado = 'NOTIFICADA'
          ORDER BY COALESCE(plazo_en, notificada_en)
         """,
         desde,

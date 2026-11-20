@@ -5013,7 +5013,7 @@ async function cargarTareas() {
 function renderAvisoInternas() {
   const caja = document.getElementById('aviso-internas');
   if (!caja) return;
-  const abiertas = (state.tareasInternas || []).filter(t => t.estado !== 'REGISTRADA');
+  const abiertas = (state.tareasInternas || []).filter(t => t.estado === 'NOTIFICADA');
   caja.hidden = abiertas.length === 0;
   if (!abiertas.length) return;
   const urgentes = abiertas.filter(t => t.prioridad === 'URGENTE').length;

@@ -9547,3 +9547,46 @@ pruebas de agenda y todas pasan.
 Julio prueba desde la web:
 `https://horminor.178.238.238.158.sslip.io/panel` con el usuario `julio`.
 Al entrar, Gato abre una conversacion vacia.
+
+
+
+---
+
+## 2026-11-20 (XXVIII) - Limpieza total de la agenda para pruebas desde cero
+
+### Hecho
+
+- Local: se borraron 26 recordatorios, se cerraron 7 tareas pendientes como
+  JUSTIFICADA, se cancelaron 2 despachos de prueba y se limpiaron los turnos
+  de Gato. La Agenda quedo en **0 / 0 / 0 / 0** y el cartel de tareas se oculto.
+- VPS: se borraron 3 recordatorios de prueba, se limpiaron los turnos y quedo
+  **0 tareas pendientes**. Se conserva el despacho real del 21/11.
+- No se borraron clientes, ordenes, pagos, cotizaciones ni facturas.
+- La pestana **Equipo** ahora muestra solo tareas NOTIFICADA.
+- El cartel de tareas pendientes solo cuenta NOTIFICADA, no JUSTIFICADA.
+
+### Evidencia
+
+| Comprobacion | Local | VPS |
+|---|---|---|
+| Turnos de Gato | 0 | 0 |
+| Recordatorios | 0 | 0 |
+| Tareas pendientes | 0 | 0 |
+| Despachos activos | 0 | 1 (real) |
+| Agenda | 0/0/0/0 | 1/0/0/0 |
+| Tests | 760 passed | 45 passed (agenda) |
+
+Archivo: `.agents/evidencias/limpieza_total_2026-11-20.txt`.
+
+### Decision
+
+- Se conservan los clientes porque son registros del CRM, no conversaciones.
+  Borrarlos arrastra ordenes, facturas y despachos; si Julio quiere un reset
+  del CRM, es una decision aparte.
+- Las tareas no se borran: se cierran como JUSTIFICADA. El historial queda para
+  auditoria y dejan de ocupar la Agenda.
+
+### Proximo paso
+
+Julio prueba desde la web con la Agenda vacia:
+`https://horminor.178.238.238.158.sslip.io/panel`, usuario `julio`.
