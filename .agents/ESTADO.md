@@ -120,6 +120,10 @@ scripts de candado.
   `crear_cliente` con el ejecutor del Cerebro. En el VPS se creó **Ingeniero
   Pablo Ayala** (`5c20148e-...`) con el teléfono `0963410409`. **746 passed**;
   la cotización y el abono siguen en 501.
+- **Agenda visual (2026-11-20):** `GET /api/v1/agenda/eventos` y la vista
+  «Agenda» del panel con pestañas **Mixers**, **Recordatorios**, **Julio** y
+  **Equipo**. El chat ahora confirma también `crear_tarea_recordatorio` y
+  `crear_tarea_interna`; el dinero sigue fuera. **16 passed** (v227 + v228).
 - **Pendiente:** historial completo y búsqueda (Fase 4); autenticación real
   (H6).
 

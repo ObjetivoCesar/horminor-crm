@@ -211,14 +211,18 @@ async def confirmar_accion(
     usuario: str,
     rol: str,
     nombre: str,
+    mensaje_final: str | None = None,
 ) -> dict[str, Any]:
     headers = _cabeceras(usuario, rol, nombre)
     headers["Content-Type"] = "application/json"
+    cuerpo: dict[str, Any] = {"accion_orden": int(accion_orden)}
+    if mensaje_final:
+        cuerpo["mensaje_final"] = mensaje_final
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SEGUNDOS) as cliente:
             respuesta = await cliente.post(
                 f"{BASE_URL}/api/v1/cerebro/borradores/{borrador_id}/confirmar",
-                json={"accion_orden": int(accion_orden)},
+                json=cuerpo,
                 headers=headers,
             )
     except httpx.HTTPError as exc:

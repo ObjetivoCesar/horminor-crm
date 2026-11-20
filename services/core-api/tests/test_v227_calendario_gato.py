@@ -16,7 +16,12 @@ from app import tiempo
 from app.asistente.bibliotecario import Bibliotecario
 from app.asistente.guardas import CifraNoVerificada, verificar
 from app.asistente.persona import render_prompt
-from app.asistente.router import _contexto_dictado, _puente, _quiere_crear_cliente
+from app.asistente.router import (
+    _accion_a_confirmar,
+    _contexto_dictado,
+    _puente,
+    _quiere_crear_cliente,
+)
 from app.cerebro import Evidencia, HechoCitado
 from app.cerebro.dinero import dinero_ya_entro
 from app.cerebro.extractor import _CONFIRMA_PAGO
@@ -133,6 +138,14 @@ def test_la_confirmacion_de_crear_cliente_se_reconoce() -> None:
     assert _quiere_crear_cliente("confirmado")
     assert _quiere_crear_cliente("créalo")
     assert not _quiere_crear_cliente("dame los leads caídos")
+
+
+def test_la_confirmacion_desde_gato_elige_la_accion() -> None:
+    assert _accion_a_confirmar("aún no existe cliente, crea a Pablo Ayala") == "crear_cliente"
+    assert _accion_a_confirmar("confirma el recordatorio") == "crear_tarea_recordatorio"
+    assert _accion_a_confirmar("crea la tarea") == "crear_tarea_interna"
+    assert _accion_a_confirmar("confirmado") == "*"
+    assert _accion_a_confirmar("dame los leads caídos") is None
 
 
 def test_la_confirmacion_de_efectivo_se_reconoce() -> None:

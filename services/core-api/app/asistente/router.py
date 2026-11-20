@@ -127,6 +127,49 @@ def _quiere_crear_cliente(mensaje: str) -> bool:
     return plano.strip() in ("confirmado", "confirmo", "dale", "hazlo", "crealo", "crea")
 
 
+# Acciones del Cerebro que el chat puede ejecutar cuando el humano confirma.
+_ACCIONES_CONFIRMABLES = (
+    "crear_cliente",
+    "crear_tarea_recordatorio",
+    "crear_tarea_interna",
+)
+
+
+def _accion_a_confirmar(mensaje: str) -> str | None:
+    """Que accion del borrador pide ejecutar este mensaje.
+
+    ``*`` significa «la que siga en el borrador»: el usuario dijo solo
+    «confirmado». Nunca se ejecuta dinero desde el chat.
+    """
+    plano = _plano(mensaje)
+    if "cliente" in plano and any(
+        marca in plano for marca in ("crea", "crear", "confirmado", "dale", "hazlo", "ejecuta")
+    ):
+        return "crear_cliente"
+    if any(marca in plano for marca in ("recordatorio", "aviso", "mensaje")) and any(
+        marca in plano
+        for marca in ("confirma", "programa", "envia", "manda", "dale", "ejecuta")
+    ):
+        return "crear_tarea_recordatorio"
+    if "tarea" in plano and any(
+        marca in plano
+        for marca in ("confirma", "crea", "ejecuta", "deja", "dale", "programa")
+    ):
+        return "crear_tarea_interna"
+    if plano.strip() in (
+        "confirmado",
+        "confirmo",
+        "dale",
+        "hazlo",
+        "ejecuta",
+        "ejecuta el borrador",
+        "crealo",
+        "crea",
+    ):
+        return "*"
+    return None
+
+
 def _plano(texto: str) -> str:
     import unicodedata
 
@@ -359,9 +402,10 @@ async def chat(
             respuesta=texto, estado=estado, conversacion_id=conversacion_id
         )
 
-    # Si el borrador está esperando y el usuario pide crear el cliente, se
-    # ejecuta la acción real del Cerebro. No se responde "no tengo herramienta".
-    if memoria_activa and pendiente and _quiere_crear_cliente(body.mensaje):
+    # Si el borrador esta esperando y el usuario confirma, se ejecuta la accion
+    # real del Cerebro. No se responde "no tengo herramienta".
+    objetivo = _accion_a_confirmar(body.mensaje)
+    if memoria_activa and pendiente and objetivo is not None:
         borrador_id = str(estado_dialogo.get("borrador_id") or "").strip()
         if not borrador_id:
             borrador_id = await conversaciones.ultimo_borrador_id(
@@ -375,25 +419,63 @@ async def chat(
                     rol=actor.rol,
                     nombre=actor.nombre,
                 )
-                accion = next(
-                    (
-                        item
-                        for item in (draft.get("acciones") or [])
-                        if item.get("accion_nombre") == "crear_cliente"
-                    ),
-                    None,
-                )
+                acciones = draft.get("acciones") or []
+                accion = None
+                if objetivo != "*":
+                    accion = next(
+                        (
+                            item
+                            for item in acciones
+                            if item.get("accion_nombre") == objetivo
+                        ),
+                        None,
+                    )
+                if accion is None:
+                    # «Confirmado» sin nombre: se ejecuta la que sigue, siempre
+                    # que sea una accion con ejecutor. El dinero nunca entra aqui.
+                    cerrados = {
+                        int(encargo.get("encargo") or 1)
+                        for encargo in (draft.get("encargos") or [])
+                        if encargo.get("estado_actual")
+                        in ("EJECUTADO", "CANCELADO")
+                    }
+                    siguiente = next(
+                        (
+                            item
+                            for item in sorted(
+                                acciones, key=lambda a: int(a.get("orden") or 0)
+                            )
+                            if int(item.get("encargo") or 1) not in cerrados
+                        ),
+                        None,
+                    )
+                    if (
+                        siguiente is not None
+                        and siguiente.get("accion_nombre") in _ACCIONES_CONFIRMABLES
+                    ):
+                        accion = siguiente
+                    elif siguiente is not None and objetivo != "*":
+                        accion = None
                 if accion is not None:
+                    parametros = accion.get("parametros") or {}
+                    mensaje_final = None
+                    if accion.get("accion_nombre") == "crear_tarea_recordatorio":
+                        mensaje_final = str(parametros.get("mensaje") or "").strip() or None
                     resultado = await cerebro_bridge.confirmar_accion(
                         borrador_id,
                         int(accion.get("orden") or 1),
                         usuario=actor.actor_id,
                         rol=actor.rol,
                         nombre=actor.nombre,
+                        mensaje_final=mensaje_final,
                     )
                     datos = resultado.get("datos") or {}
-                    texto = str(resultado.get("nota") or "Cliente creado.")
-                    if datos.get("nombre") and "cliente" not in texto.lower():
+                    texto = str(resultado.get("nota") or "Accion ejecutada.")
+                    if (
+                        accion.get("accion_nombre") == "crear_cliente"
+                        and datos.get("nombre")
+                        and "cliente" not in texto.lower()
+                    ):
                         texto = f"Cliente creado: {datos['nombre']}."
                     await memoria.guardar(
                         pool,
@@ -430,7 +512,7 @@ async def chat(
                         conversacion_id=conversacion_id,
                     )
             except HTTPException as exc:
-                texto = f"No pude crear el cliente: {exc.detail}"
+                texto = f"No pude ejecutar la acción: {exc.detail}"
                 await memoria.guardar(
                     pool,
                     conversacion_id,

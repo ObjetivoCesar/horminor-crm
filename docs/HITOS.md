@@ -129,6 +129,7 @@ una regresión.
 | 2026-11-19 | H2 | **Fase 1 desplegada en el VPS**: respaldo, 098 aplicada, 18 conversaciones / 3 abiertas, 24 pruebas, `actual` y `refresh` en verde | `.agents/evidencias/gato_conversaciones_fase1_vps_2026-11-19.txt`, `/root/backup_gato_fase1_20261119` | 2026-11-19 (XIX) |
 | 2026-11-19 | H2 | **Continuidad de aclaraciones**: el estado del borrador se persiste; una respuesta larga usa el texto completo del borrador y no vuelve a preguntar cliente/volumen/dirección | `app/asistente/conversaciones.py`, `app/asistente/router.py`, `.agents/evidencias/gato_seguimiento_preguntas_2026-11-19.txt` | 2026-11-19 (XXI) |
 | 2026-11-20 | H2 | **Confirmación de cliente desde Gato**: «créalo/confirmado» ejecuta `crear_cliente`; Pablo Ayala creado en el VPS con el teléfono dictado | `app/asistente/router.py`, `app/asistente/cerebro_bridge.py`, `.agents/evidencias/gato_confirmacion_cliente_2026-11-20.txt` | 2026-11-20 (XXII) |
+| 2026-11-20 | H2 | **Agenda visual de cuatro pestañas**: `GET /api/v1/agenda/eventos` reúne mixers, recordatorios, citas de Julio y tareas internas; el chat confirma recordatorios y tareas | `app/agenda/router.py`, `app/agenda/eventos.py`, `app/web/templates/panel.html`, `.agents/evidencias/agenda_visual_2026-11-20.txt` | 2026-11-20 (XXIII) |
 
 ## 6. Cómo se actualiza
 

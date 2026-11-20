@@ -9274,3 +9274,64 @@ el abono responden 501; el recordatorio se confirma en `/panel/cerebro`.
 
 Julio prueba los textos en local. Después, definir la agenda visual de tres
 pestañas (mixers, recordatorios y Julio) y conectar las acciones restantes.
+
+
+
+---
+
+## 2026-11-20 (XXIII) - Agenda visual de cuatro pestañas
+
+### Objetivo
+
+Que Julio vea en un calendario lo que el backend va a ejecutar: mixers,
+recordatorios, citas comerciales y tareas internas. El calendario es solo
+vista; el envio y la ejecucion siguen en sus servicios.
+
+### Hecho
+
+- `GET /api/v1/agenda/eventos` une cuatro fuentes reales con permisos por
+  pestana. Sin `tipo` devuelve solo las pestanas que el perfil puede ver.
+- `app/agenda/eventos.py` normaliza fecha, hora, titulo, detalle, estado,
+  cliente y referencia. La zona es `America/Guayaquil`.
+- Vista «Agenda» en el panel: tabs Mixers, Recordatorios, Julio y Equipo,
+  calendario mensual, modal de dia con estado vacio y branding Horminor.
+- El chat de Gato confirma tambien `crear_tarea_recordatorio` y
+  `crear_tarea_interna` («confirma el recordatorio», «crea la tarea»,
+  «confirmado»). No ejecuta dinero ni acciones sin ejecutor.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Endpoint local | HTTP 200, 4 tipos, conteo 1/22/1/13 |
+| Pestana Julio | Visita · Prueba Agenda, 21/11 11:00, SOLICITADA |
+| Pestana Recordatorios | 2 eventos el 21/11: BORRADOR y PENDIENTE |
+| Pestana Equipo | tarea de secretaria visible el 21/11 |
+| Confirmar recordatorio desde el chat | pasa a PENDIENTE |
+| Confirmar tarea desde el chat | nace NOTIFICADA |
+| Tests | **16 passed** (v227 + v228) |
+
+Archivo: `.agents/evidencias/agenda_visual_2026-11-20.txt`.
+
+### Decisiones
+
+- Cuarta pestana **Equipo** con `cerebro_tareas_internas`: se ubica por
+  `plazo_en` (24 h por defecto) o por el dia del aviso. No se inventa una
+  fecha que el dictado no dio.
+- El calendario no crea ni edita en esta version. Se prioriza leer datos
+  reales antes de escribir desde la UI.
+- Las citas de Julio son `citas` comerciales (visita, reunion, medicion,
+  entrega), no una agenda personal.
+
+### Bloqueos
+
+- Gato no agenda mixers: no existe accion de escritura en
+  `dispatch_schedule` desde el chat.
+- `crear_cotizacion_borrador` y `registrar_abono_cliente` siguen en 501.
+- `parse_cita` solo entiende hoy/mañana/pasado mañana o dia de la semana, y
+  exige un lead existente.
+
+### Proximo paso
+
+Julio prueba los cinco textos en local. Si la agenda responde bien, se sube al
+VPS y despues se agrega crear/editar desde el calendario.

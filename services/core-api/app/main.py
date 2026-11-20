@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from .agenda.router import router as agenda_router
 from .asistente.despachador import DespachadorRecordatorios
 from .asistente.router import gato_router, router as asistente_router
 from .db import create_pool, run_migrations
@@ -173,3 +174,4 @@ app.include_router(sentinel_router)
 app.include_router(panel_router)
 app.include_router(asistente_router)
 app.include_router(gato_router)
+app.include_router(agenda_router)

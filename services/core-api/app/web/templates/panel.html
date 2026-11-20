@@ -2672,6 +2672,76 @@ tbody tr:last-child td { border-bottom: 0; }
   .gato-panel { right: 12px; left: 12px; width: auto; bottom: 78px; }
   .gato-fab { right: 12px; bottom: 12px; }
 }
+
+/* ------------------------------------------------------------- Agenda */
+.ag-wrap { display: flex; flex-direction: column; gap: 16px; }
+.ag-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+.ag-head h1 { margin: 0; font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -.035em; line-height: 1.05; }
+.ag-head p { margin: 6px 0 0; color: var(--text-muted); font-size: 12px; }
+.ag-legend { display: flex; gap: 14px; flex-wrap: wrap; padding-bottom: 3px; }
+.ag-legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 10.5px; }
+.ag-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.ag-dot.mixers { background: var(--accent-cat-amber); }
+.ag-dot.recordatorios { background: var(--accent-bank-pill); }
+.ag-dot.julio { background: #34D399; }
+.ag-dot.equipo { background: #A78BFA; }
+.ag-tabs { display: flex; gap: 4px; padding: 4px; background: var(--surface-row-pill); border: var(--border-subtle); border-radius: 13px; width: fit-content; max-width: 100%; overflow-x: auto; }
+.ag-tab { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 11.5px; font-weight: 500; padding: 9px 13px; border-radius: 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.ag-tab:hover { color: var(--text-pure); }
+.ag-tab.active { background: var(--accent-cat-amber); color: #1A1200; font-weight: 600; }
+.ag-count { font-size: 9.5px; min-width: 17px; height: 17px; padding: 0 5px; display: inline-grid; place-items: center; border-radius: 6px; background: rgba(255,255,255,.12); color: inherit; }
+.ag-tab.active .ag-count { background: rgba(26,18,0,.18); }
+.ag-calendar { border: var(--border-subtle); border-radius: var(--radius-card); background: var(--surface-card); box-shadow: var(--shadow-bento); overflow: hidden; }
+.ag-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 15px 18px 10px; }
+.ag-cal-head h2 { margin: 0; font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; text-transform: capitalize; }
+.ag-nav { display: flex; gap: 6px; align-items: center; }
+.ag-nav button { width: 30px; height: 30px; border-radius: 8px; border: var(--border-subtle); background: var(--surface-row-pill); color: var(--text-slate); cursor: pointer; font: inherit; }
+.ag-nav button:hover { border-color: rgba(245,158,11,.55); color: var(--text-pure); }
+.ag-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 12px 8px; color: var(--text-muted); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; }
+.ag-weekdays span { padding-left: 8px; }
+.ag-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 0 12px 16px; }
+.ag-day { min-height: 78px; border-radius: 11px; border: 1px solid transparent; background: rgba(255,255,255,.012); padding: 8px; color: var(--text-slate); cursor: pointer; position: relative; text-align: left; font: inherit; transition: background .15s ease, border-color .15s ease; }
+.ag-day:hover { background: var(--row-hover); border-color: rgba(255,255,255,.14); }
+.ag-day.blank { background: transparent; cursor: default; pointer-events: none; }
+.ag-day .num { font-size: 11.5px; font-weight: 500; }
+.ag-day.today .num { color: var(--accent-cat-amber-bright); font-weight: 700; }
+.ag-day.selected { border-color: rgba(245,158,11,.65); background: rgba(245,158,11,.10); }
+.ag-dots { display: flex; gap: 3px; margin-top: 9px; flex-wrap: wrap; }
+.ag-dots .ag-dot { width: 5px; height: 5px; }
+.ag-pill { margin-top: 6px; font-size: 8.5px; line-height: 1.25; color: var(--text-slate); background: rgba(255,255,255,.05); border-radius: 5px; padding: 3px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-hint { color: var(--text-muted); font-size: 10.5px; margin: 0 2px; }
+.ag-modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 18px; background: rgba(3,7,13,.72); backdrop-filter: blur(7px); }
+.ag-modal-backdrop[hidden] { display: none; }
+.ag-modal { width: min(560px, 100%); border: 1px solid rgba(255,255,255,.12); border-radius: 20px; overflow: hidden; background: var(--surface-card); box-shadow: 0 30px 90px -22px rgba(0,0,0,.95); animation: ag-pop .18s ease-out; }
+@keyframes ag-pop { from { transform: translateY(8px) scale(.985); opacity: .5; } to { transform: none; opacity: 1; } }
+.ag-modal-head { padding: 18px 20px 14px; border-bottom: var(--border-subtle); position: relative; }
+.ag-kicker { color: var(--accent-cat-amber-bright); font-size: 9px; letter-spacing: .18em; font-weight: 600; text-transform: uppercase; }
+.ag-modal-title { margin: 5px 0 0; font-size: 25px; letter-spacing: -.03em; line-height: 1.1; }
+.ag-modal-close { position: absolute; right: 16px; top: 16px; width: 30px; height: 30px; border-radius: 50%; border: var(--border-subtle); background: var(--surface-row-pill); color: var(--text-slate); font: inherit; font-size: 16px; cursor: pointer; }
+.ag-modal-body { padding: 18px 20px 8px; min-height: 180px; }
+.ag-empty { display: grid; place-items: center; text-align: center; padding: 18px 10px 12px; }
+.ag-clock { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; border: 1px solid rgba(52,211,153,.45); color: #34D399; background: rgba(52,211,153,.08); margin-bottom: 14px; }
+.ag-empty h3 { margin: 0 0 6px; font-size: 13.5px; font-weight: 600; }
+.ag-empty p { margin: 0; color: var(--text-muted); font-size: 10.5px; line-height: 1.55; max-width: 330px; }
+.ag-list { display: grid; gap: 8px; }
+.ag-event { display: flex; gap: 11px; padding: 11px 12px; border-radius: 11px; background: rgba(255,255,255,.035); border: var(--border-subtle); }
+.ag-event .bar { width: 3px; border-radius: 3px; flex: 0 0 3px; background: var(--accent-cat-amber); }
+.ag-event.recordatorios .bar { background: var(--accent-bank-pill); }
+.ag-event.julio .bar { background: #34D399; }
+.ag-event.equipo .bar { background: #A78BFA; }
+.ag-event .time { font-size: 11px; font-weight: 600; color: var(--text-pure); white-space: nowrap; padding-top: 1px; }
+.ag-event .info { min-width: 0; }
+.ag-event .info strong { display: block; font-size: 11.5px; font-weight: 600; overflow-wrap: anywhere; }
+.ag-event .info small { display: block; color: var(--text-muted); font-size: 10px; margin-top: 2px; overflow-wrap: anywhere; }
+.ag-chip { display: inline-block; margin-top: 5px; font-size: 8.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; border-radius: 5px; padding: 3px 6px; color: var(--accent-cat-amber-bright); background: rgba(245,158,11,.12); }
+.ag-modal-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 20px 16px; border-top: var(--border-subtle); color: var(--text-muted); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+.ag-modal-foot .note { letter-spacing: 0; text-transform: none; font-size: 9.5px; }
+@media (max-width: 720px) {
+  .ag-day { min-height: 62px; padding: 6px; }
+  .ag-pill { display: none; }
+  .ag-tabs { width: 100%; }
+  .ag-tab { flex: 1; justify-content: center; }
+}
 </style>
 </head>
 <body>
@@ -2701,6 +2771,10 @@ tbody tr:last-child td { border-bottom: 0; }
       <button data-role-btn="cotizaciones" onclick="setView('cotizaciones')">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6Z"/><path d="M15 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
         Cotizaciones
+      </button>
+      <button data-role-btn="agenda" onclick="setView('agenda')">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/><path d="M8 13h2M14 13h2M8 17h2M14 17h2"/></svg>
+        Agenda
       </button>
       <button data-role-btn="planta" onclick="setView('planta')">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l6 3V9l6 3V6l6 3v12Z"/><path d="M7 17h.01M12 17h.01M17 17h.01"/></svg>
@@ -3236,6 +3310,61 @@ tbody tr:last-child td { border-bottom: 0; }
       </div>
     </div>
   </section>
+
+  <!-- ===================== AGENDA ===================== -->
+  <section class="view" data-view="agenda">
+    <div class="ag-wrap">
+      <div class="ag-head">
+        <div>
+          <span class="card-kicker">Lectura · backend</span>
+          <h1>Agenda</h1>
+          <p>Mixers, recordatorios, citas de Julio y tareas del equipo. El calendario muestra; el backend ejecuta los envíos.</p>
+        </div>
+        <div class="ag-legend">
+          <span><i class="ag-dot mixers"></i>Mixers</span>
+          <span><i class="ag-dot recordatorios"></i>Recordatorios</span>
+          <span><i class="ag-dot julio"></i>Julio</span>
+          <span><i class="ag-dot equipo"></i>Equipo</span>
+        </div>
+      </div>
+
+      <div class="ag-tabs" role="tablist">
+        <button class="ag-tab active" data-ag-tab="mixers" role="tab">Mixers <span class="ag-count" id="ag-count-mixers">0</span></button>
+        <button class="ag-tab" data-ag-tab="recordatorios" role="tab">Recordatorios <span class="ag-count" id="ag-count-recordatorios">0</span></button>
+        <button class="ag-tab" data-ag-tab="julio" role="tab">Julio <span class="ag-count" id="ag-count-julio">0</span></button>
+        <button class="ag-tab" data-ag-tab="equipo" role="tab">Equipo <span class="ag-count" id="ag-count-equipo">0</span></button>
+      </div>
+
+      <div class="ag-calendar">
+        <div class="ag-cal-head">
+          <h2 id="ag-mes">—</h2>
+          <div class="ag-nav">
+            <button type="button" onclick="agMoverMes(-1)" aria-label="Mes anterior">‹</button>
+            <button type="button" onclick="agHoy()">Hoy</button>
+            <button type="button" onclick="agMoverMes(1)" aria-label="Mes siguiente">›</button>
+          </div>
+        </div>
+        <div class="ag-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+        <div class="ag-grid" id="ag-grid"></div>
+      </div>
+      <p class="ag-hint" id="ag-nota">Vista de solo lectura · zona America/Guayaquil. Pulsa un día para ver sus eventos.</p>
+    </div>
+  </section>
+
+  <div class="ag-modal-backdrop" id="ag-modal" hidden>
+    <div class="ag-modal" role="dialog" aria-modal="true" aria-labelledby="ag-modal-title">
+      <div class="ag-modal-head">
+        <div class="ag-kicker" id="ag-modal-kicker">AGENDA</div>
+        <h2 class="ag-modal-title" id="ag-modal-title">—</h2>
+        <button class="ag-modal-close" type="button" onclick="agCerrarDia()" aria-label="Cerrar">×</button>
+      </div>
+      <div class="ag-modal-body" id="ag-modal-body"></div>
+      <div class="ag-modal-foot">
+        <span>Hora de Ecuador · UTC-5</span>
+        <span class="note">El backend ejecuta los envíos</span>
+      </div>
+    </div>
+  </div>
 
   <!-- ===================== SECRETARIA Y CAJA ===================== -->
   <section class="view" data-view="secretaria">
@@ -4314,6 +4443,10 @@ const VIEW_META = {
     title: 'Cotizaciones',
     subtitle: 'De la cotización a la orden, con precio de lista y extras.'
   },
+  agenda: {
+    title: 'Agenda',
+    subtitle: 'Mixers, recordatorios, citas de Julio y tareas del equipo.'
+  },
   planta: {
     title: 'Planta, Flota y Kardex',
     subtitle: 'Stock, autonomía, kardex teórico y estado de mixers.'
@@ -4419,11 +4552,151 @@ function setView(v) {
   if (v === 'secretaria') cargarSecretaria();
   if (v === 'clientes') cargarClientes();
   if (v === 'cotizaciones') cargarCotizaciones();
+  if (v === 'agenda') agCargar();
   if (v === 'planta') cargarPlanta();
   if (v === 'banca') cargarBanca();
   if (v === 'superadmin') cargarSuperadmin();
   try { window.scrollTo({top:0, behavior:'smooth'}); } catch (e) { window.scrollTo(0,0); }
 }
+
+/* ----------------------------- AGENDA ----------------------------- */
+const AG_TABS = {
+  mixers: {label: 'Mixers', kicker: 'AGENDA · MIXERS'},
+  recordatorios: {label: 'Recordatorios', kicker: 'AGENDA · RECORDATORIOS'},
+  julio: {label: 'Julio', kicker: 'AGENDA · JULIO'},
+  equipo: {label: 'Equipo', kicker: 'AGENDA · EQUIPO'}
+};
+const AG_DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const AG_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const agState = {hoy: null, mes: null, tab: 'mixers', eventos: [], conteo: {}, seleccion: null};
+
+function agDosDigitos(n) { return String(n).padStart(2, '0'); }
+function agKey(anio, mes, dia) { return anio + '-' + agDosDigitos(mes + 1) + '-' + agDosDigitos(dia); }
+function agTabActual() { return AG_TABS[agState.tab] ? agState.tab : 'mixers'; }
+function agEventosDia(fecha, tab) {
+  const tipo = tab || agTabActual();
+  return agState.eventos.filter(e => e.tipo === tipo && e.fecha === fecha);
+}
+function agMoverMes(delta) {
+  if (!agState.mes) return;
+  agState.mes = new Date(agState.mes.getFullYear(), agState.mes.getMonth() + delta, 1);
+  agState.seleccion = null;
+  agCargar();
+}
+function agHoy() {
+  const base = agState.hoy ? new Date(agState.hoy + 'T12:00:00') : new Date();
+  agState.mes = new Date(base.getFullYear(), base.getMonth(), 1);
+  agState.seleccion = agState.hoy;
+  agCargar();
+}
+function agCambiarTab(tab) {
+  if (!AG_TABS[tab]) return;
+  agState.tab = tab;
+  document.querySelectorAll('[data-ag-tab]').forEach(el => el.classList.toggle('active', el.dataset.agTab === tab));
+  agRender();
+}
+async function agCargar() {
+  const grid = document.getElementById('ag-grid');
+  if (!grid) return;
+  const nota = document.getElementById('ag-nota');
+  const base = agState.mes || (agState.hoy ? new Date(agState.hoy + 'T12:00:00') : new Date());
+  agState.mes = new Date(base.getFullYear(), base.getMonth(), 1);
+  const anio = agState.mes.getFullYear();
+  const mes = agState.mes.getMonth();
+  const desde = agKey(anio, mes, 1);
+  const hasta = agKey(anio, mes, new Date(anio, mes + 1, 0).getDate());
+  try {
+    const r = await api('/api/v1/agenda/eventos?desde=' + desde + '&hasta=' + hasta);
+    agState.hoy = r.hoy || agState.hoy;
+    agState.eventos = Array.isArray(r.eventos) ? r.eventos : [];
+    agState.conteo = r.conteo || {};
+    if (nota) nota.textContent = 'Vista de solo lectura · zona ' + (r.zona || 'America/Guayaquil') + '. Pulsa un día para ver sus eventos.';
+  } catch (e) {
+    agState.eventos = [];
+    agState.conteo = {};
+    if (nota) nota.textContent = 'No pude leer la agenda: ' + (e.message || e);
+  }
+  agRender();
+}
+function agRender() {
+  const grid = document.getElementById('ag-grid');
+  if (!grid) return;
+  const base = agState.mes || new Date();
+  const anio = base.getFullYear();
+  const mes = base.getMonth();
+  const titulo = document.getElementById('ag-mes');
+  if (titulo) titulo.textContent = AG_MESES[mes] + ' ' + anio;
+
+  Object.keys(AG_TABS).forEach(tab => {
+    const contador = document.getElementById('ag-count-' + tab);
+    if (contador) contador.textContent = agState.conteo[tab] || 0;
+  });
+
+  const primerDia = new Date(anio, mes, 1);
+  const totalDias = new Date(anio, mes + 1, 0).getDate();
+  const offset = (primerDia.getDay() + 6) % 7; // lunes primero
+  let html = '';
+  for (let i = 0; i < offset; i++) html += '<div class="ag-day blank"></div>';
+  for (let dia = 1; dia <= totalDias; dia++) {
+    const fecha = agKey(anio, mes, dia);
+    const lista = agEventosDia(fecha);
+    const dots = lista.slice(0, 3).map(() => '<span class="ag-dot ' + agState.tab + '"></span>').join('');
+    const primero = lista[0];
+    const pill = primero ? '<div class="ag-pill">' + (primero.hora || '') + (primero.hora ? ' · ' : '') + agEscapar(primero.titulo) + '</div>' : '';
+    const clases = ['ag-day'];
+    if (fecha === agState.seleccion) clases.push('selected');
+    if (fecha === agState.hoy) clases.push('today');
+    html += '<button type="button" class="' + clases.join(' ') + '" onclick="agAbrirDia(\'' + fecha + '\')">'
+      + '<div class="num">' + dia + '</div><div class="ag-dots">' + dots + '</div>' + pill + '</button>';
+  }
+  grid.innerHTML = html;
+}
+function agEscapar(valor) {
+  return String(valor == null ? '' : valor).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+}
+function agFormatoDia(fecha) {
+  const d = new Date(fecha + 'T12:00:00');
+  return AG_DIAS[d.getDay()] + ' ' + d.getDate() + ' ' + AG_MESES[d.getMonth()].slice(0, 3);
+}
+function agAbrirDia(fecha) {
+  agState.seleccion = fecha;
+  agRender();
+  const list = agEventosDia(fecha);
+  const modal = document.getElementById('ag-modal');
+  const kicker = document.getElementById('ag-modal-kicker');
+  const titulo = document.getElementById('ag-modal-title');
+  const body = document.getElementById('ag-modal-body');
+  if (kicker) kicker.textContent = (fecha === agState.hoy ? 'HOY · ' : '') + AG_TABS[agTabActual()].kicker;
+  if (titulo) titulo.textContent = agFormatoDia(fecha);
+  if (!body) return;
+  if (!list.length) {
+    body.innerHTML = '<div class="ag-empty">'
+      + '<div class="ag-clock"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>'
+      + '<h3>No hay eventos registrados este día.</h3>'
+      + '<p>La agenda se llena cuando se confirma una cita o se programa un recordatorio.</p></div>';
+  } else {
+    body.innerHTML = '<div class="ag-list">' + list.map(e => {
+      const detalle = e.detalle ? '<small>' + agEscapar(e.detalle) + '</small>' : '';
+      const estado = e.estado ? '<span class="ag-chip">' + agEscapar(e.estado) + '</span>' : '';
+      return '<div class="ag-event ' + agState.tab + '"><div class="bar"></div>'
+        + '<div class="time">' + agEscapar(e.hora || '—') + '</div>'
+        + '<div class="info"><strong>' + agEscapar(e.titulo) + '</strong>' + detalle + estado + '</div></div>';
+    }).join('') + '</div>';
+  }
+  if (modal) modal.hidden = false;
+}
+function agCerrarDia() {
+  const modal = document.getElementById('ag-modal');
+  if (modal) modal.hidden = true;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-ag-tab]').forEach(el => {
+    el.addEventListener('click', () => agCambiarTab(el.dataset.agTab));
+  });
+  const modal = document.getElementById('ag-modal');
+  if (modal) modal.addEventListener('click', e => { if (e.target === modal) agCerrarDia(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') agCerrarDia(); });
+});
 
 /* ----------------------------- PERFIL SIMULADO / ACL ----------------------------- */
 const MODULOS_PANEL = {
@@ -4447,6 +4720,7 @@ const MODULO_POR_VISTA = {
   secretaria: ['secretaria_ventanilla', 'secretaria_cobros_gastos', 'secretaria_cierre_caja', 'agenda_despachos', 'compras_materiales'],
   clientes: ['clientes_cartera'],
   cotizaciones: ['cotizaciones'],
+  agenda: ['agenda_despachos', 'clientes_cartera', 'secretaria_ventanilla', 'cerebro'],
   planta: ['planta_kardex', 'compras_materiales'],
   banca: ['finanzas_balance_auditoria'],
   superadmin: ['superadmin_config']
@@ -4463,7 +4737,7 @@ function puedeVista(v) {
 }
 
 function _primerVistaPermitida() {
-  const orden = ['dashboard', 'secretaria', 'clientes', 'planta', 'banca', 'superadmin'];
+  const orden = ['dashboard', 'secretaria', 'clientes', 'cotizaciones', 'agenda', 'planta', 'banca', 'superadmin'];
   return orden.find(puedeVista) || 'dashboard';
 }
 
