@@ -9590,3 +9590,44 @@ Archivo: `.agents/evidencias/limpieza_total_2026-11-20.txt`.
 
 Julio prueba desde la web con la Agenda vacia:
 `https://horminor.178.238.238.158.sslip.io/panel`, usuario `julio`.
+
+
+
+---
+
+## 2026-11-20 (XXIX) - Reset total de clientes y documentos
+
+### Hecho
+
+- Julio confirmo que todos los clientes son ficticios y pidio borrarlos.
+- Se hizo backup local y del VPS antes de tocar nada.
+- Se ejecuto `TRUNCATE TABLE clients CASCADE` en local y VPS.
+- La cascada borro clientes, ordenes, facturas, pagos, despachos, citas,
+  leads, cotizaciones, chat de WhatsApp, borradores/extracciones/ejecuciones del
+  Cerebro, tareas internas, movimientos de inventario y media assets.
+- Se conservaron usuarios, configuracion, recetas, precios y parametros.
+
+### Evidencia
+
+| Comprobacion | Local | VPS |
+|---|---|---|
+| Clientes | 0 | 0 |
+| Ordenes / facturas / pagos | 0 / 0 / 0 | 0 / 0 / 0 |
+| Despachos / citas / leads | 0 / 0 / 0 | 0 / 0 / 0 |
+| Tareas internas | 0 | 0 |
+| Agenda | 0/0/0/0 | 0/0/0/0 |
+| Panel | 200, 0 clientes | health ok, API 0 clientes |
+
+Backups:
+- Local: `%TEMP%\orminorth_local_antes_reset.sql`.
+- VPS: `/root/backup_agenda_20261120/orminorth_vps_antes_reset.sql`.
+
+### Decision
+
+El reset fue mas amplio que «clientes»: sin clientes, sus ordenes, facturas,
+pagos y despachos no tienen sujeto. Julio confirmo que todo era ficticio.
+
+### Proximo paso
+
+Julio prueba desde la web con todo en cero:
+`https://horminor.178.238.238.158.sslip.io/panel`, usuario `julio`.
