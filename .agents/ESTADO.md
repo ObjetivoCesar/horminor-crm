@@ -116,6 +116,10 @@ scripts de candado.
   usa el texto completo del borrador; el tercer mensaje conserva cliente, 5 m³,
   180 y dirección. **745 passed**; VPS **11 passed**. Nueva conversación de
   Julio: `fc29cf49-...`.
+- **Confirmación desde Gato (2026-11-20):** «créalo/confirmado» ejecuta
+  `crear_cliente` con el ejecutor del Cerebro. En el VPS se creó **Ingeniero
+  Pablo Ayala** (`5c20148e-...`) con el teléfono `0963410409`. **746 passed**;
+  la cotización y el abono siguen en 501.
 - **Pendiente:** historial completo y búsqueda (Fase 4); autenticación real
   (H6).
 

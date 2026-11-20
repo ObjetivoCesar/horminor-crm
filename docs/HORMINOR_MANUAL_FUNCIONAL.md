@@ -5,10 +5,10 @@
 > es el documento que permite a Julio, a la secretaría, a administración y a
 > cualquier agente de IA entender el sistema sin preguntarle al programador.
 >
-> **Estado:** v2.13 — 2026-11-19. Cubre el **Cerebro** y su relación con el CRM,
+> **Estado:** v2.14 — 2026-11-20. Cubre el **Cerebro** y su relación con el CRM,
 > las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas), el
-> dictado por audio desde Gato, las conversaciones de Gato y los módulos
-> ejecutores.
+> dictado por audio desde Gato, las conversaciones de Gato, la confirmación
+> desde el chat y los módulos ejecutores.
 >
 > **Regla de oro:** acá solo se documenta lo que **existe y funciona**. Si una
 > función no está implementada, se dice explícitamente en «Todavía no existe».
@@ -856,6 +856,22 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Dónde se encuentra** | Chat flotante de Gato y API `/api/v1/gato/`. |
 | **Referencia técnica** | Migración 098; `app/asistente/conversaciones.py`; 2026-11-19. |
 
+### Término: Confirmación desde Gato
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `cerebro_bridge.confirmar_accion`, `POST /api/v1/cerebro/borradores/{id}/confirmar` |
+| **Nombre para el usuario** | «Créalo» · «Confirmado» |
+| **Qué significa** | Cuando un borrador quedó esperando una aclaración o confirmación, Julio puede decir «créalo», «crea el cliente» o «confirmado» en Gato y la acción conectada se ejecuta sin abrir `/panel/cerebro`. |
+| **Para qué existe** | Cerrar el ciclo del dictado desde el mismo chat y dejar de responder «no tengo herramienta». |
+| **Quién lo utiliza** | Julio y los perfiles con permiso sobre el borrador. |
+| **Qué lo activa** | Un borrador pendiente en la conversación y una frase de confirmación/creación. |
+| **Qué sucede después** | Se ejecuta la acción con el ejecutor del Cerebro, se registra en `cerebro_ejecuciones` y se guarda el turno. Si quedan preguntas, el borrador sigue esperando. |
+| **Qué NO significa** | No ejecuta acciones sin ejecutor (cotización, pago: 501) ni confirma un borrador de otra conversación. El texto del recordatorio y los pagos siguen su flujo propio. |
+| **Ejemplo** | «Aún no existe cliente, crea a Pablo Ayala» → «Cliente creado: Ingeniero Pablo Ayala». |
+| **Dónde se encuentra** | Chat flotante de Gato. |
+| **Referencia técnica** | `app/asistente/router.py`, `app/asistente/cerebro_bridge.py`; 2026-11-20. |
+
 ### Término: Carpeta del cliente en el alta
 
 | Campo | Contenido |
@@ -1105,7 +1121,7 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 Aviso dejado §5 · Aclaración respondible §4 · Cancelación de un encargo §4 ·
 **Chat en vivo §6** · **Cita comercial §6** ·
 Cierre con justificación §5 · Compilador §4 · Condición conservada §4 ·
-Confirmación doble §6 · **Conversación de Gato §6** · Corrección registrada §4 ·
+Confirmación doble §6 · **Confirmación desde Gato §6** · **Conversación de Gato §6** · Corrección registrada §4 ·
 Dato sin confirmar §4 · **Dictado por Gato §6** · Duda asociada al dato §4 · Elevada al supervisor §5 ·
 Encargo §4 · Encargo sugerido §4 · Ficha de la tarea §5 ·
 Guarda de «el dinero ya entró» §6 ·
@@ -1177,3 +1193,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.11 | 2026-11-19 | **Memoria entre dictados** (§6): el Cerebro recibe los dictados previos de la misma conversación; un seguimiento conserva cliente, volumen y pago, y «me acaba de dar el efectivo» marca el ingreso como recibido. |
 | v2.12 | 2026-11-19 | **Permiso de Voz en Gato** (§6): si el perfil seleccionado no tiene Voz, el panel dice qué perfil es y que cambie a Julio; no se muestra el JSON crudo. |
 | v2.13 | 2026-11-19 | **Conversación de Gato** (§6): `gato_conversaciones`, carga del hilo desde PostgreSQL, refresh que cierra y abre, contexto deliberado y `client_turn_id`. |
+| v2.14 | 2026-11-20 | **Confirmación desde Gato** (§6): «créalo/confirmado» ejecuta `crear_cliente` con el ejecutor del Cerebro; el caso Pablo Ayala quedó creado con su teléfono. |

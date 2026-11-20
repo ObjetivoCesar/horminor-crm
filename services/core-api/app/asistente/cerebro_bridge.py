@@ -158,3 +158,76 @@ async def interpretar(
     if not isinstance(datos, dict):
         raise HTTPException(status_code=502, detail="respuesta inesperada del Cerebro")
     return datos
+
+
+def _cabeceras(usuario: str, rol: str, nombre: str) -> dict[str, str]:
+    headers = {
+        "X-Panel-User": usuario,
+        "X-Panel-Role": (rol or "").lower(),
+        "X-Panel-Name": nombre,
+    }
+    try:
+        uuid.UUID(str(usuario))
+    except (ValueError, AttributeError):
+        if (rol or "").upper() != "SUPERADMIN":
+            raise HTTPException(
+                status_code=403,
+                detail="Selecciona un perfil real en «Viendo como».",
+            )
+        headers.pop("X-Panel-User", None)
+    return headers
+
+
+async def obtener_borrador(
+    borrador_id: str,
+    *,
+    usuario: str,
+    rol: str,
+    nombre: str,
+) -> dict[str, Any]:
+    headers = _cabeceras(usuario, rol, nombre)
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT_SEGUNDOS) as cliente:
+            respuesta = await cliente.get(
+                f"{BASE_URL}/api/v1/cerebro/borradores/{borrador_id}",
+                headers=headers,
+            )
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=503, detail=f"no pude leer el borrador: {exc}"
+        ) from exc
+    if respuesta.status_code >= 400:
+        raise HTTPException(status_code=respuesta.status_code, detail=respuesta.text[:300])
+    datos = respuesta.json()
+    if not isinstance(datos, dict):
+        raise HTTPException(status_code=502, detail="respuesta inesperada del Cerebro")
+    return datos
+
+
+async def confirmar_accion(
+    borrador_id: str,
+    accion_orden: int,
+    *,
+    usuario: str,
+    rol: str,
+    nombre: str,
+) -> dict[str, Any]:
+    headers = _cabeceras(usuario, rol, nombre)
+    headers["Content-Type"] = "application/json"
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT_SEGUNDOS) as cliente:
+            respuesta = await cliente.post(
+                f"{BASE_URL}/api/v1/cerebro/borradores/{borrador_id}/confirmar",
+                json={"accion_orden": int(accion_orden)},
+                headers=headers,
+            )
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=503, detail=f"no pude confirmar la accion: {exc}"
+        ) from exc
+    if respuesta.status_code >= 400:
+        raise HTTPException(status_code=respuesta.status_code, detail=respuesta.text[:500])
+    datos = respuesta.json()
+    if not isinstance(datos, dict):
+        raise HTTPException(status_code=502, detail="respuesta inesperada del Cerebro")
+    return datos

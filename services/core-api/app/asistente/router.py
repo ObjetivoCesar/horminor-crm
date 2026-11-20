@@ -118,6 +118,15 @@ def _perfil_id(actor: Actor) -> str | None:
         return None
 
 
+def _quiere_crear_cliente(mensaje: str) -> bool:
+    plano = _plano(mensaje)
+    if "cliente" in plano and any(
+        marca in plano for marca in ("crea", "crear", "confirmado", "dale", "hazlo", "ejecuta")
+    ):
+        return True
+    return plano.strip() in ("confirmado", "confirmo", "dale", "hazlo", "crealo", "crea")
+
+
 def _plano(texto: str) -> str:
     import unicodedata
 
@@ -254,6 +263,7 @@ async def chat(
     perfil_id = _perfil_id(actor)
     pendiente = False
     texto_previo: str | None = None
+    estado_dialogo: dict[str, Any] = {}
 
     if memoria_activa:
         try:
@@ -348,6 +358,95 @@ async def chat(
         return MensajeOut(
             respuesta=texto, estado=estado, conversacion_id=conversacion_id
         )
+
+    # Si el borrador está esperando y el usuario pide crear el cliente, se
+    # ejecuta la acción real del Cerebro. No se responde "no tengo herramienta".
+    if memoria_activa and pendiente and _quiere_crear_cliente(body.mensaje):
+        borrador_id = str(estado_dialogo.get("borrador_id") or "").strip()
+        if not borrador_id:
+            borrador_id = await conversaciones.ultimo_borrador_id(
+                pool, conversacion_id
+            ) or ""
+        if borrador_id:
+            try:
+                draft = await cerebro_bridge.obtener_borrador(
+                    borrador_id,
+                    usuario=actor.actor_id,
+                    rol=actor.rol,
+                    nombre=actor.nombre,
+                )
+                accion = next(
+                    (
+                        item
+                        for item in (draft.get("acciones") or [])
+                        if item.get("accion_nombre") == "crear_cliente"
+                    ),
+                    None,
+                )
+                if accion is not None:
+                    resultado = await cerebro_bridge.confirmar_accion(
+                        borrador_id,
+                        int(accion.get("orden") or 1),
+                        usuario=actor.actor_id,
+                        rol=actor.rol,
+                        nombre=actor.nombre,
+                    )
+                    datos = resultado.get("datos") or {}
+                    texto = str(resultado.get("nota") or "Cliente creado.")
+                    if datos.get("nombre") and "cliente" not in texto.lower():
+                        texto = f"Cliente creado: {datos['nombre']}."
+                    await memoria.guardar(
+                        pool,
+                        conversacion_id,
+                        actor.actor_id,
+                        actor.rol,
+                        body.mensaje,
+                        texto,
+                        "OK",
+                        client_turn_id=body.client_turn_id,
+                    )
+                    await conversaciones.tocar(pool, conversacion_id)
+                    if int(resultado.get("preguntas_pendientes") or 0) > 0:
+                        await conversaciones.actualizar_estado(
+                            pool,
+                            conversacion_id,
+                            estado="ESPERANDO_ACLARACION",
+                            borrador_id=borrador_id,
+                        )
+                    elif resultado.get("estado_borrador") == "EJECUTADO":
+                        await conversaciones.actualizar_estado(
+                            pool, conversacion_id, estado="LIBRE"
+                        )
+                    else:
+                        await conversaciones.actualizar_estado(
+                            pool,
+                            conversacion_id,
+                            estado="ESPERANDO_CONFIRMACION",
+                            borrador_id=borrador_id,
+                        )
+                    return MensajeOut(
+                        respuesta=texto,
+                        estado="OK",
+                        conversacion_id=conversacion_id,
+                    )
+            except HTTPException as exc:
+                texto = f"No pude crear el cliente: {exc.detail}"
+                await memoria.guardar(
+                    pool,
+                    conversacion_id,
+                    actor.actor_id,
+                    actor.rol,
+                    body.mensaje,
+                    texto,
+                    "ERROR",
+                    client_turn_id=body.client_turn_id,
+                )
+                await conversaciones.tocar(pool, conversacion_id)
+                return MensajeOut(
+                    respuesta=texto,
+                    estado="ERROR",
+                    conversacion_id=conversacion_id,
+                )
 
     # Puente controlado con el Cerebro: el prefijo explicito manda. Debe ir
     # antes del atajo comercial porque un dictado puede contener «agendar» y

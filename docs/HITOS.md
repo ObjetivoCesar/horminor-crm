@@ -128,6 +128,7 @@ una regresión.
 | 2026-11-19 | H2 | **Fase 1 de conversaciones**: migración 098, `gato_conversaciones`, refresh atómico, carga del hilo, `client_turn_id`, contexto deliberado y enlaces a borradores/extracciones | `db/migrations/098_gato_conversaciones.sql`, `app/asistente/conversaciones.py`, `router.py`, `cerebro/router.py`, `templates/panel.html`; `.agents/evidencias/gato_conversaciones_fase1_2026-11-19.txt` | 2026-11-19 (XVIII) |
 | 2026-11-19 | H2 | **Fase 1 desplegada en el VPS**: respaldo, 098 aplicada, 18 conversaciones / 3 abiertas, 24 pruebas, `actual` y `refresh` en verde | `.agents/evidencias/gato_conversaciones_fase1_vps_2026-11-19.txt`, `/root/backup_gato_fase1_20261119` | 2026-11-19 (XIX) |
 | 2026-11-19 | H2 | **Continuidad de aclaraciones**: el estado del borrador se persiste; una respuesta larga usa el texto completo del borrador y no vuelve a preguntar cliente/volumen/dirección | `app/asistente/conversaciones.py`, `app/asistente/router.py`, `.agents/evidencias/gato_seguimiento_preguntas_2026-11-19.txt` | 2026-11-19 (XXI) |
+| 2026-11-20 | H2 | **Confirmación de cliente desde Gato**: «créalo/confirmado» ejecuta `crear_cliente`; Pablo Ayala creado en el VPS con el teléfono dictado | `app/asistente/router.py`, `app/asistente/cerebro_bridge.py`, `.agents/evidencias/gato_confirmacion_cliente_2026-11-20.txt` | 2026-11-20 (XXII) |
 
 ## 6. Cómo se actualiza
 

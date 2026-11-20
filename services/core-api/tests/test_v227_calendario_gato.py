@@ -16,7 +16,7 @@ from app import tiempo
 from app.asistente.bibliotecario import Bibliotecario
 from app.asistente.guardas import CifraNoVerificada, verificar
 from app.asistente.persona import render_prompt
-from app.asistente.router import _contexto_dictado, _puente
+from app.asistente.router import _contexto_dictado, _puente, _quiere_crear_cliente
 from app.cerebro import Evidencia, HechoCitado
 from app.cerebro.dinero import dinero_ya_entro
 from app.cerebro.extractor import _CONFIRMA_PAGO
@@ -126,6 +126,13 @@ def test_el_contexto_lleva_solo_el_dictado_anterior_si_se_continua() -> None:
     assert "Pastrana" not in contexto
     assert _contexto_dictado(historial, "nueva operacion: escuela 7 m3 para mañana") is None
     assert _contexto_dictado([], "si") is None
+
+
+def test_la_confirmacion_de_crear_cliente_se_reconoce() -> None:
+    assert _quiere_crear_cliente("aún no existe cliente, crea a Pablo Ayala")
+    assert _quiere_crear_cliente("confirmado")
+    assert _quiere_crear_cliente("créalo")
+    assert not _quiere_crear_cliente("dame los leads caídos")
 
 
 def test_la_confirmacion_de_efectivo_se_reconoce() -> None:

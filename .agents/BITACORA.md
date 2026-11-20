@@ -9229,3 +9229,48 @@ Archivo: `.agents/evidencias/gato_seguimiento_preguntas_2026-11-19.txt`.
 
 Que Julio recargue el panel con Ctrl+F5 y repita la prueba desde cero. Después,
 Fase 2: conectar «confirmado» de Gato al ejecutor del Cerebro.
+
+
+---
+
+## 2026-11-20 (XXII) - Confirmar «crear cliente» desde Gato
+
+### Diagnóstico
+
+El borrador de Pablo Ayala tenía `crear_cliente` en la orden 1, pero Gato
+respondía «no tengo herramienta de alta de clientes». El chat no estaba
+conectado al endpoint de confirmación; solo el panel del Cerebro lo estaba.
+
+### Hecho
+
+- `cerebro_bridge.obtener_borrador` y `confirmar_accion` llaman a los
+  endpoints existentes del Cerebro.
+- `chat()` detecta «créalo», «crea el cliente» o «confirmado» cuando hay un
+  borrador pendiente y ejecuta `crear_cliente`.
+- El turno y el estado de la conversación se guardan.
+- En el VPS se creó **Ingeniero Pablo Ayala**
+  (`5c20148e-ca2c-455f-a1b2-5b6e57356131`) y se le cargó el teléfono dictado
+  `0963410409`.
+
+### Evidencia
+
+| Comprobación | Resultado |
+|---|---|
+| Prueba local | «Cliente creado: Prueba Confirmacion» |
+| Cliente de prueba | Borrado después; sin órdenes ni pagos |
+| VPS: borrador 29303057 | «Cliente creado: Ingeniero Pablo Ayala» |
+| VPS: cliente | nombre y teléfono dictado |
+| Suite completa | **746 passed**, 2 warnings |
+| v227 | **12 passed** |
+
+Archivo: `.agents/evidencias/gato_confirmacion_cliente_2026-11-20.txt`.
+
+### Límite
+
+Solo `crear_cliente` está conectado desde esta confirmación. La cotización y
+el abono responden 501; el recordatorio se confirma en `/panel/cerebro`.
+
+### Próximo paso
+
+Julio prueba los textos en local. Después, definir la agenda visual de tres
+pestañas (mixers, recordatorios y Julio) y conectar las acciones restantes.

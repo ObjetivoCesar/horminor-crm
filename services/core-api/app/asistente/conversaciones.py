@@ -287,3 +287,19 @@ __all__ = [
     "turno_por_client_id",
     "turnos",
 ]
+
+
+async def ultimo_borrador_id(
+    pool: asyncpg.Pool, conversacion_id: str
+) -> str | None:
+    fila = await pool.fetchrow(
+        """
+        SELECT id::text AS id
+          FROM cerebro_borradores
+         WHERE conversacion_id = $1::uuid
+         ORDER BY creado_en DESC
+         LIMIT 1
+        """,
+        conversacion_id,
+    )
+    return str(fila["id"]) if fila is not None else None
