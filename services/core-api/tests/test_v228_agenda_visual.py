@@ -7,7 +7,13 @@ from datetime import timedelta
 from app.agenda import eventos as eventos_svc
 from app.agenda.router import _tipos_permitidos
 from app.asistente.comercial_bridge import es_agenda_personal
-from app.comercial.intencion import es_peticion_cita, parse_cita
+from app.comercial.intencion import (
+    es_cancelacion_cita,
+    es_correccion_cita,
+    es_peticion_cita,
+    parse_cita,
+    parse_correccion,
+)
 from app import tiempo
 
 
@@ -74,3 +80,55 @@ def test_una_visita_con_nombre_no_es_agenda_personal() -> None:
     texto = "Agenda una visita con Prueba Agenda mañana a las 11 de la mañana"
     assert es_peticion_cita(texto)
     assert not es_agenda_personal(texto)
+
+
+def test_la_correccion_toma_la_ultima_hora_dicha() -> None:
+    texto = "rectifico no es a la 13:00 es a las 14:00"
+    assert es_correccion_cita(texto)
+    cambio = parse_correccion(
+        texto,
+        fecha_base=tiempo.hoy() + timedelta(days=1),
+        hora_base="13:00",
+    )
+    assert cambio["hora"] == "14:00"
+    assert cambio["dijo_hora"] is True
+    assert cambio["dijo_fecha"] is False
+
+
+def test_la_correccion_puede_cambiar_solo_la_fecha() -> None:
+    texto = "cambia la cita al domingo"
+    assert es_correccion_cita(texto)
+    cambio = parse_correccion(
+        texto, fecha_base=tiempo.hoy(), hora_base="13:00"
+    )
+    assert cambio["hora"] == "13:00"
+    assert cambio["dijo_fecha"] is True
+    assert cambio["fecha"].weekday() == 6
+
+
+def test_una_cita_nueva_no_se_confunde_con_una_correccion() -> None:
+    assert not es_correccion_cita(
+        "mejor agenda una visita con Prueba Agenda mañana a las 9:00"
+    )
+    assert es_cancelacion_cita("cancela la cita")
+    assert not es_cancelacion_cita("cancela el recordatorio")
+
+
+def test_las_horas_del_dia_no_se_confunden() -> None:
+    assert parse_cita("Agenda una visita mañana a las 2 de la tarde")["hora"] == "14:00"
+    assert parse_cita("Agenda una visita mañana a las 12 de la noche")["hora"] == "00:00"
+    assert parse_cita("Agenda una visita mañana a las 2")["hora"] is None
+
+
+def test_de_la_manana_no_es_el_dia_siguiente() -> None:
+    datos = parse_cita("Agenda una visita hoy a las 9 de la mañana")
+    assert datos["fecha"] == tiempo.hoy()
+    datos2 = parse_cita("Agenda una visita mañana a las 9 de la mañana")
+    assert datos2["fecha"] == tiempo.hoy() + timedelta(days=1)
+
+
+def test_media_hora_y_verbos_de_movimiento() -> None:
+    assert parse_cita("Agenda una visita mañana a las 2 y media")["hora"] == "02:30"
+    assert es_correccion_cita("movamos la cita al viernes")
+    assert not es_cancelacion_cita("cancela este pedido")
+    assert not es_cancelacion_cita("cancela este despacho")

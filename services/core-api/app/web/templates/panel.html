@@ -9886,6 +9886,8 @@ function gatoToggle(force) {
   if (abrir) {
     gatoCargarConversacion();
     setTimeout(() => { const i = document.getElementById('gato-input'); if (i) i.focus(); }, 60);
+  } else if (state.view === 'agenda') {
+    agCargar();
   }
 }
 function gatoEsc(texto) {

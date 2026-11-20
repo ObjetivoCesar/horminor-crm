@@ -46,9 +46,11 @@ def test_agenda_component_unified() -> None:
         RAIZ_SERVICIO / "app" / "web" / "templates" / "panel.html"
     ).read_text(encoding="utf-8")
     assert "static/horminor-agenda.js" in html
-    assert 'id="agenda-mount-dashboard"' in html
-    assert 'id="agenda-mount-secretaria"' in html
-    assert 'id="agenda-mount-planta"' in html
+    assert 'id="agenda-mount-dashboard"' not in html
+    assert 'id="agenda-mount-secretaria"' not in html
+    assert 'id="agenda-mount-planta"' not in html
+    assert 'data-view="agenda"' in html
+    assert 'id="ag-grid"' in html
     assert "HorminorAgenda.mount(" in html
     # El calendario decorativo del Dashboard ya no existe ni lee orders.created_at
     assert "eventosCalendario" not in html

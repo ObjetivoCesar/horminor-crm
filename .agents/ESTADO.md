@@ -127,6 +127,9 @@ scripts de candado.
 - **Una sola agenda (2026-11-20):** se retiraron los calendarios duplicados de
   Secretaría, Planta y Dashboard; crear/editar mixer se hace desde **Agenda**.
   Gato registra «mi agenda» sin lead como cita de Julio. **18 passed**.
+- **Corrección de citas (2026-11-20):** «rectifico», «muévela» y «cancela la
+  cita» funcionan desde el chat; sin pasado, sin solapes, con auditoría en
+  `cita_eventos`. Migración 099. **758 passed**.
 - **Pendiente:** historial completo y búsqueda (Fase 4); autenticación real
   (H6).
 

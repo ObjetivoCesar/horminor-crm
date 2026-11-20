@@ -9385,3 +9385,59 @@ sin inventar un lead.
 
 Julio repite las pruebas en local. Si la agenda única responde bien, se sube al
 VPS.
+
+
+
+---
+
+## 2026-11-20 (XXV) - Corregir y cancelar citas desde Gato
+
+### Objetivo
+
+Que Gato no responda «no tengo herramienta» cuando Julio rectifica una cita.
+Crear, corregir y cancelar deben cerrar el ciclo en el mismo chat, con las
+mismas reglas del modulo comercial.
+
+### Hecho
+
+- `reagendar_ultima` y `cancelar_ultima` resuelven la cita del hilo, la del
+  dia/hora nombrados o la del mismo perfil. Si hay varias, preguntan; si no
+  existe la fecha/hora, no tocan nada.
+- `parse_correccion` toma la ultima hora dicha, entiende «2 de la tarde»,
+  «12 de la noche», «14h», «2 y media» y «mediodia»; no confunde «de la
+  manana» con el dia siguiente.
+- No se agenda en el pasado. `crear` y `reagendar` van en transaccion con
+  `pg_advisory_xact_lock` por fecha.
+- Migracion 099: `citas.solicitada_por_id` para encontrar la cita del mismo
+  perfil aunque se refresque el chat.
+- `cita_eventos` guarda actor y motivo de cada reprogramacion.
+- Agenda oculta canceladas y muestra «Cita reprogramada.» en REAGENDADA.
+- Cancelar facturas, envios o pedidos ya no se interpreta como cancelar cita.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Caso original 13:00 → «rectifico… 14:00» | misma cita, REAGENDADA |
+| «cancela la cita de hoy a las 9:00» (no existe) | no cancelo nada |
+| «rectifico la cita de mañana…» con dos citas | pregunto cual |
+| «mueve la cita de las 13:00 a las 16:00» | movio la de 13:00 |
+| «cancela este pedido» | no toco la agenda |
+| Refresh y correccion | misma cita |
+| Suite completa | **758 passed**, 2 warnings |
+
+Archivo: `.agents/evidencias/agenda_correcciones_2026-11-20.txt`.
+
+### Decisiones
+
+- Ante ambiguedad se pregunta; nunca se mueve o cancela «la ultima» si el
+  usuario nombro otra fecha u hora.
+- Una cita personal de Julio choca contra toda su agenda; una comercial solo
+  contra el mismo lead o cliente.
+- Las citas canceladas no se borran: salen del calendario y su historial queda
+  en `cita_eventos`.
+
+### Proximo paso
+
+Julio repite el caso original en local. Si responde «Cita corregida», subir al
+VPS con la migracion 099.

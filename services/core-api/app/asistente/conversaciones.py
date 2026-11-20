@@ -130,7 +130,7 @@ async def cerrar_y_abrir(
         async with conn.transaction():
             abierta = await conn.fetchrow(
                 """
-                SELECT id::text AS id
+                SELECT id::text AS id, estado_dialogo_json
                   FROM gato_conversaciones
                  WHERE actor_id = $1 AND cerrada_en IS NULL
                  FOR UPDATE
@@ -154,6 +154,20 @@ async def cerrar_y_abrir(
                     """,
                     abierta["id"],
                 )
+                # El refresh no debe perder la cita que se acaba de crear: el
+                # hilo nuevo hereda el puntero para poder corregirla.
+                carry: dict[str, Any] = {}
+                crudo = abierta["estado_dialogo_json"]
+                if isinstance(crudo, str):
+                    try:
+                        crudo = json.loads(crudo)
+                    except json.JSONDecodeError:
+                        crudo = {}
+                if isinstance(crudo, dict) and crudo.get("ultima_cita_id"):
+                    carry["ultima_cita_id"] = crudo["ultima_cita_id"]
+                estado_nuevo = json.dumps(
+                    {"estado": "LIBRE", **carry}, ensure_ascii=False
+                )
                 await conn.execute(
                     """
                     UPDATE gato_conversaciones
@@ -169,6 +183,8 @@ async def cerrar_y_abrir(
                     _recorte(ultima, 300),
                     ESTADO_LIBRE,
                 )
+            else:
+                estado_nuevo = ESTADO_LIBRE
             fila = await conn.fetchrow(
                 """
                 INSERT INTO gato_conversaciones (
@@ -181,7 +197,7 @@ async def cerrar_y_abrir(
                 actor_id,
                 perfil_id or _uuid_o_none(actor_id),
                 rol_actor,
-                ESTADO_LIBRE,
+                estado_nuevo,
             )
             return dict(fila)
 
@@ -257,21 +273,28 @@ async def actualizar_estado(
     estado: str,
     borrador_id: str | None = None,
     preguntas: Any = None,
+    ultima_cita_id: str | None = None,
+    limpiar_ultima_cita: bool = False,
 ) -> None:
     payload: dict[str, Any] = {"estado": estado}
     if borrador_id:
         payload["borrador_id"] = borrador_id
     if preguntas:
         payload["preguntas"] = preguntas
+    if ultima_cita_id:
+        payload["ultima_cita_id"] = ultima_cita_id
     await pool.execute(
         """
         UPDATE gato_conversaciones
-           SET estado_dialogo_json = $2::jsonb,
+           SET estado_dialogo_json =
+                   (COALESCE(estado_dialogo_json, '{}'::jsonb) || $2::jsonb)
+                   - CASE WHEN $3::boolean THEN 'ultima_cita_id' ELSE '__nada__' END,
                lock_version = lock_version + 1
          WHERE id = $1::uuid
         """,
         conversacion_id,
         json.dumps(payload, ensure_ascii=False),
+        limpiar_ultima_cita,
     )
 
 

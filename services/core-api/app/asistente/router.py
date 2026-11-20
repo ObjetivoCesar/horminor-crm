@@ -170,6 +170,40 @@ def _accion_a_confirmar(mensaje: str) -> str | None:
     return None
 
 
+def _correccion_de_cita(mensaje: str, pendiente: bool) -> bool:
+    """Con un borrador pendiente, solo se toca la cita si el texto la nombra."""
+    if not comercial_bridge.es_correccion_cita(mensaje):
+        return False
+    if not pendiente:
+        return True
+    plano = _plano(mensaje)
+    return any(
+        marca in plano
+        for marca in (
+            "cita",
+            "visita",
+            "agenda",
+            "eso",
+            "rectifico",
+            "corrijo",
+            "no es a la",
+            "no es a las",
+        )
+    )
+
+
+def _cancelacion_de_cita(mensaje: str, pendiente: bool) -> bool:
+    """Con un borrador pendiente, «cancela eso» no debe tocar una cita."""
+    if not comercial_bridge.es_cancelacion_cita(mensaje):
+        return False
+    if not pendiente:
+        return True
+    plano = _plano(mensaje)
+    return any(
+        marca in plano for marca in ("cita", "visita", "agenda", "compromiso")
+    )
+
+
 def _plano(texto: str) -> str:
     import unicodedata
 
@@ -402,6 +436,65 @@ async def chat(
             respuesta=texto, estado=estado, conversacion_id=conversacion_id
         )
 
+    ultima_cita_id = str(estado_dialogo.get("ultima_cita_id") or "").strip() or None
+
+    # Correccion de una cita recien agendada: «rectifico, no es a la 13:00
+    # sino a las 14:00». Se resuelve antes del puente para que no responda
+    # «no tengo herramienta».
+    if _correccion_de_cita(body.mensaje, pendiente):
+        try:
+            resultado = await comercial_bridge.reagendar_ultima(
+                pool,
+                body.mensaje,
+                cita_id=ultima_cita_id,
+                actor=actor.nombre,
+                actor_id=actor.actor_id,
+            )
+            estado = "OK" if resultado.get("estado") == "OK" else "FALTA"
+            cita = resultado.get("cita") or {}
+            if estado == "OK" and cita.get("id"):
+                await conversaciones.actualizar_estado(
+                    pool,
+                    conversacion_id,
+                    estado="LIBRE",
+                    ultima_cita_id=str(cita["id"]),
+                )
+            elif resultado.get("limpiar_ultima"):
+                await conversaciones.actualizar_estado(
+                    pool,
+                    conversacion_id,
+                    estado="LIBRE",
+                    limpiar_ultima_cita=True,
+                )
+            return await cerrar(str(resultado.get("mensaje") or "Listo."), estado)
+        except Exception as exc:  # noqa: BLE001
+            return await cerrar(f"No pude corregir la cita: {exc}", "ERROR")
+
+    if _cancelacion_de_cita(body.mensaje, pendiente):
+        try:
+            resultado = await comercial_bridge.cancelar_ultima(
+                pool,
+                body.mensaje,
+                cita_id=ultima_cita_id,
+                actor=actor.nombre,
+                actor_id=actor.actor_id,
+            )
+            estado = "OK" if resultado.get("estado") == "OK" else "FALTA"
+            if estado == "OK":
+                await conversaciones.actualizar_estado(
+                    pool, conversacion_id, estado="LIBRE"
+                )
+            elif resultado.get("limpiar_ultima"):
+                await conversaciones.actualizar_estado(
+                    pool,
+                    conversacion_id,
+                    estado="LIBRE",
+                    limpiar_ultima_cita=True,
+                )
+            return await cerrar(str(resultado.get("mensaje") or "Listo."), estado)
+        except Exception as exc:  # noqa: BLE001
+            return await cerrar(f"No pude cancelar la cita: {exc}", "ERROR")
+
     # Si el borrador esta esperando y el usuario confirma, se ejecuta la accion
     # real del Cerebro. No se responde "no tengo herramienta".
     objetivo = _accion_a_confirmar(body.mensaje)
@@ -598,8 +691,24 @@ async def chat(
     if puente == "agenda":
         try:
             resultado = await comercial_bridge.agendar(
-                pool, body.mensaje, actor=actor.nombre
+                pool, body.mensaje, actor=actor.nombre, actor_id=actor.actor_id
             )
+            cita = resultado.get("cita") or {}
+            if resultado.get("estado") == "OK" and cita.get("id"):
+                await conversaciones.actualizar_estado(
+                    pool,
+                    conversacion_id,
+                    estado="LIBRE",
+                    ultima_cita_id=str(cita["id"]),
+                )
+            elif resultado.get("estado") != "OK":
+                # La creación falló: no dejes apuntando a una cita vieja.
+                await conversaciones.actualizar_estado(
+                    pool,
+                    conversacion_id,
+                    estado="LIBRE",
+                    limpiar_ultima_cita=True,
+                )
             return await cerrar(
                 str(resultado.get("mensaje") or "Listo."),
                 "OK" if resultado.get("estado") == "OK" else "FALTA",

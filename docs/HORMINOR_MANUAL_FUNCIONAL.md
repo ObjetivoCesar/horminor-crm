@@ -5,7 +5,7 @@
 > es el documento que permite a Julio, a la secretaría, a administración y a
 > cualquier agente de IA entender el sistema sin preguntarle al programador.
 >
-> **Estado:** v2.16 — 2026-11-20. Cubre el **Cerebro** y su relación con el CRM,
+> **Estado:** v2.17 — 2026-11-20. Cubre el **Cerebro** y su relación con el CRM,
 > las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas), el
 > dictado por audio desde Gato, las conversaciones de Gato, la confirmación
 > desde el chat, la **agenda visual** de cuatro pestañas y los módulos
@@ -959,6 +959,22 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Dónde se encuentra** | **Agenda → Julio**; **Secretaría → Leads y citas → Citas**; API `/api/v1/comercial/citas`. |
 | **Referencia técnica** | Migraciones 096–097; `app/comercial/citas.py`; 2026-11-19. |
 
+### Término: Corrección de una cita
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `comercial_bridge.reagendar_ultima`, `citas.reagendar`, `citas.cambiar_estado` |
+| **Nombre para el usuario** | «Rectifico…» · «Muévela…» · «Cancela la cita» |
+| **Qué significa** | Gato puede mover o cancelar una cita ya creada sin abrir el panel. Entiende «rectifico no es a la 13:00 es a las 14:00», «mejor a las 20:00», «cambia la cita al domingo», «muévela al viernes», «la cita de las 13:00 a las 16:00» y «cancela la cita del domingo». |
+| **Para qué existe** | Cerrar el ciclo del agendamiento desde el mismo chat: crear, corregir y cancelar sin decir «no tengo herramienta». |
+| **Quién lo utiliza** | Julio y los perfiles con permiso sobre clientes/cartera. |
+| **Qué lo activa** | Una cita reciente en el hilo (o del mismo perfil) y una frase de corrección o cancelación. |
+| **Qué sucede después** | Se actualiza la misma fila de `citas`, pasa a `REAGENDADA` o `CANCELADA` y se registra `cita_eventos` con fecha/hora antes y después, actor y motivo. |
+| **Qué NO significa** | No mueve citas canceladas o realizadas, no agenda en el pasado y no elige a ciegas si hay varias citas ese día u hora: pregunta. Una cita cancelada deja de ocupar el calendario, pero su historial queda en `cita_eventos`. |
+| **Ejemplo** | «Tengo un cliente que visitar mañana a las 13:00… registra en mi agenda» → cita 13:00; «rectifico no es a la 13:00 es a las 14:00» → la misma cita pasa a 14:00. |
+| **Dónde se encuentra** | Chat flotante de Gato; el resultado se ve en **Agenda → Julio**. |
+| **Referencia técnica** | `app/asistente/comercial_bridge.py`, `app/comercial/intencion.py`, `app/comercial/citas.py`; migración 099; 2026-11-20. |
+
 ## 7. Términos de apoyo (consulta rápida)
 
 | Término técnico | Nombre visible | Qué es |
@@ -1138,7 +1154,7 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 Aviso dejado §5 · Aclaración respondible §4 · Cancelación de un encargo §4 ·
 **Chat en vivo §6** · **Cita comercial §6** ·
 Cierre con justificación §5 · Compilador §4 · Condición conservada §4 ·
-Confirmación doble §6 · **Confirmación desde Gato §6** · **Conversación de Gato §6** · **Agenda visual §6** · Corrección registrada §4 ·
+Confirmación doble §6 · **Confirmación desde Gato §6** · **Conversación de Gato §6** · **Agenda visual §6** · **Corrección de una cita §6** · Corrección registrada §4 ·
 Dato sin confirmar §4 · **Dictado por Gato §6** · Duda asociada al dato §4 · Elevada al supervisor §5 ·
 Encargo §4 · Encargo sugerido §4 · Ficha de la tarea §5 ·
 Guarda de «el dinero ya entró» §6 ·
@@ -1213,3 +1229,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.14 | 2026-11-20 | **Confirmación desde Gato** (§6): «créalo/confirmado» ejecuta `crear_cliente` con el ejecutor del Cerebro; el caso Pablo Ayala quedó creado con su teléfono. |
 | v2.15 | 2026-11-20 | **Agenda visual** (§6): pestañas Mixers, Recordatorios, Julio y Equipo; lectura real de `dispatch_schedule`, `gato_recordatorios`, `citas` y `cerebro_tareas_internas`. |
 | v2.16 | 2026-11-20 | **Una sola agenda** (§6): se retiraron los calendarios duplicados de Secretaría, Planta y Dashboard; crear/editar mixer vive en Agenda. Gato registra compromisos en «mi agenda» sin lead. |
+| v2.17 | 2026-11-20 | **Corregir y cancelar citas desde Gato** (§6): «rectifico…», «muévela», «cancela la cita»; sin citas en el pasado, sin solapes, con actor y motivo en `cita_eventos`. |

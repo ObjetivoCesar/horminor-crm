@@ -151,6 +151,7 @@ async def _julio(
           LEFT JOIN clients cl ON cl.id = c.cliente_id
           LEFT JOIN leads l ON l.id = c.lead_id
          WHERE c.fecha BETWEEN $1 AND $2
+           AND c.estado <> 'CANCELADA'
          ORDER BY c.fecha, c.hora_inicio
         """,
         desde,
@@ -167,7 +168,7 @@ async def _julio(
                 f"Solicitada por {fila['solicitada_por']}"
                 if fila["solicitada_por"]
                 else None
-            ),
+            ) if str(fila["estado"]).upper() != "REAGENDADA" else "Cita reprogramada.",
             estado=fila["estado"],
             cliente=fila["contacto"],
             referencia=f"{fila['duracion_min']} min",

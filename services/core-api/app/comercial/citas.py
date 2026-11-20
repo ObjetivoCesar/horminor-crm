@@ -81,21 +81,44 @@ async def _choque(
     duracion_min: int,
     lead_id: str | None,
     cliente_id: str | None,
+    excluir_id: str | None = None,
+    global_: bool = False,
 ) -> dict[str, Any] | None:
-    """Cita que se solapa para el mismo lead o cliente (no inventa capacidad global)."""
-    filas = await pool.fetch(
-        """
-        SELECT id::text AS id, hora_inicio, duracion_min
-          FROM citas
-         WHERE fecha = $1
-           AND estado <> 'CANCELADA'
-           AND (($2::uuid IS NOT NULL AND lead_id = $2::uuid)
-                OR ($3::uuid IS NOT NULL AND cliente_id = $3::uuid))
-        """,
-        fecha,
-        lead_id,
-        cliente_id,
-    )
+    """Cita que se solapa.
+
+    Una cita comercial solo choca con las del mismo lead o cliente. Un
+    compromiso personal de Julio choca con cualquier cita de ese día: su
+    agenda es una sola. ``excluir_id`` evita que una reprogramación choque
+    consigo misma.
+    """
+    if global_:
+        filas = await pool.fetch(
+            """
+            SELECT id::text AS id, hora_inicio, duracion_min
+              FROM citas
+             WHERE fecha = $1
+               AND estado <> 'CANCELADA'
+               AND ($2::uuid IS NULL OR id <> $2::uuid)
+            """,
+            fecha,
+            excluir_id,
+        )
+    else:
+        filas = await pool.fetch(
+            """
+            SELECT id::text AS id, hora_inicio, duracion_min
+              FROM citas
+             WHERE fecha = $1
+               AND estado <> 'CANCELADA'
+               AND ($4::uuid IS NULL OR id <> $4::uuid)
+               AND (($2::uuid IS NOT NULL AND lead_id = $2::uuid)
+                    OR ($3::uuid IS NOT NULL AND cliente_id = $3::uuid))
+            """,
+            fecha,
+            lead_id,
+            cliente_id,
+            excluir_id,
+        )
     inicio = _minutos(hora)
     fin = inicio + duracion_min
     for fila in filas:
@@ -117,6 +140,7 @@ async def crear(
     cliente_id: str | None = None,
     lead_id: str | None = None,
     solicitada_por: str | None = None,
+    solicitada_por_id: str | None = None,
     notas: str | None = None,
     permite_sin_contacto: bool = False,
 ) -> dict[str, Any]:
@@ -124,47 +148,177 @@ async def crear(
         raise ValueError("la cita necesita cliente_id o lead_id")
     validar(tipo=tipo, fecha=fecha, origen=origen, duracion_min=duracion_min)
     hora = _hora(hora_inicio)
-    choque = await _choque(
-        pool,
-        fecha=fecha,
-        hora=hora,
-        duracion_min=duracion_min,
-        lead_id=lead_id,
-        cliente_id=cliente_id,
-    )
-    if choque is not None:
-        raise ValueError(
-            "ya hay una cita que se solapa a esa hora "
-            f"(cita {choque['id']}, {choque['hora_inicio']})"
-        )
+    ahora = tiempo.ahora()
+    if fecha == ahora.date():
+        minutos_nuevos = hora.hour * 60 + hora.minute
+        if minutos_nuevos < ahora.hour * 60 + ahora.minute:
+            raise ValueError("la hora ya pasó hoy; elige una hora futura")
+
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            # Dos solicitudes simultáneas de la misma fecha no pueden pasar
+            # ambas la revisión de choque.
+            await conn.fetchval(
+                "SELECT pg_advisory_xact_lock(hashtext($1))",
+                f"citas:{fecha.isoformat()}",
+            )
+            choque = await _choque(
+                conn,
+                fecha=fecha,
+                hora=hora,
+                duracion_min=duracion_min,
+                lead_id=lead_id,
+                cliente_id=cliente_id,
+                global_=permite_sin_contacto,
+            )
+            if choque is not None:
+                raise ValueError(
+                    "ya hay una cita que se solapa a esa hora "
+                    f"(cita {choque['id']}, {choque['hora_inicio']})"
+                )
+            fila = await conn.fetchrow(
+                """
+                INSERT INTO citas (
+                    cliente_id, lead_id, tipo, fecha, hora_inicio, duracion_min,
+                    origen, solicitada_por, solicitada_por_id, notas
+                ) VALUES ($1, $2, $3, $4, $5::time, $6, $7, $8, $9::uuid, $10)
+                RETURNING id::text AS id, cliente_id::text, lead_id::text, tipo,
+                          fecha, hora_inicio, duracion_min, estado, origen,
+                          solicitada_por, solicitada_por_id::text, notas,
+                          created_at
+                """,
+                cliente_id,
+                lead_id,
+                tipo,
+                fecha,
+                hora,
+                duracion_min,
+                origen,
+                solicitada_por,
+                solicitada_por_id,
+                notas,
+            )
+            datos = dict(fila)
+            await _evento(
+                conn,
+                datos["id"],
+                "SOLICITADA",
+                {"origen": origen},
+                solicitada_por,
+            )
+    return datos
+
+
+async def obtener(pool: asyncpg.Pool, cita_id: str) -> dict[str, Any] | None:
     fila = await pool.fetchrow(
         """
-        INSERT INTO citas (
-            cliente_id, lead_id, tipo, fecha, hora_inicio, duracion_min,
-            origen, solicitada_por, notas
-        ) VALUES ($1, $2, $3, $4, $5::time, $6, $7, $8, $9)
-        RETURNING id::text AS id, cliente_id::text, lead_id::text, tipo,
-                  fecha, hora_inicio, duracion_min, estado, origen,
-                  solicitada_por, notas, created_at
+        SELECT id::text AS id, cliente_id::text, lead_id::text, tipo,
+               fecha, hora_inicio, duracion_min, estado, origen,
+               solicitada_por, solicitada_por_id::text, notas,
+               created_at, updated_at
+          FROM citas WHERE id = $1::uuid
         """,
-        cliente_id,
-        lead_id,
-        tipo,
-        fecha,
-        hora,
-        duracion_min,
-        origen,
-        solicitada_por,
-        notas,
+        cita_id,
     )
-    datos = dict(fila)
-    await _evento(
-        pool,
-        datos["id"],
-        "SOLICITADA",
-        {"origen": origen},
-        solicitada_por,
-    )
+    return dict(fila) if fila is not None else None
+
+
+async def reagendar(
+    pool: asyncpg.Pool,
+    *,
+    cita_id: str,
+    fecha: date | None = None,
+    hora_inicio: str | None = None,
+    duracion_min: int | None = None,
+    motivo: str | None = None,
+    actor: str | None = None,
+) -> dict[str, Any]:
+    """Mueve una cita existente. Solo cambia lo que se pide.
+
+    Mantiene la regla de no agendar en el pasado y de no solapar. Si la cita es
+    personal (sin lead ni cliente), el choque se revisa contra toda la agenda de
+    Julio; si es comercial, solo contra el mismo lead o cliente.
+    """
+    actual = await obtener(pool, cita_id)
+    if actual is None:
+        raise LookupError("cita no encontrada")
+    if actual["estado"] in ("CANCELADA", "REALIZADA"):
+        raise ValueError(
+            f"no se mueve una cita {str(actual['estado']).lower()}"
+        )
+
+    nueva_fecha = fecha or actual["fecha"]
+    nueva_hora = _hora(hora_inicio) if hora_inicio else actual["hora_inicio"]
+    nueva_duracion = int(duracion_min or actual["duracion_min"])
+    if nueva_fecha < tiempo.hoy():
+        raise ValueError("no se agenda una cita en el pasado")
+    ahora = tiempo.ahora()
+    if nueva_fecha == ahora.date():
+        minutos_nuevos = nueva_hora.hour * 60 + nueva_hora.minute
+        if minutos_nuevos < ahora.hour * 60 + ahora.minute:
+            raise ValueError("la hora ya pasó hoy; elige una hora futura")
+
+    personal = not actual["lead_id"] and not actual["cliente_id"]
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.fetchval(
+                "SELECT pg_advisory_xact_lock(hashtext($1))",
+                f"citas:{nueva_fecha.isoformat()}",
+            )
+            choque = await _choque(
+                conn,
+                fecha=nueva_fecha,
+                hora=nueva_hora,
+                duracion_min=nueva_duracion,
+                lead_id=actual["lead_id"],
+                cliente_id=actual["cliente_id"],
+                excluir_id=cita_id,
+                global_=personal,
+            )
+            if choque is not None:
+                raise ValueError(
+                    "ya hay una cita que se solapa a esa hora "
+                    f"(cita {choque['id']}, {choque['hora_inicio']})"
+                )
+
+            nuevo_estado = (
+                "REAGENDADA" if actual["estado"] != "REAGENDADA" else actual["estado"]
+            )
+            fila = await conn.fetchrow(
+                """
+                UPDATE citas
+                   SET fecha = $2, hora_inicio = $3::time, duracion_min = $4,
+                       estado = $5, updated_at = now()
+                 WHERE id = $1::uuid
+                RETURNING id::text AS id, cliente_id::text, lead_id::text, tipo,
+                          fecha, hora_inicio, duracion_min, estado, origen,
+                          solicitada_por, solicitada_por_id::text, notas,
+                          created_at, updated_at
+                """,
+                cita_id,
+                nueva_fecha,
+                nueva_hora,
+                nueva_duracion,
+                nuevo_estado,
+            )
+            datos = dict(fila)
+            await _evento(
+                conn,
+                cita_id,
+                "REAGENDADA",
+                {
+                    "antes": {
+                        "fecha": actual["fecha"].isoformat(),
+                        "hora": actual["hora_inicio"].strftime("%H:%M"),
+                    },
+                    "despues": {
+                        "fecha": nueva_fecha.isoformat(),
+                        "hora": nueva_hora.strftime("%H:%M"),
+                    },
+                    "motivo": motivo,
+                },
+                actor,
+            )
     return datos
 
 

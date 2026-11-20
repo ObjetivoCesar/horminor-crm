@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import sys
 from collections import deque
-from datetime import time
+from datetime import time, timedelta
 from pathlib import Path
 
 import pytest
@@ -24,6 +24,43 @@ from app.comercial import citas, leads  # noqa: E402
 from app.comercial.router import CitaIn, LeadIn  # noqa: E402
 
 
+class _TxGuion:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return False
+
+
+class _ConnGuion:
+    """Conexión falsa que delega en el pool y simula la transacción."""
+
+    def __init__(self, pool: "PoolGuion"):
+        self._pool = pool
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return False
+
+    async def fetchrow(self, sql, *args):
+        return await self._pool.fetchrow(sql, *args)
+
+    async def fetch(self, sql, *args):
+        return await self._pool.fetch(sql, *args)
+
+    async def execute(self, sql, *args):
+        return await self._pool.execute(sql, *args)
+
+    async def fetchval(self, sql, *args):
+        self._pool.consultas.append((sql, args))
+        return None
+
+    def transaction(self):
+        return _TxGuion()
+
+
 class PoolGuion:
     """Pool falso: devuelve respuestas en el orden en que se piden."""
 
@@ -31,6 +68,9 @@ class PoolGuion:
         self._fetchrows = deque(fetchrows or [])
         self._fetchs = deque(fetchs or [])
         self.consultas: list[tuple[str, tuple]] = []
+
+    def acquire(self) -> _ConnGuion:
+        return _ConnGuion(self)
 
     async def fetchrow(self, sql, *args):
         self.consultas.append((sql, args))
@@ -228,7 +268,7 @@ async def test_cita_que_se_solapa_se_rechaza() -> None:
         await citas.crear(
             pool,
             tipo="VISITA",
-            fecha=tiempo.hoy(),
+            fecha=tiempo.hoy() + timedelta(days=1),
             hora_inicio="10:30",
             origen="PANEL",
             lead_id="lead-1",
@@ -254,7 +294,7 @@ async def test_cita_creada_deja_evento_solicitada() -> None:
     resultado = await citas.crear(
         pool,
         tipo="VISITA",
-        fecha=tiempo.hoy(),
+        fecha=tiempo.hoy() + timedelta(days=1),
         hora_inicio="10:00",
         origen="PANEL",
         lead_id="lead-1",

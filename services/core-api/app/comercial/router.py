@@ -203,13 +203,14 @@ async def confirmar_cita(request: Request, cita_id: str) -> dict[str, Any]:
 async def cancelar_cita(
     request: Request, cita_id: str, body: CitaEstadoIn = Body(default=CitaEstadoIn())
 ) -> dict[str, Any]:
-    await exigir_modulo(request, "clientes_cartera", mutacion=True)
+    perfil = await exigir_modulo(request, "clientes_cartera", mutacion=True)
     try:
         return await citas_svc.cambiar_estado(
             _pool(request),
             cita_id=cita_id,
             nuevo="CANCELADA",
             motivo=body.motivo,
+            actor=perfil.get("nombre"),
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
