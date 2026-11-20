@@ -5,7 +5,7 @@
 > es el documento que permite a Julio, a la secretaría, a administración y a
 > cualquier agente de IA entender el sistema sin preguntarle al programador.
 >
-> **Estado:** v2.17 — 2026-11-20. Cubre el **Cerebro** y su relación con el CRM,
+> **Estado:** v2.18 — 2026-11-20. Cubre el **Cerebro** y su relación con el CRM,
 > las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas), el
 > dictado por audio desde Gato, las conversaciones de Gato, la confirmación
 > desde el chat, la **agenda visual** de cuatro pestañas y los módulos
@@ -975,6 +975,22 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Dónde se encuentra** | Chat flotante de Gato; el resultado se ve en **Agenda → Julio**. |
 | **Referencia técnica** | `app/asistente/comercial_bridge.py`, `app/comercial/intencion.py`, `app/comercial/citas.py`; migración 099; 2026-11-20. |
 
+### Término: Agenda operativa desde Gato
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `agenda_bridge` (mixer y tareas), `recordatorios.actualizar/cancelar`, `cerebro.internas.reprogramar/resolver` |
+| **Nombre para el usuario** | «Agenda el mixer…» · «Mueve el mixer…» · «Cancela el mixer» · «Cambia el recordatorio…» · «Cancela el recordatorio» · «Cambia la tarea…» · «Cancela la tarea» |
+| **Qué significa** | Las tres pestañas restantes de la Agenda también se manejan desde Gato. El mixer se crea como `RESERVA_CAMPO` con cliente, volumen, fecha, hora y dirección; el recordatorio se mueve o cancela si aún no salió; la tarea interna cambia su plazo o se justifica. |
+| **Para qué existe** | Que Julio no tenga que ir al panel para cada cambio y que el calendario refleje la misma verdad que el backend. |
+| **Quién lo utiliza** | Julio y los perfiles con permiso sobre agenda de despachos, Cerebro o secretaría. |
+| **Qué lo activa** | Una frase con la pestaña y una acción: crear, mover o cancelar. |
+| **Qué sucede después** | El mixer queda en `dispatch_schedule`; el recordatorio actualiza `programado_at` o pasa a `CANCELADO`; la tarea actualiza `plazo_en` o queda `JUSTIFICADA`. Todo se ve en su pestaña. |
+| **Qué NO significa** | No inventa cliente, dirección, volumen ni hora: si falta, pregunta. No mueve un recordatorio ya enviado ni una tarea resuelta. Un mensaje con varias acciones se resuelve por partes: primero la agenda, luego el recordatorio. |
+| **Ejemplo** | «Agenda el mixer para mañana a las 14:00 con 6 m³ de 210 para Manuel Minga en la entrada a Orellana» → `RESERVA_CAMPO`. «Muévelo a las 15:00» → misma fila, nueva hora. «Cancela el mixer» → `CANCELADO`. |
+| **Dónde se encuentra** | Chat de Gato; resultado en **Agenda → Mixers / Recordatorios / Equipo**. |
+| **Referencia técnica** | `app/asistente/agenda_bridge.py`, `app/asistente/recordatorios.py`, `app/cerebro/internas.py`; 2026-11-20. |
+
 ## 7. Términos de apoyo (consulta rápida)
 
 | Término técnico | Nombre visible | Qué es |
@@ -1154,7 +1170,7 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 Aviso dejado §5 · Aclaración respondible §4 · Cancelación de un encargo §4 ·
 **Chat en vivo §6** · **Cita comercial §6** ·
 Cierre con justificación §5 · Compilador §4 · Condición conservada §4 ·
-Confirmación doble §6 · **Confirmación desde Gato §6** · **Conversación de Gato §6** · **Agenda visual §6** · **Corrección de una cita §6** · Corrección registrada §4 ·
+Confirmación doble §6 · **Confirmación desde Gato §6** · **Conversación de Gato §6** · **Agenda visual §6** · **Corrección de una cita §6** · **Agenda operativa desde Gato §6** · Corrección registrada §4 ·
 Dato sin confirmar §4 · **Dictado por Gato §6** · Duda asociada al dato §4 · Elevada al supervisor §5 ·
 Encargo §4 · Encargo sugerido §4 · Ficha de la tarea §5 ·
 Guarda de «el dinero ya entró» §6 ·
@@ -1230,3 +1246,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.15 | 2026-11-20 | **Agenda visual** (§6): pestañas Mixers, Recordatorios, Julio y Equipo; lectura real de `dispatch_schedule`, `gato_recordatorios`, `citas` y `cerebro_tareas_internas`. |
 | v2.16 | 2026-11-20 | **Una sola agenda** (§6): se retiraron los calendarios duplicados de Secretaría, Planta y Dashboard; crear/editar mixer vive en Agenda. Gato registra compromisos en «mi agenda» sin lead. |
 | v2.17 | 2026-11-20 | **Corregir y cancelar citas desde Gato** (§6): «rectifico…», «muévela», «cancela la cita»; sin citas en el pasado, sin solapes, con actor y motivo en `cita_eventos`. |
+| v2.18 | 2026-11-20 | **Agenda operativa desde Gato** (§6): mixers, recordatorios y tareas internas se crean, mueven y cancelan desde el chat; el monto dictado por el humano se autoriza como instrucción, no como saldo. |

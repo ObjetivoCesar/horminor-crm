@@ -27,6 +27,7 @@ class Actor:
     ahora: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     conversacion_id: str | None = None
     modo_envio: str = ""
+    texto_actual: str = ""
 
 
 @dataclass
@@ -407,7 +408,7 @@ async def responder(
 
     fichas = [f for r in resultados for f in r.fichas]
     try:
-        verificar(texto, fichas)
+        verificar(texto, fichas, (pregunta,))
     except CifraNoVerificada as exc:
         return Respuesta(
             "No pude verificar una cifra contra la base; no te la voy a mostrar "

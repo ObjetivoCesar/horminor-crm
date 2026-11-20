@@ -27,6 +27,7 @@ def _actor(
     actor_id: str = "panel",
     conversacion_id: str | None = None,
     modo_envio: str = "",
+    texto_actual: str = "",
 ) -> Actor:
     rol = rol.upper()
     if rol == "JULIO":
@@ -45,6 +46,7 @@ def _actor(
         actor_id=actor_id,
         conversacion_id=conversacion_id,
         modo_envio=modo_envio,
+        texto_actual=texto_actual,
     )
 
 
@@ -65,6 +67,7 @@ async def responder_detallado(
             actor_id=actor_id,
             conversacion_id=conversacion_id,
             modo_envio=modo_envio,
+            texto_actual=pregunta,
         ),
         biblio,
         historial=historial,

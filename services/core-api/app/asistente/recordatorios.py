@@ -76,7 +76,8 @@ _RE_FACTURA = re.compile(
 _RE_MONTO = re.compile(
     r"(?:USD|\$)\s*[\d.,]+"
     r"|\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?\b"
-    r"|\b\d+[.,]\d{2}\b",
+    r"|\b\d+[.,]\d{2}\b"
+    r"|\b(\d{1,6})\s*(?:d[oó]lares|usd)\b",
     re.IGNORECASE,
 )
 
@@ -274,8 +275,9 @@ def _a_decimal(token: str) -> Decimal | None:
 def cifras_de(texto: str) -> set[Decimal]:
     """Montos mencionados en un texto. '18:40' y 'orden 55' no cuentan."""
     valores: set[Decimal] = set()
-    for encontrado in _RE_MONTO.findall(str(texto or "")):
-        valor = _a_decimal(encontrado)
+    for match in _RE_MONTO.finditer(str(texto or "")):
+        crudo = next((g for g in match.groups() if g), match.group(0))
+        valor = _a_decimal(crudo)
         if valor is not None:
             valores.add(valor)
     return valores
@@ -370,6 +372,25 @@ async def _resolver_destino(
             "Necesito el nombre del cliente o el número con código de país."
         )
     if _RE_TELEFONO.fullmatch(limpio.replace(" ", "")):
+        digitos = re.sub(r"\D", "", limpio)
+        fila = await biblio.pool.fetchrow(
+            """
+            SELECT id, nombre, telefono_whatsapp
+              FROM clients
+             WHERE regexp_replace(coalesce(telefono_whatsapp, ''), '\\D', '', 'g')
+                   LIKE '%' || right($1, 9)
+             LIMIT 1
+            """,
+            digitos,
+        )
+        if fila is not None:
+            return (
+                formato_whatsapp(str(fila["telefono_whatsapp"] or limpio)),
+                str(fila["id"]),
+                str(fila["nombre"] or "") or None,
+                "CRM",
+                None,
+            )
         return formato_whatsapp(limpio), None, None, "DICTADO", None
 
     encontrados = await biblio.buscar_clientes(limpio, limite=5)
@@ -891,6 +912,119 @@ async def cancelar(biblio: Bibliotecario, *, actor: Any, recordatorio_id: str) -
     )
 
 
+async def ultimo_de(biblio: Bibliotecario, *, actor: Any) -> dict[str, Any] | None:
+    """Recordatorio mas reciente del actor que todavia se puede tocar."""
+    fila = await biblio.pool.fetchrow(
+        """
+        SELECT id::text AS id, destinatario_nombre, telefono, mensaje,
+               programado_at, estado
+          FROM gato_recordatorios
+         WHERE creado_por = $1
+           AND estado IN ('BORRADOR', 'PENDIENTE')
+         ORDER BY created_at DESC
+         LIMIT 1
+        """,
+        str(getattr(actor, "actor_id", "") or ""),
+    )
+    return dict(fila) if fila is not None else None
+
+
+async def actualizar(
+    biblio: Bibliotecario,
+    *,
+    actor: Any,
+    recordatorio_id: str | None = None,
+    cuando: str | None = None,
+    mensaje: str | None = None,
+) -> Resultado:
+    """Mueve la hora o corrige el texto de un recordatorio aun no enviado."""
+    if getattr(actor, "rol", "") not in ROLES_ESCRITURA:
+        return Resultado(
+            "recordatorio_actualizar",
+            "ACL",
+            nota="Tu perfil no puede cambiar recordatorios.",
+        )
+    actual = (
+        await ultimo_de(biblio, actor=actor)
+        if not recordatorio_id
+        else None
+    )
+    if recordatorio_id:
+        fila = await biblio.pool.fetchrow(
+            """
+            SELECT id::text AS id, destinatario_nombre, telefono, mensaje,
+                   programado_at, estado
+              FROM gato_recordatorios
+             WHERE id = $1::uuid
+               AND (creado_por = $2 OR $3 = 'SUPERADMIN')
+            """,
+            recordatorio_id,
+            str(getattr(actor, "actor_id", "") or ""),
+            getattr(actor, "rol", ""),
+        )
+        actual = dict(fila) if fila is not None else None
+    if actual is None:
+        return Resultado(
+            "recordatorio_actualizar",
+            "VACIO",
+            nota="No hay un recordatorio pendiente que pueda corregir.",
+        )
+    if str(actual["estado"]) not in ("BORRADOR", "PENDIENTE"):
+        return Resultado(
+            "recordatorio_actualizar",
+            "ERROR",
+            nota="Ese recordatorio ya se envió o se canceló; no se puede mover.",
+        )
+
+    nuevo_mensaje = " ".join(str(mensaje or "").split()) or actual["mensaje"]
+    programado = actual["programado_at"]
+    if cuando:
+        calculado = parsear_cuando(cuando)
+        if calculado is None:
+            return Resultado(
+                "recordatorio_actualizar",
+                "FALTA_PARAMETRO",
+                parametro_faltante="cuando",
+                nota="¿Para qué hora lo muevo? Ejemplo: «a las 10:30».",
+            )
+        programado = calculado
+
+    fila = await biblio.pool.fetchrow(
+        """
+        UPDATE gato_recordatorios
+           SET mensaje = $2, programado_at = $3, updated_at = now()
+         WHERE id = $1::uuid
+           AND estado IN ('BORRADOR', 'PENDIENTE')
+        RETURNING id::text AS id, destinatario_nombre, telefono, mensaje,
+                  programado_at, estado
+        """,
+        str(actual["id"]),
+        nuevo_mensaje,
+        programado,
+    )
+    if fila is None:
+        return Resultado(
+            "recordatorio_actualizar",
+            "ERROR",
+            nota="No pude guardar el cambio del recordatorio.",
+        )
+    return Resultado(
+        "recordatorio_actualizar",
+        "OK",
+        datos={
+            "id": str(fila["id"]),
+            "programado_local": _ahora_texto(fila["programado_at"], zona_local()),
+            "estado": fila["estado"],
+        },
+        fuente=["gato_recordatorios"],
+        filtros={"id": str(fila["id"])},
+        nota=(
+            f"Recordatorio movido para {_etiqueta(fila['destinatario_nombre'], fila['telefono'])} "
+            f"el {_ahora_texto(fila['programado_at'], zona_local())}."
+        ),
+    )
+
+
 async def ejecutar(
     nombre: str, params: dict[str, Any], biblio: Bibliotecario, actor: Any
 ) -> Resultado:
@@ -905,6 +1039,10 @@ async def ejecutar(
             conversacion_id=params.get("conversacion_id"),
             adjuntar_factura=bool(params.get("adjuntar_factura")),
             factura_de=params.get("factura_de"),
+            cifras_autorizadas=cifras_de(
+                getattr(actor, "texto_actual", "") or ""
+            )
+            or None,
         )
     if nombre == "recordatorio_confirmar":
         return await confirmar(

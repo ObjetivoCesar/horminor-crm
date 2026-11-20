@@ -117,6 +117,7 @@ async def _recordatorios(
           FROM gato_recordatorios r
           LEFT JOIN clients c ON c.id = r.cliente_id
          WHERE (r.programado_at AT TIME ZONE $3)::date BETWEEN $1 AND $2
+           AND r.estado <> 'CANCELADO'
          ORDER BY r.programado_at, r.destinatario_nombre
         """,
         desde,

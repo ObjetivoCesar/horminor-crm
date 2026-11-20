@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from decimal import Decimal
+
 from app.agenda import eventos as eventos_svc
 from app.agenda.router import _tipos_permitidos
 from app.asistente.comercial_bridge import es_agenda_personal
@@ -132,3 +134,27 @@ def test_media_hora_y_verbos_de_movimiento() -> None:
     assert es_correccion_cita("movamos la cita al viernes")
     assert not es_cancelacion_cita("cancela este pedido")
     assert not es_cancelacion_cita("cancela este despacho")
+
+
+def test_las_cifras_dictadas_en_dolares_se_autorizan() -> None:
+    from app.asistente.recordatorios import cifras_de
+
+    assert Decimal("300.00") in cifras_de("nos debe un abono de 300 dólares")
+
+
+def test_el_mixer_encuentra_cliente_y_telefono() -> None:
+    from app.asistente.agenda_bridge import (
+        _nombre,
+        _telefono,
+        es_correccion_tarea,
+        es_peticion_mixer,
+    )
+
+    texto = (
+        "Agenda el mixer para mañana a las 14:00 con 6 metros cúbicos de 210 "
+        "para Manuel Minga en la entrada a Orellana"
+    )
+    assert es_peticion_mixer(texto)
+    assert _nombre(texto) == "manuel minga"
+    assert _telefono("Manuel Minga 0963410092") == "593963410092"
+    assert es_correccion_tarea("cambia la tarea para el viernes a las 9")

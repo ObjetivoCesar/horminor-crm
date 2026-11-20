@@ -9441,3 +9441,61 @@ Archivo: `.agents/evidencias/agenda_correcciones_2026-11-20.txt`.
 
 Julio repite el caso original en local. Si responde «Cita corregida», subir al
 VPS con la migracion 099.
+
+
+
+---
+
+## 2026-11-20 (XXVI) - Agenda operativa en las cuatro pestañas
+
+### Objetivo
+
+Que Gato no solo cree citas: que mixers, recordatorios y tareas internas se
+creen, muevan y cancelen desde el chat, y que cada cambio se vea en su pestaña
+de la Agenda.
+
+### Hecho
+
+- `agenda_bridge`: crea un mixer en `dispatch_schedule` como
+  `RESERVA_CAMPO` con cliente, volumen, fecha, hora y direccion; resuelve el
+  cliente por nombre o telefono y lo crea si el dictado dice «cliente nuevo»
+  con nombre y telefono; valida horario de planta y choque de mixers.
+- Mover y cancelar mixer reutiliza `PostgresAgendaStore`; ya no se marca
+  `REAGENDADO` para que el despacho siga activo en el calendario.
+- `recordatorios.actualizar`: mueve la hora o corrige el texto de un
+  recordatorio BORRADOR/PENDIENTE; cancelar usa la funcion existente.
+- `cerebro.internas.reprogramar`: mueve el plazo de una tarea abierta y deja
+  evento `REPROGRAMADA`; cancelar usa `resolver(JUSTIFICADA)`.
+- El monto que el humano dicta se autoriza como instruccion del mensaje, no
+  como saldo verificado. Se corrigio `cifras_de` para «300 dolares» y se pasa
+  `cifras_autorizadas` desde el texto del turno.
+- El actor que construye `responder_detallado` ahora lleva `texto_actual`;
+  antes se perdia y el guard rechazaba el monto dictado.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Mixer crear/mover/cancelar | RESERVA_CAMPO -> 15:00 -> CANCELADO |
+| Recordatorio mover/cancelar | 09:30 -> 10:30 -> CANCELADO |
+| Tarea mover/cancelar | plazo movido -> JUSTIFICADA |
+| «abono de 300 dolares» | borrador con 300, cliente resuelto por telefono |
+| Confirmar «si» | recordatorio PENDIENTE |
+| Suite completa | **760 passed**, 2 warnings |
+
+Archivo: `.agents/evidencias/agenda_cuatro_pestanas_2026-11-20.txt`.
+
+### Decisiones
+
+- Una accion por mensaje: si un dictado mezcla mixer y recordatorio, primero
+  se agenda el mixer y se pide el recordatorio aparte. Evita que una cifra de
+  una accion contamine la otra.
+- Un monto dictado por el humano es una instruccion, no un saldo. La guarda lo
+  acepta y la respuesta lo advierte.
+- Un mixer movido conserva su estado activo; no se marca REAGENDADO porque ese
+  estado lo saca de la capacidad disponible.
+
+### Proximo paso
+
+Julio prueba las cuatro pestañas en local. Si responde bien, subir al VPS con
+la migracion 099.

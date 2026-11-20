@@ -130,6 +130,9 @@ scripts de candado.
 - **Corrección de citas (2026-11-20):** «rectifico», «muévela» y «cancela la
   cita» funcionan desde el chat; sin pasado, sin solapes, con auditoría en
   `cita_eventos`. Migración 099. **758 passed**.
+- **Agenda operativa (2026-11-20):** las cuatro pestañas se manejan desde Gato:
+  crear, mover y cancelar mixers, recordatorios y tareas. El monto dictado se
+  autoriza como instrucción. **760 passed**.
 - **Pendiente:** historial completo y búsqueda (Fase 4); autenticación real
   (H6).
 

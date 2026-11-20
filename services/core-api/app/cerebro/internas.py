@@ -444,6 +444,65 @@ async def crear(
     )
 
 
+async def reprogramar(
+    pool: asyncpg.Pool,
+    tarea_id: str,
+    *,
+    plazo_en: datetime,
+    actor_id: str | None = None,
+    actor_nombre: str,
+    rol_actor: str,
+    nota: str | None = None,
+) -> dict[str, Any]:
+    """Mueve el plazo de una tarea interna que sigue abierta."""
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            fila = await conn.fetchrow(
+                """
+                SELECT id::text AS id, estado, plazo_en
+                  FROM cerebro_tareas_internas
+                 WHERE id = $1::uuid
+                 FOR UPDATE
+                """,
+                tarea_id,
+            )
+            if fila is None:
+                raise TareaInternaInvalida("tarea interna no encontrada")
+            if str(fila["estado"]) not in ("NOTIFICADA",):
+                raise TareaInternaInvalida(
+                    "solo se mueve una tarea que todavía no se resolvió"
+                )
+            nueva = await conn.fetchrow(
+                """
+                UPDATE cerebro_tareas_internas
+                   SET plazo_en = $2, actualizado_en = now(),
+                       lock_version = lock_version + 1
+                 WHERE id = $1::uuid
+                RETURNING id::text AS id, instruccion, asignado_rol,
+                          asignado_a, estado, prioridad, plazo_en,
+                          notificada_en
+                """,
+                tarea_id,
+                plazo_en,
+            )
+            await _guardar_evento(
+                conn,
+                tarea_id=tarea_id,
+                estado="REPROGRAMADA",
+                actor_id=actor_id,
+                actor_nombre=actor_nombre,
+                rol_actor=rol_actor,
+                nota=nota or "Plazo movido desde Gato.",
+                metadatos={
+                    "antes": fila["plazo_en"].isoformat()
+                    if fila["plazo_en"]
+                    else None,
+                    "despues": plazo_en.isoformat(),
+                },
+            )
+    return dict(nueva)
+
+
 async def resolver(
     pool: asyncpg.Pool,
     tarea_id: str,

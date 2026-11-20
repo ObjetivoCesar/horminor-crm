@@ -260,10 +260,7 @@ async def responder_llm(
                         ("dictado:", "cerebro:", "dicta:")
                     )
                 ]
-                if pregunta.strip().lower().startswith(
-                    ("dictado:", "cerebro:", "dicta:")
-                ):
-                    autorizados.append(pregunta)
+                autorizados.append(pregunta)
                 try:
                     verificar(texto, fichas, autorizados)
                 except CifraNoVerificada as exc:

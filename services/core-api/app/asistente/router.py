@@ -11,7 +11,14 @@ import asyncpg
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import cerebro_bridge, comercial_bridge, conversaciones, memoria, recordatorios
+from . import (
+    agenda_bridge,
+    cerebro_bridge,
+    comercial_bridge,
+    conversaciones,
+    memoria,
+    recordatorios,
+)
 from ..db import setting
 from ..panel_acl import exigir_modulo, resolver_perfil
 from ..services import media as media_svc
@@ -204,6 +211,25 @@ def _cancelacion_de_cita(mensaje: str, pendiente: bool) -> bool:
     )
 
 
+def _correccion_recordatorio(mensaje: str) -> bool:
+    plano = _plano(mensaje)
+    if "recordatorio" not in plano:
+        return False
+    if not any(
+        marca in plano
+        for marca in ("mueve", "mover", "cambia", "cambiar", "reprograma", "reagenda")
+    ):
+        return False
+    return recordatorios.parsear_cuando(mensaje) is not None
+
+
+def _cancelacion_recordatorio(mensaje: str) -> bool:
+    plano = _plano(mensaje)
+    return "recordatorio" in plano and any(
+        marca in plano for marca in ("cancela", "cancelar", "anula", "descarta")
+    )
+
+
 def _plano(texto: str) -> str:
     import unicodedata
 
@@ -336,6 +362,7 @@ async def chat(
         raise HTTPException(status_code=503, detail="Base de datos no disponible")
 
     memoria_activa = isinstance(pool, asyncpg.Pool)
+    actor.texto_actual = body.mensaje
     conversacion_id = (body.conversacion_id or "").strip()
     perfil_id = _perfil_id(actor)
     pendiente = False
@@ -437,6 +464,122 @@ async def chat(
         )
 
     ultima_cita_id = str(estado_dialogo.get("ultima_cita_id") or "").strip() or None
+
+    # Mixer: crear, mover o cancelar desde el chat. Es la pestana Mixers.
+    if agenda_bridge.es_cancelacion_mixer(body.mensaje):
+        try:
+            resultado = await agenda_bridge.cancelar_ultimo(
+                pool,
+                body.mensaje,
+                actor=actor.nombre,
+                actor_id=actor.actor_id,
+            )
+            return await cerrar(
+                str(resultado.get("mensaje") or "Listo."),
+                "OK" if resultado.get("estado") == "OK" else "FALTA",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return await cerrar(f"No pude cancelar el mixer: {exc}", "ERROR")
+    if agenda_bridge.es_correccion_mixer(body.mensaje):
+        try:
+            resultado = await agenda_bridge.reagendar_ultimo(
+                pool,
+                body.mensaje,
+                actor=actor.nombre,
+                actor_id=actor.actor_id,
+            )
+            return await cerrar(
+                str(resultado.get("mensaje") or "Listo."),
+                "OK" if resultado.get("estado") == "OK" else "FALTA",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return await cerrar(f"No pude mover el mixer: {exc}", "ERROR")
+
+    nota_mixer = ""
+    if agenda_bridge.es_peticion_mixer(body.mensaje):
+        try:
+            resultado = await agenda_bridge.crear(
+                pool,
+                body.mensaje,
+                actor=actor.nombre,
+                actor_id=actor.actor_id,
+                rol=actor.rol,
+            )
+            if resultado.get("estado") != "OK":
+                return await cerrar(
+                    str(resultado.get("mensaje") or "No pude agendar el mixer."),
+                    "FALTA",
+                )
+            nota_mixer = str(resultado.get("mensaje") or "")
+            # Una accion por mensaje: el mixer ya quedo. Si el mismo dictado
+            # pide un recordatorio, se prepara aparte para no mezclar cifras.
+            if "recordatorio" in _plano(body.mensaje):
+                nota_mixer += (
+                    "\n\nEl recordatorio lo preparo en el siguiente mensaje: "
+                    "dime el texto exacto y la hora."
+                )
+            return await cerrar(nota_mixer, "OK")
+        except Exception as exc:  # noqa: BLE001
+            return await cerrar(f"No pude agendar el mixer: {exc}", "ERROR")
+
+    # Recordatorio: mover o cancelar sin depender del LLM.
+    if _correccion_recordatorio(body.mensaje):
+        resultado = await recordatorios.actualizar(
+            Bibliotecario(pool),
+            actor=actor,
+            cuando=body.mensaje,
+        )
+        return await cerrar(
+            resultado.nota or "Recordatorio movido.",
+            "OK" if resultado.estado == "OK" else "FALTA",
+        )
+    if _cancelacion_recordatorio(body.mensaje):
+        actual = await recordatorios.ultimo_de(Bibliotecario(pool), actor=actor)
+        if actual is None:
+            return await cerrar(
+                "No hay un recordatorio pendiente que pueda cancelar.", "VACIO"
+            )
+        resultado = await recordatorios.cancelar(
+            Bibliotecario(pool),
+            actor=actor,
+            recordatorio_id=str(actual["id"]),
+        )
+        return await cerrar(
+            resultado.nota or "Recordatorio cancelado.",
+            "OK" if resultado.estado == "OK" else "FALTA",
+        )
+
+    # Tarea interna: mover el plazo o cancelarla (pestana Equipo).
+    if agenda_bridge.es_correccion_tarea(body.mensaje):
+        try:
+            resultado = await agenda_bridge.reprogramar_tarea(
+                pool,
+                body.mensaje,
+                actor=actor.nombre,
+                actor_id=actor.actor_id,
+                rol=actor.rol,
+            )
+            return await cerrar(
+                str(resultado.get("mensaje") or "Listo."),
+                "OK" if resultado.get("estado") == "OK" else "FALTA",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return await cerrar(f"No pude mover la tarea: {exc}", "ERROR")
+    if agenda_bridge.es_cancelacion_tarea(body.mensaje):
+        try:
+            resultado = await agenda_bridge.cancelar_tarea(
+                pool,
+                body.mensaje,
+                actor=actor.nombre,
+                actor_id=actor.actor_id,
+                rol=actor.rol,
+            )
+            return await cerrar(
+                str(resultado.get("mensaje") or "Listo."),
+                "OK" if resultado.get("estado") == "OK" else "FALTA",
+            )
+        except Exception as exc:  # noqa: BLE001
+            return await cerrar(f"No pude cancelar la tarea: {exc}", "ERROR")
 
     # Correccion de una cita recien agendada: «rectifico, no es a la 13:00
     # sino a las 14:00». Se resuelve antes del puente para que no responda
@@ -719,6 +862,12 @@ async def chat(
     respuesta = await _respuesta_con_ratificacion(
         body.mensaje, actor, biblio, historial
     )
+    if nota_mixer:
+        respuesta = Respuesta(
+            nota_mixer + "\n\n" + respuesta.texto,
+            respuesta.estado,
+            respuesta.resultados,
+        )
     if memoria_activa:
         await memoria.guardar(
             pool,
