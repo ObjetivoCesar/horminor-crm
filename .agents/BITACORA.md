@@ -9499,3 +9499,51 @@ Archivo: `.agents/evidencias/agenda_cuatro_pestanas_2026-11-20.txt`.
 
 Julio prueba las cuatro pestañas en local. Si responde bien, subir al VPS con
 la migracion 099.
+
+
+
+---
+
+## 2026-11-20 (XXVII) - Agenda desplegada al VPS y conversaciones desde cero
+
+### Hecho
+
+- Se desplego al VPS la agenda de cuatro pestanas, la correccion de citas,
+  los puentes de mixer/recordatorio/tarea, el monto dictado autorizado y la
+  migracion 099.
+- Backup previo del codigo en `/root/backup_agenda_20261120/app`.
+- Migracion 099 aplicada en el VPS.
+- Se cerraron todas las conversaciones de Gato y se borraron los turnos:
+  - Local: **0 turnos**, 6 conversaciones nuevas vacias.
+  - VPS: **0 turnos**, 4 conversaciones nuevas vacias.
+- Se conservaron las conversaciones cerradas porque `cerebro_extracciones` es
+  append-only y sus FKs impiden borrar la fila. El hilo visible queda vacio.
+- No se borraron clientes, citas, despachos, pagos, cotizaciones ni
+  recordatorios.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| VPS /health | ok, db ok |
+| VPS /panel sin clave | 401 (protegido) |
+| VPS /panel local | 200 |
+| VPS /api/v1/agenda/eventos | 200, cuatro pestanas |
+| Tests agenda en VPS | **45 passed** |
+| Suite local | **760 passed** |
+| Turnos local / VPS | 0 / 0 |
+| Conversaciones abiertas local / VPS | 6 / 4 |
+
+Archivo: `.agents/evidencias/agenda_vps_2026-11-20.txt`.
+
+### Nota
+
+La suite completa del VPS tiene 5 fallos preexistentes por variables de
+entorno (clave maestra y Centinela), no por la agenda. Se ejecutaron las 45
+pruebas de agenda y todas pasan.
+
+### Proximo paso
+
+Julio prueba desde la web:
+`https://horminor.178.238.238.158.sslip.io/panel` con el usuario `julio`.
+Al entrar, Gato abre una conversacion vacia.

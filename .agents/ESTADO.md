@@ -133,6 +133,9 @@ scripts de candado.
 - **Agenda operativa (2026-11-20):** las cuatro pestañas se manejan desde Gato:
   crear, mover y cancelar mixers, recordatorios y tareas. El monto dictado se
   autoriza como instrucción. **760 passed**.
+- **VPS (2026-11-20):** agenda desplegada y migración 099 aplicada. Se borraron
+  los turnos de Gato en local y VPS; cada perfil tiene una conversación nueva
+  vacía. **45 tests de agenda** en el VPS.
 - **Pendiente:** historial completo y búsqueda (Fase 4); autenticación real
   (H6).
 

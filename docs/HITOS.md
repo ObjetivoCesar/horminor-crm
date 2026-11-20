@@ -133,6 +133,7 @@ una regresión.
 | 2026-11-20 | H2 | **Una sola agenda**: se retiraron los calendarios duplicados de Secretaría, Planta y Dashboard; crear/editar mixer vive en Agenda. Gato registra «mi agenda» sin lead | `app/asistente/comercial_bridge.py`, `app/comercial/intencion.py`, `app/web/templates/panel.html` | 2026-11-20 (XXIV) |
 | 2026-11-20 | H2 | **Corregir y cancelar citas desde Gato**: «rectifico…», «muévela», «cancela la cita»; sin pasado, sin solapes, con actor y motivo; auditoría adversarial y 758 passed | `app/asistente/router.py`, `app/asistente/comercial_bridge.py`, `app/comercial/citas.py`, `app/comercial/intencion.py`, `db/migrations/099_citas_solicitante.sql`, `.agents/evidencias/agenda_correcciones_2026-11-20.txt` | 2026-11-20 (XXV) |
 | 2026-11-20 | H2 | **Agenda operativa en las cuatro pestañas**: mixers, recordatorios y tareas se crean, mueven y cancelan desde Gato; monto dictado autorizado como instrucción; 760 passed | `app/asistente/agenda_bridge.py`, `app/asistente/recordatorios.py`, `app/cerebro/internas.py`, `app/asistente/persona.py`, `.agents/evidencias/agenda_cuatro_pestanas_2026-11-20.txt` | 2026-11-20 (XXVI) |
+| 2026-11-20 | H2 | **Despliegue al VPS y conversaciones desde cero**: migración 099, agenda de cuatro pestañas y 0 turnos visibles en local y VPS | `.agents/evidencias/agenda_vps_2026-11-20.txt` | 2026-11-20 (XXVII) |
 
 ## 6. Cómo se actualiza
 
