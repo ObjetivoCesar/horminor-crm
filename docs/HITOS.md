@@ -130,6 +130,7 @@ una regresión.
 | 2026-11-19 | H2 | **Continuidad de aclaraciones**: el estado del borrador se persiste; una respuesta larga usa el texto completo del borrador y no vuelve a preguntar cliente/volumen/dirección | `app/asistente/conversaciones.py`, `app/asistente/router.py`, `.agents/evidencias/gato_seguimiento_preguntas_2026-11-19.txt` | 2026-11-19 (XXI) |
 | 2026-11-20 | H2 | **Confirmación de cliente desde Gato**: «créalo/confirmado» ejecuta `crear_cliente`; Pablo Ayala creado en el VPS con el teléfono dictado | `app/asistente/router.py`, `app/asistente/cerebro_bridge.py`, `.agents/evidencias/gato_confirmacion_cliente_2026-11-20.txt` | 2026-11-20 (XXII) |
 | 2026-11-20 | H2 | **Agenda visual de cuatro pestañas**: `GET /api/v1/agenda/eventos` reúne mixers, recordatorios, citas de Julio y tareas internas; el chat confirma recordatorios y tareas | `app/agenda/router.py`, `app/agenda/eventos.py`, `app/web/templates/panel.html`, `.agents/evidencias/agenda_visual_2026-11-20.txt` | 2026-11-20 (XXIII) |
+| 2026-11-20 | H2 | **Una sola agenda**: se retiraron los calendarios duplicados de Secretaría, Planta y Dashboard; crear/editar mixer vive en Agenda. Gato registra «mi agenda» sin lead | `app/asistente/comercial_bridge.py`, `app/comercial/intencion.py`, `app/web/templates/panel.html` | 2026-11-20 (XXIV) |
 
 ## 6. Cómo se actualiza
 

@@ -5,7 +5,7 @@
 > es el documento que permite a Julio, a la secretaría, a administración y a
 > cualquier agente de IA entender el sistema sin preguntarle al programador.
 >
-> **Estado:** v2.15 — 2026-11-20. Cubre el **Cerebro** y su relación con el CRM,
+> **Estado:** v2.16 — 2026-11-20. Cubre el **Cerebro** y su relación con el CRM,
 > las tareas, secretaría, WhatsApp, el núcleo comercial (leads y citas), el
 > dictado por audio desde Gato, las conversaciones de Gato, la confirmación
 > desde el chat, la **agenda visual** de cuatro pestañas y los módulos
@@ -879,11 +879,11 @@ El detalle técnico, las limitaciones y el backlog están en
 |---|---|
 | **Nombre técnico** | `GET /api/v1/agenda/eventos`, `app/agenda/eventos.py` |
 | **Nombre para el usuario** | «Agenda» |
-| **Qué significa** | Un calendario de solo lectura con cuatro pestañas: **Mixers**, **Recordatorios**, **Julio** y **Equipo**. Al pulsar un día muestra únicamente los eventos de ese día en la pestaña activa. |
+| **Qué significa** | Un calendario de solo lectura con cuatro pestañas: **Mixers**, **Recordatorios**, **Julio** y **Equipo**. Al pulsar un día muestra únicamente los eventos de ese día en la pestaña activa. Es el **único** calendario: las vistas duplicadas de Secretaría, Planta y Dashboard se retiraron. |
 | **Para qué existe** | Ver en un solo lugar lo que el backend va a ejecutar: despachos, mensajes programados, citas comerciales y tareas internas. |
 | **Quién lo utiliza** | Julio y los perfiles con permiso sobre agenda de despachos, clientes/cartera, secretaría o Cerebro. Cada pestaña respeta su módulo. |
 | **Qué lo activa** | Entrar a «Agenda» en el menú del panel. El mes que se muestra y las flechas piden los datos al backend. |
-| **Qué sucede después** | Se leen las cuatro fuentes y se pintan puntos y el primer evento de cada día. No se escribe ni se envía nada desde el calendario. |
+| **Qué sucede después** | Se leen las cuatro fuentes y se pintan puntos y el primer evento de cada día. Para un mixer, «+ Nuevo agendamiento» abre el formulario de siempre y «Editar» reprograma el evento. |
 | **Qué NO significa** | No reemplaza al backend. El envío de WhatsApp, el despacho del mixer y la ejecución de la tarea siguen en sus servicios. Un evento visible no está enviado: muestra su estado real (`BORRADOR`, `PENDIENTE`, `ENVIADO`, `SOLICITADA`, etc.). |
 | **Ejemplo** | Un recordatorio dictado a Gato aparece como `BORRADOR`; al confirmarlo pasa a `PENDIENTE` y el despachador lo envía a su hora. |
 | **Dónde se encuentra** | Menú del panel → «Agenda». |
@@ -954,9 +954,9 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Quién lo utiliza** | Julio, secretaría, Gato interno y WhatsApp. |
 | **Qué lo activa** | Se crea `SOLICITADA`. Pasa a `CONFIRMADA`, `REALIZADA`, `CANCELADA` o `REAGENDADA` solo por transiciones permitidas. |
 | **Qué sucede después** | Se rechaza si se solapa con otra cita del **mismo lead o cliente**. Cancelar guarda el motivo en `cita_eventos`. |
-| **Qué NO significa** | Gato público no confirma citas: solo solicita. No reserva capacidad de planta ni valida contra la agenda de entregas. |
+| **Qué NO significa** | Gato público no confirma citas: solo solicita. No reserva capacidad de planta ni valida contra la agenda de entregas. Un compromiso dicho como «registra en mi agenda» puede no tener lead ni cliente: se guarda como cita de Julio y se ve en la pestaña **Julio**, no como venta. |
 | **Ejemplo** | El cliente pide visita el viernes a las 10:00; queda `SOLICITADA`; la secretaría la confirma y después la marca `REALIZADA`. |
-| **Dónde se encuentra** | **Secretaría → Leads y citas → Citas**; API `/api/v1/comercial/citas`. |
+| **Dónde se encuentra** | **Agenda → Julio**; **Secretaría → Leads y citas → Citas**; API `/api/v1/comercial/citas`. |
 | **Referencia técnica** | Migraciones 096–097; `app/comercial/citas.py`; 2026-11-19. |
 
 ## 7. Términos de apoyo (consulta rápida)
@@ -1212,3 +1212,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.13 | 2026-11-19 | **Conversación de Gato** (§6): `gato_conversaciones`, carga del hilo desde PostgreSQL, refresh que cierra y abre, contexto deliberado y `client_turn_id`. |
 | v2.14 | 2026-11-20 | **Confirmación desde Gato** (§6): «créalo/confirmado» ejecuta `crear_cliente` con el ejecutor del Cerebro; el caso Pablo Ayala quedó creado con su teléfono. |
 | v2.15 | 2026-11-20 | **Agenda visual** (§6): pestañas Mixers, Recordatorios, Julio y Equipo; lectura real de `dispatch_schedule`, `gato_recordatorios`, `citas` y `cerebro_tareas_internas`. |
+| v2.16 | 2026-11-20 | **Una sola agenda** (§6): se retiraron los calendarios duplicados de Secretaría, Planta y Dashboard; crear/editar mixer vive en Agenda. Gato registra compromisos en «mi agenda» sin lead. |

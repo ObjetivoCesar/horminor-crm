@@ -3152,7 +3152,7 @@ tbody tr:last-child td { border-bottom: 0; }
 
       <div class="dash-subview" data-sub-view="agenda">
         <div class="dash-card cal-card" data-modulo="agenda_despachos">
-          <div id="agenda-mount-dashboard"></div>
+          <p class="muted small" style="margin:0">La agenda de despachos vive ahora en <strong>Agenda</strong>, en el menú principal.</p>
         </div>
       </div>
     </div>
@@ -3325,11 +3325,11 @@ tbody tr:last-child td { border-bottom: 0; }
           <span><i class="ag-dot recordatorios"></i>Recordatorios</span>
           <span><i class="ag-dot julio"></i>Julio</span>
           <span><i class="ag-dot equipo"></i>Equipo</span>
+          <button class="btn bank" id="ag-nuevo" data-mutacion="1" type="button" onclick="agNuevoMixer()">+ Nuevo agendamiento</button>
         </div>
       </div>
 
-      <div class="ag-tabs" role="tablist">
-        <button class="ag-tab active" data-ag-tab="mixers" role="tab">Mixers <span class="ag-count" id="ag-count-mixers">0</span></button>
+      <div class="ag-tabs" role="tablist">        <button class="ag-tab active" data-ag-tab="mixers" role="tab">Mixers <span class="ag-count" id="ag-count-mixers">0</span></button>
         <button class="ag-tab" data-ag-tab="recordatorios" role="tab">Recordatorios <span class="ag-count" id="ag-count-recordatorios">0</span></button>
         <button class="ag-tab" data-ag-tab="julio" role="tab">Julio <span class="ag-count" id="ag-count-julio">0</span></button>
         <button class="ag-tab" data-ag-tab="equipo" role="tab">Equipo <span class="ag-count" id="ag-count-equipo">0</span></button>
@@ -3418,7 +3418,13 @@ tbody tr:last-child td { border-bottom: 0; }
       </div>
 
       <div class="card" id="agenda-card" data-modulo="agenda_despachos">
-        <div id="agenda-mount-secretaria"></div>
+        <div class="spread">
+          <div>
+            <h2 style="margin-bottom:2px">Agenda de despachos</h2>
+            <p class="small muted" style="margin:0">Se movió a <strong>Agenda</strong>, en el menú principal. Allí se ve y se crea el agendamiento del mixer.</p>
+          </div>
+          <button class="btn small bank" type="button" onclick="setView('agenda')">Abrir Agenda</button>
+        </div>
       </div>
     </div>
 
@@ -3592,13 +3598,10 @@ tbody tr:last-child td { border-bottom: 0; }
       <div class="spread" style="margin-bottom:8px">
         <div>
           <span class="sec-eyebrow">Agenda de planta</span>
-          <p class="small muted" style="margin:0">Cola real de despachos; elige un mixer para filtrar.</p>
+          <p class="small muted" style="margin:0">La cola de despachos se movió a <strong>Agenda → Mixers</strong>.</p>
         </div>
-        <select id="planta-mixer-filtro" onchange="HorminorAgenda.refreshAll()" style="max-width:220px">
-          <option value="">Todos los mixers</option>
-        </select>
+        <button class="btn small bank" type="button" onclick="setView('agenda'); agCambiarTab('mixers')">Abrir Agenda</button>
       </div>
-      <div id="agenda-mount-planta"></div>
     </div>
     <div class="planta-grid" id="planta-stock">
       <div class="stock-card"><div class="kpi-label">Inventario</div><div class="big">Cargando…</div></div>
@@ -4678,9 +4681,12 @@ function agAbrirDia(fecha) {
     body.innerHTML = '<div class="ag-list">' + list.map(e => {
       const detalle = e.detalle ? '<small>' + agEscapar(e.detalle) + '</small>' : '';
       const estado = e.estado ? '<span class="ag-chip">' + agEscapar(e.estado) + '</span>' : '';
+      const editar = agState.tab === 'mixers'
+        ? '<button class="btn small ghost" type="button" style="margin-top:6px" onclick="agEditarMixer(\'' + e.id + '\')">Editar</button>'
+        : '';
       return '<div class="ag-event ' + agState.tab + '"><div class="bar"></div>'
         + '<div class="time">' + agEscapar(e.hora || '—') + '</div>'
-        + '<div class="info"><strong>' + agEscapar(e.titulo) + '</strong>' + detalle + estado + '</div></div>';
+        + '<div class="info"><strong>' + agEscapar(e.titulo) + '</strong>' + detalle + estado + editar + '</div></div>';
     }).join('') + '</div>';
   }
   if (modal) modal.hidden = false;
@@ -4688,6 +4694,14 @@ function agAbrirDia(fecha) {
 function agCerrarDia() {
   const modal = document.getElementById('ag-modal');
   if (modal) modal.hidden = true;
+}
+function agNuevoMixer() {
+  const fecha = agState.seleccion || agState.hoy || undefined;
+  abrirAgenda(null, fecha, 'RESERVA_CAMPO');
+}
+function agEditarMixer(id) {
+  agCerrarDia();
+  abrirAgenda(id);
 }
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-ag-tab]').forEach(el => {
@@ -4752,6 +4766,11 @@ function aplicarPerfilUI(perfil) {
   $$('[data-modulo]').forEach(el => {
     el.style.display = puedeModulo(el.dataset.modulo) ? '' : 'none';
   });
+  const nuevoAgenda = document.getElementById('ag-nuevo');
+  if (nuevoAgenda) {
+    nuevoAgenda.style.display =
+      puedeModulo('agenda_despachos') && !soloLectura ? '' : 'none';
+  }
   if (!puedeVista(state.view)) setView(_primerVistaPermitida());
   if (state.view === 'dashboard') montarAgendaDashboard();
   if (state.view === 'secretaria') montarAgendaSecretaria();
@@ -8516,6 +8535,7 @@ function _configAgenda(extra) {
 }
 
 function montarAgendaDashboard() {
+  if (!document.getElementById('agenda-mount-dashboard')) return;
   if (!window.HorminorAgenda || !puedeModulo('agenda_despachos')) return;
   HorminorAgenda.mount('#agenda-mount-dashboard', _configAgenda({
     mode: 'JULIO', allowCreate: true, allowReschedule: true,
@@ -8524,6 +8544,7 @@ function montarAgendaDashboard() {
 }
 
 function montarAgendaSecretaria() {
+  if (!document.getElementById('agenda-mount-secretaria')) return;
   if (!window.HorminorAgenda || !puedeModulo('agenda_despachos')) return;
   HorminorAgenda.mount('#agenda-mount-secretaria', _configAgenda({
     mode: 'SECRETARIA', allowCreate: true, allowReschedule: true
@@ -8531,6 +8552,7 @@ function montarAgendaSecretaria() {
 }
 
 function montarAgendaPlanta() {
+  if (!document.getElementById('agenda-mount-planta')) return;
   if (!window.HorminorAgenda || !puedeModulo('agenda_despachos')) return;
   HorminorAgenda.mount('#agenda-mount-planta', _configAgenda({
     mode: 'PLANTA_CHOFER', allowCreate: false, allowReschedule: false,
@@ -8701,6 +8723,7 @@ async function guardarAgenda() {
     toast('Agendamiento guardado', 'ok');
     document.getElementById('dlg-agenda').close();
     HorminorAgenda.notifyChanged();
+    if (state.view === 'agenda') agCargar();
   } catch(e) {
     $('#agenda-resultado').innerHTML = `<div class="notice bad">${esc(e.message)}</div>`;
   } finally {
@@ -8714,6 +8737,7 @@ async function cancelarAgenda(id) {
     await api('/api/v1/panel/agenda/' + id, {method:'DELETE'});
     toast('Entrega cancelada', 'ok');
     HorminorAgenda.notifyChanged();
+    if (state.view === 'agenda') agCargar();
   } catch(e) { toast('No se pudo cancelar: ' + e.message, 'bad'); }
 }
 

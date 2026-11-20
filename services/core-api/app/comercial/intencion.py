@@ -15,13 +15,17 @@ from .. import tiempo
 from . import leads as leads_svc
 
 _RE_AGENDAR = re.compile(
-    r"\b(agenda|agendar|programa|programar|reserva|reservar|solicita|solicitar)\b",
+    r"\b(agenda|agendar|agendame|programa|programar|reserva|reservar|solicita|solicitar|registra|registrar|anota|anotar|apunta|apuntar)\b",
     re.IGNORECASE,
 )
-_RE_CITA = re.compile(r"\b(cita|visita|reunion|medicion|entrega)\b", re.IGNORECASE)
+_RE_CITA = re.compile(
+    r"\b(cita|visita|visitar|reunion|medicion|medir|entrega|entregar)\b",
+    re.IGNORECASE,
+)
 _RE_HORA = re.compile(r"\ba\s+las?\s+(\d{1,2})(?::(\d{2}))?\b", re.IGNORECASE)
 _RE_NOMBRE = re.compile(
-    r"\b(?:visita|reunion|cita|medicion|entrega)\s+(?:a|con|para)\s+"
+    r"\b(?:cita|visita|visitar|reunion|medicion|medir|entrega|entregar)\s+"
+    r"(?:a|con|para|de)\s+"
     r"([a-z0-9 .'-]+?)(?=\s+(?:hoy|manana|pasado|a\s+las)\b|$)",
     re.IGNORECASE,
 )

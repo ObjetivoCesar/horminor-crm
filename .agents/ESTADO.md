@@ -124,6 +124,9 @@ scripts de candado.
   «Agenda» del panel con pestañas **Mixers**, **Recordatorios**, **Julio** y
   **Equipo**. El chat ahora confirma también `crear_tarea_recordatorio` y
   `crear_tarea_interna`; el dinero sigue fuera. **16 passed** (v227 + v228).
+- **Una sola agenda (2026-11-20):** se retiraron los calendarios duplicados de
+  Secretaría, Planta y Dashboard; crear/editar mixer se hace desde **Agenda**.
+  Gato registra «mi agenda» sin lead como cita de Julio. **18 passed**.
 - **Pendiente:** historial completo y búsqueda (Fase 4); autenticación real
   (H6).
 

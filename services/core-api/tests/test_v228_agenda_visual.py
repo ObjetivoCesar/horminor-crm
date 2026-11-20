@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from app.agenda import eventos as eventos_svc
 from app.agenda.router import _tipos_permitidos
+from app.asistente.comercial_bridge import es_agenda_personal
+from app.comercial.intencion import es_peticion_cita, parse_cita
+from app import tiempo
 
 
 def test_conteo_suma_por_tipo() -> None:
@@ -49,3 +54,23 @@ def test_evento_normaliza_hora_y_texto() -> None:
     assert evento["detalle"] == "hola"
     assert evento["estado"] == "PENDIENTE"
     assert evento["zona"] == "America/Guayaquil"
+
+
+def test_un_compromiso_en_mi_agenda_no_exige_lead() -> None:
+    texto = (
+        "Tengo un cliente que visitar el día de mañana a las 13:00 "
+        "en la entrada a Orellana, registra en mi agenda"
+    )
+    assert es_peticion_cita(texto)
+    assert es_agenda_personal(texto)
+    datos = parse_cita(texto)
+    assert datos["tipo"] == "VISITA"
+    assert datos["hora"] == "13:00"
+    assert datos["fecha"] == tiempo.hoy() + timedelta(days=1)
+    assert datos["nombre"] is None
+
+
+def test_una_visita_con_nombre_no_es_agenda_personal() -> None:
+    texto = "Agenda una visita con Prueba Agenda mañana a las 11 de la mañana"
+    assert es_peticion_cita(texto)
+    assert not es_agenda_personal(texto)

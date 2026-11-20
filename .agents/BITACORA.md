@@ -9335,3 +9335,53 @@ Archivo: `.agents/evidencias/agenda_visual_2026-11-20.txt`.
 
 Julio prueba los cinco textos en local. Si la agenda responde bien, se sube al
 VPS y despues se agrega crear/editar desde el calendario.
+
+
+
+---
+
+## 2026-11-20 (XXIV) - Una sola agenda y compromisos de Julio
+
+### Objetivo
+
+Que la agenda exista en un solo lugar y que Gato pueda registrar un
+compromiso de Julio («tengo un cliente que visitar... registra en mi agenda»)
+sin inventar un lead.
+
+### Hecho
+
+- Se retiraron los calendarios duplicados de **Secretaría**, **Planta** y
+  **Dashboard**. Queda solo **Agenda**, con las cuatro pestañas.
+- En **Agenda → Mixers**: botón «+ Nuevo agendamiento» que abre el formulario
+  de siempre, y «Editar» en el detalle del día para reprogramar.
+- `comercial_bridge` reconoce «mi agenda» / «agenda personal» y crea una
+  cita de Julio sin lead ni cliente. Guarda el dictado completo en `notas`.
+- `parse_cita` entiende «visitar», «registra», «anota», «apunta» y fechas
+  como «el día de mañana a las 13:00».
+- `citas.crear` acepta `permite_sin_contacto` solo cuando el puente lo pide;
+  el resto del módulo comercial sigue exigiendo lead o cliente.
+
+### Evidencia
+
+| Comprobacion | Resultado |
+|---|---|
+| Texto real «Tengo un cliente que visitar... registra en mi agenda» | «Agende una visita... 2026-11-21 13:00. Queda en tu agenda.» |
+| Pestaña Julio | Dos eventos el 21/11: Prueba Agenda 11:00 y Agenda de Julio 13:00 |
+| Calendarios duplicados | Los tres mounts (`dashboard`, `secretaria`, `planta`) ya no existen |
+| «+ Nuevo agendamiento» | Abre «Agendar entrega» con la fecha del día |
+| Tests | **18 passed** (v227 + v228) |
+| Consola del navegador | Sin errores |
+
+### Decision
+
+- El compromiso personal de Julio no se inventa como cliente ni como lead: se
+  guarda en `citas` sin contacto y se distingue por `notas` y por el título
+  «Agenda de Julio».
+- Los calendarios de Planta y Dashboard se reemplazaron por un enlace a
+  **Agenda**. La creación y edición de mixers no se pierde: vive en la pestaña
+  Mixers.
+
+### Proximo paso
+
+Julio repite las pruebas en local. Si la agenda única responde bien, se sube al
+VPS.

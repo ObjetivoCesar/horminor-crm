@@ -118,8 +118,9 @@ async def crear(
     lead_id: str | None = None,
     solicitada_por: str | None = None,
     notas: str | None = None,
+    permite_sin_contacto: bool = False,
 ) -> dict[str, Any]:
-    if not cliente_id and not lead_id:
+    if not cliente_id and not lead_id and not permite_sin_contacto:
         raise ValueError("la cita necesita cliente_id o lead_id")
     validar(tipo=tipo, fecha=fecha, origen=origen, duracion_min=duracion_min)
     hora = _hora(hora_inicio)

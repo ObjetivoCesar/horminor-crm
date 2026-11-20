@@ -162,7 +162,7 @@ async def _julio(
             tipo="julio",
             fecha=fila["fecha"],
             hora=fila["hora"],
-            titulo=f"{str(fila['tipo']).title()} · {fila['contacto'] or 'Sin contacto'}",
+            titulo=f"{str(fila['tipo']).title()} · {fila['contacto'] or 'Agenda de Julio'}",
             detalle=fila["notas"] or (
                 f"Solicitada por {fila['solicitada_por']}"
                 if fila["solicitada_por"]
