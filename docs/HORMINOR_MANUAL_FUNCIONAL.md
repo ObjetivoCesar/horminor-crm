@@ -839,6 +839,7 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Qué NO significa** | No ejecuta nada: deja un borrador para revisar y confirmar en `/panel/cerebro`. Si el audio está mal transcrito, se corrige en el laboratorio. |
 | **Ejemplo** | «Dame preparando una entrega de 25 m3 … confírmame con el chofer y con Julio» → un encargo, una tarea interna para «chofer y Julio» y 3 preguntas (cliente, dirección, resistencia). |
 | **Dónde se encuentra** | Chat flotante de **Gato**, botón de micrófono a la izquierda del campo de texto. |
+| **Uso en celular** | Al abrir Gato, el micrófono queda visible y el teclado aparece al tocar el campo de texto. El historial se desplaza dentro del chat. `app/web/templates/panel.html`, 2026-11-24. |
 | **Referencia técnica** | `app/asistente/router.py` (`chat_audio`), `app/asistente/cerebro_bridge.py`; 2026-11-19. Evidencia `.agents/evidencias/gato_audio_2026-11-19.txt`. |
 
 ### Término: Conversación de Gato
@@ -903,6 +904,7 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Qué NO significa** | No reemplaza al backend. El envío de WhatsApp, el despacho del mixer y la ejecución de la tarea siguen en sus servicios. Un evento visible no está enviado: muestra su estado real (`BORRADOR`, `PENDIENTE`, `ENVIADO`, `SOLICITADA`, etc.). |
 | **Ejemplo** | Un recordatorio dictado a Gato aparece como `BORRADOR`; al confirmarlo pasa a `PENDIENTE` y el despachador lo envía a su hora. |
 | **Dónde se encuentra** | Menú del panel → «Agenda». |
+| **Uso en celular** | En pantallas estrechas las cuatro pestañas quedan visibles en dos filas. El detalle de un día se desplaza dentro de su ventana cuando la lista es larga. `app/web/templates/panel.html`, 2026-11-24. |
 | **Referencia técnica** | `app/agenda/router.py`, `app/agenda/eventos.py`, `app/web/templates/panel.html`; 2026-11-20. |
 
 ### Término: Carpeta del cliente en el alta
@@ -1268,3 +1270,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.17 | 2026-11-20 | **Corregir y cancelar citas desde Gato** (§6): «rectifico…», «muévela», «cancela la cita»; sin citas en el pasado, sin solapes, con actor y motivo en `cita_eventos`. |
 | v2.18 | 2026-11-20 | **Agenda operativa desde Gato** (§6): mixers, recordatorios y tareas internas se crean, mueven y cancelan desde el chat; el monto dictado por el humano se autoriza como instrucción, no como saldo. |
 | v2.19 | 2026-11-20 | **Recordatorio que sí se programa** (§4 y §6): «a las 15 y 27» se lee como 15:27; un dictado nuevo ya no se toma como confirmación del borrador anterior; Gato puede completar la hora al confirmar. **Cotización desde el Cerebro** (§6): `crear_cotizacion_borrador` deja de responder 501 y crea el documento en `BORRADOR` con IVA en `Decimal`. |
+| v2.20 | 2026-11-24 | **Gato y Agenda en celular** (§6): acceso al micrófono al abrir el chat, cuatro pestañas de Agenda visibles y desplazamiento interno del detalle de un día. |

@@ -2669,8 +2669,16 @@ tbody tr:last-child td { border-bottom: 0; }
 .gato-mic.grabando svg { animation: gato-pulso 1s ease-in-out infinite; }
 @keyframes gato-pulso { 50% { opacity: .45; } }
 @media (max-width: 600px) {
-  .gato-panel { right: 12px; left: 12px; width: auto; bottom: 78px; }
-  .gato-fab { right: 12px; bottom: 12px; }
+  .gato-panel {
+    inset: 8px 8px calc(68px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-height: none;
+  }
+  .gato-panel .chat-head, .gato-panel .chat-composer { flex-shrink: 0; }
+  .gato-panel .chat-hilo { min-height: 0; max-height: none; overscroll-behavior: contain; }
+  .gato-form input { font-size: 16px; }
+  .gato-mic, .gato-cerrar { min-width: 44px; min-height: 44px; }
+  .gato-fab { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); min-height: 44px; }
 }
 
 /* ------------------------------------------------------------- Agenda */
@@ -2741,6 +2749,16 @@ tbody tr:last-child td { border-bottom: 0; }
   .ag-pill { display: none; }
   .ag-tabs { width: 100%; }
   .ag-tab { flex: 1; justify-content: center; }
+  .ag-modal { max-height: calc(100dvh - 36px); overflow-y: auto; overscroll-behavior: contain; }
+}
+@media (max-width: 480px) {
+  .ag-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ag-tab { min-height: 44px; padding: 8px 4px; }
+  .ag-grid, .ag-weekdays { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .ag-weekdays span { padding-left: 0; text-align: center; letter-spacing: 0; }
+  .ag-nav button { width: 44px; height: 44px; }
+  .ag-modal-close { width: 44px; height: 44px; }
+  .ag-modal-head { padding-right: 68px; }
 }
 </style>
 </head>
@@ -9885,7 +9903,11 @@ function gatoToggle(force) {
   fab.setAttribute('aria-expanded', String(abrir));
   if (abrir) {
     gatoCargarConversacion();
-    setTimeout(() => { const i = document.getElementById('gato-input'); if (i) i.focus(); }, 60);
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      panel.querySelector('.gato-cerrar:last-child')?.focus();
+    } else {
+      document.getElementById('gato-input').focus();
+    }
   } else if (state.view === 'agenda') {
     agCargar();
   }
