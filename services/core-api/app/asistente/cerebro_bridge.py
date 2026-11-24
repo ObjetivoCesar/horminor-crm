@@ -212,12 +212,18 @@ async def confirmar_accion(
     rol: str,
     nombre: str,
     mensaje_final: str | None = None,
+    enviar_ahora: bool = False,
+    cuando: str | None = None,
 ) -> dict[str, Any]:
     headers = _cabeceras(usuario, rol, nombre)
     headers["Content-Type"] = "application/json"
     cuerpo: dict[str, Any] = {"accion_orden": int(accion_orden)}
     if mensaje_final:
         cuerpo["mensaje_final"] = mensaje_final
+    if enviar_ahora:
+        cuerpo["enviar_ahora"] = True
+    if cuando:
+        cuerpo["cuando"] = cuando
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SEGUNDOS) as cliente:
             respuesta = await cliente.post(

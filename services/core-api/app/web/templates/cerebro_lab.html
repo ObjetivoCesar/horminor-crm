@@ -864,6 +864,20 @@
         });
         li.appendChild(btn);
       }
+      if (nombre === 'crear_cotizacion_borrador' && datos.borrador_id) {
+        const aviso = document.createElement('div');
+        aviso.className = 'sub';
+        aviso.textContent =
+          'Al confirmar se crea la cotización en BORRADOR con el precio de la '
+          + 'receta. No se envía al cliente.';
+        const btn = document.createElement('button');
+        btn.className = 'primary';
+        btn.textContent = 'Confirmar cotización';
+        btn.addEventListener('click', () => {
+          confirmarAccion(datos.borrador_id, a.orden, btn, null, false);
+        });
+        li.append(aviso, btn);
+      }
       lista.appendChild(li);
     });
 
@@ -990,11 +1004,13 @@
       });
       const etiqueta = datos.repetido
         ? 'Ya estaba ejecutado'
-        : (datos.datos && datos.datos.nombre && datos.datos.carpeta
-            ? 'Alta ejecutada'
-            : (datos.estado_borrador === 'EJECUTADO'
-                ? 'Programado'
-                : 'Programado - quedan preguntas'));
+        : (datos.accion_nombre === 'crear_cotizacion_borrador'
+            ? 'Cotización creada'
+            : (datos.datos && datos.datos.nombre && datos.datos.carpeta
+                ? 'Alta ejecutada'
+                : (datos.estado_borrador === 'EJECUTADO'
+                    ? 'Programado'
+                    : 'Programado - quedan preguntas')));
       boton.textContent = etiqueta;
       boton.disabled = true;
       const nota = document.createElement('span');

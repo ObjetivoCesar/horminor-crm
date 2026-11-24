@@ -48,6 +48,11 @@ NEGACIONES = {
 _RE_HORA_COMPLETA = re.compile(r"\b(\d{1,2}):(\d{2})\b")
 _RE_HORA_AMPM = re.compile(r"\b(\d{1,2})\s*(am|pm)\b")
 _RE_A_LAS = re.compile(r"\ba\s+las?\s+(\d{1,2})\b(?!:)(?:\s*(am|pm))?")
+# «a las 15 y 27», «a las 3 y 30 de la tarde»: hora con minutos en palabras.
+_RE_HORA_Y_MINUTOS = re.compile(
+    r"\ba\s+las?\s+(\d{1,2})\s+y\s+(\d{1,2})\b"
+    r"(?:\s*de\s+la\s+(manana|tarde|noche|madrugada))?"
+)
 _RE_EN = re.compile(r"\ben\s+(\d+)\s*(minuto|minutos|hora|horas|dia|dias)\b")
 _RE_AHORA = re.compile(
     r"\b(ahora(?:\s+mismo)?|ya|de\s+una|en\s+este\s+momento|inmediat\w*|"
@@ -65,7 +70,8 @@ _RE_MENSAJE = re.compile(
     r"(?:record[aá]rle|recu[eé]rdale|recordar|recu[eé]rde(?:me)?|"
     r"avis[aá]le|avis[aá]rle|notif[ií]cale|notif[ií]carle|"
     r"com[eé]ntale|p[ií]dele|solic[ií]tale|p[aá]sale|"
-    r"dec[ií]rle|dile|que\s+diga)\s+que\s+(.+)$",
+    r"dec[ií]rle|dile|que\s+diga|indícale|indicale|diga|mande|"
+    r"solicita|pid[eó]\s+que)\s+que\s+([^.!?]+[.!?]?)(?:\s|$)",
     re.IGNORECASE,
 )
 _RE_FACTURA = re.compile(
@@ -143,6 +149,18 @@ def _hora(texto: str) -> tuple[int, int] | None:
         hora, sufijo = ampm[-1]
         return _con_sufijo(int(hora), sufijo)
 
+    hablada = _RE_HORA_Y_MINUTOS.findall(texto)
+    if hablada:
+        hora, minuto, momento = hablada[-1]
+        valor = int(hora)
+        if momento in ("tarde", "noche") and valor < 12:
+            valor += 12
+        elif momento == "madrugada" and valor == 12:
+            valor = 0
+        elif valor > 23:
+            valor %= 24
+        return valor, int(minuto)
+
     a_las = _RE_A_LAS.findall(texto)
     if a_las:
         crudo, sufijo = a_las[-1]
@@ -195,6 +213,33 @@ def parsear_cuando(valor: str, ahora: datetime | None = None) -> datetime | None
         else:
             delta = timedelta(days=cantidad)
         return (ahora + delta).astimezone(timezone.utc)
+
+    # Soportar "12 de diciembre", "5 de enero", etc. Una fecha sin hora se
+    # programa a las 09:00 de Ecuador (hora visible en la ratificacion), nunca
+    # a medianoche ni en UTC: eso correria el dia.
+    mm = re.search(r"\b(\d+)\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b", texto, re.IGNORECASE)
+    if mm:
+        dia = int(mm.group(1))
+        mes_nombre = mm.group(2).lower()
+        meses = {"enero":1,"febrero":2,"marzo":3,"abril":4,"mayo":5,"junio":6,"julio":7,"agosto":8,"septiembre":9,"octubre":10,"noviembre":11,"diciembre":12}
+        mes = meses.get(mes_nombre)
+        if mes:
+            from datetime import date
+            try:
+                target_date = date(ahora.year, mes, dia)
+                if target_date < ahora.date():
+                    target_date = date(ahora.year + 1, mes, dia)
+                local = datetime(
+                    target_date.year,
+                    target_date.month,
+                    target_date.day,
+                    9,
+                    0,
+                    tzinfo=ahora.tzinfo or zona_local(),
+                )
+                return local.astimezone(timezone.utc)
+            except ValueError:
+                pass
 
     hora = _hora(texto)
     if hora is None:

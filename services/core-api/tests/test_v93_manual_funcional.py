@@ -99,7 +99,9 @@ def test_el_manual_no_promete_lo_que_no_existe() -> None:
     pendientes = texto.split("## 10. Todavía no existe", 1)[1].split("## 11.", 1)[0]
 
     assert "Conversación por WhatsApp" in pendientes
-    assert "crear_cliente" in pendientes
+    # La cotización ya se ejecuta desde el laboratorio, pero el chat no la
+    # ejecuta: eso sigue escrito para no prometerlo.
+    assert "desde el chat de Gato" in pendientes
     assert "bóveda de audios" in pendientes.lower()
 
 

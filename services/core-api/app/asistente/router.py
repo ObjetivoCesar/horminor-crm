@@ -148,7 +148,18 @@ def _accion_a_confirmar(mensaje: str) -> str | None:
     ``*`` significa «la que siga en el borrador»: el usuario dijo solo
     «confirmado». Nunca se ejecuta dinero desde el chat.
     """
+    # Un dictado nuevo NO confirma el borrador anterior: es otra instruccion.
+    # Sin esta guarda, «enviarle un recordatorio a las 15 y 27» se leia como
+    # «confirma el recordatorio pendiente» y consumia el dictado equivocado.
+    if cerebro_bridge.es_dictado(mensaje):
+        return None
     plano = _plano(mensaje)
+    palabras = len(plano.split())
+    # «Confírmame el recordatorio de mañana y pásale la factura a Juan por el
+    # anticipo de la obra» es una orden nueva, no la ratificacion de un
+    # borrador viejo: la confirmacion se dice en pocas palabras.
+    if palabras > 10:
+        return None
     if "cliente" in plano and any(
         marca in plano for marca in ("crea", "crear", "confirmado", "dale", "hazlo", "ejecuta")
     ):
@@ -174,7 +185,59 @@ def _accion_a_confirmar(mensaje: str) -> str | None:
         "crea",
     ):
         return "*"
+    # Respuesta a «¿a qué hora lo envío?»: sigue siendo la misma confirmacion,
+    # ahora con el dato que faltaba.
+    if _cuando_dictado(mensaje) or _autoriza_envio_ahora(mensaje):
+        return "*"
     return None
+
+
+_RE_ENVIO_AHORA = re.compile(
+    r"\b(ahora(?:\s+mismo)?|ya|de\s+una|inmediat\w*|en\s+este\s+momento|"
+    r"hoy\s+mismo|al\s+toque)\b"
+)
+
+
+def _autoriza_envio_ahora(mensaje: str) -> bool:
+    """El humano dijo que salga ya, no solo «confirmado»."""
+    return bool(
+        _RE_ENVIO_AHORA.search(recordatorios.normalizar(mensaje or ""))
+    )
+
+
+def _cuando_dictado(mensaje: str) -> str | None:
+    """Hora o fecha que el humano dicta al confirmar («a las 15 y 27»).
+
+    Se devuelve el texto tal cual lo dijo: el Cerebro lo vuelve a leer con su
+    propio parser al programar y asi queda registrado que la hora la autorizo
+    una persona, no una inferencia.
+    """
+    if recordatorios.parsear_cuando(mensaje or "") is None:
+        return None
+    return str(mensaje or "").strip() or None
+
+
+def _mensaje_de_error(codigo: str | None, detalle: Any, mensaje: str) -> str:
+    """Traduce la negativa del Cerebro a una frase o a una pregunta util.
+
+    Pegar el JSON crudo en el chat deja al usuario sin saber que hacer; el
+    mismo motivo se dice como pregunta cuando falta un dato.
+    """
+    if isinstance(detalle, dict):
+        detalle = detalle.get("message") or detalle.get("detail") or detalle
+    if codigo == "CONFIRMAR_ENVIO_INMEDIATO":
+        return (
+            "El dictado no dijo la hora del envío. ¿Lo mando ahora o a qué hora "
+            "lo programo? Ejemplo: «a las 15:27» o «mañana a las 9»."
+        )
+    if codigo == "MENSAJE_POR_CONFIRMAR":
+        return (
+            "Lo dictado describe el encargo, no el texto que va a leer la "
+            "persona. Dime el mensaje exacto y lo programo."
+        )
+    if isinstance(detalle, str) and detalle.strip():
+        return f"No pude ejecutar la acción: {detalle.strip()}"
+    return f"No pude ejecutar la acción: {mensaje}"
 
 
 def _correccion_de_cita(mensaje: str, pendiente: bool) -> bool:
@@ -695,8 +758,27 @@ async def chat(
                 if accion is not None:
                     parametros = accion.get("parametros") or {}
                     mensaje_final = None
+                    enviar_ahora = False
+                    cuando_dictado = None
                     if accion.get("accion_nombre") == "crear_tarea_recordatorio":
                         mensaje_final = str(parametros.get("mensaje") or "").strip() or None
+                        # Lo que el humano autoriza en este mismo turno: el
+                        # texto exacto, la hora y si sale ya. Sin esto, el
+                        # chat no tenia como responder al Cerebro y el guard
+                        # devolvia siempre el mismo 422.
+                        enviar_ahora = _autoriza_envio_ahora(body.mensaje)
+                        cuando_dictado = _cuando_dictado(body.mensaje)
+                        if (
+                            parametros.get("mensaje_por_confirmar")
+                            and not mensaje_final
+                            and not recordatorios.es_afirmacion(body.mensaje)
+                            and not recordatorios.es_negacion(body.mensaje)
+                            and len(_plano(body.mensaje).split()) > 2
+                            and not cuando_dictado
+                        ):
+                            # El humano está dictando el texto que leerá la
+                            # persona: eso es exactamente lo que faltaba.
+                            mensaje_final = body.mensaje.strip()
                     resultado = await cerebro_bridge.confirmar_accion(
                         borrador_id,
                         int(accion.get("orden") or 1),
@@ -704,6 +786,8 @@ async def chat(
                         rol=actor.rol,
                         nombre=actor.nombre,
                         mensaje_final=mensaje_final,
+                        enviar_ahora=enviar_ahora,
+                        cuando=cuando_dictado,
                     )
                     datos = resultado.get("datos") or {}
                     texto = str(resultado.get("nota") or "Accion ejecutada.")
@@ -748,7 +832,10 @@ async def chat(
                         conversacion_id=conversacion_id,
                     )
             except HTTPException as exc:
-                texto = f"No pude ejecutar la acción: {exc.detail}"
+                codigo = None
+                if isinstance(exc.detail, dict):
+                    codigo = str(exc.detail.get("code") or "") or None
+                texto = _mensaje_de_error(codigo, exc.detail, str(exc.detail))
                 await memoria.guardar(
                     pool,
                     conversacion_id,

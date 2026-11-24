@@ -118,7 +118,7 @@ Julio dicta (audio o texto) por WhatsApp o por el laboratorio
 | Corregir | | ✅ Julio / secretaría | |
 | Confirmar | | ✅ Julio / secretaría | |
 | Enviar WhatsApp | | | ✅ módulo WhatsApp |
-| Crear cliente / cotización | | | ⏳ todavía no conectado |
+| Crear cliente / cotización | | | ✅ cliente y cotización en BORRADOR desde el laboratorio |
 | Registrar dinero | | ✅ doble confirmación | ✅ caja / contabilidad |
 | Avisar la tarea | ✅ | | |
 | Confirmar recepción | | ✅ secretaría | |
@@ -341,7 +341,7 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Para qué existe** | Que un recordatorio no salga con una frase interna que el destinatario no entendería, y que un envío inmediato no se dé por supuesto. |
 | **Quién lo utiliza** | Julio y secretaría, en el laboratorio y en el panel. |
 | **Qué lo activa** | El compilador marca `mensaje_por_confirmar` cuando la frase no es un mensaje dirigido a la persona, y `programado_inferido` cuando el dictado no dio hora. |
-| **Qué sucede después** | Al confirmar, el sistema exige el texto y la aceptación del envío inmediato. Sin ellos responde `MENSAJE_POR_CONFIRMAR` o `CONFIRMAR_ENVIO_INMEDIATO` y no programa nada. |
+| **Qué sucede después** | Al confirmar, el sistema exige el texto y el momento del envío. Sin ellos responde `MENSAJE_POR_CONFIRMAR` o `CONFIRMAR_ENVIO_INMEDIATO` y no programa nada. Desde el chat, Gato pregunta la hora («¿lo mando ahora o a las 15:27?») y con la respuesta completa el dato que faltaba. |
 | **Qué NO significa** | No es redacción automática: el texto lo escribe una persona. La instrucción original se conserva como constancia. |
 | **Ejemplo** | «Hay que pasarle el recordatorio del pago» → pide el texto; «Dile: ingeniero, le recuerdo el anticipo» → se puede enviar tal cual. |
 | **Dónde se encuentra** | Botón **Confirmar y programar** del laboratorio y de la ficha. |
@@ -868,10 +868,26 @@ El detalle técnico, las limitaciones y el backlog están en
 | **Quién lo utiliza** | Julio y los perfiles con permiso sobre el borrador. |
 | **Qué lo activa** | Un borrador pendiente en la conversación y una frase de confirmación/creación. |
 | **Qué sucede después** | Se ejecuta la acción con el ejecutor del Cerebro, se registra en `cerebro_ejecuciones` y se guarda el turno. El cliente queda en el CRM; el recordatorio pasa de `BORRADOR` a `PENDIENTE`; la tarea interna nace `NOTIFICADA`. Si quedan preguntas, el borrador sigue esperando. |
-| **Qué NO significa** | No ejecuta acciones sin ejecutor (cotización, pago: 501), no registra dinero y no confirma un borrador de otra conversación. Si falta el texto exacto del recordatorio o la hora, no programa nada: lo pide. |
+| **Qué NO significa** | No ejecuta dinero ni envía cotizaciones (el pago sigue en 501), no registra ingresos y no confirma un borrador de otra conversación. La cotización se confirma en el laboratorio, no desde el chat. Si falta el texto exacto del recordatorio o la hora, no programa nada: lo pide. |
 | **Ejemplo** | «Aún no existe cliente, crea a Pablo Ayala» → «Cliente creado: Ingeniero Pablo Ayala». |
 | **Dónde se encuentra** | Chat flotante de Gato. |
 | **Referencia técnica** | `app/asistente/router.py`, `app/asistente/cerebro_bridge.py`; 2026-11-20. |
+
+### Término: Cotización desde el Cerebro
+
+| Campo | Contenido |
+|---|---|
+| **Nombre técnico** | `crear_cotizacion_borrador` (acción conectada del Cerebro) |
+| **Nombre para el usuario** | Cotización en borrador desde el laboratorio |
+| **Qué significa** | El dictado propone una cotización con cliente, obra, volumen, resistencia y precio; al confirmar en `/panel/cerebro` se crea el documento comercial en estado `BORRADOR`, numerado y con su versión 1. |
+| **Para qué existe** | Que el dictado no se quede en una propuesta: la cotización se arma por el mismo camino que usa el panel, sin recalcular a mano. |
+| **Quién lo utiliza** | Julio, secretaría y vendedores (los perfiles que pide la acción). |
+| **Qué lo activa** | Un borrador con la acción `crear_cotizacion_borrador` y el botón **Confirmar** del laboratorio. |
+| **Qué sucede después** | El servicio `app/services/cotizaciones.py` calcula subtotal, IVA y total con `Decimal`, asigna el número correlativo y guarda la versión 1. La cotización queda `BORRADOR`: no se envía ni se convierte en orden. |
+| **Qué NO significa** | No envía la cotización por WhatsApp (`enviar_cotizacion_whatsapp` sigue en 501), no registra dinero y no la convierte en orden. Tampoco se ejecuta desde el chat de Gato. |
+| **Ejemplo** | «Cotización para Colinas del Pucará, 10 m³ FC-210 a 118 el metro» → confirma → «Cotización HORM-COT-2026-0007 creada en BORRADOR por USD 1357.00». |
+| **Dónde se encuentra** | `/panel/cerebro`, tarjeta del borrador, botón **Confirmar**. |
+| **Referencia técnica** | `app/cerebro/ejecutores.py` (`crear_cotizacion_desde_accion`), `app/cerebro/router.py` (`ACCIONES_CONECTADAS`); 2026-11-20. |
 
 ### Término: Agenda visual
 
@@ -1118,8 +1134,10 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 
 - Conversación por WhatsApp: corregir y confirmar por el mismo chat, y preguntar
   «¿qué pasó con lo de ayer?». **Contrato escrito, implementación pendiente.**
-- Ejecutar `crear_cliente` y `crear_cotizacion_borrador` desde el Cerebro
-  (hoy responden 501 a propósito).
+- Ejecutar `crear_cotizacion_borrador` **desde el chat de Gato** (el dinero y la
+  cotización se confirman en `/panel/cerebro`; el chat no los ejecuta).
+- **Enviar** la cotización por WhatsApp desde el Cerebro (`enviar_cotizacion_whatsapp`
+  sigue sin ejecutor: 501 a propósito).
 - **Reservar mixes o entregas desde el Cerebro**: la orden se queda en borrador
   y tareas internas; la agenda operativa (`dispatch_schedule` /
   `HorminorAgenda`) no se toca.
@@ -1164,12 +1182,13 @@ resuelta, registrada). No mide cuánto trabajó una persona.
 `whatsapp_espejo_numeros` §6 · `BusEventos` / SSE §6 ·
 `leads` / `lead_eventos` §6 · `citas` / `cita_eventos` §6 ·
 `ComercialWhatsApp` §6 · `chat_audio` / `/api/v1/asistente/audio` §6 ·
-`gato_conversaciones` §6.
+`crear_cotizacion_borrador` §6 · `gato_conversaciones` §6.
 ### Por nombre visible
 
 Aviso dejado §5 · Aclaración respondible §4 · Cancelación de un encargo §4 ·
 **Chat en vivo §6** · **Cita comercial §6** ·
 Cierre con justificación §5 · Compilador §4 · Condición conservada §4 ·
+**Cotización desde el Cerebro §6** ·
 Confirmación doble §6 · **Confirmación desde Gato §6** · **Conversación de Gato §6** · **Agenda visual §6** · **Corrección de una cita §6** · **Agenda operativa desde Gato §6** · Corrección registrada §4 ·
 Dato sin confirmar §4 · **Dictado por Gato §6** · Duda asociada al dato §4 · Elevada al supervisor §5 ·
 Encargo §4 · Encargo sugerido §4 · Ficha de la tarea §5 ·
@@ -1186,6 +1205,7 @@ Trabajo realizado §5 · Espejo de WhatsApp autorizado §6.
 «asunto» → Encargo §4 · «audio» → Dictado por Gato §6 ·
 «avisada» → Aviso dejado §5 · «cita» → Hecho citado §4 · «cita comercial» → Cita comercial §6 · «contacto» → Lead §6 ·
 «condición» → Condición conservada §4 · «corregir» → Corrección registrada §4 ·
+«cotización» → Cotización desde el Cerebro §6 ·
 «creo» → Duda asociada al dato §4 · «dictar» → Dictado por Gato §6 ·
 «duda» → Dato sin confirmar §4 · «escalar» → Elevada al supervisor §5 ·
 «expediente» → Condición conservada §4 · «lead» → Lead §6 · «marcar hecho» → Trabajo realizado §5 ·
@@ -1247,3 +1267,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.16 | 2026-11-20 | **Una sola agenda** (§6): se retiraron los calendarios duplicados de Secretaría, Planta y Dashboard; crear/editar mixer vive en Agenda. Gato registra compromisos en «mi agenda» sin lead. |
 | v2.17 | 2026-11-20 | **Corregir y cancelar citas desde Gato** (§6): «rectifico…», «muévela», «cancela la cita»; sin citas en el pasado, sin solapes, con actor y motivo en `cita_eventos`. |
 | v2.18 | 2026-11-20 | **Agenda operativa desde Gato** (§6): mixers, recordatorios y tareas internas se crean, mueven y cancelan desde el chat; el monto dictado por el humano se autoriza como instrucción, no como saldo. |
+| v2.19 | 2026-11-20 | **Recordatorio que sí se programa** (§4 y §6): «a las 15 y 27» se lee como 15:27; un dictado nuevo ya no se toma como confirmación del borrador anterior; Gato puede completar la hora al confirmar. **Cotización desde el Cerebro** (§6): `crear_cotizacion_borrador` deja de responder 501 y crea el documento en `BORRADOR` con IVA en `Decimal`. |

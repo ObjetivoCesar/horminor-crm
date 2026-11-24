@@ -74,6 +74,9 @@ class ConfirmarIn(BaseModel):
     mensaje_final: str | None = Field(default=None, max_length=2000)
     # Confirmación explícita de envío inmediato cuando el dictado no dio hora.
     enviar_ahora: bool = False
+    # Hora o fecha que el humano dicta al confirmar, si el dictado no la trajo.
+    # La autoriza quien confirma: no es una inferencia del modelo.
+    cuando: str | None = Field(default=None, max_length=120)
 
 
 class CorregirIn(BaseModel):
@@ -373,6 +376,9 @@ ACCIONES_CONECTADAS = (
     "crear_tarea_recordatorio",
     "crear_tarea_interna",
     "crear_cliente",
+    # La cotización se calcula con Decimal en el servicio compartido; se
+    # confirma en el laboratorio, no desde el chat.
+    "crear_cotizacion_borrador",
 )
 
 
@@ -912,6 +918,14 @@ async def confirmar_accion(
         }
 
     parametros = accion.get("parametros") or {}
+    if nombre == "crear_tarea_recordatorio" and body.cuando:
+        # El humano acaba de dictar la hora: eso sustituye la inferencia y
+        # deja de ser «envío inmediato por defecto».
+        parametros = {
+            **parametros,
+            "cuando": body.cuando,
+            "programado_inferido": False,
+        }
     if nombre == "crear_tarea_recordatorio":
         # El dictado propone; el humano autoriza el texto y el momento. Sin
         # eso, la tarea no se programa (no se envía nada por inferencia).
@@ -961,6 +975,12 @@ async def confirmar_accion(
                     confirmado=True,
                 )
                 resultado.datos["archivos"] = movidos
+    elif nombre == "crear_cotizacion_borrador":
+        resultado = await ejecutores.crear_cotizacion_desde_accion(
+            pool,
+            parametros=parametros,
+            creado_por=str(perfil.get("nombre") or "") or actor_id,
+        )
     else:  # pragma: no cover - guardado por ACCIONES_CONECTADAS
         raise HTTPException(status_code=501, detail="accion sin ejecutor")
 
@@ -1001,6 +1021,8 @@ async def confirmar_accion(
                     if nombre == "crear_tarea_recordatorio"
                     else "cerebro_tareas_internas"
                     if nombre == "crear_tarea_interna"
+                    else "cotizaciones"
+                    if nombre == "crear_cotizacion_borrador"
                     else "clients"
                 )
                 if resultado.estado == "OK"

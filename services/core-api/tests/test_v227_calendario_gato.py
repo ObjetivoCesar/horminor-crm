@@ -18,7 +18,9 @@ from app.asistente.guardas import CifraNoVerificada, verificar
 from app.asistente.persona import render_prompt
 from app.asistente.router import (
     _accion_a_confirmar,
+    _autoriza_envio_ahora,
     _contexto_dictado,
+    _cuando_dictado,
     _puente,
     _quiere_crear_cliente,
 )
@@ -146,6 +148,36 @@ def test_la_confirmacion_desde_gato_elige_la_accion() -> None:
     assert _accion_a_confirmar("crea la tarea") == "crear_tarea_interna"
     assert _accion_a_confirmar("confirmado") == "*"
     assert _accion_a_confirmar("dame los leads caídos") is None
+
+
+def test_un_dictado_nuevo_no_confirma_el_borrador_anterior() -> None:
+    # Caso real: con un borrador esperando, Julio dictó un recordatorio nuevo
+    # («enviarle un recordatorio a las 15 y 27 de hoy») y Gato lo tomó como
+    # «confirma el recordatorio»: ejecutó el borrador viejo y devolvió
+    # CONFIRMAR_ENVIO_INMEDIATO. El dictado nuevo nunca existió.
+    dictado = (
+        "dictado: a ver, puedes agendar, no agendar, enviarle un recordatorio "
+        "a las 15 y 27 de hoy, indicándole el presupuesto, cuánto tiene que "
+        "ser el anticipo."
+    )
+    assert _accion_a_confirmar(dictado) is None
+    # Sin prefijo pero largo, tampoco es una ratificación.
+    assert (
+        _accion_a_confirmar(
+            "enviarle un recordatorio a las 15 y 27 de hoy indicándole el "
+            "presupuesto y cuánto tiene que ser el anticipo de la obra"
+        )
+        is None
+    )
+
+
+def test_una_hora_dictada_al_confirmar_sigue_siendo_la_confirmacion() -> None:
+    assert _accion_a_confirmar("sí, a las 15 y 27") == "*"
+    assert _accion_a_confirmar("mándalo ahora") == "*"
+    assert _cuando_dictado("sí, a las 15 y 27") == "sí, a las 15 y 27"
+    assert _cuando_dictado("confirmado") is None
+    assert _autoriza_envio_ahora("sí, ahora") is True
+    assert _autoriza_envio_ahora("confirmado") is False
 
 
 def test_la_confirmacion_de_efectivo_se_reconoce() -> None:

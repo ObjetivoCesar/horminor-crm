@@ -53,7 +53,7 @@
 - Confirmación por el mismo chat de WhatsApp: cuando se conecte, Julio enviará un
   audio, leerá el resumen, corregirá y confirmará en el hilo; exige persistir
   entrantes y autorizar por riesgo, no solo por el número de teléfono.
-- Ejecución de `crear_cliente` y `crear_cotizacion_borrador` desde el Cerebro (501 a propósito).
+- Envío de `enviar_cotizacion_whatsapp` desde el Cerebro (501 a propósito).
 - Persistencia de `contacto.*` en la ficha del cliente.
 - Aprendizaje de significados y lugares.
 - Ayuda contextual dentro del CRM.
@@ -177,8 +177,8 @@ no con frentes individuales:
 
 - `dispatch_schedule` agenda **entregas/mixers**, no citas comerciales: el
   agendamiento de citas es nuevo.
-- `crear_cliente` y `crear_cotizacion_borrador` compilan, pero su ejecución
-  responde **501**: falta el ejecutor.
+- `crear_cliente` y `crear_cotizacion_borrador` ya tienen ejecutor y se confirman
+  en `/panel/cerebro`; `enviar_cotizacion_whatsapp` sigue respondiendo **501**.
 - El cliente de Bunny solo tiene `subir`; no hay listar, mover, renombrar ni
   borrar.
 - El flujo público de WhatsApp (Gato) no existe.

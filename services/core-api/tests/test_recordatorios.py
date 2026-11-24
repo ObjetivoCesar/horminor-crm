@@ -91,6 +91,30 @@ def test_toma_la_ultima_hora_de_la_frase() -> None:
     assert (local.hour, local.minute) == (17, 0)
 
 
+def test_hora_hablada_con_minutos() -> None:
+    # «a las 15 y 27» es como se dicta 15:27 en Ecuador.
+    cuando = recordatorios.parsear_cuando("enviarle un recordatorio a las 15 y 27 de hoy", ahora=BASE)
+    assert cuando is not None
+    local = cuando.astimezone(ZONA)
+    assert (local.hour, local.minute) == (15, 27)
+    assert local.date() == BASE.date()
+
+
+def test_hora_hablada_con_minutos_y_tarde() -> None:
+    cuando = recordatorios.parsear_cuando("a las 3 y 30 de la tarde", ahora=BASE)
+    assert cuando is not None
+    assert cuando.astimezone(ZONA).hour == 15
+
+
+def test_fecha_con_mes_no_corre_el_dia() -> None:
+    # «12 de diciembre» sin hora: 09:00 de Ecuador del dia 12, no medianoche UTC
+    # (que en Ecuador cae el 11).
+    cuando = recordatorios.parsear_cuando("recuérdale el 12 de diciembre", ahora=BASE)
+    assert cuando is not None
+    local = cuando.astimezone(ZONA)
+    assert (local.day, local.month, local.hour) == (12, 12, 9)
+
+
 def test_afirmaciones_y_negaciones() -> None:
     for texto in ("sí", "Si", "dale", "confirmo", "ok", "adelante"):
         assert recordatorios.es_afirmacion(texto), texto

@@ -804,3 +804,21 @@ def test_hora_de_recordatorio_acepta_hh_mm_y_forma_hablada() -> None:
     assert hora_de_recordatorio("a las 18:00 pidiendo el comprobante") == "18:00"
     assert hora_de_recordatorio("a las 6 de la tarde") == "18:00"
     assert hora_de_recordatorio("que nos envíe el comprobante") is None
+
+
+def test_hora_hablada_con_minutos_se_lee_como_hora() -> None:
+    # «a las 15 y 27» es la forma dictada de 15:27; sin esto el recordatorio
+    # caia en «envio inmediato» y el guard lo rechazaba.
+    from app.cerebro.tiempo import hora_de_recordatorio
+
+    assert hora_de_recordatorio("enviarle un recordatorio a las 15 y 27 de hoy") == "15:27"
+    assert hora_de_recordatorio("a las 3 y 30 de la tarde") == "15:30"
+    assert hora_de_recordatorio("entre 15 y 27 metros") is None
+
+
+def test_la_cotizacion_del_borrador_ya_tiene_ejecutor() -> None:
+    # El Cerebro propone crear_cotizacion_borrador; hasta hoy el panel
+    # respondia 501 «accion sin ejecutor» al confirmarla.
+    from app.cerebro.router import ACCIONES_CONECTADAS
+
+    assert "crear_cotizacion_borrador" in ACCIONES_CONECTADAS

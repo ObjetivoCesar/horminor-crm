@@ -47,6 +47,13 @@ _HORA_VALOR = re.compile(
     r"(?i)^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$"
 )
 _HORA_EXPLICITA = re.compile(r"(?<!\d)(\d{1,2}):(\d{2})(?!\d)")
+# «a las 15 y 27», «a las 3 y 30 de la tarde»: la hora con minutos dicha en
+# palabras. Se exige el «a las» para no confundirla con una enumeracion
+# («entre 15 y 27 metros»).
+_HORA_CON_Y = re.compile(
+    r"(?i)\ba\s+las?\s+(\d{1,2})\s+y\s+(\d{1,2})\b"
+    r"(?:\s*(?:de\s+la\s+(manana|tarde|noche|madrugada)|(am|pm)))?"
+)
 
 
 def _plano(texto: str) -> str:
@@ -94,10 +101,18 @@ def hora_de_cita(cita: str) -> str | None:
 
 def hora_explicita(texto: str) -> str | None:
     """HH:MM dicho o escrito, sin exigir «de la mañana»."""
-    coincidencia = _HORA_EXPLICITA.search(_plano(normalizar_texto(texto)))
-    if coincidencia is None:
-        return None
-    return _a_24h(int(coincidencia.group(1)), int(coincidencia.group(2)), "")
+    plano = _plano(normalizar_texto(texto))
+    coincidencia = _HORA_EXPLICITA.search(plano)
+    if coincidencia is not None:
+        return _a_24h(int(coincidencia.group(1)), int(coincidencia.group(2)), "")
+    hablada = _HORA_CON_Y.search(plano)
+    if hablada is not None:
+        return _a_24h(
+            int(hablada.group(1)),
+            int(hablada.group(2)),
+            hablada.group(3) or hablada.group(4) or "",
+        )
+    return None
 
 
 def hora_de_recordatorio(texto: str) -> str | None:

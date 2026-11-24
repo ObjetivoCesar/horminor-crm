@@ -27,6 +27,7 @@ from ..services import media as media_svc
 from ..services.clients import crear_cliente
 
 CONSULTA = "crear_cliente"
+COTIZACION = "crear_cotizacion_borrador"
 
 
 def _texto(valor: Any) -> str | None:
@@ -399,4 +400,91 @@ async def crear_cliente_desde_accion(
             "carpeta": carpeta,
         },
         nota=nota,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cotizacion: el Cerebro propone, el panel confirma, el servicio calcula
+# ---------------------------------------------------------------------------
+# Campos del borrador que no son del alta (son rastro de como se armo).
+_CAMPOS_NO_COTIZACION = (
+    "precio_estado",
+    "descuento_pct",
+    "plazo_entrega",
+    "fecha_entrega_tentativa",
+    "hora_entrega_tentativa",
+)
+
+
+async def crear_cotizacion_desde_accion(
+    pool: asyncpg.Pool,
+    *,
+    parametros: dict[str, Any],
+    creado_por: str | None = None,
+) -> Resultado:
+    """Da de alta la cotizacion en BORRADOR por el servicio compartido.
+
+    El precio, el subtotal y el IVA los calcula `app.services.cotizaciones`
+    con `Decimal`: el Cerebro no suma ni inventa cifras. Si falta un dato de
+    negocio, el servicio responde 422 y no se escribe nada.
+    """
+    from pydantic import ValidationError
+
+    from ..routers.cotizaciones import CotizacionIn
+    from ..services.cotizaciones import crear_cotizacion_borrador
+
+    datos = {
+        clave: valor
+        for clave, valor in parametros.items()
+        if clave not in _CAMPOS_NO_COTIZACION
+    }
+    datos["creado_por"] = creado_por or datos.get("creado_por")
+    try:
+        cuerpo = CotizacionIn(**datos)
+    except ValidationError as exc:
+        primero = exc.errors()[0]
+        campo = ".".join(str(parte) for parte in primero.get("loc") or ())
+        return Resultado(
+            COTIZACION,
+            "ERROR",
+            None,
+            nota=(
+                f"La cotización no se puede armar: {campo} "
+                f"{primero.get('msg') or 'no es válido'}."
+            ),
+        )
+
+    try:
+        cotizacion_id = await crear_cotizacion_borrador(pool, cuerpo)
+    except HTTPException as exc:
+        return Resultado(COTIZACION, "ERROR", None, nota=str(exc.detail))
+
+    fila = await pool.fetchrow(
+        """
+        SELECT c.numero, c.total, cl.nombre AS cliente_nombre
+          FROM cotizaciones c
+          LEFT JOIN clients cl ON cl.id = c.cliente_id
+         WHERE c.id = $1::uuid
+        """,
+        cotizacion_id,
+    )
+    numero = str(fila["numero"]) if fila is not None else ""
+    total = str(fila["total"]) if fila is not None else ""
+    cliente = str(fila["cliente_nombre"] or "") if fila is not None else ""
+    nota = f"Cotización {numero} creada en BORRADOR"
+    if cliente:
+        nota += f" para {cliente}"
+    if total:
+        nota += f" por USD {total}"
+    return Resultado(
+        COTIZACION,
+        "OK",
+        {
+            "id": cotizacion_id,
+            "numero": numero,
+            "cliente": cliente,
+            "total": total,
+            "estado": "BORRADOR",
+        },
+        nota=nota + ".",
     )
