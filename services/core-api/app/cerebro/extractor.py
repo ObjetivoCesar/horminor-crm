@@ -14,7 +14,7 @@ import re
 import unicodedata
 from dataclasses import replace
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Sequence
 from zoneinfo import ZoneInfo
 
@@ -89,6 +89,8 @@ CLAVES = (
     "cotizacion.hora_entrega",
     "cotizacion.plazo_entrega",
     "cotizacion.descuento_pct",
+    "cotizacion.anticipo_pct",
+    "cotizacion.nota",
     "cotizacion.dias_trabajo",
     "cotizacion.precio_m3",
     "cotizacion.forma_pago",
@@ -125,7 +127,7 @@ Reglas duras:
 2. No inventes ningun dato. Si no esta, no lo incluyas o marca NO_DIJO.
 3. `hablante` es quien sostiene el dato: si no hay marca de otra persona, es SUPERADMIN (quien dicta el audio). Si el texto cita al cliente ("el dice", "me dijo", comillas), usa CLIENTE. Si no se sabe, NO_DETERMINADO.
 4. Fechas: ISO YYYY-MM-DD, calculadas con HOY y la zona America/Guayaquil. Si "proximo sabado" es ambiguo, pon el candidato y agrega una ambiguedad. Una hora suelta ("a las seis de la manana") NO es una fecha: usa cotizacion.hora_entrega con tipo HORA y valor HH:MM, y NO pongas cotizacion.fecha_entrega.
-5. Montos en USD como numero DECIMAL, sin simbolos. Volumen en m3 como DECIMAL.
+5. Montos en USD como numero DECIMAL, sin simbolos. Volumen en m3 como DECIMAL. NUNCA pongas un porcentaje (50%, 50 por ciento, la mitad) en pago.monto: pago.monto es SOLO un monto en dolares USD. Si hablan de un porcentaje de anticipo o abono ("depositar el 50%", "abono del 50%"), usa cotizacion.anticipo_pct (DECIMAL/ENTERO, ej. 50).
 6. `intencion`: CONSULTA si solo pregunta o pide revisar; MUTACION si pide crear, registrar o enviar; MIXTA si hace las dos.
 7. Maximo 3 preguntas, solo las que bloquean la accion.
 8. Si el audio repite o corrige un dato, usa el ultimo valor y cita la correccion.
@@ -136,13 +138,13 @@ La razon social del cliente no es la direccion de la obra. Si «Dirección» es 
 12. `pago.recibido` es BOOLEANO: true si el dinero YA entro ("ya me deposito", "ya me transfirio", "recibi el abono"); false si todavia no ("nos va a hacer", "todavia no me envia el comprobante", "queda pendiente"). Si no se dice, no lo incluyas.
 13. `pago.cuenta_destino` es el banco o la cuenta donde el cliente transfiere ("a la cuenta del Banco de Pichincha"). No uses traslado.cuenta_banco para eso.
 14. `traslado.cuenta_banco` SOLO si el audio ordena mover efectivo de caja al banco ("llevar la caja al banco", "depositar el efectivo").
-15. Si el audio pide enviar un recordatorio, un aviso o pedir el comprobante, usa: tarea.telefono (numero al que se envia), tarea.destinatario (nombre si lo hay), tarea.mensaje (las palabras exactas que se deben enviar, sin agregar montos ni fechas), tarea.cuando (hora o fecha del envio; "ahora" solo si dice ya/ahora/de una; omitela si no dice cuando) y tarea.adjuntar_factura (BOOLEANO). Eso NO es cotizacion.enviar.
-16. `cotizacion.enviar` solo si el audio dice explicitamente enviar o mandar la cotizacion.
+15. Si el audio pide enviar un recordatorio, un aviso operativo o pedir el comprobante por separado, usa: tarea.telefono (numero al que se envia), tarea.destinatario (nombre si lo hay), tarea.mensaje (las palabras exactas que se deben enviar, sin agregar montos ni fechas), tarea.cuando (hora o fecha del envio; "ahora" solo si dice ya/ahora/de una; omitela si no dice cuando) y tarea.adjuntar_factura (BOOLEANO). Eso NO es cotizacion.enviar.
+16. `cotizacion.enviar` true si el audio pide enviar o mandar la cotizacion, O si en el mismo encargo de hormigon pide enviar por WhatsApp el monto total, los detalles del hormigon contratado o la liquidacion ("indicarle la totalidad del monto por whatsapp", "enviarle por whatsapp el monto total"). Pon el numero o contacto en `cotizacion.enviar_destinatario` y NO lo dupliques como tarea.telefono/tarea.mensaje.
 17. La resistencia y el precio no son lo mismo. "todo el hormigon es de 240" o "hormigon de 210" es `cotizacion.resistencia` (ENTERO 240 / 210), NO es `cotizacion.precio_m3`. Usa `cotizacion.precio_m3` SOLO si dice un precio por metro cubico en dolares ("a 118 el metro", "precio de 118 por m3").
 18. `cliente.nombre` incluye empresas y contratistas ("Diaz Sur", "empresa Diaz Sur"): no lo omitas porque sea una empresa ni lo cambies por el nombre de una persona.
 19. Condiciones del contrato: "entregados en un mes" va en `cotizacion.plazo_entrega` como TEXTO copiado de la cita ("en un mes" o "un mes"); NO lo conviertas a "1 mes", NO calcules una fecha y NO pongas `cotizacion.fecha_entrega`. "13 de descuento" va en `cotizacion.descuento_pct` (ENTERO 13). "sabados y domingos" va en `cotizacion.dias_trabajo` (TEXTO). "llevar la planta movil" va en `operacion.planta_movil` (BOOLEANO true).
 20. Una instruccion a alguien del equipo ("que revisen en secretaria como van los despachos", "verifica que el deposito ya este hecho", "que Mauricio confirme el stock") SI es MUTACION: usa tarea.mensaje con la instruccion copiada de la cita y tarea.destinatario si nombra a la persona o al area ("secretaria", "bodega", "Mauricio"). NO inventes un telefono y NO pongas tarea.telefono si no lo dictan: ese encargo se registra como tarea interna del CRM, no como WhatsApp.
-21. Si el hablante NIEGA o CONDICIONA un dato o una accion ("no le hagan todavia el descuento", "primero tengo que revisar el precio", "no se lo manden"), no emitas ese hecho como si estuviera ordenado. Si hace falta registrar que se hablo del tema, usa estado NO_DIJO; nunca conviertas una negacion en una instruccion.
+21. Si el hablante NIEGA o CONDICIONA un dato o una accion ("no le hagan todavia el descuento", "primero tengo que revisar el precio", "no se lo manden", "no me han dado ningun 50 dolares", "no me han dado anticipo"), no emitas ese hecho como si estuviera ordenado y RETIRA cualquier monto negado. Si hace falta registrar que se hablo del tema, usa estado NO_DIJO; nunca conviertas una negacion en una instruccion ni en pago.monto.
 22. Si el hablante DUDA o APROXIMA ("creo que", "300 y pico", "mas o menos", "o el sabado"), emite el hecho con estado TENTATIVO, el valor aproximado en valor y la expresion original en cita. El sistema no lo usa como definitivo: pregunta.
 23. Si el audio CITA palabras de otra persona o un mensaje ("me mandaron decir que...", "te voy a leer un mensaje..."), eso no es una orden de Julio: no generes acciones a partir de la cita. Si ademas dice "eso no lo hagas", no emitas el hecho.
 24. Si el hablante se CORRIGE a si mismo en el mismo audio ("380, bueno, 300 y pico"), emite un solo hecho con el ULTIMO valor y estado CORREGIDO_EN_AUDIO, citando la correccion.
@@ -327,11 +329,51 @@ def construir_hechos(
 
         if item.tipo in ("CEDULA", "TELEFONO", "ENTERO", "DECIMAL"):
             buscado = _digitos(item.valor)
+            tokens_cita = [
+                t
+                for t in mapa.tokens
+                if t.inicio < fin
+                and t.fin > inicio
+                and t.tipo not in ("ESPACIO", "PUNTUACION")
+            ]
+            crudo_ini = tokens_cita[0].crudo_inicio if tokens_cita else 0
+            crudo_fin = tokens_cita[-1].crudo_fin if tokens_cita else len(texto_crudo)
             secuencia = next(
+                (
+                    s
+                    for s in secuencias
+                    if s.digitos == buscado and s.crudo_inicio >= crudo_ini and s.crudo_fin <= crudo_fin
+                ),
+                None,
+            ) or next(
                 (s for s in secuencias if s.digitos == buscado),
                 None,
             )
             if secuencia is None:
+                if (
+                    item.clave == "cotizacion.anticipo_pct"
+                    and buscado == "50"
+                    and "mitad" in _sin_tildes(cita)
+                ):
+                    hecho = HechoCitado(
+                        clave=item.clave,
+                        valor=Decimal("50"),
+                        estado=item.estado,
+                        tipo=item.tipo,
+                        evidencia=Evidencia(
+                            cita=texto_crudo[crudo_ini:crudo_fin] or cita,
+                            sostiene=cita,
+                            crudo_inicio=crudo_ini,
+                            crudo_fin=crudo_fin,
+                            start_ms=None,
+                            end_ms=None,
+                            confianza=None,
+                            hablante=item.hablante,
+                        ),
+                        encargo=item.encargo or 1,
+                    )
+                    hechos.append(hecho)
+                    continue
                 notas.append(
                     f"{item.clave}: el numero {item.valor} no coincide con el audio"
                 )
@@ -421,7 +463,10 @@ def construir_hechos(
     # Cada hecho queda en el encargo del dictado donde está su cita. Una
     # frase que solo confirma o coordina se une al encargo anterior.
     asignados = asignar(hechos, segmentar(texto_crudo))
-    return fusionar_coordinaciones(asignados), notas
+    fusionados = fusionar_coordinaciones(asignados)
+    notas.extend(_depurar_pago_porcentaje_y_negacion(fusionados, texto_crudo, mapa.texto))
+    notas.extend(_promover_envio_cotizacion_desde_tarea(fusionados, texto_crudo))
+    return fusionados, notas
 
 
 # «No recibido» es una afirmación financiera. Solo se acepta como dato cuando
@@ -438,11 +483,21 @@ _MARCAS_PAGO_NO_RECIBIDO = (
     "no ha cancelado",
     "no ha entrado",
     "no ha llegado",
+    "no me han dado anticipo",
+    "no me han dado ningun",
+    "no me han pagado nada",
+    "sin anticipo",
+    "no hay anticipo",
     "todavia no",
     "aun no",
     "falta que nos pague",
     "queda pendiente",
     "quedo pendiente",
+    "nos van a dar",
+    "nos van a hacer",
+    "tiene que depositar",
+    "tiene que hacer una transferencia",
+    "quedamos en que me van a hacer",
 )
 
 
@@ -579,6 +634,255 @@ def _degradar_pago_no_declarado(
             "«sin ingreso confirmado»"
         ]
     return []
+
+
+_RE_ENVIO_MONTO_COTIZACION = re.compile(
+    r"\b("
+    r"monto\s+total|totalidad\s+(?:del\s+)?monto|detalles?\s+del\s+hormigon|"
+    r"cotizacion|propuesta|"
+    r"cuentas?\s+(?:para|de|a\s+(?:la\s+|las\s+)?que)\s+(?:quiere\s+|desea\s+)?transfer(?:ir|encia)?|"
+    r"a\s+que\s+cuenta\s+(?:quiere|desea)\s+transfer(?:ir|encia)?|"
+    r"bancos?\s+que\s+trabajamos|depositar\s+el\s+(?:\d+|cincuenta)\s*(?:%|por\s*(?:ciento|100)\b)"
+    r")"
+)
+
+_RE_BANCOS = re.compile(
+    r"\b(?:banco\s+(?:de\s+|del\s+)?)?(pichincha|guayaquil|internacional|pacifico|produbanco|bolivariano|austro|loja)\b"
+)
+
+_RE_NEGACION_SIN_MONTO = re.compile(
+    r"\b(?:no\s+(?:me|nos)\s+han\s+dado\s+anticipo|"
+    r"no\s+(?:me|nos)\s+han\s+pagado\s+nada|"
+    r"sin\s+anticipo|"
+    r"no\s+hay\s+anticipo)\b"
+)
+
+
+def _numero_entero_o_decimal(valor: Any) -> str | None:
+    try:
+        dec = Decimal(str(valor))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    if dec == dec.to_integral_value():
+        return str(int(dec))
+    return format(dec.normalize(), "f")
+
+
+def _ventana_de_hecho(
+    hecho: HechoCitado, texto_crudo: str, texto_normalizado: str | None = None
+) -> str:
+    """Extrae la ventana de texto del encargo/cita para no mezclar otros encargos."""
+    segmentos = segmentar(texto_crudo)
+    if segmentos and 1 <= hecho.encargo <= len(segmentos):
+        seg_crudo = segmentos[hecho.encargo - 1].texto
+        seg = _sin_tildes(seg_crudo)
+        if texto_normalizado:
+            seg_norm = _sin_tildes(normalizar_con_mapa(seg_crudo).texto)
+            return seg + " " + seg_norm
+        return seg
+    cita_plana = _sin_tildes(hecho.evidencia.cita if hecho.evidencia else "")
+    plano = _sin_tildes(texto_crudo)
+    pos = plano.find(cita_plana) if cita_plana else -1
+    if pos >= 0:
+        return plano[max(0, pos - 90) : pos + len(cita_plana) + 90]
+    if texto_normalizado:
+        return plano + " " + _sin_tildes(texto_normalizado)
+    return plano
+
+
+def _depurar_pago_porcentaje_y_negacion(
+    hechos: list[HechoCitado],
+    texto_crudo: str,
+    texto_normalizado: str | None = None,
+) -> list[str]:
+    """Evita confundir porcentajes («50%», «cincuenta por ciento») o montos negados con pago.monto en USD."""
+    notas: list[str] = []
+    indices_retirar: set[int] = set()
+    agregar: list[HechoCitado] = []
+
+    for idx, hecho in enumerate(hechos):
+        if hecho.clave != "pago.monto" or not hecho.utilizable:
+            continue
+        if hecho.estado == "CORREGIDO_POR_HUMANO":
+            continue
+        num = _numero_entero_o_decimal(hecho.valor)
+        if not num:
+            continue
+
+        ventana = _ventana_de_hecho(hecho, texto_crudo, texto_normalizado)
+        cita_plana = _sin_tildes(hecho.evidencia.cita if hecho.evidencia else "")
+        sostiene_plana = _sin_tildes(hecho.evidencia.sostiene if hecho.evidencia else "")
+
+        # 1. Negación explícita del monto (con o sin "ningun", o negación total de anticipo)
+        patron_negado = re.compile(
+            rf"\b(?:ningun\s+{re.escape(num)}(?:\s*(?:dolares|usd))?|"
+            rf"no\s+(?:son|es)\s+{re.escape(num)}(?:\s*(?:dolares|usd))?|"
+            rf"no\s+(?:me|nos)\s+han\s+dado\s+(?:ningun\s+)?{re.escape(num)}(?:\s*(?:dolares|usd))?)\b"
+        )
+        if patron_negado.search(ventana) or (
+            _RE_NEGACION_SIN_MONTO.search(ventana)
+            and not re.search(rf"(?:\$\s*{re.escape(num)}\b|\b{re.escape(num)}\s*(?:dolares|usd)\b)", patron_negado.sub(" ", ventana))
+        ):
+            indices_retirar.add(idx)
+            notas.append(f"pago.monto: retirado porque el dictado niega los {num} USD")
+            continue
+
+        # 2. El número aparece como porcentaje ("50%", "50 por ciento", "cincuenta por ciento")
+        # y no como USD afirmado en esa misma ventana
+        en_porcentaje = bool(
+            re.search(rf"\b{re.escape(num)}\s*(?:%|por\s*(?:ciento|100)\b)", cita_plana)
+            or re.search(rf"\b{re.escape(num)}\s*(?:%|por\s*(?:ciento|100)\b)", sostiene_plana)
+            or re.search(rf"\b{re.escape(num)}\s*(?:%|por\s*(?:ciento|100)\b)", ventana)
+        )
+        ventana_sin_neg = patron_negado.sub(" ", ventana)
+        en_dolares = bool(
+            re.search(
+                rf"(?:\$\s*{re.escape(num)}\b|\b{re.escape(num)}\s*(?:dolares|usd)\b)",
+                ventana_sin_neg,
+            )
+        )
+        if en_porcentaje and not en_dolares:
+            indices_retirar.add(idx)
+            notas.append(
+                f"pago.monto: {num}% corresponde a porcentaje de anticipo, no a {num} USD"
+            )
+            es_descuento = bool(
+                re.search(
+                    rf"\b{re.escape(num)}\s*(?:%|por\s*(?:ciento|100)\b)\s*(?:de\s+)?descuento\b"
+                    rf"|\bdescuento\s+(?:del\s+)?{re.escape(num)}\s*(?:%|por\s*(?:ciento|100)\b)",
+                    ventana,
+                )
+            )
+            ya_descuento = any(
+                h.encargo == hecho.encargo
+                and h.clave == "cotizacion.descuento_pct"
+                and _numero_entero_o_decimal(h.valor) == num
+                for h in hechos
+            )
+            ya_anticipo = any(
+                h.encargo == hecho.encargo and h.clave == "cotizacion.anticipo_pct"
+                for h in hechos
+            )
+            if not es_descuento and not ya_descuento and not ya_anticipo:
+                agregar.append(
+                    HechoCitado(
+                        clave="cotizacion.anticipo_pct",
+                        valor=hecho.valor,
+                        estado="EXTRAIDO",
+                        tipo="DECIMAL",
+                        evidencia=hecho.evidencia,
+                        encargo=hecho.encargo,
+                    )
+                )
+
+    if indices_retirar:
+        hechos[:] = [h for i, h in enumerate(hechos) if i not in indices_retirar]
+    hechos.extend(agregar)
+    return notas
+
+
+def _promover_envio_cotizacion_desde_tarea(
+    hechos: list[HechoCitado], texto_crudo: str
+) -> list[str]:
+    """Si un encargo cotiza hormigón y pide enviar el monto/detalles por WhatsApp,
+    lo promueve a cotizacion.enviar en lugar de crear un recordatorio genérico.
+    """
+    encargos = sorted({h.encargo for h in hechos})
+    notas: list[str] = []
+    retirar: set[int] = set()
+    agregar: list[HechoCitado] = []
+
+    for encargo in encargos:
+        grupo = [(i, h) for i, h in enumerate(hechos) if h.encargo == encargo]
+        tiene_cot = any(
+            h.clave in ("cotizacion.volumen_m3", "cotizacion.resistencia")
+            and h.utilizable
+            for _, h in grupo
+        )
+        if not tiene_cot:
+            continue
+        t_tel = next(((i, h) for i, h in grupo if h.clave == "tarea.telefono" and h.utilizable), None)
+        t_msg = next(((i, h) for i, h in grupo if h.clave == "tarea.mensaje" and h.utilizable), None)
+        t_dest = next(((i, h) for i, h in grupo if h.clave == "tarea.destinatario" and h.utilizable), None)
+        t_cuando = next(((i, h) for i, h in grupo if h.clave == "tarea.cuando" and h.utilizable), None)
+        if not t_msg:
+            continue
+
+        msg_plano = _sin_tildes(str(t_msg[1].valor or ""))
+        cita_plana = _sin_tildes(
+            t_msg[1].evidencia.cita if t_msg[1].evidencia else ""
+        )
+        if not (
+            _RE_ENVIO_MONTO_COTIZACION.search(msg_plano)
+            or _RE_ENVIO_MONTO_COTIZACION.search(cita_plana)
+        ):
+            continue
+
+        # Conservar bancos mencionados antes de retirar tarea.mensaje
+        bancos = list(dict.fromkeys(_RE_BANCOS.findall(msg_plano + " " + cita_plana)))
+        if bancos and not any(h.clave == "cotizacion.nota" and h.utilizable for _, h in grupo):
+            bancos_fmt = ", ".join(b.title() for b in bancos)
+            agregar.append(
+                HechoCitado(
+                    clave="cotizacion.nota",
+                    valor=f"Consultar cuenta de transferencia ({bancos_fmt})",
+                    estado="EXTRAIDO",
+                    tipo="TEXTO",
+                    evidencia=t_msg[1].evidencia,
+                    encargo=encargo,
+                )
+            )
+
+        if not any(h.clave == "cotizacion.enviar" and h.utilizable for _, h in grupo):
+            agregar.append(
+                HechoCitado(
+                    clave="cotizacion.enviar",
+                    valor=True,
+                    estado="EXTRAIDO",
+                    tipo="BOOLEANO",
+                    evidencia=t_msg[1].evidencia,
+                    encargo=encargo,
+                )
+            )
+        if t_tel and not any(
+            h.clave == "cotizacion.enviar_destinatario" and h.utilizable
+            for _, h in grupo
+        ):
+            agregar.append(
+                HechoCitado(
+                    clave="cotizacion.enviar_destinatario",
+                    valor=t_tel[1].valor,
+                    estado="EXTRAIDO",
+                    tipo="TEXTO",
+                    evidencia=t_tel[1].evidencia,
+                    encargo=encargo,
+                )
+            )
+        if t_cuando and not any(
+            h.clave == "cotizacion.enviar_cuando" and h.utilizable
+            for _, h in grupo
+        ):
+            agregar.append(
+                HechoCitado(
+                    clave="cotizacion.enviar_cuando",
+                    valor=t_cuando[1].valor,
+                    estado="EXTRAIDO",
+                    tipo="TEXTO",
+                    evidencia=t_cuando[1].evidencia,
+                    encargo=encargo,
+                )
+            )
+        for item in (t_tel, t_msg, t_dest, t_cuando):
+            if item is not None:
+                retirar.add(item[0])
+        notas.append(
+            f"encargo {encargo}: envío de monto/detalles de hormigón promovido a cotizacion.enviar"
+        )
+
+    if retirar:
+        hechos[:] = [h for i, h in enumerate(hechos) if i not in retirar]
+    hechos.extend(agregar)
+    return notas
 
 
 def _completar_cuando_de_tarea(
@@ -1123,10 +1427,22 @@ async def interpretar(
     if sobre_previo is not None:
         # Conserva los hechos del pedido que el extractor omitió en esta vuelta.
         # Se vuelven a validar contra el mismo texto y su cita original.
+        # Si el turno nuevo niega el anticipo/monto o lo corrige a NO_DIJO,
+        # no resucitar pago.monto desde sobre_previo.
         presentes = {(h.encargo or 1, h.clave) for h in sobre.hechos if h.cita}
+        negadas = {(h.encargo or 1, h.clave) for h in sobre.hechos if h.estado == "NO_DIJO"}
+        nuevo_tramo = _sin_tildes(texto_crudo[continuacion_desde or 0 :])
+        niega_pago = bool(
+            _RE_NEGACION_SIN_MONTO.search(nuevo_tramo)
+            or re.search(r"\bno\s+(?:me|nos)\s+han\s+dado\s+(?:ningun\s+)?\d+", nuevo_tramo)
+        )
         recuperados = [
-            h for h in sobre_previo.hechos
-            if h.cita and (h.encargo or 1, h.clave) not in presentes
+            h
+            for h in sobre_previo.hechos
+            if h.cita
+            and (h.encargo or 1, h.clave) not in presentes
+            and (h.encargo or 1, h.clave) not in negadas
+            and not (niega_pago and h.clave == "pago.monto")
         ]
         sobre = sobre.model_copy(update={"hechos": recuperados + sobre.hechos})
     hechos, notas = construir_hechos(
@@ -1162,6 +1478,8 @@ async def interpretar(
                 replace(hecho, encargo=ultimo) if id(hecho) in nuevos else hecho
                 for hecho in hechos
             ]
+            notas.extend(_depurar_pago_porcentaje_y_negacion(hechos, texto_crudo, mapa.texto))
+            notas.extend(_promover_envio_cotizacion_desde_tarea(hechos, texto_crudo))
         # «Sí, me acaba de dar el efectivo» es una confirmación del pago que ya
         # se dictó; sin esto se vuelve a preguntar si el dinero entró.
         nuevo_texto = texto_crudo[continuacion_desde:]

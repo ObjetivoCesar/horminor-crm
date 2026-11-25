@@ -1355,6 +1355,104 @@ async def chat(
         )
         return await cerrar(respuesta.texto, respuesta.estado)
     puente = "cerebro" if retomar_pedido or decision.modo in ("nuevo", "continuar") else _puente(body.mensaje)
+    # ------------------------------------------------------------------ #
+    # Skill de cotizaciones: envío por WhatsApp desde Gato                #
+    # Solo intercepta cuando YA existe una cotización en BD para este     #
+    # asunto/borrador (o cuando se está confirmando un envío ya           #
+    # preparado). Si aún no existe cotización, pasa al Cerebro para       #
+    # crear primero el cliente/borrador/cotización.                       #
+    # ------------------------------------------------------------------ #
+    _plano_msg = _plano(body.mensaje)
+    _es_envio_cotizacion = (
+        memoria_activa
+        and (decision.tipo == "cotizacion" or (asunto is not None and asunto.tipo == "cotizacion"))
+        and decision.modo in ("nuevo", "continuar", "confirmar")
+        and (
+            (decision.modo == "confirmar" and asunto is not None and asunto.estado == "ESPERANDO_CONFIRMACION" and bool((asunto.datos or {}).get("cotizacion_id")))
+            or any(
+                marca in _plano_msg
+                for marca in ("envia", "enviale", "mandale", "manda", "enviar", "mandar")
+            )
+        )
+    )
+    if _es_envio_cotizacion:
+        _borrador_id_sk = (asunto.borrador_id if asunto else None) or estado_dialogo.get("borrador_id")
+        _hilo_cots: tuple[str, ...] = ()
+        if _borrador_id_sk and isinstance(pool, asyncpg.Pool):
+            _hilo_cots = tuple(
+                str(r["id"])
+                for r in await pool.fetch(
+                    "SELECT id::text FROM cotizaciones WHERE borrador_id = $1::text ORDER BY creada_en DESC LIMIT 5",
+                    str(_borrador_id_sk),
+                )
+            )
+        _cot_dep = (asunto.datos or {}).get("cotizacion_id") if asunto else None
+        if _hilo_cots or _cot_dep:
+            try:
+                await exigir_modulo(request, "cotizaciones", mutacion=True)
+            except HTTPException:
+                pass
+            else:
+                _settings_sk = getattr(request.app.state, "settings", None)
+                _puertos = Puertos(
+                    config=_PoolConfigPort(pool),
+                    cotizaciones=_PoolCotizacionesPort(pool, _settings_sk),
+                    avisos_dinero=PostgresAvisosDinero(pool) if isinstance(pool, asyncpg.Pool) else None,
+                )
+                _ctx_sk = ContextoSkill(
+                    actor=actor,
+                    asunto_id=asunto_id or str(uuid4()),
+                    puertos=_puertos,
+                    accion={},
+                    borrador_id=_borrador_id_sk,
+                    datos=dict(asunto.datos or {}) if asunto else {},
+                    cliente_nombre=(asunto.datos or {}).get("nombre") if asunto else None,
+                    cotizaciones_hilo=_hilo_cots,
+                    cotizacion_dependencia=_cot_dep,
+                    sandbox=_modo_envio(request) != "evolution",
+                )
+                _skill_cot = CotizacionesSkill()
+                if decision.modo == "confirmar" and asunto and asunto.estado == "ESPERANDO_CONFIRMACION":
+                    _huella_confirmar = huella_texto(
+                        actor.actor_id, "enviar_cotizacion", dict(asunto.datos or {})
+                    )
+                    from .skills.contrato import Autorizacion
+                    _res = await _skill_cot.ejecutar_envio(
+                        _ctx_sk,
+                        Autorizacion(actor_id=actor.actor_id, rol=actor.rol, huella=_huella_confirmar),
+                    )
+                    if _res.estado == EJECUTADA:
+                        if asunto_id:
+                            await guardar_asunto(
+                                asunto_id,
+                                replace(asunto, estado="LIBRE", datos={**(asunto.datos or {}), "resultado": _res.nota}),
+                            )
+                        return await cerrar(_res.nota, "OK")
+                    return await cerrar(_res.nota, "ERROR")
+                _prep = await _skill_cot.preparar_envio(_ctx_sk)
+                if _prep.estado == ESPERANDO_CONFIRMACION:
+                    _sid = asunto_id or str(uuid4())
+                    _datos_asunto = {
+                        **dict(asunto.datos or {} if asunto else {}),
+                        **dict(_prep.parametros),
+                        "vista_confirmada": _huella_vista(_prep.vista),
+                    }
+                    await guardar_asunto(
+                        _sid,
+                        razonador.Asunto(
+                            "cotizacion",
+                            f"Envío cotización {_prep.parametros.get('cotizacion_id', '')[:8]}",
+                            "ESPERANDO_CONFIRMACION",
+                            _borrador_id_sk,
+                            (),
+                            _datos_asunto,
+                        ),
+                        vista=_prep.vista,
+                    )
+                    return await cerrar(_prep.vista, "FALTA")
+                if _prep.estado in (FALTAN_DATOS, NO_PERMITIDO):
+                    return await cerrar(_prep.motivo or _prep.vista or "No pude preparar el envío.", "FALTA")
+
     if puente == "cerebro":
         try:
             if decision.modo == "continuar" and asunto and asunto.borrador_id and not texto_previo:
@@ -1460,110 +1558,6 @@ async def chat(
         return MensajeOut(
             respuesta=texto, estado=estado, conversacion_id=conversacion_id
         )
-
-    # ------------------------------------------------------------------ #
-    # Skill de cotizaciones: envío por WhatsApp desde Gato                #
-    # Se activa cuando el razonador detecta modo envio_cotizacion, o      #
-    # cuando el mensaje menciona explícitamente enviar la cotización.     #
-    # ------------------------------------------------------------------ #
-    _es_envio_cotizacion = (
-        memoria_activa
-        and decision.tipo == "cotizacion"
-        and decision.modo in ("nuevo", "continuar", "confirmar")
-        and any(
-            marca in _plano(body.mensaje)
-            for marca in (
-                "envia", "enviale", "mandale", "manda", "enviar", "mandar",
-                "cotizacion", "cotizacion por whatsapp",
-            )
-        )
-    )
-    if _es_envio_cotizacion:
-        try:
-            await exigir_modulo(request, "cotizaciones", mutacion=True)
-        except HTTPException:
-            pass  # Si no tiene el módulo, el flujo normal de Cerebro lo manejará
-        else:
-            # Construir puertos para la skill
-            _settings_sk = getattr(request.app.state, "settings", None)
-            _config_port = _PoolConfigPort(pool)
-            _aviso_port = PostgresAvisosDinero(pool) if isinstance(pool, asyncpg.Pool) else None
-            _cot_port = _PoolCotizacionesPort(pool, _settings_sk)
-            _puertos = Puertos(
-                config=_config_port,
-                cotizaciones=_cot_port,
-                avisos_dinero=_aviso_port,
-            )
-            # Determinar si hay una cotización en hilo
-            _borrador_id_sk = (asunto.borrador_id if asunto else None) or estado_dialogo.get("borrador_id")
-            _hilo_cots: tuple[str, ...] = ()
-            if _borrador_id_sk and isinstance(pool, asyncpg.Pool):
-                _hilo_cots = tuple(
-                    str(r["id"])
-                    for r in await pool.fetch(
-                        "SELECT id::text FROM cotizaciones WHERE borrador_id = $1::text ORDER BY creada_en DESC LIMIT 5",
-                        str(_borrador_id_sk),
-                    )
-                )
-            _ctx_sk = ContextoSkill(
-                actor=actor,
-                asunto_id=asunto_id or str(uuid4()),
-                puertos=_puertos,
-                accion={},
-                borrador_id=_borrador_id_sk,
-                datos=dict(asunto.datos or {}) if asunto else {},
-                cliente_nombre=(asunto.datos or {}).get("nombre") if asunto else None,
-                cotizaciones_hilo=_hilo_cots,
-                cotizacion_dependencia=(asunto.datos or {}).get("cotizacion_id") if asunto else None,
-                sandbox=_modo_envio(request) != "evolution",
-            )
-            _skill_cot = CotizacionesSkill()
-
-            if decision.modo == "confirmar" and asunto and asunto.estado == "ESPERANDO_CONFIRMACION":
-                # Ejecutar el envío si ya había una preparación
-                _huella_confirmar = huella_texto(
-                    actor.actor_id, "enviar_cotizacion", dict(asunto.datos or {})
-                )
-                from .skills.contrato import Autorizacion
-                _auth = Autorizacion(
-                    actor_id=actor.actor_id,
-                    rol=actor.rol,
-                    huella=_huella_confirmar,
-                )
-                _res = await _skill_cot.ejecutar_envio(_ctx_sk, _auth)
-                if _res.estado == EJECUTADA:
-                    if asunto_id:
-                        await guardar_asunto(
-                            asunto_id,
-                            replace(asunto, estado="LIBRE", datos={**(asunto.datos or {}), "resultado": _res.nota}),
-                        )
-                    return await cerrar(_res.nota, "OK")
-                # Si falló, mostrar el error y seguir con flujo normal
-                return await cerrar(_res.nota, "ERROR")
-            else:
-                # Preparar el envío
-                _prep = await _skill_cot.preparar_envio(_ctx_sk)
-                if _prep.estado == ESPERANDO_CONFIRMACION:
-                    _sid = asunto_id or str(uuid4())
-                    _tipo_sk: razonador.Tipo = "cotizacion"
-                    _huella_prep = huella_texto(actor.actor_id, "enviar_cotizacion", dict(_prep.parametros))
-                    _datos_asunto = {**dict(asunto.datos or {} if asunto else {}), **dict(_prep.parametros), "vista_confirmada": _huella_vista(_prep.vista)}
-                    await guardar_asunto(
-                        _sid,
-                        razonador.Asunto(
-                            _tipo_sk,
-                            f"Envío cotización {_prep.parametros.get('cotizacion_id', '')[:8]}",
-                            "ESPERANDO_CONFIRMACION",
-                            _borrador_id_sk,
-                            (),
-                            _datos_asunto,
-                        ),
-                        vista=_prep.vista,
-                    )
-                    return await cerrar(_prep.vista, "FALTA")
-                if _prep.estado in (FALTAN_DATOS, NO_PERMITIDO):
-                    return await cerrar(_prep.motivo or _prep.vista or "No pude preparar el envío.", "FALTA")
-                # Continúa al flujo normal si no pudo preparar
 
     # Modulo comercial: Gato solo pide, no reimplementa reglas.
     if puente == "leads":

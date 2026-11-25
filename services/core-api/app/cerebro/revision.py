@@ -37,6 +37,8 @@ TIPOS_CONOCIDOS: dict[str, str] = {
     "cotizacion.resistencia": "TEXTO",
     "cotizacion.precio_m3": "DECIMAL",
     "cotizacion.descuento_pct": "DECIMAL",
+    "cotizacion.anticipo_pct": "DECIMAL",
+    "cotizacion.nota": "TEXTO",
     "cotizacion.plazo_entrega": "TEXTO",
     "cotizacion.dias_trabajo": "TEXTO",
     "cotizacion.fecha_entrega": "FECHA",

@@ -820,6 +820,18 @@ def _notas_cotizacion(
         notas.append("Descuento NO aplicado: el dictado pidió esperar")
     elif descuento is not None:
         notas.append(f"Descuento acordado: {descuento.normalize():f}%")
+    anticipo_pct = _decimal(hechos, "cotizacion.anticipo_pct")
+    if anticipo_pct is not None:
+        if _booleano_opcional(hechos, "pago.recibido") is True:
+            notas.append(f"Anticipo acordado: {anticipo_pct.normalize():f}%")
+        else:
+            notas.append(f"Condicion de anticipo acordada: {anticipo_pct.normalize():f}% (pendiente)")
+    nota_cot = _texto(hechos, "cotizacion.nota")
+    if nota_cot:
+        notas.append(nota_cot)
+    cuenta_dest = _texto(hechos, "pago.cuenta_destino")
+    if cuenta_dest:
+        notas.append(f"Cuenta para transferencia: {cuenta_dest}")
     plazo = _texto(hechos, "cotizacion.plazo_entrega")
     if plazo:
         notas.append(f"Plazo de entrega: {plazo}")
