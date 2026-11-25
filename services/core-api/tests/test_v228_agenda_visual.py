@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from decimal import Decimal
+from types import SimpleNamespace
 
 from app.agenda import eventos as eventos_svc
+from app.agenda import router as agenda_http
 from app.agenda.router import _tipos_permitidos
+from app.asistente import router as asistente_http
 from app.asistente.comercial_bridge import es_agenda_personal
 from app.comercial.intencion import (
     es_cancelacion_cita,
@@ -45,6 +48,69 @@ def test_tipos_permitidos_respeta_modulos_del_perfil() -> None:
         }
     }
     assert _tipos_permitidos(perfil) == ["mixers", "julio"]
+
+
+async def test_proximo_de_hoy_usa_zona_permisos_y_estado_vigente(monkeypatch) -> None:
+    ahora = datetime.fromisoformat("2026-11-24T09:30:00-05:00")
+    monkeypatch.setattr(agenda_http.tiempo, "ahora", lambda: ahora)
+    pool = object()
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(pool=pool)))
+
+    async def perfil(*_args):
+        return {"modulos_permitidos": {"agenda_despachos": True}}
+
+    prox = {"tipo": "mixers", "hora": "11:00", "estado": "RESERVA_CAMPO"}
+
+    async def listar(conexion, *, desde, hasta, tipos):
+        assert conexion is pool
+        assert desde == hasta == ahora.date()
+        assert tipos == ("mixers",)
+        return [
+            {"tipo": "mixers", "hora": "09:20", "estado": "PROGRAMADO"},
+            {"tipo": "mixers", "hora": "10:00", "estado": "CANCELADO"},
+            prox,
+            {"tipo": "mixers", "hora": None, "estado": "PROGRAMADO"},
+        ]
+
+    monkeypatch.setattr(agenda_http, "exigir_modulos", perfil)
+    monkeypatch.setattr(agenda_http.eventos_svc, "listar", listar)
+    assert await agenda_http.proximo_evento(request) == {
+        "hoy": "2026-11-24",
+        "evento": prox,
+    }
+
+
+async def test_gato_enlaza_solo_la_reserva_registrada(monkeypatch) -> None:
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(pool=object())), headers={}
+    )
+    actor = asistente_http.Actor(nombre="Prueba", rol="SUPERADMIN")
+    instruccion = "Dictado: agenda el mixer para mañana a las 14:00 con 6 metros cúbicos"
+    falta = await asistente_http.chat(asistente_http.MensajeIn(mensaje=instruccion), request, actor)
+    assert falta.estado == "FALTA"
+    assert "dirección" in falta.respuesta
+    assert falta.operacion_agenda is None
+
+    async def guardar(*_args, **_kwargs):
+        return {
+            "estado": "OK",
+            "mensaje": "Mixer agendado.",
+            "agenda": {
+                "id": "38895a69-44f9-4895-ada8-baa7397950f5",
+                "fecha_entrega": "2026-12-01",
+                "estado": "RESERVA_CAMPO",
+            },
+        }
+
+    monkeypatch.setattr(asistente_http.agenda_bridge, "crear", guardar)
+    reserva = await asistente_http.chat(asistente_http.MensajeIn(mensaje=instruccion), request, actor)
+    assert reserva.estado == "OK"
+    assert reserva.operacion_agenda.model_dump(mode="json") == {
+        "tipo": "mixers",
+        "id": "38895a69-44f9-4895-ada8-baa7397950f5",
+        "fecha": "2026-12-01",
+        "estado": "RESERVA_CAMPO",
+    }
 
 
 def test_evento_normaliza_hora_y_texto() -> None:

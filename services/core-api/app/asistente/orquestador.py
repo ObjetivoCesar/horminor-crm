@@ -28,6 +28,7 @@ class Actor:
     conversacion_id: str | None = None
     modo_envio: str = ""
     texto_actual: str = ""
+    solo_lectura: bool = False
 
 
 @dataclass
@@ -252,6 +253,8 @@ async def _ejecutar_accion(
     resultados: list[Resultado] = []
 
     if pilar == "recordatorios":
+        if getattr(actor, "solo_lectura", False) and nombre != "recordatorio_listar":
+            return [Resultado(nombre, "ACL", nota="Este turno corresponde a una consulta.")]
         return [await ejecutar_herramienta(nombre, params, biblio, actor)]
 
     if pasos == ("cliente_buscar", "cartera_cliente"):

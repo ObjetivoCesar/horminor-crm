@@ -207,6 +207,13 @@ async def calcular(pool: asyncpg.Pool, body: Any) -> dict[str, Any]:
             detail="UBICACION_SIN_PIN: el origen WhatsApp exige coordenadas",
         )
 
+    precio_estado_body = getattr(body, "precio_estado", None)
+    precio_estado = (
+        precio_estado_body
+        if precio_estado_body in ("PROVISIONAL", "OFICIAL")
+        else (receta["precio_estado"] or "PROVISIONAL")
+    )
+
     return {
         "cliente_id": cliente["id"],
         "cliente_nombre": cliente["nombre"],
@@ -218,7 +225,7 @@ async def calcular(pool: asyncpg.Pool, body: Any) -> dict[str, Any]:
         "volumen_m3": d(body.volumen_m3),
         "resistencia": body.resistencia.strip().upper(),
         "precio_m3": precio,
-        "precio_estado": receta["precio_estado"] or "PROVISIONAL",
+        "precio_estado": precio_estado,
         "incluye_equipo": body.incluye_equipo,
         "incluye_bombeo": body.incluye_bombeo,
         "acceso_notas": body.acceso_notas,

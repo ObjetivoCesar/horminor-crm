@@ -21,6 +21,7 @@ from typing import Any, Mapping, Sequence
 import asyncpg
 
 from ..asistente.fichas import Resultado
+from ..transacciones import transaccion
 from .dinero import sin_tildes
 
 ESTADOS = ("NOTIFICADA", "RESUELTA", "JUSTIFICADA", "REGISTRADA")
@@ -353,77 +354,76 @@ async def crear(
         )
     )
 
-    async with pool.acquire() as conn:
-        async with conn.transaction():
-            persona_id = await _resolver_persona(conn, persona)
-            fila = await conn.fetchrow(
+    async with transaccion(pool) as conn:
+        persona_id = await _resolver_persona(conn, persona)
+        fila = await conn.fetchrow(
+            """
+            INSERT INTO cerebro_tareas_internas (
+                clave_externa, instruccion, asignado_rol, asignado_a,
+                asignado_a_id, extraccion_id, borrador_id, cita, hablante,
+                creado_por, metadatos, prioridad, plazo_en
+            ) VALUES (
+                $1, $2, $3, $4, $5::uuid, $6::uuid, $7::uuid, $8, $9,
+                $10, $11::jsonb, $12, $13
+            )
+            ON CONFLICT (clave_externa) DO NOTHING
+            RETURNING id::text AS id
+            """,
+            clave_externa,
+            texto,
+            rol,
+            persona,
+            persona_id,
+            extraccion_id or None,
+            borrador_id or None,
+            cita,
+            hablante,
+            creado_por,
+            _jsonb(
+                {
+                    "canal": "PANEL",
+                    "borrador_id": borrador_id,
+                    "extraccion_id": extraccion_id,
+                    "ficha": dict(ficha or {}),
+                    **(metadatos or {}),
+                }
+            ),
+            prioridad_final,
+            vence,
+        )
+        if fila is None:
+            existente = await conn.fetchrow(
                 """
-                INSERT INTO cerebro_tareas_internas (
-                    clave_externa, instruccion, asignado_rol, asignado_a,
-                    asignado_a_id, extraccion_id, borrador_id, cita, hablante,
-                    creado_por, metadatos, prioridad, plazo_en
-                ) VALUES (
-                    $1, $2, $3, $4, $5::uuid, $6::uuid, $7::uuid, $8, $9,
-                    $10, $11::jsonb, $12, $13
-                )
-                ON CONFLICT (clave_externa) DO NOTHING
-                RETURNING id::text AS id
+                SELECT id::text AS id, estado
+                  FROM cerebro_tareas_internas
+                 WHERE clave_externa = $1
                 """,
                 clave_externa,
-                texto,
-                rol,
-                persona,
-                persona_id,
-                extraccion_id or None,
-                borrador_id or None,
-                cita,
-                hablante,
-                creado_por,
-                _jsonb(
-                    {
-                        "canal": "PANEL",
-                        "borrador_id": borrador_id,
-                        "extraccion_id": extraccion_id,
-                        "ficha": dict(ficha or {}),
-                        **(metadatos or {}),
-                    }
+            )
+            return Resultado(
+                consulta_id="cerebro.tarea_interna",
+                estado="OK",
+                datos={
+                    "id": existente["id"],
+                    "estado": existente["estado"],
+                    "repetido": True,
+                },
+                nota=(
+                    "Esa instruccion ya estaba registrada; no se duplico."
                 ),
-                prioridad_final,
-                vence,
             )
-            if fila is None:
-                existente = await conn.fetchrow(
-                    """
-                    SELECT id::text AS id, estado
-                      FROM cerebro_tareas_internas
-                     WHERE clave_externa = $1
-                    """,
-                    clave_externa,
-                )
-                return Resultado(
-                    consulta_id="cerebro.tarea_interna",
-                    estado="OK",
-                    datos={
-                        "id": existente["id"],
-                        "estado": existente["estado"],
-                        "repetido": True,
-                    },
-                    nota=(
-                        "Esa instruccion ya estaba registrada; no se duplico."
-                    ),
-                )
 
-            tarea_id = str(fila["id"])
-            await _guardar_evento(
-                conn,
-                tarea_id=tarea_id,
-                estado="NOTIFICADA",
-                actor_id=actor_id,
-                actor_nombre=creado_por,
-                rol_actor=rol_actor,
-                nota="Aviso dejado en el panel al confirmar el borrador.",
-                metadatos={"canal": "PANEL"},
-            )
+        tarea_id = str(fila["id"])
+        await _guardar_evento(
+            conn,
+            tarea_id=tarea_id,
+            estado="NOTIFICADA",
+            actor_id=actor_id,
+            actor_nombre=creado_por,
+            rol_actor=rol_actor,
+            nota="Aviso dejado en el panel al confirmar el borrador.",
+            metadatos={"canal": "PANEL"},
+        )
 
     return Resultado(
         consulta_id="cerebro.tarea_interna",
@@ -919,12 +919,14 @@ async def listar(
     *,
     estados: Sequence[str] = ESTADOS_ABIERTOS,
     limite: int = 50,
+    solo_seguimiento_agenda: bool = False,
 ) -> list[dict[str, Any]]:
     filas = await pool.fetch(
         f"""
         SELECT {_CAMPOS_TAREA}
           FROM v_cerebro_tareas_internas
          WHERE estado = ANY($1::text[])
+           AND (NOT $3::boolean OR (asignado_rol = 'SECRETARIA' AND metadatos ? 'agenda'))
          ORDER BY
            CASE prioridad WHEN 'URGENTE' THEN 0 ELSE 1 END,
            COALESCE(plazo_en, notificada_en),
@@ -933,6 +935,7 @@ async def listar(
         """,
         list(estados),
         max(1, min(int(limite), 200)),
+        solo_seguimiento_agenda,
     )
     return [_fila_a_dict(fila) for fila in filas]
 

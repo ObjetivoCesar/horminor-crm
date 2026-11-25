@@ -238,6 +238,72 @@ class EvolutionNotifier:
             return False
         return 200 <= respuesta.status_code < 300
 
+    async def enviar_documento_detalle(
+        self,
+        telefono: str,
+        nombre: str,
+        mimetype: str,
+        contenido: bytes,
+        texto: str | None = None,
+    ) -> dict[str, Any]:
+        """Igual que enviar_documento, pero expone message_id y estado real."""
+        if not self.configurado():
+            return {
+                "ok": False,
+                "message_id": None,
+                "estado": "FALLIDO",
+                "http_status": None,
+                "detalle": "evolution_no_configurado",
+            }
+        endpoint = f"{self._url}/message/sendMedia/{self._instancia}"
+        cuerpo = {
+            "number": formato_whatsapp(telefono),
+            "mediatype": "document",
+            "mimetype": mimetype or "application/octet-stream",
+            "fileName": nombre or "documento",
+            "caption": texto or "",
+            "media": base64.b64encode(contenido).decode("ascii"),
+        }
+        try:
+            if self._http is not None:
+                respuesta = await self._http.post(
+                    endpoint,
+                    json=cuerpo,
+                    headers={"apikey": self._api_key},
+                    timeout=max(self._timeout, 30.0),
+                )
+            else:
+                async with httpx.AsyncClient(timeout=max(self._timeout, 30.0)) as cliente:
+                    respuesta = await cliente.post(
+                        endpoint,
+                        json=cuerpo,
+                        headers={"apikey": self._api_key},
+                    )
+        except httpx.HTTPError as exc:
+            log.warning("fallo enviando documento a %s: %s", telefono, exc)
+            return {
+                "ok": False,
+                "message_id": None,
+                "estado": "FALLIDO",
+                "http_status": None,
+                "detalle": f"error_red: {type(exc).__name__}",
+            }
+        ok = 200 <= respuesta.status_code < 300
+        try:
+            datos = respuesta.json()
+        except ValueError:
+            datos = {}
+        key = datos.get("key") if isinstance(datos, dict) else None
+        message_id = key.get("id") if isinstance(key, dict) else None
+        estado = datos.get("status") if isinstance(datos, dict) else None
+        return {
+            "ok": ok,
+            "message_id": str(message_id) if message_id else None,
+            "estado": str(estado or ("ACEPTADA" if ok else "FALLIDO")),
+            "http_status": respuesta.status_code,
+            "detalle": f"HTTP {respuesta.status_code}",
+        }
+
 
 class NullNotifier:
     """Sin Evolution configurado: no finge envios."""

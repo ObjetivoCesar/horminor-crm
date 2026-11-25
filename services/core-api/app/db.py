@@ -56,7 +56,7 @@ async def run_migrations(pool: asyncpg.Pool, migrations_dir: str) -> list[str]:
     return applied
 
 
-async def setting(pool: asyncpg.Pool, key: str, default=None):
+async def setting(pool: asyncpg.Pool | asyncpg.Connection, key: str, default=None):
     """Lee un parametro maestro. El codigo nunca fija valores de negocio."""
     row = await pool.fetchrow("SELECT value FROM system_settings WHERE key = $1", key)
     if row is None:

@@ -7,7 +7,7 @@ Internet hasta implementar autenticacion.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, time
 from decimal import Decimal
 from typing import Any, Awaitable, Callable
 
@@ -15,7 +15,7 @@ import asyncpg
 from fastapi import APIRouter, Body, HTTPException, Query, Request
 
 from ..panel_acl import exigir_modulo
-from ..services.ordenes import NuevaOrden, crear_orden
+from ..services.ordenes import NuevaOrden, OrdenInvalidaError, crear_orden
 from .service import MemorySecretariaStore, PostgresSecretariaStore, SecretariaStore
 
 router = APIRouter(prefix="/api/v1/secretaria", tags=["secretaria"])
@@ -151,6 +151,9 @@ async def crear_orden_secretaria(
             ),
             creada_por=datos.get("creada_por") or "Secretaria",
             notas=datos.get("notas"),
+            fecha_entrega=date.fromisoformat(datos["fecha_entrega"]) if datos.get("fecha_entrega") else None,
+            hora_entrega=time.fromisoformat(datos["hora_entrega"]) if datos.get("hora_entrega") else None,
+            direccion_obra=datos.get("direccion_obra"),
             politica_viajes=datos.get("politica_viajes"),
             permitir_receta_provisional=bool(
                 datos.get("permitir_receta_provisional", True)
@@ -168,7 +171,10 @@ async def crear_orden_secretaria(
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=f"orden invalida: {exc}") from exc
 
-    resultado = await _creador(request)(orden)
+    try:
+        resultado = await _creador(request)(orden)
+    except OrdenInvalidaError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if hasattr(resultado, "orden_id"):
         return {
             "orden_id": resultado.orden_id,

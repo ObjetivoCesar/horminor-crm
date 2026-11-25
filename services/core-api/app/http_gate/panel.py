@@ -23,6 +23,7 @@ from fastapi import APIRouter, Body, Header, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from .. import tiempo
+from ..agenda.service import transaccion_agenda
 from ..agenda import (
     PostgresAgendaStore,
     conflicto_mixer,
@@ -660,32 +661,33 @@ async def crear_agenda(
 ):
     await exigir_modulo(request, "agenda_despachos", mutacion=True)
     ctx = _contexto_panel(rol, actor_id)
-    params = await _parametros_agenda(_pool(request))
-    duracion = body.duracion_estimada_min or params["duracion_entrega_default_min"]
-    error = validar_ventana(
-        parametros=params,
-        fecha=body.fecha_entrega,
-        hora=body.hora_inicio,
-        duracion_min=duracion,
-    )
-    if error:
-        raise HTTPException(status_code=422, detail=error)
-    store = _store_agenda(request)
-    filas = await store.listar(body.fecha_entrega, body.fecha_entrega)
-    _conflicto_o_409(
-        filas=filas,
-        mixer_codigo=body.mixer_codigo,
-        fecha=body.fecha_entrega,
-        hora=body.hora_inicio,
-        duracion=duracion,
-        parametros=params,
-    )
-    datos = body.model_dump()
-    datos["duracion_estimada_min"] = duracion
-    datos["creado_por_rol"] = ctx.actor.role
-    datos["creado_por_id"] = ctx.actor.id
-    fila = await store.crear(datos)
-    return {"agenda": fila}
+    async with transaccion_agenda(_pool(request)) as conn:
+        params = await _parametros_agenda(conn)
+        duracion = body.duracion_estimada_min or params["duracion_entrega_default_min"]
+        error = validar_ventana(
+            parametros=params,
+            fecha=body.fecha_entrega,
+            hora=body.hora_inicio,
+            duracion_min=duracion,
+        )
+        if error:
+            raise HTTPException(status_code=422, detail=error)
+        store = PostgresAgendaStore(conn)
+        filas = await store.listar(body.fecha_entrega, body.fecha_entrega)
+        _conflicto_o_409(
+            filas=filas,
+            mixer_codigo=body.mixer_codigo,
+            fecha=body.fecha_entrega,
+            hora=body.hora_inicio,
+            duracion=duracion,
+            parametros=params,
+        )
+        datos = body.model_dump()
+        datos["duracion_estimada_min"] = duracion
+        datos["creado_por_rol"] = ctx.actor.role
+        datos["creado_por_id"] = ctx.actor.id
+        fila = await store.crear(datos)
+        return {"agenda": fila}
 
 
 @router.patch("/agenda/{agenda_id}")
@@ -698,41 +700,42 @@ async def editar_agenda(
 ):
     await exigir_modulo(request, "agenda_despachos", mutacion=True)
     _contexto_panel(rol, actor_id)
-    params = await _parametros_agenda(_pool(request))
-    store = _store_agenda(request)
-    actual = await store.obtener(agenda_id)
-    if actual is None:
-        raise HTTPException(status_code=404, detail="agendamiento no encontrado")
+    async with transaccion_agenda(_pool(request)) as conn:
+        params = await _parametros_agenda(conn)
+        store = PostgresAgendaStore(conn)
+        actual = await store.obtener(agenda_id)
+        if actual is None:
+            raise HTTPException(status_code=404, detail="agendamiento no encontrado")
 
-    cambios = body.model_dump(exclude_unset=True)
-    if not cambios:
-        return {"agenda": actual}
+        cambios = body.model_dump(exclude_unset=True)
+        if not cambios:
+            return {"agenda": actual}
 
-    fecha = cambios.get("fecha_entrega") or date.fromisoformat(actual["fecha_entrega"])
-    hora = cambios.get("hora_inicio") or actual["hora_inicio"]
-    duracion = (
-        cambios.get("duracion_estimada_min")
-        or actual["duracion_estimada_min"]
-        or params["duracion_entrega_default_min"]
-    )
-    mixer = cambios.get("mixer_codigo", actual.get("mixer_codigo"))
-    error = validar_ventana(
-        parametros=params, fecha=fecha, hora=hora, duracion_min=int(duracion)
-    )
-    if error:
-        raise HTTPException(status_code=422, detail=error)
-    filas = await store.listar(fecha, fecha)
-    _conflicto_o_409(
-        filas=filas,
-        mixer_codigo=mixer,
-        fecha=fecha,
-        hora=hora,
-        duracion=int(duracion),
-        excluir_id=agenda_id,
-        parametros=params,
-    )
-    fila = await store.actualizar(agenda_id, cambios)
-    return {"agenda": fila}
+        fecha = cambios.get("fecha_entrega") or date.fromisoformat(actual["fecha_entrega"])
+        hora = cambios.get("hora_inicio") or actual["hora_inicio"]
+        duracion = (
+            cambios.get("duracion_estimada_min")
+            or actual["duracion_estimada_min"]
+            or params["duracion_entrega_default_min"]
+        )
+        mixer = cambios.get("mixer_codigo", actual.get("mixer_codigo"))
+        error = validar_ventana(
+            parametros=params, fecha=fecha, hora=hora, duracion_min=int(duracion)
+        )
+        if error:
+            raise HTTPException(status_code=422, detail=error)
+        filas = await store.listar(fecha, fecha)
+        _conflicto_o_409(
+            filas=filas,
+            mixer_codigo=mixer,
+            fecha=fecha,
+            hora=hora,
+            duracion=int(duracion),
+            excluir_id=agenda_id,
+            parametros=params,
+        )
+        fila = await store.actualizar(agenda_id, cambios)
+        return {"agenda": fila}
 
 
 @router.delete("/agenda/{agenda_id}")

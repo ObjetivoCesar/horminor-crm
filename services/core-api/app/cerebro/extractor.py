@@ -40,6 +40,7 @@ from .compilador import (
     compilar,
     dictado_revocado,
     normalizar_resistencia,
+    pide_reserva_mixer,
     textos_por_encargo,
 )
 from .encargos import asignar, fusionar_coordinaciones, segmentar
@@ -92,6 +93,11 @@ CLAVES = (
     "cotizacion.precio_m3",
     "cotizacion.forma_pago",
     "cotizacion.enviar",
+    "cotizacion.enviar_cuando",
+    "cotizacion.enviar_destinatario",
+    "cotizacion.extra_descripcion",
+    "cotizacion.extra_monto",
+    "cotizacion.extra_cobrable",
     "operacion.planta_movil",
     "pago.monto",
     "pago.forma",
@@ -123,6 +129,7 @@ Reglas duras:
 6. `intencion`: CONSULTA si solo pregunta o pide revisar; MUTACION si pide crear, registrar o enviar; MIXTA si hace las dos.
 7. Maximo 3 preguntas, solo las que bloquean la accion.
 8. Si el audio repite o corrige un dato, usa el ultimo valor y cita la correccion.
+La razon social del cliente no es la direccion de la obra. Si «Dirección» es parte del nombre de una entidad, usa cliente.nombre y espera una calle o referencia distinta para cotizacion.obra_direccion.
 9. Un numero de 10 digitos que empieza con 09 es un telefono, pero la clave depende de quien es: cliente.telefono solo si es el numero del cliente; contacto.telefono si es el maestro, encargado o ingeniero del cliente; tarea.telefono si es el destinatario de un recordatorio. Una cedula de 10 digitos que no empieza con 09 va en cliente.cedula.
 10. `contacto.*` es una persona distinta del cliente (maestro, encargado, ingeniero, chofer del cliente): contacto.nombre, contacto.rol y contacto.telefono. contacto.rol es una sola palabra ("maestro", "ingeniero", "encargado"), copiada de la cita. Ese telefono no va en cliente.telefono.
 11. Si el audio menciona VARIAS personas de contacto, usa contacto.* para la primera, contacto.2.* para la segunda y contacto.3.* para la tercera, con nombre, rol y telefono de cada una. No las juntes en un solo hecho ni pongas sus numeros en cliente.telefono.
@@ -143,11 +150,18 @@ Reglas duras:
 26. La duda afecta solo al dato que la sigue o la precede inmediatamente: "creo que eran treinta metros de hormigon de 240" marca TENTATIVO el volumen, NO la resistencia. "creo que el cliente es X" marca TENTATIVO el cliente. "para el viernes, creo" marca TENTATIVO la fecha. No marques TENTATIVO un dato que el hablante afirma con seguridad.
 27. Si el hablante pide CONTACTAR o LLAMAR a alguien por un tema ("hay que llamar al ingeniero Mauricio por lo del pago"), es una tarea dirigida a esa persona: usa tarea.destinatario con su nombre y tarea.mensaje con el tema copiado ("por lo del pago"). No inventes telefono ni hora. No es cotizacion.*.
 28. "Que me confirmen las medidas", "que revisen", "que verifiquen" es una instruccion al equipo: tarea.mensaje con la instruccion copiada y tarea.destinatario con el area si la nombra. No lo conviertas en cotizacion si no pide cotizar.
+29. Si el audio separa la entrega del envio del PDF («la entrega sigue a las diez; enviale el PDF a las seis y cincuenta de la tarde»), usa `cotizacion.hora_entrega` para la obra y `cotizacion.enviar_cuando` (TEXTO) para la hora/fecha del WhatsApp; nunca los mezcles. Si pide enviarla al encargado o a un contacto («enviasela ahi»), pon su nombre, rol o numero en `cotizacion.enviar_destinatario`.
+30. Gastos extras de la cotizacion: si menciona uno («retroexcavadora de 80 dolares que se cobra al cliente»), usa `cotizacion.extra_descripcion`, `cotizacion.extra_monto` (DECIMAL) y `cotizacion.extra_cobrable` (BOOLEANO). Si dice «ningun gasto extra» o «sin extras», emite `cotizacion.extra_cobrable` false citando esa frase.
+31. Si en un mismo audio habla de DOS clientes distintos, separa sus hechos en distinto `encargo` (1, 2…) para que cada dato quede con su dueño.
 """
 
 
 class ExtractorNoDisponible(RuntimeError):
     """Falta la clave del LLM o el proveedor fallo."""
+
+
+class ClienteConfirmadoDistinto(ValueError):
+    """Una continuación propone otro cliente para un alta ya realizada."""
 
 
 def _hoy() -> date:
@@ -898,7 +912,7 @@ def _notas_de_dinero_y_tarea(
     return notas
 
 
-async def _borrador_desde_hechos(
+async def _compilar_con_clientes(
     pool: asyncpg.Pool,
     hechos: list[HechoCitado],
     *,
@@ -906,31 +920,87 @@ async def _borrador_desde_hechos(
     sandbox: bool,
     hoy: date,
     texto: str | None = None,
-) -> tuple[Borrador, list[str], Any]:
-    """Resuelve cliente y receta y compila. Sin LLM: es determinístico."""
+    intencion_tarea: str | None = None,
+    cliente_confirmado: ClienteResuelto | None = None,
+) -> tuple[Borrador, list[str], Any, dict[int, ClienteResuelto]]:
+    """Resuelve cliente(s) por encargo y receta, y compila. Sin LLM."""
     notas: list[str] = []
-    cliente, candidatos, conflicto = await _resolver_cliente(pool, hechos)
-    if conflicto is not None:
+    encargos_idx = sorted({h.encargo for h in hechos}) or [1]
+    clientes_por_encargo: dict[int, ClienteResuelto] = {}
+    preguntas_id: list[Pregunta] = []
+
+    if cliente_confirmado:
+        nombres = {
+            _sin_tildes(str(hecho.valor)).strip()
+            for hecho in hechos
+            if hecho.clave == "cliente.nombre" and hecho.utilizable and hecho.valor
+        }
+        nombre_registrado = _sin_tildes(cliente_confirmado.nombre).strip()
+        if nombres - {nombre_registrado}:
+            raise ClienteConfirmadoDistinto(
+                f"El pedido ya está vinculado a {cliente_confirmado.nombre}. "
+                "Indica si quieres corregir el contacto de esa obra o abrir otro pedido."
+            )
+        cliente = cliente_confirmado
+        clientes_por_encargo = {idx: cliente_confirmado for idx in encargos_idx}
+    else:
+        sin_cliente_propio: list[int] = []
+        for idx in encargos_idx:
+            grupo = [h for h in hechos if h.encargo == idx]
+            tiene_cliente = any(
+                h.clave.startswith("cliente.") and h.utilizable and h.estado != "INFERIDO"
+                for h in grupo
+            )
+            if not tiene_cliente:
+                sin_cliente_propio.append(idx)
+                continue
+            cli_e, cands_e, conf_e = await _resolver_cliente(pool, grupo)
+            if conf_e is not None:
+                preguntas_id.append(replace(conf_e, encargo=idx))
+            elif cands_e:
+                candidatos_txt = ", ".join(c["nombre"] for c in cands_e)
+                preguntas_id.append(
+                    Pregunta(
+                        "cliente.nombre",
+                        f"Hay varios clientes parecidos: {candidatos_txt}. ¿Cuál es?",
+                        tuple(c["nombre"] for c in cands_e),
+                        encargo=idx,
+                    )
+                )
+            elif cli_e is not None:
+                clientes_por_encargo[idx] = cli_e
+
+        if not clientes_por_encargo and not preguntas_id:
+            cli_g, cands_g, conf_g = await _resolver_cliente(pool, hechos)
+            if conf_g is not None:
+                preguntas_id.append(conf_g)
+            elif cands_g:
+                candidatos_txt = ", ".join(c["nombre"] for c in cands_g)
+                preguntas_id.append(
+                    Pregunta(
+                        "cliente.nombre",
+                        f"Hay varios clientes parecidos: {candidatos_txt}. ¿Cuál es?",
+                        tuple(c["nombre"] for c in cands_g),
+                    )
+                )
+            elif cli_g is not None:
+                clientes_por_encargo = {idx: cli_g for idx in encargos_idx}
+        elif len({c.id for c in clientes_por_encargo.values()}) == 1:
+            unico = next(iter(clientes_por_encargo.values()))
+            for idx in sin_cliente_propio:
+                grupo = [h for h in hechos if h.encargo == idx]
+                if any(h.clave.startswith(("pago.", "traslado.")) for h in grupo):
+                    clientes_por_encargo[idx] = unico
+
+        unicos = {c.id: c for c in clientes_por_encargo.values() if c.id}
+        cliente = next(iter(unicos.values())) if len(unicos) == 1 else None
+
+    if preguntas_id and len(encargos_idx) == 1:
         borrador = Borrador(
             estado="REQUIERE_ACLARACION",
             intencion="MUTACION",
             acciones=(),
-            preguntas=(conflicto,),
-            hechos=tuple(hechos),
-        )
-    elif candidatos:
-        candidatos_txt = ", ".join(c["nombre"] for c in candidatos)
-        borrador = Borrador(
-            estado="REQUIERE_ACLARACION",
-            intencion="MUTACION",
-            acciones=(),
-            preguntas=(
-                Pregunta(
-                    "cliente.nombre",
-                    f"Hay varios clientes parecidos: {candidatos_txt}. ¿Cuál es?",
-                    tuple(c["nombre"] for c in candidatos),
-                ),
-            ),
+            preguntas=tuple(preguntas_id[:3]),
             hechos=tuple(hechos),
         )
     else:
@@ -941,16 +1011,56 @@ async def _borrador_desde_hechos(
                 hoy=hoy,
                 sandbox=sandbox,
                 cliente=cliente,
+                clientes_por_encargo=clientes_por_encargo,
                 receta=receta,
                 texto=texto,
+                intencion_tarea=intencion_tarea,
             ),
             intencion=intencion,
         )
+        if preguntas_id:
+            ambiguos = {p.encargo for p in preguntas_id}
+            acciones_ok = tuple(
+                a for a in borrador.acciones if a.encargo not in ambiguos
+            )
+            preguntas_tot = tuple(preguntas_id) + tuple(
+                p for p in borrador.preguntas if p.encargo not in ambiguos
+            )
+            borrador = replace(
+                borrador,
+                estado="REQUIERE_ACLARACION",
+                acciones=acciones_ok,
+                preguntas=preguntas_tot[:3],
+            )
         notas.extend(_notas_de_dinero_y_tarea(hechos, borrador))
         if dictado_revocado(texto) and not borrador.acciones:
             notas.append(
                 "El dictado revoca la instruccion: no se proponen acciones."
             )
+    return borrador, notas, cliente, clientes_por_encargo
+
+
+async def _borrador_desde_hechos(
+    pool: asyncpg.Pool,
+    hechos: list[HechoCitado],
+    *,
+    intencion: str,
+    sandbox: bool,
+    hoy: date,
+    texto: str | None = None,
+    intencion_tarea: str | None = None,
+    cliente_confirmado: ClienteResuelto | None = None,
+) -> tuple[Borrador, list[str], Any]:
+    borrador, notas, cliente, _ = await _compilar_con_clientes(
+        pool,
+        hechos,
+        intencion=intencion,
+        sandbox=sandbox,
+        hoy=hoy,
+        texto=texto,
+        intencion_tarea=intencion_tarea,
+        cliente_confirmado=cliente_confirmado,
+    )
     return borrador, notas, cliente
 
 
@@ -988,6 +1098,9 @@ async def interpretar(
     hoy: date | None = None,
     http_client: Any = None,
     continuacion_desde: int | None = None,
+    sobre_previo: SobreIn | None = None,
+    intencion_tarea: str | None = None,
+    cliente_confirmado: ClienteResuelto | None = None,
 ) -> dict[str, Any]:
     """Texto → sobre verificado → borrador. No escribe en la base."""
     hoy = hoy or _hoy()
@@ -1007,6 +1120,15 @@ async def interpretar(
         vocabulario=await _vocabulario(pool),
         http_client=http_client,
     )
+    if sobre_previo is not None:
+        # Conserva los hechos del pedido que el extractor omitió en esta vuelta.
+        # Se vuelven a validar contra el mismo texto y su cita original.
+        presentes = {(h.encargo or 1, h.clave) for h in sobre.hechos if h.cita}
+        recuperados = [
+            h for h in sobre_previo.hechos
+            if h.cita and (h.encargo or 1, h.clave) not in presentes
+        ]
+        sobre = sobre.model_copy(update={"hechos": recuperados + sobre.hechos})
     hechos, notas = construir_hechos(
         sobre, texto_crudo=texto_crudo, mapa=mapa, palabras=palabras
     )
@@ -1030,6 +1152,12 @@ async def interpretar(
         }
         if previos and nuevos:
             ultimo = max(hecho.encargo for hecho in previos)
+            if pide_reserva_mixer(mapa.texto):
+                ultimo = next(
+                    (hecho.encargo for hecho in previos
+                     if hecho.clave == "cotizacion.volumen_m3" and hecho.utilizable),
+                    ultimo,
+                )
             hechos = [
                 replace(hecho, encargo=ultimo) if id(hecho) in nuevos else hecho
                 for hecho in hechos
@@ -1064,13 +1192,15 @@ async def interpretar(
                     encargo=max(hecho.encargo for hecho in hechos),
                 )
             )
-    borrador, notas_compiladas, cliente = await _borrador_desde_hechos(
+    borrador, notas_compiladas, cliente, clientes_por_encargo = await _compilar_con_clientes(
         pool,
         hechos,
         intencion=sobre.intencion,
         sandbox=sandbox,
         hoy=hoy,
         texto=mapa.texto,
+        intencion_tarea=intencion_tarea,
+        cliente_confirmado=cliente_confirmado,
     )
     notas.extend(notas_compiladas)
     hechos_finales = list(borrador.hechos)
@@ -1088,6 +1218,7 @@ async def interpretar(
             textos_por_encargo=textos,
         ),
         "cliente": cliente,
+        "clientes_por_encargo": clientes_por_encargo,
         "texto_normalizado": mapa.texto,
         "palabras": [p.__dict__ for p in palabras],
     }
@@ -1105,7 +1236,7 @@ async def recompilar(
     """Vuelve a compilar con hechos ya corregidos, sin llamar al LLM."""
     hoy = hoy or _hoy()
     lista = list(hechos)
-    borrador, notas, _cliente = await _borrador_desde_hechos(
+    borrador, notas, _cliente, _clientes = await _borrador_desde_hechos(
         pool, lista, intencion=intencion, sandbox=sandbox, hoy=hoy, texto=texto
     )
     textos = textos_por_encargo(list(borrador.hechos), texto)

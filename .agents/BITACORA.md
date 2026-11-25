@@ -1,4 +1,4 @@
-﻿# BITÁCORA — Orminorth / Centinela
+# BITÁCORA — Orminorth / Centinela
 
 **Registro append-only.** Se añade al final. No se borra ni se reescribe una
 entrada anterior. Si una decisión cambió, se escribe una entrada nueva que lo
@@ -9631,3 +9631,560 @@ pagos y despachos no tienen sujeto. Julio confirmo que todo era ficticio.
 
 Julio prueba desde la web con todo en cero:
 `https://horminor.178.238.238.158.sslip.io/panel`, usuario `julio`.
+
+---
+
+## 2026-11-20 (XXX) - El recordatorio se programa y la cotizacion se confirma
+
+**Agente:** DeepSeek V4.1 Flash (OpenCode)
+**Duracion:** sesion unica
+**Objetivo:** que el dictado «enviarle un recordatorio a las 15 y 27 de hoy» se
+registre de verdad en `gato_recordatorios` y que la cotizacion del borrador deje
+de responder 501 al confirmarla.
+
+### Hecho
+
+1. **Se encontro la causa real del error repetido.** Con un borrador pendiente,
+   Gato tomaba el dictado nuevo como confirmacion del anterior:
+   `_accion_a_confirmar` buscaba subcadenas y «enviarle» contiene «envia».
+   Ejecutaba la accion vieja (`programado_inferido=true`) y devolvia
+   `CONFIRMAR_ENVIO_INMEDIATO`. El dictado nuevo nunca se interpretaba: por eso
+   "nunca registro el recordatorio".
+2. **Un dictado ya no confirma un borrador.** `_accion_a_confirmar` ignora los
+   mensajes con prefijo `dictado:`/`cerebro:` y los de mas de 10 palabras.
+3. **Hora hablada.** `cerebro/tiempo.py` y `asistente/recordatorios.py` leen
+   «a las 15 y 27» como 15:27 y «a las 3 y 30 de la tarde» como 15:30.
+4. **El chat puede completar el dato.** `ConfirmarIn` acepta `cuando`; el puente
+   envia `enviar_ahora` y `cuando`; con un borrador pendiente, la respuesta
+   «a las 15 y 27» o «mándalo ahora» se toma como la misma confirmacion, ahora
+   con el dato que faltaba.
+5. **Mensajes utiles.** Los guardas (`CONFIRMAR_ENVIO_INMEDIATO`,
+   `MENSAJE_POR_CONFIRMAR`) ya no se pegan como JSON crudo: Gato pregunta.
+6. **Cotizacion conectada.** `crear_cotizacion_borrador` entra en
+   `ACCIONES_CONECTADAS`: el panel la crea en `BORRADOR` por el servicio
+   compartido (`Decimal`, version 1, numero correlativo). No se ejecuta desde el
+   chat y `enviar_cotizacion_whatsapp` sigue sin ejecutor.
+
+### Evidencia (real, ejecutada)
+
+| Comando | Resultado |
+|---|---|
+| `pytest /app/tests` en local | **766 passed**, 2 warnings |
+| `recordatorios.crear(cuando="a las 15 y 27 de hoy")` local | OK; programado **20/11/2026 15:27** America/Guayaquil; fila borrada |
+| `ejecutores.crear_cotizacion_desde_accion` local | OK; HORM-COT-2026-0007; 1180.00 + IVA 177.00 = **1357.00**; version 1 |
+| Copia al VPS (5 archivos) | hash `git hash-object` identico al HEAD antes de copiar; backup en `/root/backup_recordatorio_20261120` |
+| `/health` del VPS | `{"status":"ok","db":"ok","db_latencia_ms":1.87}` |
+| `pytest` focalizado en el VPS | **101 passed**, 1 warning |
+| `ACCIONES_CONECTADAS` en el VPS | incluye `crear_cotizacion_borrador` |
+| `recordatorios.crear(...)` en el VPS | OK; `2026-11-20T20:27:00+00:00`; fila borrada |
+
+Archivo: `.agents/evidencias/recordatorio_cotizacion_2026-11-20.txt`.
+
+### Decisiones tomadas
+
+1. **La confirmacion del chat no se acepta con un dictado largo.** Preferible
+   pedir «dictado:» o una frase corta antes que consumir una instruccion nueva
+   como ratificacion. Alternativa descartada: adivinar por palabras clave
+   (fue justo el defecto).
+2. **`cuando` viaja en la confirmacion.** La hora la autoriza el humano en el
+   mismo turno; no se reescribe el borrador ni se llama otra vez al LLM.
+   Alternativa descartada: re-interpretar el mensaje (coste y nueva extraccion).
+3. **La cotizacion se confirma en el laboratorio, no en el chat.** El chat sigue
+   sin ejecutar dinero ni documentos comerciales. Alternativa descartada:
+   agregarla a `_ACCIONES_CONFIRMABLES`.
+4. **Los campos del borrador que no son del alta** (`precio_estado`,
+   `descuento_pct`, `plazo_entrega`, `fecha/hora_entrega_tentativa`) no se
+   pasan a `CotizacionIn`; el plazo y el descuento ya viajan en `notas`.
+
+### Bloqueos / preguntas al cliente
+
+1. El borrador `ef637a32` del VPS (dictado del comprobante del anticipo) sigue
+   con `programado_inferido=true`. Si Julio lo confirma, Gato ahora le pregunta
+   la hora en vez de fallar. No se borro nada.
+
+### Proximo paso exacto
+
+Julio dicta de nuevo desde Gato el recordatorio de las 15:27 y confirma; luego
+revisa `/panel/cerebro` y confirma la cotizacion del mismo borrador.
+
+### Archivos tocados
+
+- `services/core-api/app/cerebro/tiempo.py`
+- `services/core-api/app/cerebro/router.py`
+- `services/core-api/app/cerebro/ejecutores.py`
+- `services/core-api/app/asistente/router.py`
+- `services/core-api/app/asistente/cerebro_bridge.py`
+- `services/core-api/app/asistente/recordatorios.py`
+- `services/core-api/tests/test_recordatorios.py`
+- `services/core-api/tests/test_v87_cerebro_compilador.py`
+- `services/core-api/tests/test_v227_calendario_gato.py`
+- `docs/HORMINOR_MANUAL_FUNCIONAL.md`
+- `.agents/ESTADO.md`
+- `.agents/evidencias/recordatorio_cotizacion_2026-11-20.txt`
+
+## 2026-11-24 — Evaluación de madurez y pendientes de entrega
+
+**Agente:** Codex  
+**Objetivo:** Revisar los avances de tres semanas y priorizar cierres para Dirección.
+
+### Hecho
+Se contrastaron los hitos, el estado, el historial Git y la evidencia de la última validación.
+
+### Evidencia
+git log y git status muestran el último commit del 20 de noviembre y cambios posteriores en el árbol de trabajo. La evidencia recordatorio_cotizacion_2026-11-20.txt registra la validación focalizada del VPS. La revisión de hoy fue documental.
+
+### Decisiones tomadas
+Se propuso priorizar la aceptación con Julio y Secretaría y la reproducibilidad de la entrega. La prioridad oficial sigue en docs/HITOS.md.
+
+### Bloqueos / preguntas al cliente
+Falta documentar la aceptación del circuito comercial con datos reales y las reglas comerciales pendientes.
+
+### Próximo paso exacto
+Validar con Julio un dictado, su recordatorio con hora confirmada y la cotización en borrador desde el panel del Cerebro.
+
+### Archivos tocados
+.agents/BITACORA.md
+
+## 2026-11-24 — Dictado y reserva verificados en el VPS, primer ajuste móvil
+
+**Agente:** Codex
+**Objetivo:** Desplegar el corte de dictado y preparar la demostración móvil.
+
+### Hecho
+El VPS sirve los cambios de Gato y Agenda de la revisión 53c644f. Se verificó una cita de Julio y un audio sintético procesado por Gato que dejó una reserva visible en Agenda dentro de una transacción revertida.
+
+### Evidencia
+.agents/evidencias/vps_dictado_movil_2026-11-24.md. 122 pruebas focalizadas aprobadas, H1 COMERCIAL OK, comprobación móvil a 390 px aprobada y Core API saludable.
+
+### Decisiones tomadas
+Se preservó la configuración de Compose del VPS y se aplicó un despliegue de archivos verificados, porque el checkout del servidor conserva cambios históricos encima de 0cfa9fc.
+
+### Bloqueos / preguntas al cliente
+WhatsApp comercial sigue pendiente de datos oficiales. Falta comprobar el micrófono físico en el teléfono de Julio y validar el resto de las pantallas a 390 px.
+
+### Próximo paso exacto
+Abrir el panel en el teléfono de Julio, conceder permiso de micrófono y dictar una reserva de prueba. Abrir Agenda → Mixers y verificar fecha, hora y estado con Secretaría.
+
+### Archivos tocados
+Panel, Manual Vivo, ESTADO, HITOS, evidencia y bitácora.
+
+## 2026-11-24 — Inicio móvil y verificación de la reserva
+
+**Agente:** Codex
+**Objetivo:** Implementar el diseño móvil aprobado para revisar la agenda y dictar con Gato.
+
+### Hecho
+Inicio móvil con barra inferior, búsqueda bajo demanda, navegación según el perfil y acciones Dictar, Cotizar y Agendar. La tarjeta Próximo de hoy lee la Agenda y Gato puede abrir el registro exacto de una reserva o cita que se acaba de guardar.
+
+### Evidencia
+.agents/evidencias/h4_inicio_movil_2026-11-24.md. Playwright aprobado a 390 px y navegación de escritorio verificada a 1280 px. 51 pruebas focalizadas aprobadas. Suite Windows con 767 aprobadas y dos fallos de ruta del documento AGENTS.md.
+
+### Decisiones tomadas
+Se reutilizó la plantilla HTML y las vistas existentes para escritorio y móvil. El servidor elige el próximo evento según fecha, hora, estado y permisos. Gato devuelve una referencia estructurada del registro que acaba de guardar para abrir el día exacto en Agenda.
+
+### Bloqueos / preguntas al cliente
+Quedan el despliegue de esta revisión y la prueba de micrófono con Julio y Secretaría. H4 sigue en curso.
+
+### Próximo paso exacto
+Desplegar la revisión completa de Core API y comprobar en un teléfono de Julio el dictado con dirección pendiente y el dictado completo. Secretaría verifica el segundo en Agenda → Mixers.
+
+### Archivos tocados
+Panel, API de Agenda, respuesta y validación de mixer de Gato, pruebas de Agenda, Manual Vivo, HITOS, ESTADO, evidencia y bitácora.
+
+## 2026-11-24 — Cabeceras y accesos móviles de HORMINOR
+
+**Objetivo y hecho.** Se aplicó el patrón de cabecera fotográfica al 40 % en los ocho módulos del panel móvil y se compactaron las acciones. El tablero conserva sus cuatro pestañas y sus destinos.
+**Evidencia.** Playwright con Chrome a 390 px comprobó las ocho cabeceras en ambos temas, la opacidad calculada, la proporción cuadrada y la selección de las cuatro pestañas. A 1280 px se verificaron los nombres de escritorio. Resultado: OK.
+**Decisión.** Reutilizar fotografías y permisos del ERP con etiquetas cortas para móvil.
+**Bloqueos y próximo paso.** Pendiente el despliegue de H4 y la revisión en el teléfono de Julio.
+**Archivos.** Plantilla del panel y Manual Vivo.
+
+## 2026-11-24 — Inicio móvil y fotografías publicados en el VPS
+
+**Objetivo.** Habilitar la vista móvil en vivo.
+**Hecho.** Se actualizaron la plantilla del panel, sus dos fotografías, la API de Agenda y la referencia de operación de Gato. Se reconstruyó únicamente Core API.
+**Evidencia.** Antes, la foto principal respondía 200 pero el panel carecía de la cabecera móvil y la ruta de próximo evento devolvía 404. Después, Core API quedó healthy, el panel contiene la cabecera con opacidad .4, ambas fotos responden 200, la ruta de próximo evento devuelve la estructura esperada y Caddy responde 401 sin credenciales. Suite focalizada local: 51 aprobadas. Respaldo del despliegue: /root/backup_h4_mobile.wzcc8W.
+**Decisión.** Se compararon hashes contra 53c644f y se comprobó la integridad del paquete antes de reemplazar los archivos pertinentes.
+**Bloqueo y próximo paso.** Validación de micrófono y aceptación desde el teléfono de Julio con Secretaría.
+
+## 2026-11-24 — Portada móvil y anclas del tablero en el VPS
+
+**Objetivo.** Ampliar la fotografía del Inicio y mostrar el contenido de cada pestaña debajo de su selector.
+**Hecho.** Portada con foto ampliada, próximo evento y accesos. Operación, Venta, Inventario y Cobranzas abren su panel y llevan el selector debajo de la cabecera. Inicio devuelve a la portada.
+**Evidencia.** Playwright a 390 × 780 verificó las cuatro posiciones, contenidos y regreso a Inicio. A 1280 px quedaron visibles los resultados desde la entrada. El VPS quedó healthy y /panel coincide con la versión publicada con los finales de línea normalizados. Respaldo en /root/backup_h4_portada.mjogGe.
+**Decisión y próximo paso.** Los resultados se muestran tras elegir una pestaña en móvil. Pendiente la revisión en el teléfono de Julio.
+
+## 2026-11-24 — Restablecimiento de acceso de Julio al panel
+
+**Objetivo y hecho.** Se rotó la contraseña de julio en Caddy por solicitud del usuario.
+**Evidencia.** Configuración validada. El panel por HTTPS devolvió 200 con la contraseña nueva y 401 sin credenciales.
+**Decisión.** Se guardó la contraseña en el perfil local de Windows. Se dejó respaldo de la configuración previa en el VPS.
+**Próximo paso.** Julio abre el panel en el teléfono y sustituye la contraseña guardada en el navegador.
+
+## 2026-11-24 — Cabeceras temáticas de los ocho módulos
+
+**Objetivo y hecho.** Se asignó una imagen distinta y pertinente a cada módulo móvil. Se conservó la foto de mixers en Inicio y se generaron siete escenas ilustrativas para el resto del panel.
+**Evidencia.** Core API saludable en el VPS. Playwright autenticado por HTTPS decodificó las ocho cabeceras a 390 px y comprobó su asignación por módulo. Respaldo final en /root/backup_horminor_fotos.ph3RyL.
+**Decisión y próximo paso.** Se mantuvo el tratamiento de cabecera móvil. Queda la revisión de aceptación desde el teléfono de Julio.
+
+## 2026-11-24 — Portada completa para todos los módulos móviles
+
+**Objetivo y hecho.** Se extendió el patrón de Inicio a los otros siete módulos. Cada uno abre con foto y accesos, y revela su contenido con desplazamiento al elegir el acceso correspondiente.
+**Evidencia.** Playwright en el VPS autenticado a 390 × 780 verificó Agenda, Clientes, Banca, Cotizaciones, Secretaría, Planta y Superadmin. En escritorio el contenido se abrió directamente. Core API saludable. Respaldo final en /root/backup_h4_arranque.11TXvq.
+**Decisiones.** Los accesos a formularios conservan su apertura. Los módulos con formularios disponen de un botón de consulta. Se corrigió la carga inicial del perfil para conservar la portada ya elegida.
+**Próximo paso.** Revisar en el teléfono de Julio y continuar la aceptación de H4.
+
+## 2026-11-24 — Mis cargas e Inventario de Bodega
+
+**Agente:** Codex
+**Objetivo:** Que Bodega vea la dosificación de cada viaje sin consultar a Julio.
+
+### Hecho
+- La fecha y hora pactadas se vinculan a Agenda al crear la orden o convertir la cotización.
+- Bodega abre en Hoy, consulta los viajes, su dosificación y el inventario. La campana muestra entregas nuevas o actualizadas. Gerencia recibe los faltantes proyectados.
+
+### Evidencia
+- Playwright con Chrome a 390 × 780 y respuestas de prueba verificó Hoy, Mañana, dosis parcial con tres decimales, inventario y apertura desde el aviso.
+- Pytest con temporal del workspace: 767 pasaron. Dos pruebas documentales esperan un AGENTS.md ausente en services/core-api.
+- git diff --check en código y Manual Funcional sin errores.
+
+### Decisiones
+- Agenda y kardex aportan los datos, evitando una agenda paralela y cálculos en el celular. Los nuevos avisos se consultan dentro del ERP.
+
+### Bloqueos
+- Docker local no disponible. Falta confirmar la transacción en PostgreSQL y probar el recorrido en el teléfono de Bodega.
+
+### Próximo paso exacto
+- En el clon PostgreSQL, confirmar un pedido con hora de entrega y dos viajes, con una última carga parcial. Comprobar que aparece en la fecha acordada y que Gerencia ve un faltante si el disponible proyectado queda en negativo.
+
+### Archivos tocados
+- Panel, router Bodega, alta de órdenes, conversión de cotizaciones, Agenda y Manual Funcional.
+
+## 2026-11-24 — Diagnóstico de Groq y transcripción visible
+
+**Agente:** Codex
+**Objetivo:** Diagnosticar el dictado móvil y verificar el respaldo de Groq.
+
+### Hecho
+- Se verificaron las dos credenciales activas por separado desde Core API. La configuración cargó GroqCascada con dos claves únicas y whisper-large-v3.
+- El panel publicado ahora muestra abierta la transcripción de voz al recibirla.
+
+### Evidencia
+- Cuatro trabajos recientes completados antes de la intervención. Ambas claves respondieron a una entrada sintética.
+- 13 pruebas focalizadas de Groq y cascada pasaron.
+- Chrome a 390 × 780 contra el VPS, con captura sintética por el micrófono del navegador, devolvió HTTP 200, transcripción con las palabras esperadas y estado OK en Gato. Antes el texto quedaba plegado. Tras publicar, quedó abierto.
+- Respaldo de la plantilla en /root/horminor-transcripcion.7DgMkW.
+
+### Decisiones y próximo paso
+- Se publicó el cambio puntual de presentación. Queda validar con un dictado en el teléfono físico del usuario.
+
+### Archivos tocados
+- services/core-api/app/web/templates/panel.html
+
+
+## 2026-11-24 — Reserva de mixers desde pedidos dictados
+
+**Agente:** Codex
+**Objetivo:** Conservar el primer dictado y reservar desde Gato con disponibilidad de Agenda.
+
+### Hecho
+- El borrador conserva el pedido al completar la hora. Gato filtra pruebas de sonido y el Cerebro conserva los hechos previos que el extractor omite.
+- Agenda revisa capacidad y cruces por franja. Al confirmar, guarda las cargas en una transacción. El chat devuelve el enlace al registro.
+- Se actualizó el Manual Funcional y su índice.
+
+### Evidencia
+- Pytest local con temporal dentro del workspace: 772 pruebas pasaron. Dos pruebas documentales requieren el AGENTS.md ausente en services/core-api.
+
+### Decisiones
+- La reserva se confirma como acción del Cerebro. El cálculo de cupo queda en reglas determinísticas de Agenda.
+
+### Bloqueos
+- Motor de Docker local no disponible. Queda verificar PostgreSQL y probar desde el teléfono. Cambios locales.
+
+### Próximo paso exacto
+- En un entorno de prueba con capacidad de flota configurada, dictar Sur Cárnico, completar la hora, abrir la reserva y repetir la confirmación. Verificar una única reserva y probar una franja ocupada.
+
+### Archivos tocados
+- Asistente, Cerebro, servicio y rutas de Agenda, pruebas y Manual Funcional.
+
+
+## 2026-11-24 — Estado del pedido en Gato y bandeja móvil de Cotizaciones
+
+**Agente:** Codex
+**Objetivo:** Responder con el estado real del pedido y contener la bandeja a ancho de teléfono.
+
+### Hecho
+- Las preguntas breves de seguimiento consultan el borrador activo y sus acciones ejecutadas. Los dictados de negocio pasan al Cerebro y Agenda comprueba cupo por franja y capacidad para reservar.
+- La bandeja de Cotizaciones presenta los campos en una ficha por fila a ancho de celular. La selección abre el detalle y muestra la acción de envío.
+- Se publicó la imagen y la plantilla se preparó sobre la copia del VPS para preservar sus otros cambios.
+
+### Evidencia
+- Consulta de solo lectura al borrador compartido: crear_cliente, EXITOSO.
+- Pytest: 81 pruebas focalizadas en local, 21 en la imagen del VPS.
+- Chrome con datos de prueba: 320, 390 y 1280 px, ancho de página sin desbordamiento y acción Enviar por WhatsApp visible tras seleccionar.
+- Core API healthy, base OK y hash de la plantilla activa verificado. Respaldo en /root/horminor-gato-backup.LKr30R.
+
+### Decisiones
+- El estado del pedido se lee de las ejecuciones del Cerebro. La conversación general deja de inferir si se registró.
+- Se conservó la tabla en escritorio y se transformó la misma fila en una ficha en celular.
+
+### Bloqueos
+- Pendiente aceptación en el teléfono y prueba de reserva completa con capacidad de flota suficiente.
+
+### Próximo paso exacto
+- En el teléfono, preguntar «¿registraste?» en el hilo original. Recargar el panel, abrir Cotizaciones, seleccionar la cotización enviada y verificar la bandeja y el detalle. En un pedido de prueba, verificar la franja de Agenda y confirmar solo cuando haya capacidad.
+
+### Archivos tocados
+- Router y herramientas de Gato, extractor de Cerebro, plantilla del panel, pruebas y Manual Funcional.
+
+
+## 2026-11-24 — Razonador semántico de Gato y continuidad por asunto
+
+**Agente:** Codex
+**Objetivo:** Conservar pedidos intercalados y devolver al interlocutor la aclaración concreta que necesita.
+
+### Hecho
+- El razonador usa el proveedor conversacional configurado para interpretar cada turno con el historial y los asuntos guardados. Valida las referencias al asunto y los fragmentos citados por el modelo.
+- Cotización, visita y recordatorio pueden intercalarse. Una corrección enlaza la revisión del borrador y la confirmación corresponde a la vista previa del asunto en foco.
+- El borrador de cotización aplica el descuento con Decimal en el ejecutor compartido. Agenda y el programador conservan sus comprobantes.
+- Actualizados el Manual Funcional y Continuidad del Cerebro.
+
+### Evidencia
+- Suite completa de Core API con temporal dentro del workspace: 778 pasaron. Dos pruebas documentales preexistentes requieren services/core-api/AGENTS.md, ausente en el repositorio.
+- Cinco pruebas específicas cubren diálogo intercalado, ambigüedad, delegación, citas inventadas, confirmación fuera de foco y descuento. Las respuestas del proveedor y las acciones externas se simularon.
+
+### Decisiones
+- Se incorporó la interpretación semántica al chat actual. Las reglas por frase se descartaron para clasificar la conversación. Los permisos, importes y transiciones se mantienen en los servicios correspondientes.
+- Los asuntos se guardan en el JSON de conversación y enlazan revisiones del Cerebro con el esquema existente.
+
+### Bloqueos
+- Verificación con proveedor real y PostgreSQL pendiente. El proceso local carece de credencial DeepSeek. Cambios en el workspace.
+
+### Próximo paso exacto
+- En un entorno de prueba con proveedor configurado, ejecutar por voz y teclado la conversación sintética de cotización, recordatorio y visita. Retomar la cotización y verificar la revisión, descuento y comprobantes de las acciones autorizadas.
+
+### Archivos tocados
+- Asistente, Cerebro, pruebas de diálogo y documentación funcional.
+
+
+## 2026-11-24 — Razonador de Gato publicado para pruebas por texto
+
+**Agente:** Codex
+**Objetivo:** Habilitar la versión del razonador en el panel del VPS.
+
+### Hecho
+- Core API reconstruido con los cambios de Gato y Cerebro. La plantilla y los módulos ajenos al cambio conservaron su versión publicada.
+- Se ajustó el tiempo máximo de respuesta al valor configurado del proveedor. Los campos opcionales nulos se aceptan y los campos adicionales del proveedor se descartan.
+
+### Evidencia
+- 15 pruebas focalizadas en la imagen candidata.
+- PostgreSQL verificó por medio de una tabla temporal que dos asuntos se conservan y el foco queda en el último. Transacción revertida.
+- Siete consultas sintéticas con el proveedor real aprobaron cotización, recordatorio personal, visita, continuación por hora, retorno a cotización, ambigüedad y consulta general.
+- HEALTH y base OK. Hash activo 8141efdcc831c6fb3b5eeae12bd38fda17c7b57fe62f683b8bd2b870e57a3bf7. Respaldo /root/horminor-razonador-backup.hRo46j.
+
+### Decisiones
+- Activación condicionada a las pruebas reales de clasificación y persistencia. Los dos primeros intentos conservaron la imagen anterior.
+- Las pruebas usaron texto ficticio y no confirmaron operaciones comerciales.
+
+### Bloqueos
+- Pendiente aceptación del usuario desde el panel. La prueba semántica verificó clasificación y referencias. Falta la prueba humana de la conversación completa.
+
+### Próximo paso exacto
+- Abrir Gato en el VPS, pulsar Nueva conversación y pegar los textos en orden. Verificar la corrección de la cotización tras intercalar recordatorio y visita. Detenerse en los borradores.
+
+### Archivos tocados
+- Razonador y prueba focalizada. Imagen de Core API, bitácora y estado.
+
+
+## 2026-11-24 — Verificación de Agenda en la prueba por texto
+
+**Agente:** Codex
+**Objetivo:** Distinguir los borradores conversacionales de los registros operativos de Agenda.
+
+### Hecho
+- El hilo de prueba guardó 11 turnos y cuatro borradores del Cerebro. Quedaron vigentes dos borradores de cotización. La visita y el recordatorio quedaron esperando aclaración.
+- Cero ejecuciones de los cuatro borradores. Cero clientes, cotizaciones, visitas, recordatorios o tareas de esta prueba.
+- Una prueba separada llamó a los servicios de cita, recordatorio y lectura de Agenda con tablas temporales del VPS. Agenda devolvió visita SOLICITADA y recordatorio PENDIENTE. Transacción revertida.
+
+### Evidencia
+- SQL en transacción de solo lectura por identificadores de borrador e hilo.
+- Salida del verificador: AGENDA_POSTGRES_OK visita=SOLICITADA recordatorio=PENDIENTE y ROLLBACK_TABLAS_TEMPORALES.
+
+### Decisiones
+- La aceptación por interpretación y la aceptación del registro operativo requieren evidencias diferentes. Los ejemplos del usuario se conservan como borradores de prueba.
+
+### Bloqueos
+- El perfil de Julio carece de WhatsApp para el recordatorio personal. La visita requiere identificar un lead y todavía sustituye el nombre por el teléfono cuando ese dato llega después.
+
+### Próximo paso exacto
+- Corregir la aclaración de la visita para conservar nombre y teléfono en campos separados. Tras completar los requisitos, verificar una acción real solo con un caso que el usuario decida confirmar.
+
+### Archivos tocados
+- Bitácora. La auditoría y la verificación temporal se ejecutaron en el VPS.
+
+
+## 2026-11-24 — Agenda de Gato confirmada en un paso
+
+**Agente:** Codex
+**Objetivo:** Guardar eventos al confirmar en Gato y dejar la revisión de Secretaría para después.
+
+### Hecho
+- Gato guarda las visitas en CONFIRMADA después de la ratificación. Una visita con nombre dictado puede salir a Agenda sin alta de un lead. El recordatorio personal se registra con canal PANEL, estado AGENDADO y sin destino WhatsApp.
+- Al reservar un mixer disponible se guarda la franja con unidades asignadas. Las tres operaciones dejan una tarea de revisión vinculada para Secretaría en la misma transacción.
+- La Agenda ofrece corrección de horario para visitas y recordatorios de Gato. Secretaría conserva la edición de reservas según los permisos de Agenda.
+- El razonador recibe hasta doce asuntos entre foco, referencias al turno y recientes. Nueva conversación sigue disponible.
+
+### Evidencia
+- Local: 779 pruebas aprobadas y dos fallos documentales preexistentes por el AGENTS.md ausente en services/core-api.
+- Imagen candidata: 49 pruebas focalizadas. Validación PostgreSQL en tablas temporales: visita CONFIRMADA, recordatorio AGENDADO, reserva de mixer visible, tres tareas de revisión, dos correcciones y contexto limitado a 12 entre 1.000 asuntos. Transacción revertida.
+- VPS: migración 100 aplicada, Core API y DB saludables. Respaldo verificado por inventario en /root/horminor-agenda-backup.KlEX2L. Plantilla activa c9ebcf042151769a0b2ab5f7545e9bceab2e07197634efcc3b1c15f278ad371f.
+
+### Decisiones
+- Se modifica explícitamente la entrada Gato del núcleo comercial por decisión del usuario. La confirmación de Julio es suficiente para hacer efectiva la visita. Secretaría recibe seguimiento en vez de una segunda aprobación.
+- El estado técnico RESERVA_CAMPO continúa bloqueando las unidades en Agenda y se muestra como Reservado. Se añadió el canal interno de recordatorios para una cita de agenda que no dispara WhatsApp.
+- La ventana de modelo se limita ahora. El catálogo de clientes y el historial guardado se consultan aparte. Queda pendiente medir concurrencia y evaluar un índice por asunto si crecen los hilos.
+
+### Bloqueos
+- Pendiente aceptación de Julio y Secretaría en el panel. La prueba de 1.000 asuntos comprueba el límite de contexto y no mide latencia bajo carga.
+
+### Próximo paso exacto
+- Confirmar en Gato un recordatorio interno real con hora futura. Abrir Ver en Agenda y verificar la tarea con el perfil Secretaría. Probar una corrección de horario y comprobar que el evento siga agendado.
+
+### Archivos tocados
+- Migración 100, Agenda, Asistente, Cerebro, citas, plantilla del panel, pruebas y Manual Funcional.
+
+
+## 2026-11-24 — Continuidad del pedido después de crear el cliente
+
+**Agente:** Codex
+**Objetivo:** Permitir completar una cotización después de confirmar el alta asociada al mismo pedido.
+
+### Hecho
+- La revisión del borrador conserva el ID del cliente confirmado en su línea de versiones. Agregar el contacto de obra permite seguir a la cotización sin repetir el alta.
+- Los errores del Cerebro se presentan en texto. La cotización puede prepararse aunque siga pendiente la aprobación requerida para su envío.
+
+### Evidencia
+- Lectura del VPS: el alta del cliente fue exitosa y no hay cotización, reserva ni tarea de ese borrador.
+- Una comprobación de PostgreSQL en tablas temporales registró alta=1, revisiones=2, cotización propuesta=1 y rechazó el cambio a otro cliente. Transacción revertida.
+
+### Decisiones
+- La continuidad reutiliza la ejecución del alta. Las revisiones de otros efectos ya ejecutados se mantienen protegidas para evitar duplicados.
+
+### Bloqueos
+- El revisor automático rechazó el intento de publicación que reutilizaba un script anterior. El paquete se verificó en un contenedor temporal. Falta autorizar y publicar la corrección.
+
+### Próximo paso exacto
+- Con autorización de publicación, desplegar solo los cuatro archivos de Asistente y Cerebro que figuran en el manifiesto de continuidad. Retomar el mismo hilo de Inapesa y dictar de nuevo la aclaración del contacto para ver la propuesta antes de confirmarla.
+
+### Archivos tocados
+- Asistente, Cerebro, prueba focalizada, Manual Funcional y bitácora.
+
+
+## 2026-11-24 — Corrección de continuidad activa en el VPS
+
+**Agente:** Codex
+**Objetivo:** Que el pedido continúe después de un alta de cliente confirmada.
+
+### Hecho y evidencia
+- Con autorización del usuario se publicaron los cuatro archivos ya verificados en el contenedor temporal. Se comprobó el hash de cada archivo activo. Core API y base quedaron saludables.
+- Respaldo en /root/horminor-continuidad-backup.oA8dMk.
+
+### Decisión
+- El despliegue quedó limitado al arreglo del alta parcial. La comprobación de esta publicación fue de versión y salud.
+
+### Bloqueos y próximo paso exacto
+- Pendiente aceptación en el hilo existente de Inapesa. Repetir la aclaración del contacto y revisar la propuesta de cotización.
+
+### Archivos tocados
+- Imagen de Core API y bitácora.
+
+## 2026-11-24 — Diagnóstico de la cotización en tres encargos
+
+**Agente:** Codex. **Objetivo:** revisar el dictado y ubicar las reglas de mínimos.
+
+### Hecho y evidencia
+Consulta de solo lectura en el VPS con psql sobre los tres IDs facilitados, seleccionando estado y jsonb_array_length(encargos_json) en orden cronológico. Resultado: 1 SUPERADO_POR_CORRECCION, 2 SUPERADO_POR_CORRECCION, 3 REQUIERE_ACLARACION. El chat muestra la hora de envío como entrega y agrega volumen y dirección en un tercer encargo.
+
+### Decisiones y bloqueos
+Revisión diagnóstica. La aceptación del flujo de seguimiento sigue pendiente. El compilador valida volumen y obra por encargo. El contrato del PDF tiene requisitos distintos.
+
+### Próximo paso exacto
+Reproducir los tres turnos con datos sintéticos y comprobar en qué paso se separa el envío de la cotización activa y se clasifica su hora como entrega.
+
+### Archivos tocados
+- Bitácora y estado.
+
+## 2026-11-24 — Insumos para integrar skills e historial de Gato
+
+**Agente:** Codex. **Objetivo:** reunir interfaces para la implementación externa.
+
+### Hecho y evidencia
+ZIP de 55 archivos validado con zipfile.testzip(). Incluye código de Gato, Cerebro, Agenda, Cotizaciones, transporte WhatsApp y migraciones de referencia. Se revisaron el estado de recordatorios personales, los roles del compilador y la detección de solapamiento.
+
+### Decisiones y pendientes
+La revisión reutiliza las tablas y el servicio de Agenda existentes. Cantidad real de mixers y margen operativo pendientes de validación del negocio. La entrega no cambió código ni políticas.
+
+### Próximo paso exacto
+Cuando llegue la implementación externa, comparar sus contratos de entrada y salida con el compilador, el extractor y el almacenamiento histórico incluidos en el ZIP.
+
+### Archivos tocados
+- ZIP de insumos y bitácora.
+
+## 2026-11-24 — Propuesta funcional de las cuatro piezas de Gato
+
+**Objetivo y resultado.** Documento para revisión manual de César, Julio y Secretaría en docs/GATO_SKILLS_REVISION_FUNCIONAL.md. Compara implementación y propuesta e incluye seis operaciones y un recorrido desde el celular en obra.
+
+**Evidencia.** Lectura UTF-8 del Markdown con Python, diez enlaces locales resueltos y seis apartados de operación.
+
+**Decisiones.** Un movimiento de dinero comunicado a Gato origina un aviso a Secretaría, responsable de verificar y registrar. La disponibilidad puede consultarse directamente y el resultado de cada operación se incorpora al asunto identificado.
+
+**Pendientes y próximo paso.** Revisar las fichas con Julio y Secretaría, especialmente aprobación de precio, permiso de envío y margen de reservas. La sesión produjo documentación de diseño.
+
+## 2026-11-24 — Gato Skills operativas v2.22
+
+### Objetivo
+Implementar las cuatro piezas del sistema de razonamiento de Gato: razonador enriquecido, historiador de asuntos, skills operativas (cotizaciones, agenda, avisos de dinero, política) y conexión en el router. Resolver el caso concreto «envíale la cotización al encargado a las 18:50» de punta a punta.
+
+### Hecho
+
+**Corrección crítica:**
+- `app/services/cotizaciones_envio.py`: cambio de import `chat_clientes` → `cotizaciones` en `_config_bunny`. Era el único error de importación bloqueante.
+
+**Phase 3 — Skills operativas:**
+- `app/asistente/skills/politica.py`: `huella_texto()` SHA-256 determinístico para vincular confirmación a parámetros mostrados; `permisos_envio_cotizacion()` por rol; `precio_bloqueado()` PROVISIONAL en producción.
+- `app/asistente/skills/avisos_dinero.py` (`PostgresAvisosDinero`): implementación de `AvisosDineroPort` contra `cerebro_tareas_internas`. Idempotente por `clave_externa = sha256(cliente+monto+forma+día)`. Nunca toca `payments`.
+- `app/asistente/skills/agenda.py` (`AgendaSkill`): `preparar_consulta()`, `preparar_recordatorio()`, `ejecutar_recordatorio()`, `verificar_cupo()`. No escribe sin autorización.
+- `app/asistente/skills/cotizaciones_skill.py` (`CotizacionesSkill`): `preparar_envio()` resuelve cotización, permisos, teléfono y hora antes de mostrar el resumen al actor; `ejecutar_envio()` llama `cotizaciones_envio.enviar_cotizacion()` solo si la huella coincide.
+
+**Phase 4 — Historiador:**
+- `app/asistente/redactor_historial.py`: `AsuntoRegistros` dataclass + `contexto_para_razonador()` consulta cotizaciones, citas, recordatorios, avisos de dinero y hechos confirmados; `ficha_de_asunto()` → dict compacto para el razonador; `nota_de_contexto()` → una frase sin verbos de acción, solo estado verificado.
+
+**Phase 5+6 — Wiring en router:**
+- `app/asistente/router.py`:
+  - Nuevos imports: skills, historiador, contrato de puertos.
+  - `_PoolConfigPort`: lee `system_settings` via `setting()`.
+  - `_PoolCotizacionesPort`: `obtener()`, `abiertas()`, `enviar()` (delega a `cotizaciones_envio`), `consultar_envio()`.
+  - Bloque `_es_envio_cotizacion`: intercepta antes del módulo comercial cuando el razonador detecta `cotizacion` + verbo de envío → llama `CotizacionesSkill.preparar_envio()` / `ejecutar_envio()` según el modo. La confirmación usa `huella_texto` para vincular el «sí» de Julio exactamente a lo mostrado.
+
+### Evidencia
+```
+781 passed, 2 failed (pre-existing: AGENTS.md path en tests locales), 0 regressions
+Importación directa verificada: todas las skills, redactor_historial y router OK
+```
+
+### Decisiones
+1. `enviar_cotizacion_whatsapp` vive en Gato (skill), NO en `ACCIONES_CONECTADAS` del Cerebro. El compilador sigue proponiéndolo en borradores como señal, pero la ejecución es de Gato.
+2. `PostgresAvisosDinero` es el único camino de Gato hacia dinero. No se modifica en esta sesión el `compilador.registrar_abono_cliente` del Cerebro (ese flujo es independiente).
+3. `_PoolCotizacionesPort.enviar` toma `settings` del `request.app.state` en el momento de construir el contexto de skill, no al instanciar la clase.
+4. La huella de confirmación (`huella_texto`) vincula `actor_id + accion + params`. Un «sí» de Julio no ejecuta la acción de Secretaría aunque ambas estén en espera.
+5. El historiador no inventa ni infiere: si el campo no está en BD, es `None`. La nota de contexto es máximo una frase, sin verbos de acción ni montos inventados.
+
+### Bloqueos
+- `enviar_cotizacion()` recibe `settings` como segundo argumento posicional; en el adaptador se pasa `self._settings` obtenido del `request.app.state` al construir el contexto. En tests sin BD este bloque no se ejecuta (guard `memoria_activa`).
+- Tests del Manual (`test_v93_manual_funcional.py`) siguen fallando en local porque buscan `AGENTS.md` dentro de `services/core-api/`; es un error de ruta en los tests, no una regresión.
+
+### Próximo paso exacto
+Prueba real con Julio: dictar «envíale la cotización a César al 09XXXXXXXX a las 18:50» y verificar:
+1. Gato muestra el resumen (número, destino, hora) y pide «Confirmado».
+2. Al confirmar, `gato_recordatorios` recibe el registro con `cotizacion_id`, `programado_at = 18:50` y el `cotizacion_version` vigente.
+3. El despachador envía el PDF a la hora indicada y marca `ENVIADA` solo si `enviado=True`.

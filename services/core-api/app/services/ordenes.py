@@ -9,13 +9,15 @@ from __future__ import annotations
 import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime, time
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
 import asyncpg
 
+from ..agenda.parametros import normalizar_parametros
+from ..agenda.service import PostgresAgendaStore, conflicto_mixer
 from ..db import setting
 from ..m2_planta import (
     ErrorPlanta,
@@ -135,6 +137,9 @@ class NuevaOrden:
     aplica_iva: bool | None = None
     abono_inicial_monto: Decimal | None = None
     abono_inicial_metodo: str | None = None
+    fecha_entrega: date | None = None
+    hora_entrega: time | None = None
+    direccion_obra: str | None = None
 
 
 @dataclass
@@ -222,6 +227,12 @@ async def crear_orden(
     *,
     conn: asyncpg.Connection | None = None,
 ) -> ResultadoOrden:
+    if datos.fecha_entrega or datos.hora_entrega:
+        if not (datos.fecha_entrega and datos.hora_entrega and (datos.direccion_obra or "").strip()):
+            raise OrdenInvalidaError("Completa la fecha, hora y dirección de entrega.")
+        if datos.hora_entrega.tzinfo is not None:
+            raise OrdenInvalidaError("Usa la hora local de Ecuador para la entrega.")
+
     forma_pago = str(datos.forma_pago).upper()
     if forma_pago not in FORMAS_PAGO:
         raise OrdenInvalidaError(
@@ -540,6 +551,37 @@ async def crear_orden(
                 }
             )
 
+        if datos.fecha_entrega:
+            agenda = PostgresAgendaStore(conn)
+            params = normalizar_parametros(await setting(conn, "agenda.parametros"))
+            duracion = params["duracion_entrega_default_min"]
+            mixer_codigo = mixer.get("codigo")
+            if mixer_codigo:
+                filas = await agenda.listar(datos.fecha_entrega, datos.fecha_entrega)
+                choque = conflicto_mixer(
+                    filas=filas, mixer_codigo=mixer_codigo, fecha=datos.fecha_entrega,
+                    hora=datos.hora_entrega.isoformat(), duracion_min=duracion,
+                    parametros=params,
+                )
+                if choque:
+                    raise OrdenInvalidaError(
+                        f"El {mixer_codigo} ya está ocupado de "
+                        f"{choque['hora_inicio']} a {choque['hora_fin']}."
+                    )
+            await agenda.crear({
+                "order_id": orden["id"],
+                "cliente_id": datos.cliente_id,
+                "planta_id": planta["id"],
+                "mixer_codigo": mixer_codigo,
+                "chofer_nombre": datos.chofer_nombre,
+                "receta_codigo": datos.resistencia,
+                "volumen_m3": datos.volumen_m3,
+                "fecha_entrega": datos.fecha_entrega,
+                "hora_inicio": datos.hora_entrega,
+                "direccion_obra": datos.direccion_obra.strip(),
+                "duracion_estimada_min": duracion,
+                "creado_por_id": datos.creada_por or "panel",
+            })
         await conn.execute(
             "UPDATE orders SET estado = 'CONFIRMADA' WHERE id = $1", orden["id"]
         )

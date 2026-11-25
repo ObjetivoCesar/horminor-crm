@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from datetime import date, time
 from decimal import Decimal
 
 import asyncpg
@@ -24,6 +25,9 @@ class OrdenCreate(BaseModel):
     precio_m3: Decimal | None = Field(default=None, ge=0)
     creada_por: str | None = None
     notas: str | None = None
+    fecha_entrega: date | None = None
+    hora_entrega: time | None = None
+    direccion_obra: str | None = None
     politica_viajes: str | None = None
     # Ratificado 2026-11-08: por defecto se permite vender con receta provisional.
     permitir_receta_provisional: bool = True
@@ -58,6 +62,9 @@ async def nueva_orden(request: Request, body: OrdenCreate):
                 precio_m3=body.precio_m3,
                 creada_por=body.creada_por,
                 notas=body.notas,
+                fecha_entrega=body.fecha_entrega,
+                hora_entrega=body.hora_entrega,
+                direccion_obra=body.direccion_obra,
                 politica_viajes=body.politica_viajes,
                 permitir_receta_provisional=body.permitir_receta_provisional,
                 mixer_codigo=body.mixer_codigo,

@@ -22,6 +22,7 @@ from ..agenda import (
     normalizar_parametros,
     validar_ventana,
 )
+from ..agenda.service import ReservaMixerInvalida, reservar_mixers
 from ..cerebro import internas as tareas_svc
 from ..comercial import leads as leads_svc
 from ..comercial.intencion import _fecha_dicha, _horas_dichas, parse_cita
@@ -232,7 +233,7 @@ async def crear(
     if not direccion:
         return {
             "estado": "FALTA",
-            "mensaje": "¿En qué dirección o referencia es la entrega del mixer?",
+            "mensaje": "Vuelve a indicar la reserva del mixer con la dirección o referencia de la obra.",
         }
     cliente, telefono = await _cliente(pool, texto)
     if cliente is None:
@@ -250,58 +251,22 @@ async def crear(
     receta_codigo = (
         f"FC-{receta.group(1) or receta.group(2)}" if receta else None
     )
-    params = await _parametros(pool)
-    duracion = params["duracion_entrega_default_min"]
-    error = validar_ventana(
-        parametros=params,
-        fecha=datos["fecha"],
-        hora=datos["hora"],
-        duracion_min=duracion,
-    )
-    if error:
-        return {"estado": "FALTA", "mensaje": _error_texto(error)}
-    if _ya_paso(datos["fecha"], datos["hora"]):
-        return {
-            "estado": "FALTA",
-            "mensaje": "Esa hora ya pasó; dime una hora futura para el mixer.",
-        }
-
-    store = PostgresAgendaStore(pool)
-    filas = await store.listar(datos["fecha"], datos["fecha"])
-    choque = conflicto_mixer(
-        filas=filas,
-        mixer_codigo=None,
-        fecha=datos["fecha"],
-        hora=datos["hora"],
-        duracion_min=duracion,
-        parametros=params,
-    )
-    if choque is not None:
-        return {
-            "estado": "ERROR",
-            "mensaje": (
-                "Ese mixer se cruza con "
-                f"{choque.get('mixer_codigo') or 'otro despacho'} a las "
-                f"{choque.get('hora_inicio')}."
-            ),
-        }
-    fila = await store.crear(
-        {
+    try:
+        filas = await reservar_mixers(pool, {
             "cliente_id": cliente["id"],
             "receta_codigo": receta_codigo,
             "volumen_m3": m3,
             "fecha_entrega": datos["fecha"].isoformat(),
             "hora_inicio": datos["hora"],
-            "duracion_estimada_min": duracion,
             "direccion_obra": direccion,
-            "contacto_obra_telefono": telefono
-            or cliente.get("telefono_whatsapp"),
-            "estado": "RESERVA_CAMPO",
+            "contacto_obra_telefono": telefono or cliente.get("telefono_whatsapp"),
             "creado_por_rol": (rol or "SECRETARIA").upper(),
             "creado_por_id": actor_id or actor or "gato",
             "notas": "Creado desde Gato.",
-        }
-    )
+        })
+    except ReservaMixerInvalida as exc:
+        return {"estado": "FALTA", "mensaje": str(exc)}
+    fila = filas[0]
     etiqueta = cliente.get("nombre") or cliente.get("telefono_whatsapp")
     return {
         "estado": "OK",
@@ -309,7 +274,7 @@ async def crear(
             f"Mixer agendado para {etiqueta} el {datos['fecha'].isoformat()} "
             f"a las {datos['hora']}: {m3:g} m3"
             + (f" {receta_codigo}" if receta_codigo else "")
-            + f" en {direccion} (RESERVA_CAMPO, {fila['id']})."
+            + f" en {direccion}. Unidades: {', '.join(item['mixer_codigo'] for item in filas)}."
         ),
         "agenda": fila,
     }

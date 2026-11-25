@@ -26,6 +26,7 @@ from .m3_secretaria.router import router as secretaria_router
 from .comercial.router import router as comercial_router
 from .m4_dashboard.router import router as dashboard_router
 from .m5_sentinel.router import router as sentinel_router
+from .routers.bodega import router as bodega_router
 from .routers import (
     catalog,
     chat_clientes,
@@ -157,6 +158,7 @@ app.include_router(chat_clientes.router)
 app.include_router(comercial_router)
 app.include_router(facturas.router)
 app.include_router(orders.router)
+app.include_router(bodega_router)
 app.include_router(cotizaciones.router)
 app.include_router(voz_router)
 app.include_router(cerebro_router)

@@ -6,6 +6,7 @@ import hashlib
 import json
 import time
 import uuid
+from asyncio import Semaphore
 from datetime import datetime
 from typing import Any, Literal, Mapping
 from zoneinfo import ZoneInfo
@@ -14,17 +15,20 @@ import asyncpg
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from ..agenda.service import ReservaMixerInvalida, reservar_mixers
 from ..asistente import recordatorios
 from ..asistente.bibliotecario import Bibliotecario
 from ..asistente.orquestador import Actor
 from ..db import setting
 from ..m1_whatsapp.bunny import BunnyError, BunnyHttpStorageClient
-from ..panel_acl import exigir_modulo
+from ..panel_acl import exigir_modulo, exigir_modulos
 from ..services import media as media_svc
 from ..voz import localizar_palabras, normalizar_con_mapa
 from . import ejecutores
+from .compilador import ClienteResuelto
 from .extractor import (
     CLAVES,
+    ClienteConfirmadoDistinto,
     MODELO,
     VERSION_PROMPT,
     ExtractorNoDisponible,
@@ -52,6 +56,9 @@ from .revision import CorreccionInvalida, TIPOS_CONOCIDOS, aplicar
 from .sobre import SobreIn
 
 router = APIRouter(prefix="/api/v1/cerebro", tags=["cerebro"])
+# Cada confirmación conserva una conexión para su candado y usa el pool
+# para los ejecutores existentes. Deja conexiones libres para estos últimos.
+_confirmaciones_en_curso = Semaphore(3)
 
 
 class InterpretarIn(BaseModel):
@@ -61,7 +68,9 @@ class InterpretarIn(BaseModel):
     # Dictados anteriores de la misma conversacion. El Cerebro los usa como
     # contexto para que «me acaba de dar el efectivo» se refiera al cliente y
     # monto que se acaban de dictar, no a una operacion nueva.
-    contexto: str | None = Field(default=None, max_length=8000)
+    contexto: str | None = Field(default=None, max_length=32000)
+    borrador_previo_id: uuid.UUID | None = None
+    intencion_tarea: Literal["ENVIAR", "DELEGAR"] | None = None
 
 
 class ConfirmarIn(BaseModel):
@@ -130,6 +139,56 @@ async def _habilitado(pool: asyncpg.Pool, clave: str) -> bool:
     return bool(await setting(pool, clave, False))
 
 
+async def _ejecuciones_de_revision(db, borrador_id: str, conversacion_id: str):
+    """Recupera decisiones de la misma línea de versiones, sin ejecutar nada."""
+    return await db.fetch(
+        """
+        WITH RECURSIVE versiones AS (
+            SELECT id, borrador_padre_id
+              FROM cerebro_borradores
+             WHERE id = $1::uuid AND conversacion_id = $2::uuid
+            UNION ALL
+            SELECT b.id, b.borrador_padre_id
+              FROM cerebro_borradores b
+              JOIN versiones v ON v.borrador_padre_id = b.id
+             WHERE b.conversacion_id = $2::uuid
+        )
+        SELECT e.accion_nombre, e.entidad_destino_tabla, e.entidad_destino_id::text AS cliente_id,
+               c.nombre AS cliente_nombre
+          FROM versiones v JOIN cerebro_ejecuciones e ON e.borrador_id = v.id
+          LEFT JOIN clients c ON e.entidad_destino_tabla = 'clients' AND c.id = e.entidad_destino_id
+         WHERE e.estado = 'EXITOSO'
+        UNION ALL
+        SELECT 'CANCELADO', NULL, NULL, NULL
+          FROM versiones v JOIN cerebro_encargos_decisiones d ON d.borrador_id = v.id
+         WHERE d.decision = 'CANCELADO'
+        """,
+        borrador_id, conversacion_id,
+    )
+
+
+async def _cliente_fijado_en_revision(db, borrador_id: str, conversacion_id: str) -> ClienteResuelto | None:
+    ejecuciones = await _ejecuciones_de_revision(db, borrador_id, conversacion_id)
+    if not ejecuciones:
+        return None
+    clientes = {
+        (e["cliente_id"], e["cliente_nombre"]) for e in ejecuciones
+        if e["accion_nombre"] == "crear_cliente" and e["entidad_destino_tabla"] == "clients"
+        and e["cliente_id"] and e["cliente_nombre"]
+    }
+    if len(clientes) == 1 and all(
+        (e["cliente_id"], e["cliente_nombre"]) in clientes
+        and e["accion_nombre"] == "crear_cliente" and e["entidad_destino_tabla"] == "clients"
+        for e in ejecuciones
+    ):
+        cliente_id, nombre = next(iter(clientes))
+        return ClienteResuelto(cliente_id, nombre)
+    raise HTTPException(
+        status_code=409,
+        detail="El pedido ya tiene otras acciones ejecutadas o canceladas. Revisa cuáles en Cerebro.",
+    )
+
+
 @router.post("/interpretar")
 async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, Any]:
     perfil = await exigir_modulo(request, "cerebro", mutacion=True)
@@ -154,11 +213,19 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
         except ValueError as exc:
             raise HTTPException(status_code=422, detail="conversacion_id invalido") from exc
         conv = await pool.fetchrow(
-            "SELECT cerrada_en FROM gato_conversaciones WHERE id = $1::uuid",
+            "SELECT cerrada_en, actor_id FROM gato_conversaciones WHERE id = $1::uuid",
             conversacion_id,
         )
         if conv is None:
             raise HTTPException(status_code=404, detail="conversacion no encontrada")
+        if body.borrador_previo_id:
+            actor_conversacion = str(conv["actor_id"])
+            actor_perfil = perfil.get("id")
+            propio = actor_conversacion == str(actor_perfil) if actor_perfil else (
+                perfil.get("rol_base") == "SUPERADMIN" and actor_conversacion in {"julio", "superadmin"}
+            )
+            if not propio:
+                raise HTTPException(status_code=403, detail="La conversación pertenece a otro perfil.")
         if conv["cerrada_en"] is not None:
             raise HTTPException(
                 status_code=409, detail="la conversacion esta cerrada"
@@ -189,11 +256,45 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
     # Memoria de la conversacion: los dictados previos se leen como contexto.
     # El texto que se guarda y se compila es el mismo que se interpreta.
     continuacion_desde: int | None = None
-    if body.contexto and not transcripcion_id:
+    sobre_previo = None
+    cliente_confirmado = None
+    padre_id = str(body.borrador_previo_id) if body.borrador_previo_id else None
+    if padre_id:
+        if not conversacion_id or transcripcion_id:
+            raise HTTPException(status_code=422, detail="La revisión requiere el hilo del borrador.")
+        previo = await pool.fetchrow(
+            """
+            SELECT e.texto_directo, e.sobre_json
+              FROM cerebro_borradores b
+              JOIN cerebro_extracciones e ON e.id = b.extraccion_id
+             WHERE b.id = $1::uuid AND b.conversacion_id = $2::uuid
+               AND b.estado IN ('PENDIENTE_CONFIRMACION', 'REQUIERE_ACLARACION')
+            """,
+            padre_id, conversacion_id,
+        )
+        if not previo or not previo["texto_directo"]:
+            raise HTTPException(status_code=409, detail="El borrador cambió. Revisa su versión vigente en Cerebro.")
+        contexto = previo["texto_directo"]
+        texto = f"{contexto}\n\n{texto}"
+        continuacion_desde = len(contexto) + 2
+        sobre_previo = SobreIn.model_validate(_jsonb(previo["sobre_json"]))
+        cliente_confirmado = await _cliente_fijado_en_revision(pool, padre_id, conversacion_id)
+    elif body.contexto and not transcripcion_id:
         contexto = body.contexto.strip()
         if contexto:
             texto = f"{contexto}\n\n{texto}"
             continuacion_desde = len(contexto) + 2
+            if conversacion_id:
+                previo = await pool.fetchval(
+                    """
+                    SELECT sobre_json FROM cerebro_extracciones
+                     WHERE conversacion_id = $1::uuid AND texto_directo = $2
+                     ORDER BY creado_en DESC LIMIT 1
+                    """, conversacion_id, contexto,
+                )
+                if previo:
+                    sobre_previo = SobreIn.model_validate(_jsonb(previo))
+
 
     inicio = time.perf_counter()
     try:
@@ -203,9 +304,14 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
             palabras_crudas=palabras,
             sandbox=bool(getattr(request.app.state.settings, "sandbox_mode", True)),
             continuacion_desde=continuacion_desde,
+            **({"sobre_previo": sobre_previo} if sobre_previo is not None else {}),
+            **({"intencion_tarea": body.intencion_tarea} if body.intencion_tarea else {}),
+            **({"cliente_confirmado": cliente_confirmado} if cliente_confirmado else {}),
         )
     except ExtractorNoDisponible as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ClienteConfirmadoDistinto as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     latencia_ms = int((time.perf_counter() - inicio) * 1000)
 
     sobre = resultado["sobre"]
@@ -217,6 +323,31 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
 
     async with pool.acquire() as conn:
         async with conn.transaction():
+            version = 1
+            if padre_id:
+                await _tomar_candado_borrador(conn, padre_id)
+                padre = await conn.fetchrow(
+                    """
+                    SELECT version, estado
+                      FROM cerebro_borradores
+                     WHERE id = $1::uuid AND conversacion_id = $2::uuid
+                     FOR UPDATE
+                    """,
+                    padre_id, conversacion_id,
+                )
+                if not padre or padre["estado"] not in ("PENDIENTE_CONFIRMACION", "REQUIERE_ACLARACION"):
+                    raise HTTPException(status_code=409, detail="El borrador cambió mientras se revisaba.")
+                if await _cliente_fijado_en_revision(conn, padre_id, conversacion_id) != cliente_confirmado:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="El alta del cliente cambió mientras se revisaba. Vuelve a indicar el cambio al pedido.",
+                    )
+                if borrador.estado == "SIN_ACCIONES":
+                    raise HTTPException(
+                        status_code=422,
+                        detail="No pude aplicar ese cambio al borrador. Indica qué dato quieres corregir.",
+                    )
+                version = int(padre["version"]) + 1
             extraccion = await conn.fetchrow(
                 """
                 INSERT INTO cerebro_extracciones (
@@ -245,10 +376,10 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
                 INSERT INTO cerebro_borradores (
                     extraccion_id, version, estado, acciones_propuestas_json,
                     preguntas_pendientes_json, condiciones_json, encargos_json,
-                    creado_por, conversacion_id
+                    creado_por, conversacion_id, borrador_padre_id
                 ) VALUES (
-                    $1::uuid, 1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb,
-                    $7, $8::uuid
+                    $1::uuid, $9, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb,
+                    $7, $8::uuid, $10::uuid
                 )
                 RETURNING id::text AS id
                 """,
@@ -275,11 +406,23 @@ async def interpretar_http(request: Request, body: InterpretarIn) -> dict[str, A
                 ),
                 usuario,
                 conversacion_id,
+                version,
+                padre_id,
             )
+            if padre_id:
+                await conn.execute(
+                    """
+                    UPDATE cerebro_borradores
+                       SET estado = 'SUPERADO_POR_CORRECCION', lock_version = lock_version + 1
+                     WHERE id = $1::uuid
+                    """,
+                    padre_id,
+                )
 
     return {
         "extraccion_id": extraccion["id"],
         "borrador_id": guardado["id"],
+        "cliente_confirmado": cliente_confirmado.nombre if cliente_confirmado else None,
         "estado": borrador.estado,
         "intencion": borrador.intencion,
         "sobre": sobre.model_dump(),
@@ -304,7 +447,7 @@ async def obtener_borrador(request: Request, borrador_id: str) -> dict[str, Any]
         """
         SELECT b.id::text AS id, b.estado, b.version, b.acciones_propuestas_json,
                b.preguntas_pendientes_json, b.condiciones_json, b.encargos_json,
-               b.creado_por, b.creado_en,
+               b.creado_por, b.creado_en, b.borrador_padre_id::text, b.conversacion_id::text,
                e.sobre_json, e.modelo_llm, e.version_prompt, e.latencia_ms
           FROM cerebro_borradores b
           JOIN cerebro_extracciones e ON e.id = b.extraccion_id
@@ -315,6 +458,14 @@ async def obtener_borrador(request: Request, borrador_id: str) -> dict[str, Any]
     if fila is None:
         raise HTTPException(status_code=404, detail="borrador no encontrado")
     datos = dict(fila)
+    padre_id = datos.pop("borrador_padre_id", None)
+    conversacion_id = datos.pop("conversacion_id", None)
+    if padre_id and conversacion_id:
+        previas = await _ejecuciones_de_revision(pool, padre_id, conversacion_id)
+        datos["cliente_confirmado"] = next((
+            e["cliente_nombre"] for e in previas
+            if e["accion_nombre"] == "crear_cliente" and e["cliente_nombre"]
+        ), None)
     datos["acciones"] = _jsonb(datos.pop("acciones_propuestas_json")) or []
     datos["preguntas"] = _jsonb(datos.pop("preguntas_pendientes_json")) or []
     datos["condiciones"] = _jsonb(datos.pop("condiciones_json")) or []
@@ -343,23 +494,24 @@ async def obtener_borrador(request: Request, borrador_id: str) -> dict[str, Any]
     # como si todo el dictado se hubiera ejecutado.
     ejecutadas = await pool.fetch(
         """
-        SELECT encargo, COUNT(DISTINCT orden_ejecucion) AS total
+        SELECT encargo, array_agg(DISTINCT orden_ejecucion) AS ordenes
           FROM cerebro_ejecuciones
          WHERE borrador_id = $1::uuid AND estado = 'EXITOSO'
          GROUP BY encargo
         """,
         borrador_id,
     )
-    hechas = {fila["encargo"]: int(fila["total"]) for fila in ejecutadas}
+    hechas = {fila["encargo"]: fila["ordenes"] for fila in ejecutadas}
+    datos["ordenes_ejecutadas"] = [orden for ordenes in hechas.values() for orden in ordenes]
     cancelados_indices = {fila["encargo"] for fila in cancelados}
     for encargo in datos["encargos"]:
         indice = int(encargo.get("encargo") or 1)
         acciones = encargo.get("acciones") or []
         if indice in cancelados_indices:
             encargo["estado_actual"] = "CANCELADO"
-        elif acciones and hechas.get(indice, 0) >= len(acciones):
+        elif acciones and len(hechas.get(indice, ())) >= len(acciones):
             encargo["estado_actual"] = "EJECUTADO"
-        elif hechas.get(indice, 0) > 0:
+        elif hechas.get(indice):
             encargo["estado_actual"] = "CONFIRMADO_PARCIAL"
         else:
             encargo["estado_actual"] = encargo.get("estado")
@@ -376,6 +528,7 @@ ACCIONES_CONECTADAS = (
     "crear_tarea_recordatorio",
     "crear_tarea_interna",
     "crear_cliente",
+    "reservar_mixer",
     # La cotización se calcula con Decimal en el servicio compartido; se
     # confirma en el laboratorio, no desde el chat.
     "crear_cotizacion_borrador",
@@ -445,6 +598,8 @@ async def corregir_borrador(
 
     async with pool.acquire() as conn:
         async with conn.transaction():
+            if isinstance(pool, asyncpg.Pool):
+                await _tomar_candado_borrador(conn, str(uuid.UUID(borrador_id)))
             padre = await conn.fetchrow(
                 """
                 SELECT id::text AS id, extraccion_id::text AS extraccion_id,
@@ -682,15 +837,18 @@ async def tareas_pendientes(request: Request) -> dict[str, Any]:
 
     El panel los usa para el popout de tareas al entrar y para la campanita.
     """
-    await exigir_modulo(request, "cerebro")
+    perfil = await exigir_modulos(request, ("cerebro", "secretaria_ventanilla"))
     pool = _pool(request)
+    if not (perfil.get("modulos_permitidos") or {}).get("cerebro"):
+        internas = await listar_tareas_internas(pool, limite=20, solo_seguimiento_agenda=True)
+        return {"tareas": [], "internas": internas, "total": 0}
     internas = await listar_tareas_internas(pool, limite=20)
     filas = await pool.fetch(
         """
         SELECT id::text AS id, destinatario_nombre, telefono, mensaje,
                programado_at, zona, estado, origen_destino
           FROM gato_recordatorios
-         WHERE estado IN ('PENDIENTE', 'ENVIANDO')
+         WHERE estado IN ('AGENDADO', 'PENDIENTE', 'ENVIANDO')
          ORDER BY programado_at
          LIMIT 20
         """
@@ -772,6 +930,29 @@ def validar_confirmacion_recordatorio(
 
 @router.post("/borradores/{borrador_id}/confirmar")
 async def confirmar_accion(
+    request: Request, borrador_id: str, body: ConfirmarIn
+) -> dict[str, Any]:
+    try:
+        borrador_id = str(uuid.UUID(borrador_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="borrador_id invalido") from exc
+    pool = _pool(request)
+    if not isinstance(pool, asyncpg.Pool):
+        return await _confirmar_accion(request, borrador_id, body)
+    async with _confirmaciones_en_curso, pool.acquire() as conn, conn.transaction():
+        await _tomar_candado_borrador(conn, borrador_id)
+        return await _confirmar_accion(request, borrador_id, body)
+
+
+async def _tomar_candado_borrador(conn: asyncpg.Connection, borrador_id: str) -> None:
+    if not await conn.fetchval(
+        "SELECT pg_try_advisory_xact_lock(hashtextextended($1::text, 0))",
+        f"cerebro:borrador:{borrador_id}",
+    ):
+        raise HTTPException(status_code=409, detail="El borrador se está procesando. Consulta su estado en un momento.")
+
+
+async def _confirmar_accion(
     request: Request, borrador_id: str, body: ConfirmarIn
 ) -> dict[str, Any]:
     """Ejecuta una accion que un humano acaba de confirmar en pantalla.
@@ -975,12 +1156,31 @@ async def confirmar_accion(
                     confirmado=True,
                 )
                 resultado.datos["archivos"] = movidos
-    elif nombre == "crear_cotizacion_borrador":
-        resultado = await ejecutores.crear_cotizacion_desde_accion(
-            pool,
-            parametros=parametros,
-            creado_por=str(perfil.get("nombre") or "") or actor_id,
-        )
+    elif nombre in ("reservar_mixer", "crear_cotizacion_borrador"):
+        cliente_id = parametros.get("cliente_id")
+        if not cliente_id and dependencia:
+            cliente_id = await pool.fetchval(
+                """
+                SELECT entidad_destino_id::text FROM cerebro_ejecuciones
+                 WHERE borrador_id = $1::uuid AND orden_ejecucion = $2
+                   AND estado = 'EXITOSO' AND entidad_destino_tabla = 'clients'
+                """,
+                borrador_id, int(dependencia),
+            )
+        if not cliente_id:
+            raise HTTPException(status_code=409, detail="Falta crear o identificar al cliente.")
+        parametros = {**parametros, "cliente_id": cliente_id}
+        if nombre == "crear_cotizacion_borrador":
+            await exigir_modulo(request, "cotizaciones", mutacion=True)
+            resultado = await ejecutores.crear_cotizacion_desde_accion(
+                pool, parametros=parametros,
+                creado_por=str(perfil.get("nombre") or "") or actor_id,
+            )
+        else:
+            await exigir_modulo(request, "agenda_despachos", mutacion=True)
+            resultado = await _reservar_mixer_desde_borrador(
+                pool, parametros, rol, actor_id, borrador_id, body.accion_orden,
+            )
     else:  # pragma: no cover - guardado por ACCIONES_CONECTADAS
         raise HTTPException(status_code=501, detail="accion sin ejecutor")
 
@@ -1023,6 +1223,8 @@ async def confirmar_accion(
                     if nombre == "crear_tarea_interna"
                     else "cotizaciones"
                     if nombre == "crear_cotizacion_borrador"
+                    else "dispatch_schedule"
+                    if nombre == "reservar_mixer"
                     else "clients"
                 )
                 if resultado.estado == "OK"
@@ -1084,6 +1286,26 @@ async def confirmar_accion(
             _jsonb(fila["preguntas_pendientes_json"]) or []
         ),
     }
+
+
+async def _reservar_mixer_desde_borrador(
+    pool, parametros: dict[str, Any], rol: str, actor_id: str, borrador_id: str, orden: int,
+):
+    try:
+        filas = await reservar_mixers(
+            pool, {**parametros, "creado_por_rol": rol, "creado_por_id": actor_id},
+            clave=f"Cerebro: {borrador_id}/{orden}", unidades=parametros.get("unidades"),
+            avisar_secretaria=True,
+        )
+    except ReservaMixerInvalida as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    unidades = ", ".join(fila["mixer_codigo"] for fila in filas)
+    return ejecutores.Resultado(
+        "reservar_mixer", "OK",
+        nota=f"Mixers reservados para el {parametros['fecha_entrega']} a las "
+             f"{parametros['hora_inicio']} con {unidades}. Secretaría recibió la tarea de revisión.",
+        datos={"id": filas[0]["id"], "reservas": filas},
+    )
 
 
 class CancelarEncargoIn(BaseModel):
@@ -1337,12 +1559,31 @@ async def tareas_internas(
     return {"tareas": tareas, "total": len(tareas)}
 
 
+async def _perfil_revision_tarea(request: Request, tarea_id: str) -> dict[str, Any]:
+    perfil = await exigir_modulos(request, ("cerebro", "secretaria_ventanilla"), mutacion=True)
+    if (perfil.get("modulos_permitidos") or {}).get("cerebro"):
+        return perfil
+    try:
+        ident = str(uuid.UUID(tarea_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="tarea_id inválido") from exc
+    autorizada = perfil.get("rol_base") == "SECRETARIA" and await _pool(request).fetchval(
+        """
+        SELECT 1 FROM cerebro_tareas_internas
+         WHERE id = $1::uuid AND asignado_rol = 'SECRETARIA' AND metadatos ? 'agenda'
+        """, ident,
+    )
+    if not autorizada:
+        raise HTTPException(status_code=403, detail="Esta tarea requiere permiso de Cerebro.")
+    return perfil
+
+
 @router.post("/tareas-internas/{tarea_id}/resolver")
 async def resolver_tarea(
     request: Request, tarea_id: str, body: ResolverTareaIn
 ) -> dict[str, Any]:
     """Resuelta (se hizo) o justificada (no hacía falta), con su nota."""
-    perfil = await exigir_modulo(request, "cerebro", mutacion=True)
+    perfil = await _perfil_revision_tarea(request, tarea_id)
     try:
         uuid.UUID(tarea_id)
     except ValueError as exc:
@@ -1372,7 +1613,7 @@ async def registrar_tarea(
     request: Request, tarea_id: str, body: RegistrarTareaIn
 ) -> dict[str, Any]:
     """Cierra con metadatos: sin metadatos no se registra."""
-    perfil = await exigir_modulo(request, "cerebro", mutacion=True)
+    perfil = await _perfil_revision_tarea(request, tarea_id)
     try:
         uuid.UUID(tarea_id)
     except ValueError as exc:
@@ -1419,7 +1660,7 @@ async def ver_tarea(request: Request, tarea_id: str) -> dict[str, Any]:
 @router.post("/tareas-internas/{tarea_id}/acusar")
 async def acusar_tarea(request: Request, tarea_id: str) -> dict[str, Any]:
     """Confirma que recibió el encargo. No significa que lo hizo."""
-    perfil = await exigir_modulo(request, "cerebro", mutacion=True)
+    perfil = await _perfil_revision_tarea(request, tarea_id)
     try:
         uuid.UUID(tarea_id)
     except ValueError as exc:
@@ -1443,7 +1684,7 @@ async def escalar_tarea(
     request: Request, tarea_id: str, body: EscalarTareaIn
 ) -> dict[str, Any]:
     """Marca una tarea vencida para un supervisor y sube la prioridad."""
-    perfil = await exigir_modulo(request, "cerebro", mutacion=True)
+    perfil = await _perfil_revision_tarea(request, tarea_id)
     if str(perfil.get("rol_base") or "").upper() != "SUPERADMIN":
         raise HTTPException(
             status_code=403, detail="solo un superadmin puede escalar una tarea"

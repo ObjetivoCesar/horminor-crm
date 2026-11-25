@@ -26,7 +26,16 @@ from .internas import (
 )
 from .tiempo import normalizar_hora, sostiene_fecha
 
+def pide_reserva_mixer(texto: str) -> bool:
+    plano = sin_tildes(texto).lower()
+    return bool(re.search(
+        r"\b(?:reserva(?:r|s|me)?|agend(?:a|ar|ame)|program(?:a|ar))"
+        r"\s+(?:(?:el|los|un|una|tres|dos|[0-9]+)\s+)*mixers?\b", plano
+    ))
+
+
 ROLES_ACCIONES: dict[str, tuple[str, ...]] = {
+    "reservar_mixer": ("SUPERADMIN", "SECRETARIA"),
     "crear_cliente": ("SUPERADMIN", "SECRETARIA", "VENDEDOR"),
     "crear_cotizacion_borrador": ("SUPERADMIN", "SECRETARIA", "VENDEDOR"),
     "enviar_cotizacion_whatsapp": ("SUPERADMIN", "SECRETARIA", "VENDEDOR"),
@@ -79,6 +88,10 @@ class Contexto:
     # frase alrededor de la cifra («ya me depositó» vs «nos van a depositar»);
     # la cita de un monto numérico es solo el número y no alcanza.
     texto: str | None = None
+    reserva_mixer: bool = False
+    unidades_mixer: int | None = None
+    intencion_tarea: str | None = None
+    clientes_por_encargo: Mapping[int, ClienteResuelto] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -806,7 +819,7 @@ def _notas_cotizacion(
     if descuento_negado:
         notas.append("Descuento NO aplicado: el dictado pidió esperar")
     elif descuento is not None:
-        notas.append(f"Descuento acordado: {descuento.normalize()}%")
+        notas.append(f"Descuento acordado: {descuento.normalize():f}%")
     plazo = _texto(hechos, "cotizacion.plazo_entrega")
     if plazo:
         notas.append(f"Plazo de entrega: {plazo}")
@@ -815,6 +828,9 @@ def _notas_cotizacion(
         notas.append(f"Dias de trabajo: {dias}")
     if _booleano(hechos, "operacion.planta_movil"):
         notas.append("Llevar la planta movil al sitio")
+    pago_monto = _decimal(hechos, "pago.monto")
+    if pago_monto is not None and _booleano_opcional(hechos, "pago.recibido") is False:
+        notas.append(f"Anticipo acordado (pendiente): USD {pago_monto.normalize():f}")
     return "; ".join(notas) or None
 
 
@@ -901,7 +917,7 @@ def _compilar_asunto(
     orden_cliente: int | None = None
     # Un recordatorio a un número dictado no necesita cliente. Si el dictado
     # trae cliente, cotización, dinero o traslado, sí.
-    necesita_cliente = not hechos or any(
+    necesita_cliente = contexto.reserva_mixer or not hechos or any(
         hecho.clave.startswith(("cliente.", "cotizacion.", "pago.", "traslado."))
         for hecho in hechos
     )
@@ -953,7 +969,7 @@ def _compilar_asunto(
     orden_cotizacion: int | None = None
     precio_estado: str | None = None
 
-    if hay_cotizacion:
+    if hay_cotizacion or contexto.reserva_mixer:
         volumen = _decimal(hechos, "cotizacion.volumen_m3")
         descuento_negado = _condicion_negada(contexto.texto, "descuento", "rebaja")
         obra = _texto(hechos, "cotizacion.obra_direccion") or _texto(
@@ -992,76 +1008,138 @@ def _compilar_asunto(
             )
             bloqueos = True
 
-        precio = _decimal(hechos, "cotizacion.precio_m3")
-        if precio is not None:
-            hablante = _hablante(hechos, "cotizacion.precio_m3")
-            if hablante != "SUPERADMIN":
+        if contexto.reserva_mixer:
+            fecha = _fecha(hechos, "cotizacion.fecha_entrega")
+            hecho_fecha = _hecho(hechos, "cotizacion.fecha_entrega")
+            if hecho_fecha and hecho_fecha.evidencia and not sostiene_fecha(hecho_fecha.evidencia.cita):
+                fecha = None
+            hora = normalizar_hora(_texto(hechos, "cotizacion.hora_entrega"))
+            if fecha is None:
+                preguntas.append(Pregunta("cotizacion.fecha_entrega", "¿Qué día es la entrega?"))
+            if hora is None:
+                preguntas.append(Pregunta("cotizacion.hora_entrega", "¿A qué hora es la entrega?"))
+            if fecha is None or hora is None:
+                bloqueos = True
+            if fecha and hora and volumen and volumen > 0 and obra and resistencia and (cliente or orden_cliente):
+                agregar(
+                    "reservar_mixer",
+                    {
+                        "cliente_id": cliente.id if cliente else None,
+                        "direccion_obra": obra,
+                        "receta_codigo": resistencia,
+                        "volumen_m3": volumen,
+                        "fecha_entrega": fecha,
+                        "hora_inicio": hora,
+                        "contacto_obra_telefono": _texto(hechos, "contacto.telefono")
+                        or _texto(hechos, "cliente.telefono"),
+                        "unidades": contexto.unidades_mixer,
+                    },
+                    depende=orden_cliente,
+                )
+
+        if not contexto.reserva_mixer or re.search(r"\bcotiza(?:cion|r|me)?\b", sin_tildes(contexto.texto or "").lower()):
+            precio = _decimal(hechos, "cotizacion.precio_m3")
+            if precio is not None:
+                hablante = _hablante(hechos, "cotizacion.precio_m3")
+                if hablante != "SUPERADMIN":
+                    preguntas.append(
+                        Pregunta(
+                            "cotizacion.precio_m3",
+                            "Solo Julio puede fijar el precio; se usará la lista vigente.",
+                        )
+                    )
+                    precio = None
+                else:
+                    precio_estado = "OFICIAL"
+            if precio is None and contexto.receta is not None:
+                precio = contexto.receta.precio_m3
+                precio_estado = contexto.receta.precio_estado
+            if precio is None:
                 preguntas.append(
-                    Pregunta(
-                        "cotizacion.precio_m3",
-                        "Solo Julio puede fijar el precio; se usará la lista vigente.",
+                    Pregunta("cotizacion.precio_m3", "¿Qué precio por m³ se aplica?")
+                )
+                bloqueos = True
+
+            if (
+                volumen is not None
+                and volumen > 0
+                and obra
+                and resistencia
+                and precio is not None
+                and precio_estado is not None
+            ):
+                forma_pago = (
+                    _forma(_texto(hechos, "cotizacion.forma_pago"), FORMAS_COTIZACION)
+                    or "POR_DEFINIR"
+                )
+                fecha_entrega = _fecha(hechos, "cotizacion.fecha_entrega")
+                hecho_fecha = _hecho(hechos, "cotizacion.fecha_entrega")
+                if (
+                    fecha_entrega is not None
+                    and hecho_fecha is not None
+                    and hecho_fecha.evidencia is not None
+                    and not sostiene_fecha(hecho_fecha.evidencia.cita)
+                ):
+                    # Una hora no sostiene una fecha: no se arrastra el día de hoy.
+                    fecha_entrega = None
+                extra_desc = _texto(hechos, "cotizacion.extra_descripcion")
+                extra_monto = _decimal(hechos, "cotizacion.extra_monto")
+                extra_cobrable = _booleano_opcional(hechos, "cotizacion.extra_cobrable")
+                extras_cotizacion: list[dict[str, Any]] = []
+                if extra_desc:
+                    cobrable_flag = True if extra_cobrable is None else extra_cobrable
+                    if cobrable_flag and extra_monto is None:
+                        preguntas.append(
+                            Pregunta(
+                                "cotizacion.extra_monto",
+                                f"¿Cuál es el monto de «{extra_desc}» y si se cobra al cliente?",
+                            )
+                        )
+                        bloqueos = True
+                    else:
+                        extras_cotizacion.append(
+                            {
+                                "descripcion": extra_desc,
+                                "monto": extra_monto if extra_monto is not None else Decimal("0"),
+                                "cobrable": cobrable_flag,
+                            }
+                        )
+                extras_aclarados = bool(
+                    extra_desc
+                    or extra_cobrable is False
+                    or re.search(
+                        r"\b(ningun(?:o|a)?|sin\s+(?:gastos?\s+)?extras?)\b",
+                        sin_tildes(contexto.texto or ""),
                     )
                 )
-                precio = None
-            else:
-                precio_estado = "OFICIAL"
-        if precio is None and contexto.receta is not None:
-            precio = contexto.receta.precio_m3
-            precio_estado = contexto.receta.precio_estado
-        if precio is None:
-            preguntas.append(
-                Pregunta("cotizacion.precio_m3", "¿Qué precio por m³ se aplica?")
-            )
-            bloqueos = True
-
-        if (
-            volumen is not None
-            and volumen > 0
-            and obra
-            and resistencia
-            and precio is not None
-            and precio_estado is not None
-        ):
-            forma_pago = (
-                _forma(_texto(hechos, "cotizacion.forma_pago"), FORMAS_COTIZACION)
-                or "POR_DEFINIR"
-            )
-            fecha_entrega = _fecha(hechos, "cotizacion.fecha_entrega")
-            hecho_fecha = _hecho(hechos, "cotizacion.fecha_entrega")
-            if (
-                fecha_entrega is not None
-                and hecho_fecha is not None
-                and hecho_fecha.evidencia is not None
-                and not sostiene_fecha(hecho_fecha.evidencia.cita)
-            ):
-                # Una hora no sostiene una fecha: no se arrastra el día de hoy.
-                fecha_entrega = None
-            orden_cotizacion = agregar(
-                "crear_cotizacion_borrador",
-                {
-                    "cliente_id": cliente.id if cliente else None,
-                    "obra_direccion": obra,
-                    "volumen_m3": volumen,
-                    "resistencia": resistencia,
-                    "precio_m3": precio,
-                    "precio_estado": precio_estado,
-                    "forma_pago": forma_pago,
-                    "fecha_entrega_tentativa": fecha_entrega,
-                    "hora_entrega_tentativa": normalizar_hora(
-                        _texto(hechos, "cotizacion.hora_entrega")
-                    ),
-                    "descuento_pct": (
-                        None
-                        if descuento_negado
-                        else _decimal(hechos, "cotizacion.descuento_pct")
-                    ),
-                    "plazo_entrega": _texto(hechos, "cotizacion.plazo_entrega"),
-                    "notas": _notas_cotizacion(
-                        hechos, descuento_negado=descuento_negado
-                    ),
-                },
-                depende=orden_cliente,
-            )
+                orden_cotizacion = agregar(
+                    "crear_cotizacion_borrador",
+                    {
+                        "cliente_id": cliente.id if cliente else None,
+                        "obra_direccion": obra,
+                        "volumen_m3": volumen,
+                        "resistencia": resistencia,
+                        "precio_m3": precio,
+                        "precio_estado": precio_estado,
+                        "forma_pago": forma_pago,
+                        "fecha_entrega_tentativa": fecha_entrega,
+                        "hora_entrega_tentativa": normalizar_hora(
+                            _texto(hechos, "cotizacion.hora_entrega")
+                        ),
+                        "descuento_pct": (
+                            None
+                            if descuento_negado
+                            else _decimal(hechos, "cotizacion.descuento_pct")
+                        ),
+                        "plazo_entrega": _texto(hechos, "cotizacion.plazo_entrega"),
+                        "extras": extras_cotizacion,
+                        "extras_aclarados": extras_aclarados,
+                        "notas": _notas_cotizacion(
+                            hechos, descuento_negado=descuento_negado
+                        ),
+                    },
+                    depende=orden_cliente,
+                )
 
     # ------------------------------------------------------------------
     # Dinero
@@ -1118,6 +1196,7 @@ def _compilar_asunto(
                 )
                 bloqueos = True
                 forma_pago = "POR_DEFINIR"
+            hecho_monto = _hecho(hechos, "pago.monto")
             orden_abono = agregar(
                 "registrar_abono_cliente",
                 {
@@ -1125,6 +1204,16 @@ def _compilar_asunto(
                     "monto_usd": monto,
                     "forma_pago": forma_pago,
                     "referencia": _texto(hechos, "pago.referencia"),
+                    "cita": (
+                        hecho_monto.evidencia.cita
+                        if hecho_monto is not None and hecho_monto.evidencia is not None
+                        else None
+                    ),
+                    "hablante": (
+                        hecho_monto.evidencia.hablante
+                        if hecho_monto is not None and hecho_monto.evidencia is not None
+                        else contexto.rol_actor
+                    ),
                 },
                 doble=True,
                 depende=orden_cliente,
@@ -1191,11 +1280,37 @@ def _compilar_asunto(
                         ("Marcar OFICIAL", "No enviar todavía"),
                     )
                 )
+            contactos_cot = _contactos(hechos)
+            enviar_cuando = _texto(hechos, "cotizacion.enviar_cuando")
+            enviar_dest = _texto(hechos, "cotizacion.enviar_destinatario")
+            dest_tel = None
+            dest_nom = None
+            if enviar_dest:
+                dig_dest = re.sub(r"\D", "", enviar_dest)
+                if len(dig_dest) >= 9:
+                    dest_tel = dig_dest
+                else:
+                    dest_nom = enviar_dest
+                    c_match = _contacto_por_nombre(contactos_cot, enviar_dest)
+                    if c_match:
+                        dest_tel = c_match.get("telefono")
+                        dest_nom = c_match.get("nombre") or c_match.get("rol") or dest_nom
+            elif re.search(
+                r"\b(encargad[oa]|ah[ií]|maestro|ingenier[oa])\b",
+                sin_tildes(contexto.texto or ""),
+            ):
+                con_tel = [c for c in contactos_cot if c.get("telefono")]
+                if len(con_tel) == 1:
+                    dest_tel = con_tel[0]["telefono"]
+                    dest_nom = con_tel[0].get("nombre") or con_tel[0].get("rol")
             agregar(
                 "enviar_cotizacion_whatsapp",
                 {
                     "cotizacion": "nueva",
                     "cliente_id": cliente.id if cliente else None,
+                    "enviar_cuando": enviar_cuando,
+                    "destinatario_nombre": dest_nom,
+                    "destinatario_telefono": dest_tel,
                 },
                 depende=orden_cotizacion,
                 bloqueo=bloqueo,
@@ -1255,7 +1370,7 @@ def _compilar_asunto(
                 mensaje_tarea = combinado
         cuando_tarea = _texto(hechos, "tarea.cuando")
         rol_interno = detectar_rol_interno(contexto.texto)
-        intencion_tarea = detectar_intencion_tarea(
+        intencion_tarea = contexto.intencion_tarea or detectar_intencion_tarea(
             contexto.texto, tiene_telefono=bool(telefono_dictado)
         )
         prioridad = detectar_prioridad(contexto.texto)
@@ -1362,6 +1477,8 @@ def _compilar_asunto(
             # La instrucción se guarda tal cual se dictó: no se redacta.
             rol_final = rol_interno or "SECRETARIA"
             persona = persona_dictada(nombre_tarea, rol_final)
+            if persona and _contacto_por_nombre(contactos, persona):
+                persona = None
             agregar(
                 "crear_tarea_interna",
                 {
@@ -1614,12 +1731,63 @@ def compilar(
                 )
             )
 
+    if len(grupos) > 1 and 1 in grupos:
+        cliente_principal = next(
+            (h for h in grupos[1] if h.clave == "cliente.nombre" and h.utilizable),
+            None,
+        )
+        monto_principal = next(
+            (h for h in grupos[1] if h.clave == "pago.monto" and h.utilizable),
+            None,
+        )
+        for indice in sorted(grupos):
+            if indice == 1:
+                continue
+            grupo = grupos[indice]
+            claves = {h.clave for h in grupo if h.utilizable}
+            if any(c.startswith(("traslado.", "pago.")) for c in claves):
+                if cliente_principal is not None and "cliente.nombre" not in claves:
+                    grupo.append(replace(cliente_principal, encargo=indice))
+                if (
+                    "traslado.cuenta_banco" in claves
+                    and "pago.monto" not in claves
+                    and monto_principal is not None
+                ):
+                    grupo.append(replace(monto_principal, encargo=indice))
+
+    texto_total = contexto.texto or ""
+    reserva = pide_reserva_mixer(texto_total)
+    unidades = re.search(r"\b(dos|tres|[1-9][0-9]*)\s+mixers\b", sin_tildes(texto_total).lower())
+    cantidad = None
+    if unidades:
+        literal = unidades[1]
+        cantidad = int(literal) if literal.isdigit() else {"dos": 2, "tres": 3}[literal]
+    grupo_reserva = next((
+        indice for indice in sorted(grupos)
+        if any(h.clave == "cotizacion.volumen_m3" for h in grupos[indice])
+    ), min(grupos, default=1))
+    if reserva:
+        for indice, grupo in list(grupos.items()):
+            grupos[indice] = [
+                h for h in grupo
+                if not (h.clave == "tarea.mensaje" and pide_reserva_mixer(str(h.valor or "")))
+            ]
+            if not grupos[indice] and indice != grupo_reserva:
+                del grupos[indice]
     for indice in sorted(grupos):
         grupo = grupos[indice]
         texto_grupo = _texto_del_grupo(grupo, segmentos, indice, contexto.texto)
+        cliente_grupo = contexto.clientes_por_encargo.get(indice, contexto.cliente)
         parcial = _compilar_asunto(
             grupo,
-            replace(contexto, texto=texto_grupo),
+            replace(
+                contexto,
+                cliente=cliente_grupo,
+                texto=texto_grupo,
+                reserva_mixer=reserva and indice == grupo_reserva,
+                unidades_mixer=cantidad,
+                intencion_tarea=contexto.intencion_tarea if len(grupos) == 1 else None,
+            ),
             intencion=intencion,
         )
         base = len(acciones)

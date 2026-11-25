@@ -48,6 +48,24 @@ class SandboxNotifier:
         )
         return True
 
+    async def enviar_documento_detalle(
+        self,
+        telefono: str,
+        nombre: str,
+        mimetype: str,
+        contenido: bytes,
+        texto: str | None = None,
+    ) -> dict[str, Any]:
+        """En SANDBOX queda encolado en outbox sin message_id externo."""
+        await self.enviar_documento(telefono, nombre, mimetype, contenido, texto)
+        return {
+            "ok": True,
+            "message_id": None,
+            "estado": "ENCOLADO",
+            "http_status": None,
+            "detalle": "SANDBOX: encolado sin envio real",
+        }
+
     async def enviar_texto_detalle(
         self, telefono: str, texto: str
     ) -> dict[str, Any]:
@@ -83,6 +101,24 @@ class SandboxNotifier:
             },
         )
         return True
+
+    async def enviar_documento_detalle(
+        self,
+        telefono: str,
+        nombre: str,
+        mimetype: str,
+        contenido: bytes,
+        texto: str | None = None,
+    ) -> dict[str, Any]:
+        """En SANDBOX queda encolado en outbox sin message_id externo."""
+        await self.enviar_documento(telefono, nombre, mimetype, contenido, texto)
+        return {
+            "ok": True,
+            "message_id": None,
+            "estado": "ENCOLADO",
+            "http_status": None,
+            "detalle": "SANDBOX: encolado sin envio real",
+        }
 
 
 @dataclass

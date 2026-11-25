@@ -16,7 +16,7 @@ import unicodedata
 import uuid
 from collections.abc import Mapping
 from dataclasses import asdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -109,6 +109,9 @@ class CotizacionIn(BaseModel):
     volumen_m3: Decimal = Field(gt=0)
     resistencia: str = Field(min_length=1, max_length=20)
     precio_m3: Decimal | None = Field(default=None, ge=0)
+    precio_estado: str | None = Field(
+        default=None, pattern="^(PROVISIONAL|OFICIAL)$"
+    )
     forma_pago: str = Field(
         default="POR_DEFINIR",
         pattern="^(POR_DEFINIR|EFECTIVO|TRANSFERENCIA|ABONO|FIADO)$",
@@ -151,6 +154,8 @@ class ConvertirIn(BaseModel):
         default=None, pattern="^(EFECTIVO|TRANSFERENCIA)$"
     )
     factura: FacturaIn | None = None
+    fecha_entrega: date | None = None
+    hora_entrega: time | None = None
 
 
 def _resumen(fila: asyncpg.Record) -> dict[str, Any]:
@@ -497,140 +502,23 @@ async def actualizar(
 @router.post("/{cotizacion_id}/enviar")
 async def enviar(request: Request, cotizacion_id: str) -> dict[str, Any]:
     """Genera el PDF, lo archiva y lo envia por WhatsApp (o SANDBOX)."""
-    await exigir_modulo(request, "cotizaciones", mutacion=True)
+    perfil = await exigir_modulo(request, "cotizaciones", mutacion=True)
     pool = _pool(request)
     settings = _settings(request)
-    fila = await pool.fetchrow(
-        """
-        SELECT c.*, cl.nombre AS cliente_nombre, cl.telefono_whatsapp,
-               cl.cedula, cl.ruc, cl.ciudad
-          FROM cotizaciones c
-          JOIN clients cl ON cl.id = c.cliente_id
-         WHERE c.id = $1
-        """,
-        _uuid(cotizacion_id, "cotizacion_id"),
-    )
-    if fila is None:
-        raise HTTPException(status_code=404, detail="cotizacion no encontrada")
-    if fila["estado"] in ("CONVERTIDA", "RECHAZADA", "VENCIDA"):
-        raise HTTPException(
-            status_code=422, detail=f"cotizacion en estado {fila['estado']} no se envia"
-        )
-    telefono = str(fila["telefono_whatsapp"] or "").strip()
-    if not telefono:
-        raise HTTPException(
-            status_code=422,
-            detail="TELEFONO_REQUERIDO: agrega el telefono del cliente antes de enviar",
-        )
-    empresa = dict(await setting(pool, "empresa.bot_publico", {}) or {})
-    extras = await pool.fetch(
-        "SELECT descripcion, monto, cobrable FROM cotizacion_extras WHERE cotizacion_id = $1 ORDER BY orden",
-        fila["id"],
-    )
-    pdf = generar_pdf(
-        {
-            "tipo_documento": "COTIZACION",
-            "numero": fila["numero"],
-            "fecha": date.today(),
-            "referencia": f"Cotizacion {fila['numero']}",
-            "obra_direccion": fila["obra_direccion"],
-            "ubicacion": {
-                "texto": _campo(fila, "ubicacion_texto"),
-                "lat": _coordenada(_campo(fila, "ubicacion_lat")),
-                "lng": _coordenada(_campo(fila, "ubicacion_lng")),
-                "origen": _campo(fila, "ubicacion_origen"),
-                "maps_url": _maps_url(
-                    _campo(fila, "ubicacion_lat"), _campo(fila, "ubicacion_lng")
-                ),
-            },
-            "cliente_nombre": fila["cliente_nombre"],
-            "cliente_ruc": fila["ruc"],
-            "cliente_ciudad": fila["ciudad"],
-            "resistencia": fila["resistencia"],
-            "volumen_m3": _money(fila["volumen_m3"]),
-            "precio_m3": _money(fila["precio_m3"]),
-            "precio_estado": fila["precio_estado"],
-            "forma_pago": "POR DEFINIR" if fila["forma_pago"] == "POR_DEFINIR" else fila["forma_pago"],
-            "validez": _fecha(fila["valida_hasta"]),
-            "subtotal": _money(fila["subtotal"]),
-            "iva_pct": _money(fila["iva_pct"]),
-            "iva_monto": _money(fila["iva_monto"]),
-            "total": _money(fila["total"]),
-            "empresa": empresa,
-            "extras": [
-                {
-                    "descripcion": e["descripcion"],
-                    "monto": _money(e["monto"]),
-                    "cobrable": bool(e["cobrable"]),
-                }
-                for e in extras
-            ],
-        }
-    )
-    try:
-        media_id, cdn_url = await _archivar_pdf(
-            pool,
-            settings,
-            str(fila["cliente_id"]),
-            {
-                "nombre": fila["cliente_nombre"],
-                "cedula": fila["cedula"],
-                "ruc": fila["ruc"],
-            },
-            pdf,
-            fila["numero"],
-        )
-    except BunnyError as exc:
-        raise HTTPException(status_code=502, detail=f"Bunny.net rechazo el PDF: {exc}") from exc
+    from ..services.cotizaciones_envio import enviar_cotizacion
 
-    notifier, sandbox = await _notifier(pool)
-    texto = (
-        f"Cotizacion {fila['numero']} de "
-        f"{empresa.get('trade_name') or 'Horminor'}. "
-        "Revisa el PDF y responde CONFIRMO si estas de acuerdo."
+    res = await enviar_cotizacion(
+        pool,
+        settings,
+        cotizacion_id,
+        actor=perfil,
     )
-    try:
-        enviado = await notifier.enviar_documento(
-            telefono, f"{fila['numero']}.pdf", "application/pdf", pdf, texto
-        )
-    except Exception:
-        enviado = False
-    canal = "WHATSAPP" if enviado else "PANEL"
-    async with pool.acquire() as conn:
-        async with conn.transaction():
-            await conn.execute(
-                """
-                UPDATE cotizaciones
-                   SET estado = 'ENVIADA', enviada_at = now(),
-                       enviada_por = COALESCE(enviada_por, 'panel'),
-                       canal_envio = $2, pdf_media_id = $3::uuid,
-                       updated_at = now()
-                 WHERE id = $1
-                """,
-                fila["id"],
-                canal,
-                media_id,
-            )
-            await conn.execute(
-                """
-                INSERT INTO cotizacion_eventos
-                    (cotizacion_id, tipo, canal, mensaje, actor, payload)
-                VALUES ($1, 'ENVIO', $2, $3, 'panel', $4::jsonb)
-                """,
-                fila["id"],
-                canal,
-                f"PDF enviado a {telefono}.",
-                json.dumps(
-                    {"enviado": enviado, "sandbox": sandbox, "media_id": media_id},
-                    ensure_ascii=False,
-                ),
-            )
     return {
         "cotizacion": await _detalle(pool, cotizacion_id),
-        "enviado": enviado,
-        "modo": "SANDBOX" if sandbox else "EVOLUTION",
-        "media_id": media_id,
-        "pdf_url": cdn_url,
+        "enviado": res["enviado"],
+        "modo": res["modo"],
+        "media_id": res["media_id"],
+        "pdf_url": res["pdf_url"],
     }
 
 
@@ -843,6 +731,9 @@ async def convertir(
                 forma_pago=forma_pago,
                 precio_m3=_d(fila["precio_m3"]),
                 creada_por=fila["creado_por"] or "cotizacion",
+                fecha_entrega=body.fecha_entrega,
+                hora_entrega=body.hora_entrega,
+                direccion_obra=fila["obra_direccion"],
                 notas=f"Desde cotizacion {fila['numero']}. {fila['notas'] or ''}".strip(),
                 aplica_iva=True,
                 abono_inicial_monto=body.abono_inicial_monto,

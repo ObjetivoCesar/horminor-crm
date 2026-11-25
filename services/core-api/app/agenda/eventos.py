@@ -31,7 +31,7 @@ TIPOS: tuple[str, ...] = ("mixers", "recordatorios", "julio", "equipo")
 MODULOS_POR_TIPO: dict[str, tuple[str, ...]] = {
     "mixers": ("agenda_despachos", "secretaria_ventanilla"),
     "recordatorios": ("cerebro", "secretaria_ventanilla"),
-    "julio": ("clientes_cartera", "cotizaciones"),
+    "julio": ("clientes_cartera", "cotizaciones", "secretaria_ventanilla"),
     "equipo": ("cerebro", "secretaria_ventanilla"),
 }
 
@@ -125,7 +125,7 @@ async def _recordatorios(
         ZONA,
     )
     return [
-        _evento(
+        {**_evento(
             identificador=fila["id"],
             tipo="recordatorios",
             fecha=fila["fecha"],
@@ -135,31 +135,34 @@ async def _recordatorios(
             estado=fila["estado"],
             cliente=fila["cliente"],
             referencia=fila["telefono"],
-        )
+        ), "editable": fila["estado"] == "AGENDADO"}
         for fila in filas
     ]
 
 
 async def _julio(
-    pool: asyncpg.Pool, desde: date, hasta: date
+    pool: asyncpg.Pool, desde: date, hasta: date, *, solo_gato: bool = False,
 ) -> list[dict[str, Any]]:
     filas = await pool.fetch(
         """
         SELECT c.id, c.tipo, c.fecha, to_char(c.hora_inicio, 'HH24:MI') AS hora,
                c.duracion_min, c.estado, c.notas, c.solicitada_por,
-               COALESCE(cl.nombre, l.nombre, l.telefono_e164) AS contacto
+               COALESCE(cl.nombre, l.nombre, c.contacto_agenda, l.telefono_e164) AS contacto,
+               c.clave_gato IS NOT NULL AS de_gato
           FROM citas c
           LEFT JOIN clients cl ON cl.id = c.cliente_id
           LEFT JOIN leads l ON l.id = c.lead_id
          WHERE c.fecha BETWEEN $1 AND $2
            AND c.estado <> 'CANCELADA'
+           AND (NOT $3::boolean OR c.clave_gato IS NOT NULL)
          ORDER BY c.fecha, c.hora_inicio
         """,
         desde,
         hasta,
+        solo_gato,
     )
     return [
-        _evento(
+        {**_evento(
             identificador=fila["id"],
             tipo="julio",
             fecha=fila["fecha"],
@@ -173,7 +176,7 @@ async def _julio(
             estado=fila["estado"],
             cliente=fila["contacto"],
             referencia=f"{fila['duracion_min']} min",
-        )
+        ), "editable": fila["de_gato"] and fila["estado"] in ("CONFIRMADA", "REAGENDADA")}
         for fila in filas
     ]
 
@@ -235,6 +238,7 @@ async def listar(
     desde: date,
     hasta: date,
     tipos: tuple[str, ...],
+    solo_visitas_gato: bool = False,
 ) -> list[dict[str, Any]]:
     """Eventos de los tipos pedidos, ordenados por fecha y hora."""
     eventos: list[dict[str, Any]] = []
@@ -242,7 +246,10 @@ async def listar(
         fuente = _FUENTES.get(tipo)
         if fuente is None:
             continue
-        eventos.extend(await fuente(pool, desde, hasta))
+        if tipo == "julio" and solo_visitas_gato:
+            eventos.extend(await _julio(pool, desde, hasta, solo_gato=True))
+        else:
+            eventos.extend(await fuente(pool, desde, hasta))
     eventos.sort(key=lambda e: (e["fecha"], e["hora"] or "99:99", e["titulo"]))
     return eventos
 

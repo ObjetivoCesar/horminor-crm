@@ -65,6 +65,8 @@ class DespachadorRecordatorios:
                 SELECT id
                   FROM gato_recordatorios
                  WHERE estado = 'PENDIENTE'
+                   AND origen_destino <> 'PANEL'
+                   AND telefono IS NOT NULL
                    AND programado_at <= now()
                  ORDER BY programado_at
                  LIMIT $1
@@ -77,7 +79,8 @@ class DespachadorRecordatorios:
               FROM lote
              WHERE r.id = lote.id
             RETURNING r.id, r.telefono, r.mensaje, r.intentos,
-                      r.destinatario_nombre, r.media_id
+                      r.destinatario_nombre, r.media_id, r.cotizacion_id,
+                      r.cotizacion_version, r.creado_por
             """,
             limite,
         )
@@ -120,17 +123,69 @@ class DespachadorRecordatorios:
         except httpx.HTTPError:
             return None
 
-    async def _enviado(self, recordatorio_id: Any, hora: Any) -> None:
+    async def _enviado(
+        self,
+        fila: dict[str, Any],
+        hora: Any,
+        msg_id: str | None = None,
+    ) -> None:
+        import json
+
         await self.pool.execute(
             """
             UPDATE gato_recordatorios
-               SET estado = 'ENVIADO', enviado_at = $2, ultimo_error = NULL,
+               SET estado = 'ENVIADO',
+                   enviado_at = $2,
+                   ultimo_error = NULL,
+                   proveedor_msg_id = COALESCE($3, proveedor_msg_id),
                    updated_at = now()
              WHERE id = $1
             """,
-            recordatorio_id,
+            fila["id"],
             hora,
+            msg_id,
         )
+        cot_id = fila.get("cotizacion_id")
+        if cot_id:
+            await self.pool.execute(
+                """
+                UPDATE cotizaciones
+                   SET estado = 'ENVIADA',
+                       enviada_at = COALESCE(enviada_at, $2),
+                       enviada_por = COALESCE($3, enviada_por),
+                       canal_envio = 'WHATSAPP',
+                       pdf_media_id = COALESCE($4::uuid, pdf_media_id),
+                       whatsapp_msg_id = COALESCE($5, whatsapp_msg_id),
+                       updated_at = now()
+                 WHERE id = $1
+                """,
+                cot_id,
+                hora,
+                fila.get("creado_por") or "gato",
+                fila.get("media_id"),
+                msg_id,
+            )
+            await self.pool.execute(
+                """
+                INSERT INTO cotizacion_eventos
+                    (cotizacion_id, tipo, canal, mensaje, whatsapp_msg_id, actor, payload)
+                VALUES ($1, 'ENVIO', 'WHATSAPP', $2, $3, $4, $5::jsonb)
+                """,
+                cot_id,
+                f"PDF programado v{fila.get('cotizacion_version') or 1} enviado a {fila.get('telefono')}.",
+                msg_id,
+                fila.get("creado_por") or "gato",
+                json.dumps(
+                    {
+                        "enviado": True,
+                        "programado": True,
+                        "recordatorio_id": str(fila["id"]),
+                        "version": fila.get("cotizacion_version"),
+                        "media_id": str(fila["media_id"]) if fila.get("media_id") else None,
+                    },
+                    ensure_ascii=False,
+                ),
+            )
 
     async def _fallido(self, fila: dict[str, Any], error: str) -> None:
         from .recordatorios import MAX_INTENTOS
@@ -214,21 +269,34 @@ class DespachadorRecordatorios:
                     procesados.append({**fila, "resultado": "FALLIDO"})
                     continue
 
+            msg_id: str | None = None
             try:
                 if adjunto is not None:
                     nombre, mime, datos = adjunto
-                    ok = await notifier.enviar_documento(
-                        destino, nombre, mime, datos, str(fila["mensaje"])
-                    )
+                    if hasattr(notifier, "enviar_documento_detalle"):
+                        det = await notifier.enviar_documento_detalle(
+                            destino, nombre, mime, datos, str(fila["mensaje"])
+                        )
+                        ok = bool(det.get("ok"))
+                        msg_id = det.get("message_id")
+                    else:
+                        ok = await notifier.enviar_documento(
+                            destino, nombre, mime, datos, str(fila["mensaje"])
+                        )
                 else:
-                    ok = await notifier.enviar_texto(destino, str(fila["mensaje"]))
+                    if hasattr(notifier, "enviar_texto_detalle"):
+                        det = await notifier.enviar_texto_detalle(destino, str(fila["mensaje"]))
+                        ok = bool(det.get("ok"))
+                        msg_id = det.get("message_id")
+                    else:
+                        ok = await notifier.enviar_texto(destino, str(fila["mensaje"]))
             except Exception as exc:  # el loop nunca debe morir por un envío
                 log.exception("error enviando recordatorio %s", fila["id"])
                 await self._fallido(fila, f"{type(exc).__name__}: {exc}")
                 continue
 
             if ok:
-                await self._enviado(fila["id"], datetime.now(timezone.utc))
+                await self._enviado(fila, datetime.now(timezone.utc), msg_id)
                 procesados.append({**fila, "resultado": "ENVIADO"})
             else:
                 await self._fallido(fila, "el notificador devolvió False")

@@ -165,12 +165,16 @@ def _nombre(pilar: str, accion: str) -> str:
     return f"{pilar}__{accion}".replace("-", "_")
 
 
-def herramientas_llm(actor_rol: str) -> tuple[list[dict[str, Any]], dict[str, tuple[str, str]]]:
+def herramientas_llm(
+    actor_rol: str, *, solo_lectura: bool = False,
+) -> tuple[list[dict[str, Any]], dict[str, tuple[str, str]]]:
     """Tools filtradas por rol + mapa nombre→(pilar, acción)."""
     tools: list[dict[str, Any]] = []
     mapa: dict[str, tuple[str, str]] = {}
     for pilar, datos in pilares.pilares_para(actor_rol).items():
         for accion, info in datos["acciones"].items():
+            if solo_lectura and pilar == "recordatorios" and accion != "recordatorio_listar":
+                continue
             params = PARAMS.get(accion)
             if params is None:
                 continue
@@ -210,7 +214,7 @@ async def responder_llm(
     from .guardas import CifraNoVerificada, verificar
     from .redactor import redactar
 
-    tools, mapa = herramientas_llm(actor.rol)
+    tools, mapa = herramientas_llm(actor.rol, solo_lectura=getattr(actor, "solo_lectura", False))
     mensajes: list[dict[str, Any]] = [
         {"role": "system", "content": render_prompt(actor.nombre, actor.rol, actor.ahora)},
     ]

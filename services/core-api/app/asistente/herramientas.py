@@ -533,7 +533,10 @@ async def _disponibilidad(params: dict[str, Any], biblio: Bibliotecario) -> Resu
         return Resultado("disponibilidad_agenda", "VACIO", fuente=["dispatch_schedule"],
                          filtros=filtros, nota="No hay mixers registrados para ese día.")
     return Resultado("disponibilidad_agenda", "OK",
-                     datos={"filas": filas, "libres": libres}, fichas=[],
+                     datos={"filas": filas, "unidades_sin_bloques_del_dia": libres},
+                     fichas=[],
+                     nota="Esta consulta no comprueba capacidad, horario de operación ni una reserva. "
+                          "Para comprobar cupo, usa la franja de entrega en Agenda.",
                      fuente=["dispatch_schedule", "system_settings"], filtros=filtros)
 
 

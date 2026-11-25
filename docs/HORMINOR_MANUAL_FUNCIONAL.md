@@ -1138,8 +1138,7 @@ resuelta, registrada). No mide cuánto trabajó una persona.
   «¿qué pasó con lo de ayer?». **Contrato escrito, implementación pendiente.**
 - Ejecutar `crear_cotizacion_borrador` **desde el chat de Gato** (el dinero y la
   cotización se confirman en `/panel/cerebro`; el chat no los ejecuta).
-- **Enviar** la cotización por WhatsApp desde el Cerebro (`enviar_cotizacion_whatsapp`
-  sigue sin ejecutor: 501 a propósito).
+- **Envío de cotización por WhatsApp desde Gato** (`enviar_cotizacion_whatsapp`): implementado en v2.22 como skill de Gato. La frase «envíale la cotización al encargado a las 18:50» produce ese resultado exacto: teléfono indicado, PDF de la versión vigente y hora programada. El Cerebro sigue sin ejecutor (501 a propósito); el envío es exclusivo de la skill de Gato.
 - **Reservar mixes o entregas desde el Cerebro**: la orden se queda en borrador
   y tareas internas; la agenda operativa (`dispatch_schedule` /
   `HorminorAgenda`) no se toca.
@@ -1271,3 +1270,4 @@ verificación de que este manual y la skill de consulta existan y apunten a él.
 | v2.18 | 2026-11-20 | **Agenda operativa desde Gato** (§6): mixers, recordatorios y tareas internas se crean, mueven y cancelan desde el chat; el monto dictado por el humano se autoriza como instrucción, no como saldo. |
 | v2.19 | 2026-11-20 | **Recordatorio que sí se programa** (§4 y §6): «a las 15 y 27» se lee como 15:27; un dictado nuevo ya no se toma como confirmación del borrador anterior; Gato puede completar la hora al confirmar. **Cotización desde el Cerebro** (§6): `crear_cotizacion_borrador` deja de responder 501 y crea el documento en `BORRADOR` con IVA en `Decimal`. |
 | v2.20 | 2026-11-24 | **Gato y Agenda en celular** (§6): acceso al micrófono al abrir el chat, cuatro pestañas de Agenda visibles y desplazamiento interno del detalle de un día. |
+| v2.22 | 2026-11-24 | **Gato Skills operativas** (§6): razonador enriquecido con historial determinístico (`redactor_historial.py`), skill de cotizaciones con envío inmediato o programado y huella de confirmación, skill de agenda para consultas de disponibilidad, política de permisos por rol y precios, skill de avisos de dinero (Gato → aviso para Secretaría, nunca toca `payments`), `hechos_cliente.py` anotando la ficha por encargo. El caso «envíale la cotización al encargado a las 18:50» queda resuelto: teléfono indicado, PDF de la versión vigente y hora programada en `gato_recordatorios`. |

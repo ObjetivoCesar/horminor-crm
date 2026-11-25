@@ -19,10 +19,15 @@ una maquina concreta.
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from datetime import date, datetime, time
+from decimal import Decimal
 from typing import Any, Mapping, Sequence
 
 import asyncpg
+
+from .. import tiempo
+from .seguimiento import notificar_secretaria
 
 from .parametros import (
     DEFAULTS,
@@ -394,8 +399,147 @@ _SELECT = """
 """
 
 
+class ReservaMixerInvalida(ValueError):
+    """La franja o las unidades no cubren la entrega solicitada."""
+
+
+def planificar_cargas(disponibilidad, volumen, unidades=None):
+    """Distribuye el volumen entre unidades libres de capacidad conocida."""
+    paso = Decimal("0.01")
+    if not volumen.is_finite() or volumen <= 0 or volumen != volumen.quantize(paso):
+        raise ReservaMixerInvalida("Indica un volumen mayor que cero con hasta dos decimales.")
+    candidatas = [
+        (item, Decimal(str(item["capacidad_m3"])))
+        for item in disponibilidad["mixers"]
+        if item["estado"] == "LIBRE" and item.get("capacidad_m3")
+    ]
+    candidatas.sort(key=lambda pareja: (-pareja[1], pareja[0]["codigo"]))
+    cargas = []
+    choferes = set()
+    for item, capacidad in candidatas:
+        chofer = str(item.get("chofer_asignado") or "").strip().casefold()
+        if capacidad <= 0 or (chofer and chofer in choferes):
+            continue
+        if unidades is not None and len(cargas) == unidades:
+            break
+        restante = unidades - len(cargas) - 1 if unidades is not None else 0
+        carga = min(capacidad, volumen - restante * paso)
+        if carga <= 0:
+            break
+        cargas.append((item, carga))
+        if chofer:
+            choferes.add(chofer)
+        volumen -= carga
+        if volumen == 0:
+            break
+    return cargas if volumen == 0 and (unidades is None or len(cargas) == unidades) else []
+
+
+async def plan_reserva_mixer(db, *, fecha, hora, volumen, unidades=None):
+    parametros = normalizar_parametros(await db.fetchval(
+        "SELECT value FROM system_settings WHERE key = 'agenda.parametros'"
+    ))
+    flota = mixers_activos(await db.fetchval(
+        "SELECT value FROM system_settings WHERE key = 'flota.mixers'"
+    ))
+    filas = await PostgresAgendaStore(db).listar(fecha, fecha)
+    duracion = parametros["duracion_entrega_default_min"]
+    def cargas_a(hora_inicio):
+        disponibilidad = evaluar_disponibilidad(
+            filas=filas, mixers=flota, fecha=fecha, hora=hora_inicio,
+            duracion_min=duracion, parametros=parametros,
+        )
+        if not disponibilidad["hay_disponible"]:
+            return []
+        inicio = a_minutos(hora_inicio)
+        ocupados = {
+            str(fila.get("chofer_nombre") or "").strip().casefold()
+            for fila in _filas_activas(filas)
+            if se_solapan(
+                inicio, inicio + duracion,
+                a_minutos(fila.get("hora_inicio")), a_minutos(fila.get("hora_fin_estimada")),
+            )
+        } - {""}
+        for item in disponibilidad["mixers"]:
+            if str(item.get("chofer_asignado") or "").strip().casefold() in ocupados:
+                item["estado"] = "OCUPADO"
+        return planificar_cargas(disponibilidad, volumen, unidades)
+
+    cargas = cargas_a(hora)
+    if cargas:
+        return duracion, cargas
+
+    paso = parametros["intervalo_slot_min"]
+    inicio = max(a_minutos(hora) + paso, a_minutos(parametros["hora_apertura"]))
+    cierre = a_minutos(parametros["hora_cierre"]) - duracion
+    alternativa = next(
+        (a_hhmm(minuto) for minuto in range(inicio, cierre + 1, paso)
+         if cargas_a(a_hhmm(minuto))),
+        None,
+    )
+    mensaje = f"No hay capacidad de mixers verificada el {fecha.isoformat()} a las {hora}."
+    if alternativa:
+        mensaje += f" Hay cupo a las {alternativa}. ¿Quieres usar esa hora?"
+    else:
+        mensaje += " Indica otra fecha u hora, o revisa la flota y sus capacidades en Agenda."
+    raise ReservaMixerInvalida(mensaje)
+
+
+@asynccontextmanager
+async def transaccion_agenda(pool):
+    """Serializa la comprobación de cruces con la escritura de la agenda."""
+    async with pool.acquire() as conn, conn.transaction():
+        await conn.execute("LOCK TABLE dispatch_schedule IN SHARE ROW EXCLUSIVE MODE")
+        yield conn
+
+
+async def reservar_mixers(pool, datos, *, clave=None, unidades=None, avisar_secretaria=False):
+    """Comprueba el cupo y guarda todas las cargas en una transacción."""
+    fecha = _fecha_sql(datos["fecha_entrega"])
+    hora = datos["hora_inicio"]
+    async with transaccion_agenda(pool) as conn:
+        store = PostgresAgendaStore(conn)
+        if clave:
+            anteriores = await conn.fetch(
+                "SELECT id::text FROM dispatch_schedule WHERE notas = $1 ORDER BY id",
+                clave,
+            )
+            if anteriores:
+                filas = [await store.obtener(fila["id"]) for fila in anteriores]
+                if any(fila is None or fila["estado"] in ("CANCELADO", "REAGENDADO") for fila in filas):
+                    raise ReservaMixerInvalida("La reserva original fue cambiada en Agenda.")
+                return filas
+        if datetime.combine(fecha, _hora_sql(hora), tzinfo=tiempo.ahora().tzinfo) <= tiempo.ahora():
+            raise ReservaMixerInvalida("Indica una fecha y hora futuras para la entrega.")
+        duracion, cargas = await plan_reserva_mixer(
+            conn, fecha=fecha, hora=hora,
+            volumen=Decimal(str(datos["volumen_m3"])), unidades=unidades,
+        )
+        filas = [
+            await store.crear({
+                **datos,
+                "mixer_codigo": mixer["codigo"],
+                "chofer_nombre": mixer.get("chofer_asignado"),
+                "volumen_m3": volumen,
+                "duracion_estimada_min": duracion,
+                "estado": "RESERVA_CAMPO",
+                "notas": clave or datos.get("notas"),
+            })
+            for mixer, volumen in cargas
+        ]
+        if avisar_secretaria:
+            await notificar_secretaria(
+                conn, tipo="mixers", entidad_id=filas[0]["id"],
+                fecha=fecha.isoformat(), hora=hora,
+                actor_id=datos.get("creado_por_id"), actor=str(datos.get("creado_por_nombre") or "Gato"),
+                rol=str(datos.get("creado_por_rol") or "SUPERADMIN"),
+                referencia=filas[0].get("cliente"),
+            )
+        return filas
+
+
 class PostgresAgendaStore:
-    def __init__(self, pool: asyncpg.Pool) -> None:
+    def __init__(self, pool: asyncpg.Pool | asyncpg.Connection) -> None:
         self._pool = pool
 
     async def listar(self, desde: date, hasta: date) -> list[dict[str, Any]]:

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
-from typing import Any
+from dataclasses import replace
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -13,12 +17,30 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from . import (
     agenda_bridge,
+    asuntos_operativos,
     cerebro_bridge,
     comercial_bridge,
     conversaciones,
     memoria,
+    razonador,
     recordatorios,
+    redactor_historial,
 )
+from .skills.agenda import AgendaSkill
+from .skills.avisos_dinero import PostgresAvisosDinero
+from .skills.contrato import (
+    EJECUTADA,
+    ESPERANDO_CONFIRMACION,
+    FALTAN_DATOS,
+    NO_PERMITIDO,
+    ContextoSkill,
+    Puertos,
+)
+from .skills.cotizaciones_skill import CotizacionesSkill
+from .skills.politica import huella_texto
+from ..agenda.service import PostgresAgendaStore, ReservaMixerInvalida, plan_reserva_mixer
+from ..cerebro.compilador import pide_reserva_mixer
+from ..comercial import citas as citas_svc
 from ..db import setting
 from ..panel_acl import exigir_modulo, resolver_perfil
 from ..services import media as media_svc
@@ -26,9 +48,119 @@ from ..voz.ingesta import ingestar_audio
 from .bibliotecario import Bibliotecario
 from .gato import responder_detallado
 from .orquestador import Actor, Respuesta
+from ..comercial.intencion import _fecha_dicha, _horas_dichas
+from .. import tiempo
 
 router = APIRouter(prefix="/api/v1/asistente", tags=["asistente"])
 gato_router = APIRouter(prefix="/api/v1/gato", tags=["gato"])
+
+
+# ---------------------------------------------------------------------------
+# Adaptadores de puertos para las skills de Gato (usan el pool de BD directamente)
+# ---------------------------------------------------------------------------
+
+class _PoolConfigPort:
+    """Lee system_settings desde el pool."""
+
+    def __init__(self, pool: asyncpg.Pool) -> None:
+        self._pool = pool
+
+    async def valor(self, clave: str, defecto: Any = None) -> Any:
+        if not isinstance(self._pool, asyncpg.Pool):
+            return defecto
+        try:
+            v = await setting(self._pool, clave)
+            return v if v is not None else defecto
+        except Exception:
+            return defecto
+
+
+class _PoolCotizacionesPort:
+    """Implementa CotizacionesPort contra la BD existente."""
+
+    def __init__(self, pool: asyncpg.Pool, settings: Any = None) -> None:
+        self._pool = pool
+        self._settings = settings
+
+    async def obtener(self, cotizacion_id: str) -> dict[str, Any] | None:
+        if not isinstance(self._pool, asyncpg.Pool):
+            return None
+        try:
+            fila = await self._pool.fetchrow(
+                """
+                SELECT c.id::text, c.numero, c.estado, c.precio_estado,
+                       cl.nombre AS cliente_nombre, cl.telefono AS cliente_telefono
+                  FROM cotizaciones c
+                  LEFT JOIN clientes cl ON cl.id = c.cliente_id
+                 WHERE c.id = $1::uuid
+                """,
+                cotizacion_id,
+            )
+            return dict(fila) if fila else None
+        except Exception:
+            return None
+
+    async def abiertas(
+        self, *, ids: Any = None, cliente_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        if not isinstance(self._pool, asyncpg.Pool):
+            return []
+        try:
+            if ids:
+                filas = await self._pool.fetch(
+                    "SELECT id::text, numero, estado FROM cotizaciones WHERE id = ANY($1::uuid[]) AND estado NOT IN ('CANCELADA')",
+                    [str(i) for i in ids],
+                )
+            elif cliente_id:
+                filas = await self._pool.fetch(
+                    "SELECT id::text, numero, estado FROM cotizaciones WHERE cliente_id = $1::uuid AND estado NOT IN ('CANCELADA') ORDER BY creada_en DESC LIMIT 10",
+                    cliente_id,
+                )
+            else:
+                return []
+            return [dict(f) for f in filas]
+        except Exception:
+            return []
+
+    async def enviar(
+        self,
+        cotizacion_id: str,
+        *,
+        actor: Any,
+        telefono_destino: str | None = None,
+        destinatario_nombre: str | None = None,
+        cuando: datetime | None = None,
+        clave_idempotencia: str | None = None,
+    ) -> dict[str, Any]:
+        from ..services import cotizaciones_envio
+        return await cotizaciones_envio.enviar_cotizacion(
+            self._pool,
+            self._settings,
+            cotizacion_id=cotizacion_id,
+            actor=actor,
+            telefono_destino=telefono_destino,
+            destinatario_nombre=destinatario_nombre,
+            cuando=cuando,
+            clave_idempotencia=clave_idempotencia,
+        )
+
+    async def consultar_envio(self, cotizacion_id: str) -> dict[str, Any] | None:
+        if not isinstance(self._pool, asyncpg.Pool):
+            return None
+        try:
+            fila = await self._pool.fetchrow(
+                """
+                SELECT id::text, estado, programado_at
+                  FROM gato_recordatorios
+                 WHERE cotizacion_id = $1::uuid
+                   AND estado IN ('BORRADOR', 'PENDIENTE', 'AGENDADO')
+                 ORDER BY creado_en DESC LIMIT 1
+                """,
+                cotizacion_id,
+            )
+            return dict(fila) if fila else None
+        except Exception:
+            return None
 
 ROLES = {
     "julio": "SUPERADMIN",
@@ -44,9 +176,16 @@ class MensajeIn(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    mensaje: str = Field(min_length=1, max_length=1000)
+    mensaje: str = Field(min_length=1, max_length=8010)
     conversacion_id: str | None = Field(default=None, max_length=80)
     client_turn_id: str | None = Field(default=None, max_length=80)
+
+
+class OperacionAgendaOut(BaseModel):
+    tipo: Literal["mixers", "julio", "recordatorios"]
+    id: UUID
+    fecha: date
+    estado: str
 
 
 class MensajeOut(BaseModel):
@@ -54,6 +193,7 @@ class MensajeOut(BaseModel):
     estado: str
     conversacion_id: str
     transcripcion: str | None = None
+    operacion_agenda: OperacionAgendaOut | None = None
 
 
 class RecordatorioIn(BaseModel):
@@ -137,6 +277,8 @@ def _quiere_crear_cliente(mensaje: str) -> bool:
 # Acciones del Cerebro que el chat puede ejecutar cuando el humano confirma.
 _ACCIONES_CONFIRMABLES = (
     "crear_cliente",
+    "crear_cotizacion_borrador",
+    "reservar_mixer",
     "crear_tarea_recordatorio",
     "crear_tarea_interna",
 )
@@ -314,6 +456,30 @@ def _es_continuacion(mensaje: str) -> bool:
     return bool(re.match(r"^(si|no|correcto|ya|efectivamente)\b", plano))
 
 
+def _es_ruido_o_saludo(mensaje: str) -> bool:
+    """True si el dictado es solo un saludo, agradecimiento o prueba de sonido."""
+    limpio = _plano(cerebro_bridge.texto_limpio(mensaje)).strip(".,!?¡¿ ")
+    if not limpio:
+        return True
+    ruido = (
+        "hola",
+        "gracias",
+        "muchas gracias",
+        "ok",
+        "okay",
+        "listo",
+        "prueba",
+        "prueba de sonido",
+        "hola esta es una prueba de sonido",
+        "probando",
+    )
+    if limpio in ruido:
+        return True
+    if "prueba de sonido" in limpio and len(limpio.split()) <= 8:
+        return True
+    return False
+
+
 def _contexto_dictado(
     historial: list[dict[str, str]] | None,
     mensaje: str,
@@ -328,6 +494,8 @@ def _contexto_dictado(
     Si no hay pendiente, solo se continúa con una respuesta corta o una
     corrección explícita.
     """
+    if _es_ruido_o_saludo(mensaje):
+        return None
     if pendiente and texto_previo:
         return texto_previo
     if not _es_continuacion(mensaje):
@@ -414,6 +582,71 @@ async def _respuesta_con_ratificacion(
     )
 
 
+def _estado_del_pedido(borrador: dict[str, Any]) -> str:
+    """Presenta el estado registrado por el Cerebro para el pedido activo."""
+    ejecutadas = set(borrador.get("ordenes_ejecutadas") or ())
+    canceladas = {item["encargo"] for item in borrador.get("encargos_cancelados") or ()}
+    etiquetas = {
+        "crear_cliente": "Alta del cliente",
+        "reservar_mixer": "Reserva de mixer",
+        "crear_cotizacion_borrador": "Borrador de cotización",
+        "enviar_cotizacion_whatsapp": "Envío de la cotización",
+        "crear_tarea_recordatorio": "Programación del recordatorio",
+        "crear_tarea_interna": "Registro de la tarea",
+        "registrar_abono_cliente": "Registro del anticipo",
+        "registrar_traslado_caja_banco": "Traslado al banco",
+    }
+    lineas = []
+    if cliente := borrador.get("cliente_confirmado"):
+        lineas.append(f"- Alta del cliente ({cliente}): completada.")
+    for accion in borrador.get("acciones") or ():
+        nombre = accion.get("accion_nombre")
+        etiqueta = etiquetas.get(nombre)
+        if not etiqueta:
+            continue
+        orden = accion.get("orden")
+        if orden in ejecutadas:
+            estado = "completado"
+        elif accion.get("encargo") in canceladas:
+            estado = "cancelado"
+        else:
+            estado = "pendiente"
+        if nombre == "crear_cliente":
+            cliente = (accion.get("parametros") or {}).get("nombre")
+            if cliente:
+                etiqueta += f" ({cliente})"
+        lineas.append(f"- {etiqueta}: {estado}.")
+    preguntas = [item["texto"] for item in borrador.get("preguntas") or () if item.get("texto")]
+    if preguntas:
+        lineas.extend(["", "Datos pendientes:", *(f"- {texto}" for texto in preguntas)])
+    return "\n".join(lineas).strip() or "El borrador aún no tiene acciones registradas."
+
+
+def _vista_asunto(asunto: razonador.Asunto) -> str:
+    datos = asunto.datos or {}
+    if asunto.tipo == "visita":
+        texto = f"Visita a {datos.get('nombre') or 'un posible cliente'}"
+        if datos.get("fecha"):
+            texto += f" el {datos['fecha']}"
+        if datos.get("hora"):
+            texto += f" a las {datos['hora']}"
+    else:
+        texto = "Recordatorio para ti"
+        if datos.get("mensaje"):
+            texto += f" para «{datos['mensaje']}»"
+        if datos.get("cuando"):
+            momento = datetime.fromisoformat(datos["cuando"])
+            texto += f" el {momento:%Y-%m-%d} a las {momento:%H:%M}"
+            texto += " (hora de Ecuador)"
+    if asunto.preguntas:
+        return texto + ".\n\n" + "\n".join(asunto.preguntas)
+    return texto + ".\n\nResponde «Confirmado» para guardarlo."
+
+
+def _huella_vista(texto: str) -> str:
+    return hashlib.sha256(texto[:memoria.MAX_TEXTO].encode("utf-8")).hexdigest()
+
+
 @router.post("/chat", response_model=MensajeOut)
 async def chat(
     body: MensajeIn,
@@ -460,7 +693,7 @@ async def chat(
             )
             if pendiente:
                 texto_previo = await conversaciones.texto_ultimo_borrador(
-                    pool, conversacion_id
+                    pool, conversacion_id, estado_dialogo.get("borrador_id")
                 )
         except conversaciones.ConversacionCerrada as exc:
             raise HTTPException(
@@ -509,7 +742,9 @@ async def chat(
     actor.conversacion_id = conversacion_id
     actor.modo_envio = _modo_envio(request)
 
-    async def cerrar(texto: str, estado: str) -> MensajeOut:
+    async def cerrar(
+        texto: str, estado: str, operacion_agenda: OperacionAgendaOut | None = None
+    ) -> MensajeOut:
         if memoria_activa:
             await memoria.guardar(
                 pool,
@@ -523,13 +758,236 @@ async def chat(
             )
             await conversaciones.tocar(pool, conversacion_id)
         return MensajeOut(
-            respuesta=texto, estado=estado, conversacion_id=conversacion_id
+            respuesta=texto, estado=estado, conversacion_id=conversacion_id,
+            operacion_agenda=operacion_agenda,
         )
+
+    es_dictado = cerebro_bridge.es_dictado(body.mensaje)
+    if _es_ruido_o_saludo(body.mensaje) and (es_dictado or pendiente):
+        return await cerrar("Te escucho." if pendiente else "Dictado recibido.", "OK")
+
+    dicho = _plano(cerebro_bridge.texto_limpio(body.mensaje)).strip(" .?!¿¡")
+    asuntos = razonador.asuntos_guardados(estado_dialogo)
+    foco = estado_dialogo.get("foco_asunto")
+    # Los borradores abiertos anteriores a este cambio se incorporan al
+    # primer seguimiento, sin perder la referencia que ya vio el usuario.
+    if not asuntos and pendiente and estado_dialogo.get("borrador_id") and texto_previo:
+        anterior = estado_dialogo["borrador_id"]
+        tipo = "encargo"
+        foco = anterior
+        asuntos[foco] = razonador.Asunto(
+            tipo, razonador.NOMBRES[tipo], estado_dialogo["estado"], anterior,
+            tuple(p["texto"] for p in estado_dialogo.get("preguntas") or () if p.get("texto")),
+        )
+    decision = await razonador.decidir(
+        body.mensaje, asuntos, foco=foco, rol=actor.rol, historial=historial,
+    ) if memoria_activa else razonador.Decision("legado")
+    if decision.modo == "aclarar":
+        return await cerrar(decision.pregunta or "¿A qué pedido te refieres?", "FALTA")
+    asunto_id = decision.asunto
+    asunto = asuntos.get(asunto_id or "")
+    ultima_respuesta = next((
+        turno["content"] for turno in reversed(historial) if turno["role"] == "assistant"
+    ), "")
+    huella = (asunto.datos or {}).get("vista_confirmada") if asunto else None
+    ratificacion_visible = bool(huella and huella == _huella_vista(ultima_respuesta))
+    if decision.modo == "confirmar" and (
+        not ratificacion_visible
+        or dicho not in {"confirmado", "confirmo", "si", "dale", "hazlo", "crealo"}
+    ):
+        if asunto:
+            texto = f"¿Confirmas «{asunto.etiqueta}»? Responde «Confirmado» para autorizar el paso mostrado."
+            asunto = replace(asunto, datos={**(asunto.datos or {}), "vista_confirmada": _huella_vista(texto)})
+            await conversaciones.actualizar_estado(
+                pool, conversacion_id, estado=asunto.estado, borrador_id=asunto.borrador_id,
+                asunto_id=asunto_id, asunto=asunto.a_dict(),
+            )
+            return await cerrar(texto, "FALTA")
+
+    if asunto and asunto.borrador_id:
+        texto_previo = await conversaciones.texto_ultimo_borrador(
+            pool, conversacion_id, asunto.borrador_id,
+        )
+        estado_dialogo = {
+            **estado_dialogo, "borrador_id": asunto.borrador_id, "estado": asunto.estado,
+        }
+        pendiente = asunto.estado != "LIBRE"
+
+    async def guardar_asunto(
+        identificador: str, registro: razonador.Asunto, *, vista: str | None = None, **cambios: Any,
+    ) -> None:
+        registro = replace(registro, actualizado_en=tiempo.iso())
+        if vista and registro.estado == "ESPERANDO_CONFIRMACION":
+            registro = replace(registro, datos={**(registro.datos or {}), "vista_confirmada": _huella_vista(vista)})
+        kwargs = {
+            "estado": registro.estado, "borrador_id": registro.borrador_id,
+            "asunto_id": identificador, "asunto": registro.a_dict(), **cambios,
+        }
+        await conversaciones.actualizar_estado(pool, conversacion_id, **kwargs)
+
+    if decision.modo == "estado" and asunto:
+        if asunto.borrador_id:
+            borrador = await cerebro_bridge.obtener_borrador(
+                asunto.borrador_id, usuario=actor.actor_id, rol=actor.rol, nombre=actor.nombre,
+            )
+            return await cerrar(_estado_del_pedido(borrador), "OK")
+        datos = asunto.datos or {}
+        if datos.get("cita_id"):
+            cita = await citas_svc.obtener(pool, datos["cita_id"])
+            if cita:
+                estado_cita = str(cita["estado"])
+                return await cerrar(
+                    f"Visita del {cita['fecha']} a las {cita['hora_inicio']} · {estado_cita}.",
+                    "OK", OperacionAgendaOut(
+                        tipo="julio", id=cita["id"], fecha=cita["fecha"], estado=estado_cita,
+                    ),
+                )
+            return await cerrar("La visita ya no está disponible en Agenda.", "FALTA")
+        if datos.get("recordatorio_id"):
+            recordatorio = await pool.fetchrow(
+                "SELECT estado, programado_at FROM gato_recordatorios WHERE id = $1::uuid AND creado_por = $2",
+                datos["recordatorio_id"], actor.actor_id,
+            )
+            if recordatorio:
+                if recordatorio["estado"] == "AGENDADO":
+                    momento = recordatorio["programado_at"].astimezone(tiempo.ZONA)
+                    return await cerrar(
+                        f"Tu recordatorio está agendado el {momento:%Y-%m-%d} a las {momento:%H:%M}.",
+                        "OK", OperacionAgendaOut(
+                            tipo="recordatorios", id=datos["recordatorio_id"],
+                            fecha=momento.date(), estado=recordatorio["estado"],
+                        ),
+                    )
+                return await cerrar(f"Estado del recordatorio: {recordatorio['estado']}.", "OK")
+            return await cerrar("El recordatorio ya no está disponible en el programador.", "FALTA")
+        if datos.get("resultado"):
+            return await cerrar(datos["resultado"], "OK")
+        return await cerrar(_vista_asunto(asunto), "OK")
+
+    visita = decision.tipo == "visita"
+    recordatorio_personal = decision.tipo == "recordatorio" and (
+        bool(asunto and (asunto.datos or {}).get("personal"))
+        or bool(decision.datos and decision.datos.personal)
+    )
+    if memoria_activa and (visita or recordatorio_personal) and decision.modo in (
+        "nuevo", "continuar", "confirmar",
+    ):
+        asunto_id = asunto_id or str(uuid4())
+        datos = (asunto.datos or {}) if asunto else {}
+        try:
+            if decision.modo != "confirmar" or not asunto:
+                literal = cerebro_bridge.texto_limpio(body.mensaje)
+                if visita:
+                    await exigir_modulo(request, "clientes_cartera", mutacion=True)
+                    registro = await asuntos_operativos.preparar_visita(
+                        pool, literal, decision.datos or razonador.DatosTurno(), datos,
+                    )
+                else:
+                    registro = asuntos_operativos.preparar_recordatorio(
+                        decision.datos or razonador.DatosTurno(), datos,
+                    )
+                    registro.datos["personal"] = True
+                    await exigir_modulo(request, "cerebro", mutacion=True)
+                    registro.datos.pop("telefono", None)
+                vista = _vista_asunto(registro)
+                await guardar_asunto(asunto_id, registro, vista=vista)
+                return await cerrar(vista, "FALTA" if registro.preguntas else "OK")
+            if asunto.estado != "ESPERANDO_CONFIRMACION":
+                return await cerrar(datos.get("resultado") or _vista_asunto(asunto), "OK")
+            if visita:
+                await exigir_modulo(request, "clientes_cartera", mutacion=True)
+                texto_visita = datos["motivo"]
+                resultado = await comercial_bridge.agendar(
+                    pool, texto_visita, actor=actor.nombre, actor_id=actor.actor_id,
+                    datos_confirmados={**datos, "fecha": date.fromisoformat(datos["fecha"])},
+                    clave_gato=asunto_id, rol=actor.rol,
+                )
+                if resultado["estado"] != "OK":
+                    return await cerrar(resultado["mensaje"], "FALTA")
+                cita = resultado["cita"]
+                texto = resultado["mensaje"]
+                registro = replace(asunto, estado="LIBRE", datos={**datos, "resultado": texto, "cita_id": str(cita["id"])})
+                await guardar_asunto(asunto_id, registro, ultima_cita_id=str(cita["id"]))
+                return await cerrar(texto, "OK", OperacionAgendaOut(
+                    tipo="julio", id=cita["id"], fecha=cita["fecha"], estado=cita["estado"],
+                ))
+            await exigir_modulo(request, "cerebro", mutacion=True)
+            if datetime.fromisoformat(datos["cuando"]) <= tiempo.ahora():
+                registro = replace(
+                    asunto, estado="ESPERANDO_ACLARACION",
+                    preguntas=("Esa hora ya pasó. ¿A qué hora quieres el recordatorio?",),
+                    datos={k: v for k, v in datos.items() if k not in {"hora", "cuando"}},
+                )
+                await guardar_asunto(asunto_id, registro)
+                return await cerrar(registro.preguntas[0], "FALTA")
+            resultado = await recordatorios.agendar_personal(
+                pool, actor=actor, asunto_id=asunto_id, mensaje=datos["mensaje"],
+                cuando=datetime.fromisoformat(datos["cuando"]),
+            )
+            texto = resultado.nota or "Estado del recordatorio no disponible."
+            if not resultado.ok:
+                return await cerrar(texto, "FALTA")
+            await guardar_asunto(asunto_id, replace(
+                asunto, estado="LIBRE",
+                datos={**datos, "resultado": texto, "recordatorio_id": resultado.datos["id"]},
+            ))
+            return await cerrar(texto, "OK", OperacionAgendaOut(
+                tipo="recordatorios", id=resultado.datos["id"], fecha=resultado.datos["fecha"],
+                estado=resultado.datos["estado"],
+            ))
+        except (HTTPException, ValueError) as exc:
+            return await cerrar(str(getattr(exc, "detail", exc)), "FALTA")
+
+    pide_estado_mixer = bool(re.search(r"\b(?:ya reservaste|quedo reservado|esta reservado)\b", dicho))
+    pide_confirmar_mixer = bool(re.fullmatch(
+        r"(?:te digo que reserves|reserva(?:lo)? (?:el |los )?mixers?|"
+        r"confirma (?:la )?reserva(?: (?:del|de los) mixers?)?)", dicho
+    ))
+    borrador_activo = estado_dialogo.get("borrador_id")
+    if memoria_activa and decision.modo == "legado" and not asuntos and pide_estado_mixer and borrador_activo:
+        reserva_id = await pool.fetchval(
+            """
+            SELECT entidad_destino_id::text FROM cerebro_ejecuciones
+             WHERE borrador_id = $1::uuid AND accion_nombre = 'reservar_mixer'
+               AND estado = 'EXITOSO'
+             ORDER BY ejecutado_en DESC LIMIT 1
+            """, borrador_activo,
+        )
+        fila = await PostgresAgendaStore(pool).obtener(reserva_id) if reserva_id else None
+        if fila and fila["estado"] not in ("CANCELADO", "REAGENDADO"):
+            return await cerrar(
+                f"Reserva en Agenda el {fila['fecha_entrega']} a las {fila['hora_inicio']}.",
+                "OK", OperacionAgendaOut(
+                    tipo="mixers", id=fila["id"], fecha=fila["fecha_entrega"], estado=fila["estado"]
+                ),
+            )
+        return await cerrar("El pedido todavía no tiene una reserva activa en Agenda.", "OK")
+
+    if memoria_activa and decision.modo == "legado" and not asuntos and re.fullmatch(
+        r"(?:que paso|(?:ya )?registraste|(?:ya )?(?:lo )?creaste|(?:ya )?creaste el cliente"
+        r"|quedo registrado|ya quedo)", dicho
+    ):
+        if not borrador_activo:
+            return await cerrar("Todavía no hay un borrador activo en esta conversación.", "OK")
+        borrador = await cerebro_bridge.obtener_borrador(
+            borrador_activo, usuario=actor.actor_id, rol=actor.rol, nombre=actor.nombre,
+        )
+        return await cerrar(_estado_del_pedido(borrador), "OK")
+
+    iniciar_reserva_pendiente = False
+    continuar_reserva = bool(
+        pendiente and texto_previo and pide_reserva_mixer(texto_previo)
+        and not pide_confirmar_mixer
+        and (_es_continuacion(dicho) or (
+            len(dicho.split()) <= 16
+            and (_horas_dichas(dicho) or _fecha_dicha(dicho, tiempo.hoy()) or dicho.startswith("la direccion"))
+        ))
+    )
 
     ultima_cita_id = str(estado_dialogo.get("ultima_cita_id") or "").strip() or None
 
     # Mixer: crear, mover o cancelar desde el chat. Es la pestana Mixers.
-    if agenda_bridge.es_cancelacion_mixer(body.mensaje):
+    if decision.modo == "legado" and agenda_bridge.es_cancelacion_mixer(body.mensaje):
         try:
             resultado = await agenda_bridge.cancelar_ultimo(
                 pool,
@@ -543,7 +1001,7 @@ async def chat(
             )
         except Exception as exc:  # noqa: BLE001
             return await cerrar(f"No pude cancelar el mixer: {exc}", "ERROR")
-    if agenda_bridge.es_correccion_mixer(body.mensaje):
+    if decision.modo == "legado" and agenda_bridge.es_correccion_mixer(body.mensaje):
         try:
             resultado = await agenda_bridge.reagendar_ultimo(
                 pool,
@@ -559,7 +1017,19 @@ async def chat(
             return await cerrar(f"No pude mover el mixer: {exc}", "ERROR")
 
     nota_mixer = ""
-    if agenda_bridge.es_peticion_mixer(body.mensaje):
+    _plano_msg = _plano(body.mensaje)
+    _es_dictado_negocio = cerebro_bridge.es_dictado(body.mensaje) and (
+        "mixer" not in _plano_msg
+        or any(
+            k in _plano_msg
+            for k in ("hormigon", "cliente", "cotizacion", "resistencia")
+        )
+    )
+    if (
+        decision.modo == "legado" and not _es_dictado_negocio and not continuar_reserva
+        and not (pendiente and pide_confirmar_mixer)
+        and agenda_bridge.es_peticion_mixer(body.mensaje)
+    ):
         try:
             resultado = await agenda_bridge.crear(
                 pool,
@@ -581,12 +1051,19 @@ async def chat(
                     "\n\nEl recordatorio lo preparo en el siguiente mensaje: "
                     "dime el texto exacto y la hora."
                 )
-            return await cerrar(nota_mixer, "OK")
+            reserva = resultado["agenda"]
+            return await cerrar(
+                nota_mixer, "OK",
+                OperacionAgendaOut(
+                    tipo="mixers", id=reserva["id"], fecha=reserva["fecha_entrega"],
+                    estado=reserva["estado"],
+                ),
+            )
         except Exception as exc:  # noqa: BLE001
             return await cerrar(f"No pude agendar el mixer: {exc}", "ERROR")
 
     # Recordatorio: mover o cancelar sin depender del LLM.
-    if _correccion_recordatorio(body.mensaje):
+    if decision.modo == "legado" and _correccion_recordatorio(body.mensaje):
         resultado = await recordatorios.actualizar(
             Bibliotecario(pool),
             actor=actor,
@@ -596,7 +1073,7 @@ async def chat(
             resultado.nota or "Recordatorio movido.",
             "OK" if resultado.estado == "OK" else "FALTA",
         )
-    if _cancelacion_recordatorio(body.mensaje):
+    if decision.modo == "legado" and _cancelacion_recordatorio(body.mensaje):
         actual = await recordatorios.ultimo_de(Bibliotecario(pool), actor=actor)
         if actual is None:
             return await cerrar(
@@ -613,7 +1090,7 @@ async def chat(
         )
 
     # Tarea interna: mover el plazo o cancelarla (pestana Equipo).
-    if agenda_bridge.es_correccion_tarea(body.mensaje):
+    if decision.modo == "legado" and agenda_bridge.es_correccion_tarea(body.mensaje):
         try:
             resultado = await agenda_bridge.reprogramar_tarea(
                 pool,
@@ -628,7 +1105,7 @@ async def chat(
             )
         except Exception as exc:  # noqa: BLE001
             return await cerrar(f"No pude mover la tarea: {exc}", "ERROR")
-    if agenda_bridge.es_cancelacion_tarea(body.mensaje):
+    if decision.modo == "legado" and agenda_bridge.es_cancelacion_tarea(body.mensaje):
         try:
             resultado = await agenda_bridge.cancelar_tarea(
                 pool,
@@ -647,7 +1124,7 @@ async def chat(
     # Correccion de una cita recien agendada: «rectifico, no es a la 13:00
     # sino a las 14:00». Se resuelve antes del puente para que no responda
     # «no tengo herramienta».
-    if _correccion_de_cita(body.mensaje, pendiente):
+    if decision.modo == "legado" and _correccion_de_cita(body.mensaje, pendiente):
         try:
             resultado = await comercial_bridge.reagendar_ultima(
                 pool,
@@ -676,7 +1153,7 @@ async def chat(
         except Exception as exc:  # noqa: BLE001
             return await cerrar(f"No pude corregir la cita: {exc}", "ERROR")
 
-    if _cancelacion_de_cita(body.mensaje, pendiente):
+    if decision.modo == "legado" and _cancelacion_de_cita(body.mensaje, pendiente):
         try:
             resultado = await comercial_bridge.cancelar_ultima(
                 pool,
@@ -703,7 +1180,11 @@ async def chat(
 
     # Si el borrador esta esperando y el usuario confirma, se ejecuta la accion
     # real del Cerebro. No se responde "no tengo herramienta".
-    objetivo = _accion_a_confirmar(body.mensaje)
+    objetivo = "reservar_mixer" if pide_confirmar_mixer and pendiente else _accion_a_confirmar(body.mensaje)
+    if decision.modo == "confirmar":
+        objetivo = "*"
+    elif decision.modo != "legado" or asuntos:
+        objetivo = None
     if memoria_activa and pendiente and objetivo is not None:
         borrador_id = str(estado_dialogo.get("borrador_id") or "").strip()
         if not borrador_id:
@@ -718,43 +1199,47 @@ async def chat(
                     rol=actor.rol,
                     nombre=actor.nombre,
                 )
-                acciones = draft.get("acciones") or []
-                accion = None
-                if objetivo != "*":
-                    accion = next(
-                        (
-                            item
-                            for item in acciones
-                            if item.get("accion_nombre") == objetivo
-                        ),
-                        None,
+                ejecutadas = set(draft.get("ordenes_ejecutadas") or ())
+                cancelados = {
+                    int(item.get("encargo") or 1)
+                    for item in draft.get("encargos_cancelados") or ()
+                }
+                acciones = [
+                    item for item in sorted(
+                        draft.get("acciones") or [], key=lambda a: int(a.get("orden") or 0)
                     )
-                if accion is None:
-                    # «Confirmado» sin nombre: se ejecuta la que sigue, siempre
-                    # que sea una accion con ejecutor. El dinero nunca entra aqui.
-                    cerrados = {
-                        int(encargo.get("encargo") or 1)
-                        for encargo in (draft.get("encargos") or [])
-                        if encargo.get("estado_actual")
-                        in ("EJECUTADO", "CANCELADO")
-                    }
-                    siguiente = next(
-                        (
-                            item
-                            for item in sorted(
-                                acciones, key=lambda a: int(a.get("orden") or 0)
-                            )
-                            if int(item.get("encargo") or 1) not in cerrados
-                        ),
-                        None,
+                    if item.get("orden") not in ejecutadas
+                    and int(item.get("encargo") or 1) not in cancelados
+                ]
+                listas = [
+                    item for item in acciones
+                    if item.get("accion_nombre") in _ACCIONES_CONFIRMABLES
+                    and (objetivo == "*" or item.get("accion_nombre") == objetivo)
+                    and not item.get("bloqueada_por")
+                    and (not item.get("depende_de_orden") or item["depende_de_orden"] in ejecutadas)
+                ]
+                if len({item.get("encargo", 1) for item in listas}) > 1:
+                    return await cerrar(
+                        "Hay varios encargos listos. Indica cuál quieres confirmar o elígelo en Cerebro.",
+                        "FALTA",
                     )
-                    if (
-                        siguiente is not None
-                        and siguiente.get("accion_nombre") in _ACCIONES_CONFIRMABLES
-                    ):
-                        accion = siguiente
-                    elif siguiente is not None and objetivo != "*":
-                        accion = None
+                accion = listas[0] if listas else None
+                if accion is None and decision.modo == "confirmar" and objetivo != "reservar_mixer":
+                    return await cerrar(_estado_del_pedido(draft), "FALTA")
+                if objetivo == "reservar_mixer" and accion is None:
+                    preguntas = [p.get("texto") for p in draft.get("preguntas") or []
+                                 if str(p.get("clave") or "").startswith(("cotizacion.", "cliente."))]
+                    reserva_propuesta = any(
+                        item.get("accion_nombre") == "reservar_mixer" for item in acciones
+                    )
+                    if texto_previo and not reserva_propuesta and not pide_reserva_mixer(texto_previo):
+                        iniciar_reserva_pendiente = True
+                    else:
+                        return await cerrar(
+                            " ".join(filter(None, preguntas))
+                            or "Confirma primero el alta del cliente del pedido.",
+                            "FALTA",
+                        )
                 if accion is not None:
                     parametros = accion.get("parametros") or {}
                     mensaje_final = None
@@ -797,40 +1282,41 @@ async def chat(
                         and "cliente" not in texto.lower()
                     ):
                         texto = f"Cliente creado: {datos['nombre']}."
-                    await memoria.guardar(
-                        pool,
-                        conversacion_id,
-                        actor.actor_id,
-                        actor.rol,
-                        body.mensaje,
-                        texto,
-                        "OK",
-                        client_turn_id=body.client_turn_id,
-                    )
-                    await conversaciones.tocar(pool, conversacion_id)
-                    if int(resultado.get("preguntas_pendientes") or 0) > 0:
-                        await conversaciones.actualizar_estado(
-                            pool,
-                            conversacion_id,
-                            estado="ESPERANDO_ACLARACION",
-                            borrador_id=borrador_id,
+                    if any(item.get("accion_nombre") == "reservar_mixer" for item in acciones
+                           if item is not accion):
+                        texto += "\n\nLa reserva de mixer sigue pendiente."
+                    operacion = None
+                    if accion.get("accion_nombre") == "reservar_mixer" and datos.get("id"):
+                        operacion = OperacionAgendaOut(
+                            tipo="mixers", id=datos["id"],
+                            fecha=parametros["fecha_entrega"], estado="RESERVA_CAMPO",
                         )
+                    preguntas_pendientes = int(resultado.get("preguntas_pendientes") or 0)
+                    if preguntas_pendientes:
+                        estado_siguiente = "ESPERANDO_ACLARACION"
                     elif resultado.get("estado_borrador") == "EJECUTADO":
-                        await conversaciones.actualizar_estado(
-                            pool, conversacion_id, estado="LIBRE"
-                        )
+                        estado_siguiente = "LIBRE"
+                    else:
+                        estado_siguiente = "ESPERANDO_CONFIRMACION"
+                        restantes = {a["accion_nombre"] for a in acciones if a is not accion}
+                        if restantes.intersection(_ACCIONES_CONFIRMABLES):
+                            siguiente = next(
+                                a for a in acciones
+                                if a is not accion and a["accion_nombre"] in _ACCIONES_CONFIRMABLES
+                            )
+                            texto += (
+                                "\n\nSiguiente paso: " + siguiente["accion_nombre"].replace("_", " ") + "."
+                                " Responde «Confirmado» para autorizarlo."
+                            )
+                        elif "enviar_cotizacion_whatsapp" in restantes:
+                            texto += "\n\nAbre la cotización en el panel para revisar el envío por WhatsApp."
+                    if asunto_id and asunto:
+                        await guardar_asunto(asunto_id, replace(asunto, estado=estado_siguiente), vista=texto)
                     else:
                         await conversaciones.actualizar_estado(
-                            pool,
-                            conversacion_id,
-                            estado="ESPERANDO_CONFIRMACION",
-                            borrador_id=borrador_id,
+                            pool, conversacion_id, estado=estado_siguiente, borrador_id=borrador_id,
                         )
-                    return MensajeOut(
-                        respuesta=texto,
-                        estado="OK",
-                        conversacion_id=conversacion_id,
-                    )
+                    return await cerrar(texto, "OK", operacion)
             except HTTPException as exc:
                 codigo = None
                 if isinstance(exc.detail, dict):
@@ -853,47 +1339,108 @@ async def chat(
                     conversacion_id=conversacion_id,
                 )
 
-    # Puente controlado con el Cerebro: el prefijo explicito manda. Debe ir
-    # antes del atajo comercial porque un dictado puede contener «agendar» y
-    # «entrega» sin ser una cita comercial.
-    puente = _puente(body.mensaje)
+    # El razonador elige el asunto. El prefijo sigue disponible para el
+    # dictado libre y para clientes que llaman directamente a este endpoint.
+    retomar_pedido = (
+        decision.modo == "legado" and (
+            continuar_reserva or iniciar_reserva_pendiente
+            or bool(pendiente and texto_previo and re.match(r"^(?:te dije|ya te dije)\b", dicho))
+        )
+    )
+    if decision.modo == "consulta":
+        respuesta = await responder_detallado(
+            body.mensaje, actor.rol, biblio, actor.nombre, historial=historial,
+            actor_id=actor.actor_id, conversacion_id=conversacion_id,
+            modo_envio=actor.modo_envio, solo_lectura=True,
+        )
+        return await cerrar(respuesta.texto, respuesta.estado)
+    puente = "cerebro" if retomar_pedido or decision.modo in ("nuevo", "continuar") else _puente(body.mensaje)
     if puente == "cerebro":
         try:
+            if decision.modo == "continuar" and asunto and asunto.borrador_id and not texto_previo:
+                return await cerrar("El borrador cambió. Abre el pedido en Cerebro para revisar su versión vigente.", "FALTA")
+            contexto = texto_previo if decision.modo == "continuar" or retomar_pedido else None
+            if decision.modo == "legado" and not retomar_pedido and not asuntos:
+                contexto = _contexto_dictado(
+                    historial, body.mensaje, texto_previo=texto_previo,
+                    pendiente=estado_dialogo.get("estado") == "ESPERANDO_ACLARACION",
+                )
+            padre = asunto.borrador_id if asunto and contexto else None
+            intencion_tarea = (
+                (decision.datos.accion_tarea if decision.datos else None)
+                or ((asunto.datos or {}).get("accion_tarea") if asunto else None)
+            )
             datos = await cerebro_bridge.interpretar(
-                body.mensaje,
+                "dictado: reserva el mixer" if iniciar_reserva_pendiente
+                else body.mensaje if es_dictado else f"dictado: {body.mensaje}",
                 usuario=actor.actor_id,
                 rol=actor.rol,
                 nombre=actor.nombre,
-                contexto=_contexto_dictado(
-                    historial,
-                    body.mensaje,
-                    texto_previo=texto_previo,
-                    pendiente=pendiente,
-                ),
+                contexto=contexto,
+                **({"borrador_previo_id": padre} if padre else {}),
+                **({"intencion_tarea": intencion_tarea} if intencion_tarea else {}),
                 conversacion_id=conversacion_id,
             )
             texto = cerebro_bridge.mensaje_de_resumen(datos)
             estado = "OK"
             preguntas = (datos.get("borrador") or {}).get("preguntas") or []
             acciones = (datos.get("borrador") or {}).get("acciones") or []
-            if datos.get("estado") == "REQUIERE_ACLARACION" or preguntas:
-                await conversaciones.actualizar_estado(
-                    pool,
-                    conversacion_id,
-                    estado="ESPERANDO_ACLARACION",
-                    borrador_id=str(datos.get("borrador_id") or "") or None,
+            if cliente_confirmado := datos.get("cliente_confirmado"):
+                texto += f"\n\n{cliente_confirmado} ya está registrado para este pedido."
+            primer_paso = acciones[0].get("accion_nombre") if acciones else None
+            solo_bloqueo_de_envio = primer_paso == "crear_cotizacion_borrador" and all(
+                p.get("clave") == "cotizacion.precio_estado" for p in preguntas
+            )
+            puede_confirmar = primer_paso in _ACCIONES_CONFIRMABLES and (
+                not preguntas or solo_bloqueo_de_envio
+            )
+            if puede_confirmar:
+                paso = "preparar la cotización" if primer_paso == "crear_cotizacion_borrador" else (
+                    primer_paso.replace("_", " ")
+                )
+                texto += f"\n\nResponde «Confirmado» para autorizar el siguiente paso: {paso}."
+            if any(a.get("accion_nombre") == "enviar_cotizacion_whatsapp" for a in acciones):
+                texto += "\n\nEl envío por WhatsApp se revisa desde Cotizaciones cuando el documento esté listo."
+            for accion in acciones:
+                if accion.get("accion_nombre", accion.get("nombre")) != "reservar_mixer":
+                    continue
+                parametros = accion["parametros"]
+                try:
+                    _, cargas = await plan_reserva_mixer(
+                        pool, fecha=date.fromisoformat(parametros["fecha_entrega"]),
+                        hora=parametros["hora_inicio"],
+                        volumen=Decimal(str(parametros["volumen_m3"])),
+                        unidades=parametros.get("unidades"),
+                    )
+                    unidades = ", ".join(item["codigo"] for item, _ in cargas)
+                    texto += f"\n\nHay cupo en Agenda con {unidades}. Confirma para guardar la reserva."
+                except ReservaMixerInvalida as exc:
+                    texto += f"\n\n{exc}"
+            if memoria_activa and datos.get("borrador_id") and (preguntas or acciones):
+                tipo = decision.tipo or (asunto.tipo if asunto else "encargo")
+                nombre_cliente = next((
+                    h.get("valor") for h in reversed(datos.get("hechos") or [])
+                    if h.get("clave") == "cliente.nombre" and h.get("valor")
+                    and h.get("estado") in ("EXTRAIDO", "CORREGIDO_EN_AUDIO", "CORREGIDO_POR_HUMANO")
+                ), None)
+                etiqueta = razonador.NOMBRES[tipo]
+                if nombre_cliente:
+                    etiqueta += f" de {nombre_cliente}"
+                elif asunto:
+                    etiqueta = asunto.etiqueta
+                estado_asunto = (
+                    "ESPERANDO_CONFIRMACION" if puede_confirmar or not preguntas
+                    else "ESPERANDO_ACLARACION"
+                )
+                await guardar_asunto(
+                    asunto_id or str(datos["borrador_id"]),
+                    razonador.Asunto(
+                        tipo, etiqueta, estado_asunto, str(datos["borrador_id"]),
+                        tuple(p["texto"] for p in preguntas if p.get("texto")),
+                        {"accion_tarea": intencion_tarea} if intencion_tarea else None,
+                    ),
+                    vista=texto,
                     preguntas=preguntas,
-                )
-            elif acciones:
-                await conversaciones.actualizar_estado(
-                    pool,
-                    conversacion_id,
-                    estado="ESPERANDO_CONFIRMACION",
-                    borrador_id=str(datos.get("borrador_id") or "") or None,
-                )
-            else:
-                await conversaciones.actualizar_estado(
-                    pool, conversacion_id, estado="LIBRE"
                 )
         except HTTPException as exc:
             texto = f"No pude pasarlo al Cerebro: {exc.detail}"
@@ -913,6 +1460,110 @@ async def chat(
         return MensajeOut(
             respuesta=texto, estado=estado, conversacion_id=conversacion_id
         )
+
+    # ------------------------------------------------------------------ #
+    # Skill de cotizaciones: envío por WhatsApp desde Gato                #
+    # Se activa cuando el razonador detecta modo envio_cotizacion, o      #
+    # cuando el mensaje menciona explícitamente enviar la cotización.     #
+    # ------------------------------------------------------------------ #
+    _es_envio_cotizacion = (
+        memoria_activa
+        and decision.tipo == "cotizacion"
+        and decision.modo in ("nuevo", "continuar", "confirmar")
+        and any(
+            marca in _plano(body.mensaje)
+            for marca in (
+                "envia", "enviale", "mandale", "manda", "enviar", "mandar",
+                "cotizacion", "cotizacion por whatsapp",
+            )
+        )
+    )
+    if _es_envio_cotizacion:
+        try:
+            await exigir_modulo(request, "cotizaciones", mutacion=True)
+        except HTTPException:
+            pass  # Si no tiene el módulo, el flujo normal de Cerebro lo manejará
+        else:
+            # Construir puertos para la skill
+            _settings_sk = getattr(request.app.state, "settings", None)
+            _config_port = _PoolConfigPort(pool)
+            _aviso_port = PostgresAvisosDinero(pool) if isinstance(pool, asyncpg.Pool) else None
+            _cot_port = _PoolCotizacionesPort(pool, _settings_sk)
+            _puertos = Puertos(
+                config=_config_port,
+                cotizaciones=_cot_port,
+                avisos_dinero=_aviso_port,
+            )
+            # Determinar si hay una cotización en hilo
+            _borrador_id_sk = (asunto.borrador_id if asunto else None) or estado_dialogo.get("borrador_id")
+            _hilo_cots: tuple[str, ...] = ()
+            if _borrador_id_sk and isinstance(pool, asyncpg.Pool):
+                _hilo_cots = tuple(
+                    str(r["id"])
+                    for r in await pool.fetch(
+                        "SELECT id::text FROM cotizaciones WHERE borrador_id = $1::text ORDER BY creada_en DESC LIMIT 5",
+                        str(_borrador_id_sk),
+                    )
+                )
+            _ctx_sk = ContextoSkill(
+                actor=actor,
+                asunto_id=asunto_id or str(uuid4()),
+                puertos=_puertos,
+                accion={},
+                borrador_id=_borrador_id_sk,
+                datos=dict(asunto.datos or {}) if asunto else {},
+                cliente_nombre=(asunto.datos or {}).get("nombre") if asunto else None,
+                cotizaciones_hilo=_hilo_cots,
+                cotizacion_dependencia=(asunto.datos or {}).get("cotizacion_id") if asunto else None,
+                sandbox=_modo_envio(request) != "evolution",
+            )
+            _skill_cot = CotizacionesSkill()
+
+            if decision.modo == "confirmar" and asunto and asunto.estado == "ESPERANDO_CONFIRMACION":
+                # Ejecutar el envío si ya había una preparación
+                _huella_confirmar = huella_texto(
+                    actor.actor_id, "enviar_cotizacion", dict(asunto.datos or {})
+                )
+                from .skills.contrato import Autorizacion
+                _auth = Autorizacion(
+                    actor_id=actor.actor_id,
+                    rol=actor.rol,
+                    huella=_huella_confirmar,
+                )
+                _res = await _skill_cot.ejecutar_envio(_ctx_sk, _auth)
+                if _res.estado == EJECUTADA:
+                    if asunto_id:
+                        await guardar_asunto(
+                            asunto_id,
+                            replace(asunto, estado="LIBRE", datos={**(asunto.datos or {}), "resultado": _res.nota}),
+                        )
+                    return await cerrar(_res.nota, "OK")
+                # Si falló, mostrar el error y seguir con flujo normal
+                return await cerrar(_res.nota, "ERROR")
+            else:
+                # Preparar el envío
+                _prep = await _skill_cot.preparar_envio(_ctx_sk)
+                if _prep.estado == ESPERANDO_CONFIRMACION:
+                    _sid = asunto_id or str(uuid4())
+                    _tipo_sk: razonador.Tipo = "cotizacion"
+                    _huella_prep = huella_texto(actor.actor_id, "enviar_cotizacion", dict(_prep.parametros))
+                    _datos_asunto = {**dict(asunto.datos or {} if asunto else {}), **dict(_prep.parametros), "vista_confirmada": _huella_vista(_prep.vista)}
+                    await guardar_asunto(
+                        _sid,
+                        razonador.Asunto(
+                            _tipo_sk,
+                            f"Envío cotización {_prep.parametros.get('cotizacion_id', '')[:8]}",
+                            "ESPERANDO_CONFIRMACION",
+                            _borrador_id_sk,
+                            (),
+                            _datos_asunto,
+                        ),
+                        vista=_prep.vista,
+                    )
+                    return await cerrar(_prep.vista, "FALTA")
+                if _prep.estado in (FALTAN_DATOS, NO_PERMITIDO):
+                    return await cerrar(_prep.motivo or _prep.vista or "No pude preparar el envío.", "FALTA")
+                # Continúa al flujo normal si no pudo preparar
 
     # Modulo comercial: Gato solo pide, no reimplementa reglas.
     if puente == "leads":
@@ -942,6 +1593,9 @@ async def chat(
             return await cerrar(
                 str(resultado.get("mensaje") or "Listo."),
                 "OK" if resultado.get("estado") == "OK" else "FALTA",
+                OperacionAgendaOut(
+                    tipo="julio", id=cita["id"], fecha=cita["fecha"], estado=cita["estado"]
+                ) if resultado.get("estado") == "OK" and cita.get("id") else None,
             )
         except Exception as exc:  # noqa: BLE001
             return await cerrar(f"No pude agendar: {exc}", "ERROR")
@@ -1050,9 +1704,13 @@ async def chat_audio(
     # El audio es dictado por defecto: el Cerebro es quien interpreta
     # instrucciones. Escribir en Gato sigue siendo una consulta normal.
     mensaje = f"dictado: {texto}" if modo == "dictado" else texto
+    if len(texto) > 8000:
+        raise HTTPException(
+            status_code=422, detail="El audio supera el límite de 8.000 caracteres. Divide el dictado en dos turnos."
+        )
     salida = await chat(
         MensajeIn(
-            mensaje=mensaje[:1000],
+            mensaje=mensaje,
             conversacion_id=conversacion_id,
             client_turn_id=client_turn_id,
         ),
@@ -1064,6 +1722,7 @@ async def chat_audio(
         estado=salida.estado,
         conversacion_id=salida.conversacion_id,
         transcripcion=texto,
+        operacion_agenda=salida.operacion_agenda,
     )
 
 

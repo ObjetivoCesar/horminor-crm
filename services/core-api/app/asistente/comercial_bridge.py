@@ -415,11 +415,14 @@ async def agendar(
     *,
     actor: str | None = None,
     actor_id: str | None = None,
+    datos_confirmados: dict[str, Any] | None = None,
+    clave_gato: str | None = None,
+    rol: str | None = None,
 ) -> dict[str, Any]:
-    datos = parse_cita(texto)
+    datos = datos_confirmados if datos_confirmados is not None else parse_cita(texto)
     # «Registra en mi agenda» es un compromiso de Julio, no una cita comercial
     # atada a un lead. Se permite sin contacto y se guarda el dictado tal cual.
-    personal = es_agenda_personal(texto)
+    personal = bool(datos["personal"]) if datos_confirmados is not None else es_agenda_personal(texto)
     faltan = []
     if datos["fecha"] is None:
         faltan.append("el dia (hoy, manana o pasado manana)")
@@ -434,7 +437,14 @@ async def agendar(
         }
 
     lead = None
-    if datos["nombre"] and not personal:
+    if datos.get("lead_id") and not personal:
+        lead = await pool.fetchrow(
+            "SELECT id::text, nombre, telefono_e164 FROM leads WHERE id = $1::uuid",
+            datos["lead_id"],
+        )
+        if not lead:
+            return {"estado": "SIN_LEAD", "mensaje": "El contacto de la visita ya no está disponible."}
+    elif datos["nombre"] and not personal and not clave_gato:
         lead = await leads_svc.buscar(pool, str(datos["nombre"]))
         if lead is None:
             return {
@@ -457,13 +467,25 @@ async def agendar(
         notas=(
             "Agenda de Julio desde Gato: " + " ".join(str(texto).split())
             if personal
+            else " ".join(texto.split())
+            if datos_confirmados is not None
             else "Solicitada por Gato desde el chat interno."
         ),
-        permite_sin_contacto=personal,
+        permite_sin_contacto=personal or bool(clave_gato and datos.get("nombre")),
+        **({"clave_gato": clave_gato, "contacto_agenda": datos.get("nombre"), "rol_actor": rol}
+           if clave_gato else {}),
     )
     nombre = (lead or {}).get("nombre") or (lead or {}).get("telefono_e164")
     if personal and not nombre:
         nombre = "Agenda de Julio"
+    if clave_gato:
+        etiqueta = nombre or datos.get("nombre") or "Agenda de Julio"
+        return {
+            "estado": "OK",
+            "mensaje": f"Visita agendada para {etiqueta} el {cita['fecha']} a las {datos['hora']}. "
+                        "Secretaría recibió la tarea de revisión.",
+            "cita": cita,
+        }
     return {
         "estado": "OK",
         "mensaje": (

@@ -2718,9 +2718,9 @@ tbody tr:last-child td { border-bottom: 0; }
 .ag-dots .ag-dot { width: 5px; height: 5px; }
 .ag-pill { margin-top: 6px; font-size: 8.5px; line-height: 1.25; color: var(--text-slate); background: rgba(255,255,255,.05); border-radius: 5px; padding: 3px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ag-hint { color: var(--text-muted); font-size: 10.5px; margin: 0 2px; }
-.ag-modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 18px; background: rgba(3,7,13,.72); backdrop-filter: blur(7px); }
-.ag-modal-backdrop[hidden] { display: none; }
-.ag-modal { width: min(560px, 100%); border: 1px solid rgba(255,255,255,.12); border-radius: 20px; overflow: hidden; background: var(--surface-card); box-shadow: 0 30px 90px -22px rgba(0,0,0,.95); animation: ag-pop .18s ease-out; }
+.ag-modal::backdrop { background: rgba(3,7,13,.72); backdrop-filter: blur(7px); }
+.ag-modal { width: min(560px, calc(100% - 36px)); max-height: calc(100dvh - 36px); padding: 0; border: var(--border-subtle); border-radius: 20px; overflow-y: auto; overscroll-behavior: contain; background: var(--surface); color: var(--text-pure); box-shadow: var(--shadow-bento); }
+.ag-modal[open] { animation: ag-pop .18s ease-out; }
 @keyframes ag-pop { from { transform: translateY(8px) scale(.985); opacity: .5; } to { transform: none; opacity: 1; } }
 .ag-modal-head { padding: 18px 20px 14px; border-bottom: var(--border-subtle); position: relative; }
 .ag-kicker { color: var(--accent-cat-amber-bright); font-size: 9px; letter-spacing: .18em; font-weight: 600; text-transform: uppercase; }
@@ -2749,7 +2749,6 @@ tbody tr:last-child td { border-bottom: 0; }
   .ag-pill { display: none; }
   .ag-tabs { width: 100%; }
   .ag-tab { flex: 1; justify-content: center; }
-  .ag-modal { max-height: calc(100dvh - 36px); overflow-y: auto; overscroll-behavior: contain; }
 }
 @media (max-width: 480px) {
   .ag-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2760,6 +2759,218 @@ tbody tr:last-child td { border-bottom: 0; }
   .ag-modal-close { width: 44px; height: 44px; }
   .ag-modal-head { padding-right: 68px; }
 }
+
+/* Inicio y navegación para el trabajo en campo. */
+.movil-marca, .movil-buscar, .movil-inicio, .movil-nav, .nav-label-corta { display: none; }
+.top-actions-sec { display: contents; }
+.movil-mas { display: none; }
+.gato-resultado { display: block; margin-bottom: 5px; }
+.gato-ver-agenda { display: block; min-height: 44px; margin-top: 6px; }
+.ag-event.destacado { border-color: var(--accent-cat-amber); }
+
+@media (max-width: 680px) {
+  .app-header { display: none; }
+  .top-header { padding: 8px 14px; min-height: 60px; }
+  .movil-marca { display: flex; align-items: center; gap: 8px; }
+  .movil-marca img { width: 28px; height: 28px; object-fit: contain; }
+  .movil-marca .brand-word { font-size: 15px; }
+  .movil-buscar { display: inline-grid; place-items: center; }
+  .top-header .icon-button { width: 44px; height: 44px; }
+  .top-header .top-search { display: none; }
+  .top-header .top-search:not([hidden]).abierto { display: flex; }
+  #busqueda-global { font-size: 16px; }
+  .top-header .avatar-chip { display: none; }
+  .notif-popover, .search-results { max-width: calc(100vw - 28px); }
+  .notif-popover { right: 0; }
+  main { padding: 16px 14px calc(86px + env(safe-area-inset-bottom, 0px)); }
+  .movil-inicio { display: grid; gap: 12px; margin-bottom: 24px; min-width: 0; }
+  .movil-inicio h1 { margin: 0; font-size: 22px; letter-spacing: -.035em; overflow-wrap: anywhere; }
+  .movil-inicio h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+  .movil-fecha { margin: 2px 0 0; font-size: 12px; color: var(--text-slate); }
+  .movil-proximo { padding: 14px; min-width: 0; }
+  .movil-proximo p { margin: 0; color: var(--text-slate); font-size: 13px; }
+  .movil-proximo-evento { width: 100%; min-height: 44px; display: flex; gap: 10px; align-items: center; text-align: left; }
+  .movil-proximo-evento, .movil-acciones .btn {
+    background: var(--surface-row-pill); color: var(--text-pure); border: var(--border-subtle);
+    box-shadow: none;
+  }
+  .movil-proximo-evento strong { flex: none; font-variant-numeric: tabular-nums; }
+  .movil-proximo-evento span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .movil-acciones { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+  .movil-acciones button, .movil-nav button {
+    display: grid; justify-items: center; align-content: center; gap: 4px;
+    min-width: 0; min-height: 52px; padding: 6px; font-size: 12px;
+  }
+  .movil-acciones .movil-dictar { background: var(--accent-cat-amber); color: #1a1200; font-weight: 700; }
+  .movil-ico { width: 20px; height: 20px; }
+  .movil-nav {
+    position: fixed; inset: auto 0 0; z-index: 52;
+    display: flex; padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px));
+    background: var(--bg-obsidian); border-top: var(--border-subtle);
+  }
+  .movil-nav button {
+    flex: 1; border: 0; border-top: 2px solid transparent; border-radius: 7px;
+    font-family: inherit; background: transparent; color: var(--text-slate); cursor: pointer;
+  }
+  .movil-nav button[aria-current="page"] {
+    border-top-color: var(--accent-cat-amber); background: var(--surface-row-pill);
+    color: var(--text-pure); font-weight: 700;
+  }
+  .movil-mas[open] { display: block; }
+  .movil-mas { width: min(calc(100% - 24px), 450px); }
+  .movil-mas .role-switch {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; overflow: visible;
+  }
+  .movil-mas .role-switch button { width: 100%; min-height: 48px; background: var(--surface-row-pill); }
+  .movil-mas .role-switch button.active { color: var(--text-pure); border-color: var(--accent-cat-amber); }
+  .movil-mas .nav-label-larga, .movil-mas [data-role-btn="dashboard"],
+  .movil-mas [data-role-btn="agenda"], .movil-mas [data-role-btn="clientes"] { display: none; }
+  .movil-mas .nav-label-corta { display: inline; }
+  .movil-mas .top-actions-sec { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+  #movil-modulos, #movil-herramientas { padding-inline: 14px; }
+  #movil-modulos { padding-top: 14px; }
+  #movil-herramientas { padding-bottom: 14px; }
+  .movil-mas .perfil-select-wrap { display: flex; flex: 1 0 100%; flex-wrap: wrap; margin: 0 0 4px; }
+  .movil-mas #sim-user { min-height: 44px; max-width: 100%; font-size: 16px; }
+  .movil-mas .icon-button, .movil-mas .theme-toggle { min-height: 44px; }
+  .movil-mas .theme-toggle { display: inline-flex; align-items: center; }
+  .movil-mas .movil-abrir-gato { min-height: 44px; margin: 8px 14px 0; }
+  .julio-portada > .dash2-head { display: none; }
+  #julio-ventanilla .sec-eyebrow, #julio-ventanilla .sec-eyebrow ~ p { display: none; }
+  .ag-head .card-kicker, .ag-head p, .ag-legend > span, .ag-modal-foot .note { display: none; }
+  .ag-head { align-items: center; gap: 8px; }
+  .ag-legend { padding: 0; }
+  #ag-nuevo { min-height: 44px; }
+  .ag-event .btn { min-height: 44px; }
+  .gato-fab { display: none; }
+  .gato-panel { inset: 8px 8px calc(68px + env(safe-area-inset-bottom, 0px)); width: auto; max-height: none; }
+  .gato-panel .chat-head, .gato-panel .chat-composer { flex-shrink: 0; }
+  .gato-panel .chat-hilo { min-height: 0; max-height: none; overscroll-behavior: contain; }
+  .gato-form input { font-size: 16px; }
+  .gato-form button, .gato-cerrar { min-height: 44px; }
+  .gato-mic, .gato-cerrar { min-width: 44px; }
+  .gato-mic.grabando { width: auto; gap: 4px; padding: 0 7px; }
+  .gato-mic.grabando::after { content: 'Detener'; font-size: 11px; }
+}
+.accion-corta, .ag-tab .sec-accion-ico { display: none; }
+.julio-portada, .movil-portada-modulo, .movil-contenido-modulo { display: contents; }
+.movil-ver-modulo { display: none; }
+@media (max-width: 680px) {
+  [data-view="dashboard"] { --hero-foto: url('/static/brand/fotos/mixers-en-planta.jpg'); }
+  [data-view="agenda"] { --hero-foto: url('/static/brand/fotos/cabecera-agenda.webp'); }
+  [data-view="clientes"] { --hero-foto: url('/static/brand/fotos/cabecera-clientes.webp'); }
+  [data-view="cotizaciones"] { --hero-foto: url('/static/brand/fotos/cabecera-cotizaciones.webp'); }
+
+  [data-view="cotizaciones"] .grid.two { grid-template-columns: minmax(0, 1fr); }
+  [data-view="cotizaciones"] .grid.two > *, [data-view="cotizaciones"] .spread > :first-child { min-width: 0; }
+  #cot-buscar { font-size: 16px; }
+  #cot-lista { overflow: visible; }
+  #cot-lista table, #cot-lista tbody { display: block; width: 100%; }
+  #cot-lista thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #cot-lista tbody { display: grid; gap: 8px; }
+  #cot-lista tr[data-cot-id] {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px;
+    border: var(--border-subtle); border-radius: 12px; padding: 12px;
+    background: var(--surface-row-pill);
+  }
+  #cot-lista td {
+    min-width: 0; padding: 0; border: 0;
+    white-space: normal; overflow-wrap: anywhere;
+  }
+  #cot-lista td:nth-child(2), #cot-lista td:nth-child(3) { grid-column: 1 / -1; }
+  #cot-lista td::before {
+    content: attr(data-cot-etiqueta); display: block;
+    color: var(--text-muted); font-size: 11px; margin-bottom: 2px;
+  }
+  #cot-detalle { overflow-wrap: anywhere; }
+  [data-view="secretaria"] { --hero-foto: url('/static/brand/fotos/cabecera-secretaria.webp'); }
+  [data-view="planta"] { --hero-foto: url('/static/brand/fotos/cabecera-planta.jpg'); }
+  [data-view="banca"] { --hero-foto: url('/static/brand/fotos/cabecera-banca.webp'); }
+  [data-view="superadmin"] { --hero-foto: url('/static/brand/fotos/cabecera-superadmin.webp'); }
+  .movil-hero {
+    position: relative; isolation: isolate; overflow: hidden;
+    width: 100%; min-width: 0; min-height: 94px; padding: 16px;
+    display: grid; align-content: center; gap: 5px;
+    border-radius: 14px; background: #0b1625; color: white;
+  }
+  .movil-hero::before {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: var(--hero-foto) center 52% / cover no-repeat; opacity: .4;
+  }
+  .view .movil-hero :is(h1,h2,.movil-fecha,.sec-eyebrow,.dash-sub,.small) {
+    color: white; text-shadow: 0 1px 3px #07101c;
+  }
+  .julio-portada, .movil-portada-modulo {
+    display: flex; flex-direction: column; gap: 12px;
+    min-height: calc(100svh - 150px - env(safe-area-inset-bottom, 0px));
+  }
+  .julio-portada .movil-inicio {
+    display: flex; flex-direction: column; flex: 1; margin-bottom: 0;
+  }
+  .movil-hero-inicio {
+    flex: 1; min-height: 232px;
+    grid-template-rows: auto 1fr; align-content: stretch; gap: 16px;
+  }
+  .movil-hero-inicio .movil-proximo {
+    align-self: end; background: #101a28e8; color: white; padding: 10px 12px;
+  }
+  .movil-hero-inicio .movil-proximo :is(h2,p) { color: white; }
+  .movil-hero-inicio .movil-proximo-evento { background: #ffffff12; color: white; }
+  #julio-resultados:not(.desplegado) { display: none; }
+  #julio-resultados { padding-top: 12px; }
+  .view .sec-ventanilla { padding: 12px; display: grid; gap: 12px; }
+  .view .sec-acciones { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; }
+  .view .sec-acciones .sec-accion, .ag-tabs .ag-tab {
+    width: 100%; min-width: 0; aspect-ratio: 1; min-height: 0; padding: 3px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    gap: 5px; border-radius: 12px; text-align: center;
+  }
+  .view .sec-acciones .sec-accion-ico, .ag-tabs .sec-accion-ico {
+    display: block; width: 23px; height: 23px; flex: none;
+  }
+  .view .sec-acciones :is(.sec-accion-arrow,.accion-larga,small:not([id])) { display: none; }
+  .view .sec-acciones .accion-corta { display: block; font: 600 clamp(10px,2.8vw,13px)/1.18 Poppins,sans-serif; }
+  .view .sec-acciones .sec-accion-txt { align-items: center; }
+  .view .banca-acciones { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .view .banca-acciones .banco-logo { width: 30px; height: 30px; flex: none; }
+  .view .banca-acciones small { white-space: normal; }
+  .ag-wrap .ag-tabs { width: 100%; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; }
+  .ag-tabs .ag-tab { position: relative; font-size: clamp(10px,2.7vw,13px); white-space: normal; }
+  .ag-tabs .ag-count { position: absolute; top: 2px; right: 2px; }
+  .movil-portada-modulo > :is(.sec-ventanilla,.dash2-head,.ag-head,.spread) {
+    display: contents;
+  }
+  .movil-portada-modulo > .sec-ventanilla > :first-child:not(.movil-hero),
+  .movil-portada-modulo .dash2-head-right {
+    display: none;
+  }
+  .movil-portada-modulo .movil-hero {
+    flex: 1; min-height: 232px; align-content: start;
+  }
+  .movil-portada-modulo .sec-acciones {
+    padding: 8px; border: var(--border-subtle); border-radius: 14px;
+    background: var(--bg-obsidian);
+  }
+  .movil-portada-modulo .ag-legend { justify-content: flex-start; }
+  .movil-ver-modulo { display: block; min-height: 44px; }
+  .movil-contenido-modulo { display: block; min-height: calc(100svh - 230px); }
+  .portada-sola .movil-contenido-modulo { display: none; }
+}
+@media (max-width: 359px) {
+  .view .sec-acciones, .ag-wrap .ag-tabs { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+.bodega-cabecera { min-height: 110px; background: linear-gradient(90deg, #111927, #11192780), url('/static/brand/fotos/cabecera-planta.jpg') center/cover; color: #fff; }
+.bodega-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block: 12px; }
+.bodega-controles button, .bodega-controles input { min-height: 44px; }
+.bodega-lista { display: grid; gap: 10px; }
+.bodega-carga summary { cursor: pointer; min-height: 44px; padding-block: 4px; }
+.bodega-hora { display: block; font-size: 1.3rem; }
+.bodega-materiales { display: grid; gap: 0; margin: 10px 0 0; }
+.bodega-materiales div { display: flex; justify-content: space-between; gap: 12px; padding-block: 8px; border-top: var(--border-subtle); }
+.bodega-materiales dd { margin: 0; text-align: right; font-weight: 600; }
+[data-role-btn="bodega"] { display: none; }
+body.perfil-bodega .role-switch [data-role-btn="bodega"],
+body.perfil-bodega .movil-nav [data-role-btn="bodega"] { display: flex; }
 </style>
 </head>
 <body>
@@ -2778,37 +2989,38 @@ tbody tr:last-child td { border-bottom: 0; }
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
         Dashboard Julio
       </button>
-      <button data-role-btn="secretaria" onclick="setView('secretaria')">
+      <button data-role-btn="secretaria" onclick="setView('secretaria', null, true)">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>
-        Secretaría y Caja
+        <span class="nav-label-larga">Secretaría y Caja</span><span class="nav-label-corta">Caja</span>
       </button>
-      <button data-role-btn="clientes" onclick="setView('clientes')">
+      <button data-role-btn="clientes" onclick="setView('clientes', null, true)">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 11h18"/></svg>
         Carpetas de Clientes
       </button>
-      <button data-role-btn="cotizaciones" onclick="setView('cotizaciones')">
+      <button data-role-btn="cotizaciones" onclick="setView('cotizaciones', null, true)">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6Z"/><path d="M15 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
         Cotizaciones
       </button>
-      <button data-role-btn="agenda" onclick="setView('agenda')">
+      <button data-role-btn="agenda" onclick="setView('agenda', null, true)">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/><path d="M8 13h2M14 13h2M8 17h2M14 17h2"/></svg>
         Agenda
       </button>
-      <button data-role-btn="planta" onclick="setView('planta')">
+      <button data-role-btn="bodega" onclick="setView('bodega')">Mis cargas</button>
+      <button data-role-btn="planta" onclick="setView('planta', null, true)">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l6 3V9l6 3V6l6 3v12Z"/><path d="M7 17h.01M12 17h.01M17 17h.01"/></svg>
-        Planta, Flota y Kardex
+        <span class="nav-label-larga">Planta, Flota y Kardex</span><span class="nav-label-corta">Planta</span>
       </button>
-      <button data-role-btn="banca" onclick="setView('banca')">
+      <button data-role-btn="banca" onclick="setView('banca', null, true)">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/></svg>
-        Banca y Mercado
+        <span class="nav-label-larga">Banca y Mercado</span><span class="nav-label-corta">Banca</span>
       </button>
       <button data-modulo="cerebro" onclick="location.href='/panel/cerebro'" title="Laboratorio de voz: dicta y revisa el borrador antes de ejecutar">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/><path d="M8 21h8"/></svg>
-        Cerebro · voz <span style="opacity:.55;font-size:10px;letter-spacing:.08em">BETA</span>
+        <span class="nav-label-larga">Cerebro · voz <span style="opacity:.55;font-size:10px;letter-spacing:.08em">BETA</span></span><span class="nav-label-corta">Cerebro</span>
       </button>
-      <button data-role-btn="superadmin" onclick="setView('superadmin')">
+      <button data-role-btn="superadmin" onclick="setView('superadmin', null, true)">
         <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
-        Superadmin y WhatsApp
+        <span class="nav-label-larga">Superadmin y WhatsApp</span><span class="nav-label-corta">Superadmin</span>
       </button>
     </nav>
     <div class="sidebar-profile">
@@ -2830,6 +3042,10 @@ tbody tr:last-child td { border-bottom: 0; }
 </aside>
 
 <header class="top-header">
+  <div class="movil-marca">
+    <img src="/static/brand/horminor-mark-64.png" alt="" onerror="this.hidden=true">
+    <span class="brand-word">HORMINOR</span>
+  </div>
   <div class="top-left">
     <div>
       <span class="top-eyebrow" id="page-title">Dashboard Julio</span>
@@ -2837,18 +3053,17 @@ tbody tr:last-child td { border-bottom: 0; }
     </div>
     <span class="top-date" id="page-date">—</span>
   </div>
-  <div class="top-search">
+  <div class="top-search" id="busqueda-global-panel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
-    <input type="search" id="busqueda-global" autocomplete="off"
+    <input type="search" id="busqueda-global" autocomplete="off" aria-label="Buscar en HORMINOR"
            placeholder="Buscar cliente, obra, mixer, resistencia o guía…"
            oninput="buscarGlobal(this.value)" onfocus="buscarGlobal(this.value)">
     <div class="search-results" id="search-results" hidden></div>
   </div>
   <div class="top-actions">
-    <div class="perfil-select-wrap" title="Simular la vista de un usuario sin login">
-      <label for="sim-user">Viendo como:</label>
-      <select id="sim-user" onchange="cambiarPerfilSimulado(this.value)" aria-label="Simular vista de usuario"></select>
-    </div>
+    <button class="icon-button movil-buscar" id="movil-buscar" type="button" onclick="movilBuscar()" aria-label="Buscar" aria-expanded="false" aria-controls="busqueda-global-panel">
+      <svg class="movil-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+    </button>
     <div class="notif-wrap">
       <button class="icon-button" id="btn-notif" type="button" onclick="toggleNotif()" aria-label="Alertas del Centinela" aria-expanded="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -2859,6 +3074,11 @@ tbody tr:last-child td { border-bottom: 0; }
         <div class="notif-list" id="notif-list"></div>
       </div>
     </div>
+    <div class="top-actions-sec" id="top-actions-sec">
+      <div class="perfil-select-wrap" title="Simular la vista de un usuario sin login">
+        <label for="sim-user">Viendo como:</label>
+        <select id="sim-user" onchange="cambiarPerfilSimulado(this.value)" aria-label="Simular vista de usuario"></select>
+      </div>
     <div class="notif-wrap">
       <button class="icon-button" id="btn-wa" type="button" onclick="abrirAlertaWhatsApp()" aria-label="Mensajes de WhatsApp sin leer" title="WhatsApp sin mensajes nuevos">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
@@ -2874,6 +3094,7 @@ tbody tr:last-child td { border-bottom: 0; }
     <button class="theme-toggle" id="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Cambiar entre modo día y noche" aria-pressed="false">
       <span class="icon" id="theme-icon">🌙</span><span id="theme-label">Noche</span>
     </button>
+    </div>
     <div class="avatar-chip" title="Julio Villavicencio — Gerente General">
       <div class="avatar">JV</div>
       <div class="avatar-meta"><strong>Julio V.</strong><span>Gerente General</span></div>
@@ -2893,6 +3114,37 @@ tbody tr:last-child td { border-bottom: 0; }
 
   <!-- ===================== DASHBOARD JULIO ===================== -->
   <section class="view active" data-view="dashboard">
+    <div class="julio-portada">
+    <div class="movil-inicio">
+      <div class="movil-hero movil-hero-inicio">
+      <div>
+        <h1 id="movil-saludo">Hola, Julio</h1>
+        <p class="movil-fecha" id="movil-fecha" hidden></p>
+      </div>
+      <section class="card movil-proximo" id="movil-proximo" aria-labelledby="movil-proximo-titulo" hidden>
+        <h2 id="movil-proximo-titulo">Próximo de hoy</h2>
+        <p id="movil-proximo-estado" role="status"></p>
+        <button class="btn movil-proximo-evento" id="movil-proximo-evento" type="button" hidden>
+          <strong></strong><span></span><i aria-hidden="true">›</i>
+        </button>
+        <button class="btn small" id="movil-proximo-reintento" type="button" onclick="movilCargarProximo()" hidden>Reintentar</button>
+      </section>
+      </div>
+      <div class="movil-acciones">
+        <button class="btn movil-dictar" id="movil-dictar" data-modulo="voz" data-mutacion="1" type="button" aria-expanded="false" aria-controls="gato-panel" onclick="gatoToggle(true, this)">
+          <svg class="movil-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          Dictar
+        </button>
+        <button class="btn" data-modulo="cotizaciones" data-mutacion="1" type="button" onclick="setView('cotizaciones'); abrirCotizacion()">
+          <svg class="movil-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6ZM15 3v4h4M9 12h6M9 16h6"/></svg>
+          Cotizar
+        </button>
+        <button class="btn" data-modulo="agenda_despachos" data-mutacion="1" type="button" onclick="abrirAgenda(null, agState.hoy, 'RESERVA_CAMPO')">
+          <svg class="movil-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18M9 15h6M12 12v6"/></svg>
+          Agendar
+        </button>
+      </div>
+    </div>
     <div class="dash2-head">
       <div>
         <h1 class="dash-hi">Buenos días, Julio</h1>
@@ -2913,31 +3165,33 @@ tbody tr:last-child td { border-bottom: 0; }
       <div class="sec-acciones">
         <button type="button" class="sec-accion primary" role="tab" aria-selected="true"
                 data-dash-tab="operacion" onclick="setDashTab('operacion')">
-          <span class="sec-accion-ico" aria-hidden="true">🚚</span>
-          <span class="sec-accion-txt"><strong>Operación y capacidad</strong><small>Qué puedo producir y entregar hoy</small></span>
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5h13v11H2zM15 9h4l3 4v3h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+          <span class="sec-accion-txt"><strong class="accion-larga">Operación y capacidad</strong><strong class="accion-corta">Operación</strong><small>Qué puedo producir y entregar hoy</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button type="button" class="sec-accion" role="tab" aria-selected="false"
                 data-dash-tab="inventario_ventas" onclick="setDashTab('inventario_ventas')">
-          <span class="sec-accion-ico" aria-hidden="true">🧱</span>
-          <span class="sec-accion-txt"><strong>Inventario vs ventas</strong><small>Alcanza el material para lo vendido</small></span>
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18M5 16l5-6 4 3 6-8M15 5h5v5"/></svg>
+          <span class="sec-accion-txt"><strong class="accion-larga">Inventario vs ventas</strong><strong class="accion-corta">Venta</strong><small>Alcanza el material para lo vendido</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button type="button" class="sec-accion" role="tab" aria-selected="false"
                 data-dash-tab="inventario_fechas" onclick="setDashTab('inventario_fechas')">
-          <span class="sec-accion-ico" aria-hidden="true">📅</span>
-          <span class="sec-accion-txt"><strong>Inventario por fechas</strong><small>Consumo, merma y último conteo</small></span>
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7zM3 7l9 5 9-5M12 12v10M7.5 4.5l9 5"/></svg>
+          <span class="sec-accion-txt"><strong class="accion-larga">Inventario por fechas</strong><strong class="accion-corta">Inventario</strong><small>Consumo, merma y último conteo</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button type="button" class="sec-accion" role="tab" aria-selected="false"
                 data-dash-tab="cobranza" onclick="setDashTab('cobranza')">
-          <span class="sec-accion-ico" aria-hidden="true">💵</span>
-          <span class="sec-accion-txt"><strong>Cobranza y caja</strong><small>Qué está vencido y qué entra</small></span>
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M5 10v4m14-4v4"/></svg>
+          <span class="sec-accion-txt"><strong class="accion-larga">Cobranza y caja</strong><strong class="accion-corta">Cobranzas</strong><small>Qué está vencido y qué entra</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
       </div>
     </div>
 
+    </div>
+    <div id="julio-resultados">
     <!-- 2. KPI QUE CAMBIAN CON LA VENTANA -->
     <div class="dash-resumen metric-grid kpi-window" data-kpi-window="operacion">
       <!-- Mercado: el número que importa -->
@@ -3277,12 +3531,14 @@ tbody tr:last-child td { border-bottom: 0; }
         </div>
       </div>
     </div>
+    </div>
   </section>
 
   <!-- ===================== COTIZACIONES ===================== -->
   <section class="view" data-view="cotizaciones">
+    <div class="movil-portada-modulo">
     <div class="dash2-head">
-      <div>
+      <div class="movil-hero">
         <h1 class="dash-hi">Cotizaciones</h1>
         <p class="dash-sub">Toda venta pasa primero por aquí. Aceptar no crea la orden: la conversión es un paso explícito.</p>
       </div>
@@ -3299,18 +3555,21 @@ tbody tr:last-child td { border-bottom: 0; }
       </div>
       <div class="sec-acciones">
         <button class="sec-accion primary" data-mutacion="1" onclick="abrirCotizacion()">
-          <span class="sec-accion-ico" aria-hidden="true">📄</span>
-          <span class="sec-accion-txt"><strong>Nueva cotización</strong><small>Cliente, obra y volumen</small></span>
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h10l4 4v14H5zM14 3v5h5M8 12h8M8 16h6"/></svg>
+          <span class="sec-accion-txt"><strong class="accion-larga">Nueva cotización</strong><strong class="accion-corta">Cotizar</strong><small>Cliente, obra y volumen</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button class="sec-accion" onclick="cargarCotizaciones()">
-          <span class="sec-accion-ico" aria-hidden="true">🔄</span>
-          <span class="sec-accion-txt"><strong>Actualizar bandeja</strong><small>Estados y totales</small></span>
+          <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5 9a7.5 7.5 0 0 1 13-3l2 3M4 15l2 3a7.5 7.5 0 0 0 13-3"/></svg>
+          <span class="sec-accion-txt"><strong class="accion-larga">Actualizar bandeja</strong><strong class="accion-corta">Actualizar</strong><small>Estados y totales</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
       </div>
     </div>
 
+    <button class="btn movil-ver-modulo" type="button" onclick="movilMostrarModulo(this.closest('[data-view]'))">Bandeja</button>
+    </div>
+    <div class="movil-contenido-modulo">
     <div class="grid two" style="margin-top:16px">
       <div class="card">
         <div class="spread">
@@ -3327,13 +3586,15 @@ tbody tr:last-child td { border-bottom: 0; }
         <p class="muted small">Selecciona una cotización de la bandeja.</p>
       </div>
     </div>
+    </div>
   </section>
 
   <!-- ===================== AGENDA ===================== -->
   <section class="view" data-view="agenda">
     <div class="ag-wrap">
+    <div class="movil-portada-modulo">
       <div class="ag-head">
-        <div>
+        <div class="movil-hero">
           <span class="card-kicker">Lectura · backend</span>
           <h1>Agenda</h1>
           <p>Mixers, recordatorios, citas de Julio y tareas del equipo. El calendario muestra; el backend ejecuta los envíos.</p>
@@ -3347,12 +3608,14 @@ tbody tr:last-child td { border-bottom: 0; }
         </div>
       </div>
 
-      <div class="ag-tabs" role="tablist">        <button class="ag-tab active" data-ag-tab="mixers" role="tab">Mixers <span class="ag-count" id="ag-count-mixers">0</span></button>
-        <button class="ag-tab" data-ag-tab="recordatorios" role="tab">Recordatorios <span class="ag-count" id="ag-count-recordatorios">0</span></button>
-        <button class="ag-tab" data-ag-tab="julio" role="tab">Julio <span class="ag-count" id="ag-count-julio">0</span></button>
-        <button class="ag-tab" data-ag-tab="equipo" role="tab">Equipo <span class="ag-count" id="ag-count-equipo">0</span></button>
+      <div class="ag-tabs" role="tablist">        <button class="ag-tab active" data-ag-tab="mixers" role="tab"><svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5h13v11H2zM15 9h4l3 4v3h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>Mixers <span class="ag-count" id="ag-count-mixers">0</span></button>
+        <button class="ag-tab" data-ag-tab="recordatorios" role="tab"><svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 17h14l-2-4V9a5 5 0 0 0-10 0v4zM10 20h4"/></svg>Recordatorios <span class="ag-count" id="ag-count-recordatorios">0</span></button>
+        <button class="ag-tab" data-ag-tab="julio" role="tab"><svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>Julio <span class="ag-count" id="ag-count-julio">0</span></button>
+        <button class="ag-tab" data-ag-tab="equipo" role="tab"><svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M2 20a7 7 0 0 1 14 0M16 5a3 3 0 0 1 0 6m2 3a6 6 0 0 1 4 6"/></svg>Equipo <span class="ag-count" id="ag-count-equipo">0</span></button>
       </div>
 
+    </div>
+    <div class="movil-contenido-modulo">
       <div class="ag-calendar">
         <div class="ag-cal-head">
           <h2 id="ag-mes">—</h2>
@@ -3365,29 +3628,29 @@ tbody tr:last-child td { border-bottom: 0; }
         <div class="ag-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
         <div class="ag-grid" id="ag-grid"></div>
       </div>
-      <p class="ag-hint" id="ag-nota">Vista de solo lectura · zona America/Guayaquil. Pulsa un día para ver sus eventos.</p>
+      <p class="ag-hint" id="ag-nota">Zona America/Guayaquil. Pulsa un día para ver sus eventos.</p>
+    </div>
     </div>
   </section>
 
-  <div class="ag-modal-backdrop" id="ag-modal" hidden>
-    <div class="ag-modal" role="dialog" aria-modal="true" aria-labelledby="ag-modal-title">
+  <dialog class="ag-modal" id="ag-modal" aria-labelledby="ag-modal-title">
       <div class="ag-modal-head">
         <div class="ag-kicker" id="ag-modal-kicker">AGENDA</div>
         <h2 class="ag-modal-title" id="ag-modal-title">—</h2>
-        <button class="ag-modal-close" type="button" onclick="agCerrarDia()" aria-label="Cerrar">×</button>
+        <button class="ag-modal-close" type="button" onclick="agCerrarDia()" aria-label="Cerrar" autofocus>×</button>
       </div>
       <div class="ag-modal-body" id="ag-modal-body"></div>
       <div class="ag-modal-foot">
         <span>Hora de Ecuador · UTC-5</span>
         <span class="note">El backend ejecuta los envíos</span>
       </div>
-    </div>
-  </div>
+  </dialog>
 
   <!-- ===================== SECRETARIA Y CAJA ===================== -->
   <section class="view" data-view="secretaria">
+    <div class="movil-portada-modulo">
     <div class="card sec-ventanilla">
-      <div>
+      <div class="movil-hero">
         <span class="sec-eyebrow">Ventanilla</span>
         <h2>¿Qué vas a registrar hoy?</h2>
         <p class="small muted" style="margin:0">Cobra a un cliente, registra un gasto o crea una orden. Todo pasa por el Custodio.</p>
@@ -3395,27 +3658,30 @@ tbody tr:last-child td { border-bottom: 0; }
       <div class="sec-acciones">
         <button class="sec-accion primary" data-modulo="secretaria_cobros_gastos" data-mutacion="1" onclick="abrirPago()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg>
-          <span class="sec-accion-txt"><strong>Cobrar / abonar</strong><small>Pago de cliente u orden</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Cobrar / abonar</strong><strong class="accion-corta">Cobrar</strong><small>Pago de cliente u orden</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button class="sec-accion" data-modulo="secretaria_cobros_gastos" data-mutacion="1" onclick="abrirGasto()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></svg>
-          <span class="sec-accion-txt"><strong>Gasto operativo</strong><small>Caja chica o banco</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Gasto operativo</strong><strong class="accion-corta">Gasto</strong><small>Caja chica o banco</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button class="sec-accion" data-modulo="compras_materiales" data-mutacion="1" onclick="abrirCompra()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18l-2 12H5L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M9 12h6"/></svg>
-          <span class="sec-accion-txt"><strong>Compra de material</strong><small>Cemento, arena, ripio</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Compra de material</strong><strong class="accion-corta">Comprar</strong><small>Cemento, arena, ripio</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button class="sec-accion" data-modulo="secretaria_ventanilla" data-mutacion="1" onclick="abrirOrden()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17V7h11v10"/><path d="M14 10h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
-          <span class="sec-accion-txt"><strong>Nueva orden</strong><small>Venta de hormigón</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Nueva orden</strong><strong class="accion-corta">Orden</strong><small>Venta de hormigón</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
       </div>
     </div>
 
+    <button class="btn movil-ver-modulo" type="button" onclick="movilMostrarModulo(this.closest('[data-view]'))">Ver ventanilla</button>
+    </div>
+    <div class="movil-contenido-modulo">
     <div class="grid two" style="margin-top:16px">
       <div class="card">
         <div class="spread">
@@ -3502,12 +3768,14 @@ tbody tr:last-child td { border-bottom: 0; }
       </div>
       <div id="sec-ordenes" class="table-wrap" style="margin-top:10px"><p class="muted small">Cargando órdenes…</p></div>
     </div>
+    </div>
   </section>
 
   <!-- ===================== CARPETAS DE CLIENTES ===================== -->
   <section class="view" data-view="clientes">
+    <div class="movil-portada-modulo">
     <div class="card sec-ventanilla" data-modulo="clientes_cartera">
-      <div>
+      <div class="movil-hero">
         <span class="sec-eyebrow">CARTERA Y EXPEDIENTES</span>
         <h2>¿Qué clientes necesitas encontrar hoy?</h2>
         <p class="small muted" style="margin:0">Filtra por deuda, obra activa o pagos. El buscador también cruza órdenes, viajes, obras y transferencias.</p>
@@ -3515,27 +3783,29 @@ tbody tr:last-child td { border-bottom: 0; }
       <div class="sec-acciones">
         <button class="sec-accion primary" data-grupo-cliente="DEUDA" onclick="setGrupoClientes('DEUDA')">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg>
-          <span class="sec-accion-txt"><strong>Con deuda / Fiado</strong><small id="cli-res-deuda">—</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Con deuda / Fiado</strong><strong class="accion-corta">Con deuda</strong><small id="cli-res-deuda">—</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button class="sec-accion" data-grupo-cliente="OBRA" onclick="setGrupoClientes('OBRA')">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17V7h11v10"/><path d="M14 10h4l3 3v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
-          <span class="sec-accion-txt"><strong>En obra / Entregas activas</strong><small id="cli-res-obra">—</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">En obra / Entregas activas</strong><strong class="accion-corta">En obra</strong><small id="cli-res-obra">—</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button class="sec-accion" data-grupo-cliente="PAGOS" onclick="setGrupoClientes('PAGOS')">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/></svg>
-          <span class="sec-accion-txt"><strong>Pagos y Transferencias</strong><small id="cli-res-pagos">—</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Pagos y Transferencias</strong><strong class="accion-corta">Pagos</strong><small id="cli-res-pagos">—</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
-        <button class="sec-accion" data-grupo-cliente="TODOS" onclick="cardTodosClientes()">
+        <button class="sec-accion" data-grupo-cliente="TODOS" onclick="pantallaMovil.matches ? setGrupoClientes('TODOS') : cardTodosClientes()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 11h5M18.5 8.5v5"/></svg>
-          <span class="sec-accion-txt"><strong>Todos y Prospectos</strong><small id="cli-res-todos">—</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Todos y Prospectos</strong><strong class="accion-corta">Todos</strong><small id="cli-res-todos">—</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
       </div>
     </div>
 
+    </div>
+    <div class="movil-contenido-modulo">
     <div class="card card-buscar-clientes" style="margin-top:16px" data-modulo="clientes_cartera">
       <div class="spread clientes-toolbar" style="align-items:flex-end;gap:10px">
         <div style="flex:1;min-width:220px;position:relative">
@@ -3600,18 +3870,45 @@ tbody tr:last-child td { border-bottom: 0; }
         </div>
       </div>
     </div>
+    </div>
   </section>
 
   <!-- ===================== PLANTA, FLOTA Y KARDEX ===================== -->
+  <section class="view" data-view="bodega">
+    <div class="card bodega-cabecera"><h2>Bodega</h2><p>Calendario de mixers</p></div>
+    <div class="bodega-controles" role="group" aria-label="Vista de Bodega">
+      <button class="btn bank" id="bodega-ver-cargas" onclick="bodegaVista(false)" aria-pressed="true">Mis cargas</button>
+      <button class="btn" id="bodega-ver-inventario" onclick="bodegaVista(true)" aria-pressed="false">Inventario</button>
+    </div>
+    <section id="bodega-cargas">
+      <div class="bodega-controles" role="group" aria-label="Fecha de entrega">
+        <button class="btn" id="bodega-hoy" onclick="bodegaCargar()">Hoy</button>
+        <button class="btn" id="bodega-manana" onclick="bodegaCargar(this.dataset.fecha)" disabled>Mañana</button>
+        <input type="date" id="bodega-fecha" aria-label="Elegir fecha" onchange="bodegaCargar(this.value)">
+      </div>
+      <p id="bodega-estado" role="status"></p>
+      <div id="bodega-lista" class="bodega-lista"></div>
+    </section>
+    <section id="bodega-inventario" hidden>
+      <h3>Inventario</h3>
+      <p class="muted small">Disponible proyectado desde el último conteo registrado.</p>
+      <div id="bodega-materiales" class="bodega-lista"></div>
+    </section>
+  </section>
+
   <section class="view" data-view="planta">
+    <div class="movil-portada-modulo">
     <div class="spread" style="margin-bottom:12px">
-      <div>
+      <div class="movil-hero">
         <span class="sec-eyebrow">Bodega</span>
         <h2 style="margin:0">Inventario de insumos</h2>
         <p class="small muted" style="margin:0">Stock real, costo promedio y compras en tránsito.</p>
       </div>
       <button class="btn small" data-modulo="compras_materiales" data-mutacion="1" onclick="abrirCompra()">+ Registrar compra de material</button>
     </div>
+    <button class="btn movil-ver-modulo" type="button" onclick="movilMostrarModulo(this.closest('[data-view]'))">Ver inventario</button>
+    </div>
+    <div class="movil-contenido-modulo">
     <div class="card planta-agenda" style="margin-bottom:16px" data-modulo="agenda_despachos">
       <div class="spread" style="margin-bottom:8px">
         <div>
@@ -3648,12 +3945,14 @@ tbody tr:last-child td { border-bottom: 0; }
       </div>
       <div id="planta-movimientos" class="table-wrap" style="margin-top:8px"><p class="muted small">Leyendo kardex…</p></div>
     </div>
+    </div>
   </section>
 
   <!-- ===================== BANCA Y MERCADO ===================== -->
   <section class="view" data-view="banca">
+    <div class="movil-portada-modulo">
     <div class="card sec-ventanilla banca-hero" data-modulo="finanzas_balance_auditoria">
-      <div>
+      <div class="movil-hero">
         <span class="sec-eyebrow">BANCA Y MERCADO</span>
         <h2>Caja, bancos y financiamiento</h2>
         <p class="small muted" style="margin:0">Las cuentas registradas, la cuota de mercado y el simulador de la pluma, en una sola vista.</p>
@@ -3661,19 +3960,21 @@ tbody tr:last-child td { border-bottom: 0; }
       <div class="sec-acciones banca-acciones">
         <button type="button" class="sec-accion banco-cuenta" data-banco="pichincha" onclick="seleccionarBanco('pichincha')" aria-pressed="false">
           <span class="banco-logo"><img src="/static/brand/bancos/pichincha.svg?v=612" alt="Banco Pichincha" loading="lazy"></span>
-          <span class="sec-accion-txt"><strong>Banco Pichincha</strong><small id="banco-pichincha-detalle">Cuenta por confirmar</small><span class="banco-estado" id="banco-pichincha-badge">Pendiente</span></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Banco Pichincha</strong><strong class="accion-corta">Pichincha</strong><small id="banco-pichincha-detalle">Cuenta por confirmar</small><span class="banco-estado" id="banco-pichincha-badge">Pendiente</span></span>
         </button>
         <button type="button" class="sec-accion banco-cuenta" data-banco="guayaquil" onclick="seleccionarBanco('guayaquil')" aria-pressed="false">
           <span class="banco-logo"><img src="/static/brand/bancos/guayaquil.svg?v=612" alt="Banco Guayaquil" loading="lazy"></span>
-          <span class="sec-accion-txt"><strong>Banco Guayaquil</strong><small id="banco-guayaquil-detalle">Cuenta por confirmar</small><span class="banco-estado" id="banco-guayaquil-badge">Pendiente</span></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Banco Guayaquil</strong><strong class="accion-corta">Guayaquil</strong><small id="banco-guayaquil-detalle">Cuenta por confirmar</small><span class="banco-estado" id="banco-guayaquil-badge">Pendiente</span></span>
         </button>
         <button type="button" class="sec-accion banco-cuenta" data-banco="internacional" onclick="seleccionarBanco('internacional')" aria-pressed="false">
           <span class="banco-logo"><img src="/static/brand/bancos/internacional.svg?v=612" alt="Banco Internacional" loading="lazy"></span>
-          <span class="sec-accion-txt"><strong>Banco Internacional</strong><small id="banco-internacional-detalle">Cuenta por confirmar</small><span class="banco-estado" id="banco-internacional-badge">Pendiente</span></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Banco Internacional</strong><strong class="accion-corta">Internacional</strong><small id="banco-internacional-detalle">Cuenta por confirmar</small><span class="banco-estado" id="banco-internacional-badge">Pendiente</span></span>
         </button>
       </div>
     </div>
 
+    </div>
+    <div class="movil-contenido-modulo">
     <div class="card banco-detalle" id="banco-detalle" hidden>
       <div class="spread">
         <div>
@@ -3772,12 +4073,14 @@ tbody tr:last-child td { border-bottom: 0; }
         <p class="small muted" style="margin-bottom:0">DSCR proyectado = flujo incremental del equipo / cuota. DSCR histórico suma el flujo operativo de los últimos 90 días. Umbral verde: 1.50x.</p>
       </div>
     </div>
+    </div>
   </section>
 
   <!-- ===================== SUPERADMIN Y WHATSAPP ===================== -->
   <section class="view" data-view="superadmin">
+    <div class="movil-portada-modulo">
     <div class="card sec-ventanilla" data-modulo="superadmin_config">
-      <div>
+      <div class="movil-hero">
         <span class="sec-eyebrow">CENTRO DE CONTROL</span>
         <h2>¿Qué vas a configurar hoy?</h2>
         <p class="small muted" style="margin:0">Gestiona usuarios y permisos, caja chica, horarios de planta, recetas y parámetros financieros.</p>
@@ -3785,27 +4088,30 @@ tbody tr:last-child td { border-bottom: 0; }
       <div class="sec-acciones">
         <button class="sec-accion primary" data-mutacion="1" onclick="abrirSuperUsuarios()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 11h5M18.5 8.5v5"/></svg>
-          <span class="sec-accion-txt"><strong>Usuarios y accesos</strong><small>Crear perfiles y checklist de módulos</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Usuarios y accesos</strong><strong class="accion-corta">Usuarios</strong><small>Crear perfiles y checklist de módulos</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button class="sec-accion" data-mutacion="1" onclick="abrirSuperCaja()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2"/></svg>
-          <span class="sec-accion-txt"><strong>Caja chica y horarios</strong><small>Topes de efectivo y jornada de planta</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Caja chica y horarios</strong><strong class="accion-corta">Caja</strong><small>Topes de efectivo y jornada de planta</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button class="sec-accion" data-mutacion="1" onclick="abrirSuperRecetas()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18l-2 12H5L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M9 12h6"/></svg>
-          <span class="sec-accion-txt"><strong>Recetas, flota y precios</strong><small>Fórmulas, mixers y tarifas por m³</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Recetas, flota y precios</strong><strong class="accion-corta">Planta</strong><small>Fórmulas, mixers y tarifas por m³</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
         <button class="sec-accion" data-mutacion="1" onclick="abrirSuperTasas()">
           <svg class="sec-accion-ico" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l3-4 3 2 4-6"/><path d="M17 7h3v3"/></svg>
-          <span class="sec-accion-txt"><strong>Tasas y conteo de silos</strong><small>WACC, impuestos y stock físico</small></span>
+          <span class="sec-accion-txt"><strong class="accion-larga">Tasas y conteo de silos</strong><strong class="accion-corta">Tasas y silos</strong><small>WACC, impuestos y stock físico</small></span>
           <span class="sec-accion-arrow">→</span>
         </button>
       </div>
     </div>
 
+    <button class="btn movil-ver-modulo" type="button" onclick="movilMostrarModulo(this.closest('[data-view]'))">Ver configuración</button>
+    </div>
+    <div class="movil-contenido-modulo">
     <div class="grid two" style="margin-top:16px">
       <div class="card" data-modulo="superadmin_config">
         <div class="spread">
@@ -3855,8 +4161,40 @@ tbody tr:last-child td { border-bottom: 0; }
         <div id="reglas-resumen" class="reglas-resumen"><p class="muted small">Leyendo configuración…</p></div>
       </div>
     </div>
+    </div>
   </section>
 </main>
+<nav class="movil-nav" aria-label="Navegación móvil">
+  <button type="button" data-role-btn="bodega" onclick="setView('bodega')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 5h13v12H2zM15 9h4l3 4v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+    <span>Mis cargas</span>
+  </button>
+  <button type="button" data-role-btn="dashboard" aria-current="page" onclick="setView('dashboard')">
+    <svg class="movil-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M10 21v-7h4v7"/></svg>
+    Inicio
+  </button>
+  <button type="button" data-role-btn="agenda" onclick="setView('agenda', null, true)">
+    <svg class="movil-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18M8 13h2M14 13h2M8 17h2"/></svg>
+    Agenda
+  </button>
+  <button type="button" data-role-btn="clientes" onclick="setView('clientes', null, true)">
+    <svg class="movil-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10H3Z"/><path d="M3 11h18"/></svg>
+    Clientes
+  </button>
+  <button type="button" id="movil-mas-btn" onclick="movilAbrirMas()" aria-haspopup="dialog" aria-controls="movil-mas">
+    <svg class="movil-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg>
+    Más
+  </button>
+</nav>
+<dialog id="movil-mas" class="movil-mas" aria-labelledby="movil-mas-titulo">
+  <div class="dialog-head">
+    <h2 id="movil-mas-titulo">Más</h2>
+    <button type="button" class="btn small" onclick="this.closest('dialog').close()">Cerrar</button>
+  </div>
+  <div id="movil-modulos"></div>
+  <button type="button" class="btn movil-abrir-gato" onclick="this.closest('dialog').close(); gatoToggle(true, document.getElementById('movil-mas-btn'))">Abrir Gato</button>
+  <div id="movil-herramientas"></div>
+</dialog>
 
 
 <dialog id="dlg-cliente">
@@ -3940,6 +4278,9 @@ tbody tr:last-child td { border-bottom: 0; }
       <div><label class="field">Mixer</label><select id="ord-mixer"><option value="">Automático</option></select></div>
       <div><label class="field">Chofer</label><input type="text" id="ord-chofer" placeholder="Nombre del chofer"></div>
       <div><label class="field">Notas</label><input type="text" id="ord-notas"></div>
+      <div><label class="field" for="ord-fecha-entrega">Fecha de entrega</label><input type="date" id="ord-fecha-entrega"></div>
+      <div><label class="field" for="ord-hora-entrega">Hora de entrega en obra</label><input type="time" id="ord-hora-entrega"></div>
+      <div><label class="field" for="ord-obra">Dirección de obra</label><input type="text" id="ord-obra"></div>
     </div>
     <div id="ord-calculo" class="notice info" style="margin-top:12px">Completa volumen y resistencia.</div>
     <div id="ord-resultado"></div>
@@ -4407,6 +4748,10 @@ tbody tr:last-child td { border-bottom: 0; }
       <div><label class="field">Fecha de emisión</label><input type="date" id="cot-conv-fecha"></div>
       <div><label class="field">Vencimiento (si es fiado)</label><input type="date" id="cot-conv-vencimiento"></div>
     </div>
+    <div class="form-grid">
+      <div><label class="field" for="cot-conv-fecha-entrega">Fecha de entrega</label><input type="date" id="cot-conv-fecha-entrega"></div>
+      <div><label class="field" for="cot-conv-hora-entrega">Hora de entrega en obra</label><input type="time" id="cot-conv-hora-entrega"></div>
+    </div>
     <div id="cot-conv-resultado"></div>
   </div>
   <div class="dialog-foot">
@@ -4552,10 +4897,78 @@ async function api(path, options={}) {
 }
 
 /* ----------------------------- NAVEGACIÓN ----------------------------- */
+const pantallaMovil = window.matchMedia('(max-width: 680px)');
+let solicitudInicioMovil = 0;
+
+function movilAbrirMas() {
+  $('#movil-mas').showModal();
+}
+
+function movilBuscar(abrir = !$('#busqueda-global-panel').classList.contains('abierto')) {
+  $('#busqueda-global-panel').classList.toggle('abierto', abrir);
+  $('#movil-buscar').setAttribute('aria-expanded', String(abrir));
+  if (abrir) $('#busqueda-global').focus();
+}
+
+function prepararNavegacionMovil() {
+  const modulos = $('.app-header .role-switch');
+  const herramientas = $('#top-actions-sec');
+  const lugarModulos = modulos.nextElementSibling;
+  const lugarHerramientas = herramientas.nextElementSibling;
+  function adaptar() {
+    if (pantallaMovil.matches) {
+      $('#movil-modulos').append(modulos);
+      $('#movil-herramientas').append(herramientas);
+    } else {
+      $('#movil-mas').close();
+      lugarModulos.before(modulos);
+      lugarHerramientas.before(herramientas);
+    }
+  }
+  pantallaMovil.addEventListener('change', () => {
+    adaptar();
+    if (pantallaMovil.matches && state.view === 'dashboard') movilCargarProximo();
+  });
+  adaptar();
+}
+
+async function movilCargarProximo() {
+  const solicitud = ++solicitudInicioMovil;
+  const tarjeta = $('#movil-proximo');
+  tarjeta.hidden = !puedeVista('agenda');
+  if (tarjeta.hidden) return;
+  const estado = $('#movil-proximo-estado');
+  const boton = $('#movil-proximo-evento');
+  const reintento = $('#movil-proximo-reintento');
+  estado.textContent = 'Cargando agenda…';
+  boton.hidden = reintento.hidden = true;
+  try {
+    const {hoy, evento} = await api('/api/v1/agenda/proximo');
+    if (solicitud !== solicitudInicioMovil) return;
+    const fecha = $('#movil-fecha');
+    fecha.textContent = new Intl.DateTimeFormat('es-EC', {dateStyle: 'full', timeZone: 'UTC'}).format(new Date(hoy + 'T12:00:00Z'));
+    fecha.hidden = false;
+    agState.hoy = hoy;
+    estado.textContent = evento ? '' : 'Sin eventos próximos para hoy.';
+    if (!evento) return;
+    boton.querySelector('strong').textContent = evento.hora;
+    boton.querySelector('span').textContent = evento.titulo;
+    boton.onclick = () => agVerEvento(evento);
+    boton.hidden = false;
+  } catch {
+    if (solicitud !== solicitudInicioMovil) return;
+    estado.textContent = 'No se pudo cargar la agenda.';
+    reintento.hidden = false;
+  }
+}
+
 function _activarVista(v) {
   $$('.view').forEach(el => el.classList.toggle('active', el.dataset.view === v));
   $$('[data-role-btn]').forEach(el => el.classList.toggle('active', el.dataset.roleBtn === v));
-  const meta = VIEW_META[v] || VIEW_META.dashboard;
+  const destino = $('.movil-nav [data-role-btn="' + v + '"]') || $('#movil-mas-btn');
+  $$('.movil-nav button').forEach(el => el.removeAttribute('aria-current'));
+  destino.setAttribute('aria-current', 'page');
+  const meta = v === 'bodega' ? {title: 'Mis cargas', subtitle: 'Bodega'} : VIEW_META[v] || VIEW_META.dashboard;
   const titulo = $('#page-title');
   const subtitulo = $('#page-subtitle');
   if (titulo) titulo.textContent = meta.title;
@@ -4563,22 +4976,167 @@ function _activarVista(v) {
   document.title = 'Horminor · ' + meta.title;
 }
 
-function setView(v) {
+function movilMostrarModulo(vista) {
+  if (!pantallaMovil.matches || !vista?.classList.contains('active')) return;
+  const portada = $('.movil-portada-modulo', vista);
+  if (!portada) return;
+  vista.classList.remove('portada-sola');
+  const ancla = $('.sec-acciones, .ag-tabs, .movil-ver-modulo', portada);
+  movilDesplazarA(ancla);
+}
+
+function movilDesplazarA(ancla) {
+  const cabecera = $('.top-header').getBoundingClientRect().bottom;
+  const top = window.scrollY + ancla.getBoundingClientRect().top - cabecera - 8;
+  const movimientoReducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({top, behavior: movimientoReducido ? 'instant' : 'smooth'});
+}
+
+function setView(v, fechaAgenda, abrirPortada = false) {
   if (v === 'gerencial') v = 'dashboard';
   state.view = v;
+  $('#movil-mas').close();
   _activarVista(v);
+  const vista = $('.view.active');
+  vista.classList.toggle('portada-sola', abrirPortada);
   cerrarBusqueda();
   toggleNotif(false);
-  if (v === 'dashboard') cargarDashboard();
+  if (v === 'dashboard') {
+    $('#julio-resultados').classList.remove('desplegado');
+    cargarDashboard();
+    if (pantallaMovil.matches) movilCargarProximo();
+  }
   if (v === 'secretaria') cargarSecretaria();
   if (v === 'clientes') cargarClientes();
   if (v === 'cotizaciones') cargarCotizaciones();
-  if (v === 'agenda') agCargar();
+  if (v === 'bodega') { bodegaVista(false); bodegaCargar(); }
   if (v === 'planta') cargarPlanta();
   if (v === 'banca') cargarBanca();
   if (v === 'superadmin') cargarSuperadmin();
   try { window.scrollTo({top:0, behavior:'smooth'}); } catch (e) { window.scrollTo(0,0); }
+  if (!abrirPortada && !fechaAgenda) {
+    requestAnimationFrame(() => movilMostrarModulo(vista));
+  }
+  if (v === 'agenda') {
+    if (fechaAgenda) {
+      const fecha = new Date(fechaAgenda + 'T12:00:00');
+      agState.mes = new Date(fecha.getFullYear(), fecha.getMonth(), 1);
+      agState.seleccion = fechaAgenda;
+    }
+    return agCargar();
+  }
 }
+
+/* ----------------------------- BODEGA ----------------------------- */
+const bodegaEstado = {solicitud: 0, datos: null, faltantes: []};
+const bodegaMateriales = [
+  ['Cemento', 'cemento_sacos_teorico', 'sacos', 'CEMENTO'],
+  ['Arena', 'arena_m3', 'm³', 'ARENA'],
+  ['Ripio', 'ripio_m3', 'm³', 'RIPIO'],
+  ['Agua', 'agua_litros', 'L', 'AGUA'],
+  ['Retardante', 'retardante_litros', 'L', 'RETARDANTE']
+];
+
+function bodegaVista(inventario) {
+  $('#bodega-cargas').hidden = inventario;
+  $('#bodega-inventario').hidden = !inventario;
+  [['#bodega-ver-cargas', !inventario], ['#bodega-ver-inventario', inventario]].forEach(([id, activo]) => {
+    $(id).setAttribute('aria-pressed', String(activo));
+    $(id).classList.toggle('bank', activo);
+  });
+}
+
+function bodegaHora(hora) {
+  if (!hora) return 'Horario por confirmar';
+  const [h, m] = hora.split(':');
+  return (Number(h) % 12 || 12) + ':' + m + (Number(h) < 12 ? ' a. m.' : ' p. m.');
+}
+
+function bodegaTextoAviso(aviso) {
+  const vigente = aviso.fecha_entrega + ' · ' + bodegaHora(aviso.hora_entrega);
+  return aviso.fecha_anterior
+    ? 'Antes: ' + aviso.fecha_anterior + ' · ' + bodegaHora(aviso.hora_anterior) + ' → ' + vigente
+    : 'Entrega en obra · ' + vigente;
+}
+
+const bodegaNumero = new Intl.NumberFormat('es-EC', {maximumFractionDigits: 3});
+
+function bodegaCantidad(cantidad, unidad) {
+  return cantidad == null ? 'Por confirmar' : bodegaNumero.format(cantidad) + ' ' + esc(unidad);
+}
+
+function bodegaRender(datos) {
+  const abiertos = new Set($$('#bodega-lista details[open]').map(el => el.dataset.carga));
+  $('#bodega-manana').dataset.fecha = datos.manana;
+  $('#bodega-manana').disabled = false;
+  $('#bodega-fecha').value = datos.fecha;
+  [['#bodega-hoy', datos.hoy], ['#bodega-manana', datos.manana]].forEach(([id, fecha]) => {
+    $(id).setAttribute('aria-pressed', String(fecha === datos.fecha));
+    $(id).classList.toggle('bank', fecha === datos.fecha);
+  });
+  $('#bodega-estado').textContent = datos.cargas.length ? '' : 'Sin cargas para este día.';
+  const bajoStock = new Set(datos.inventario.filter(m => m.disponible < 0).map(m => m.codigo));
+  $('#bodega-lista').innerHTML = datos.cargas.map(carga => {
+    const revisarMaterial = carga.estado_actual === 'PROGRAMADO' &&
+      bodegaMateriales.some(([, campo, , codigo]) => carga.materiales?.[campo] > 0 && bajoStock.has(codigo));
+    const estado = {PROGRAMADO:'Programado', EN_RUTA:'En ruta', COMPLETADO:'Completado', ENTREGADO:'Entregado'};
+    const filas = bodegaMateriales.map(([nombre, campo, unidad]) =>
+      `<div><dt>${nombre}</dt><dd>${bodegaCantidad(carga.materiales?.[campo], unidad)}</dd></div>`).join('');
+    const horario = carga.hora_entrega ? 'Entrega del pedido · ' + bodegaHora(carga.hora_entrega) : 'Horario por confirmar';
+    return `<details class="card bodega-carga" data-carga="${esc(carga.id)}" data-pedido="${esc(carga.numero)}" ${abiertos.has(carga.id) ? 'open' : ''}>
+      <summary><strong class="bodega-hora">${esc(horario)}</strong>
+        <strong>${esc(carga.mixer || 'Mixer por asignar')} · Viaje ${carga.viaje_numero}/${carga.total_viajes_orden}</strong><br>
+        <span>${esc(carga.cliente)} · ${esc(carga.direccion_obra || 'Obra por confirmar')}</span><br>
+        <small>${esc(estado[carga.estado_actual] || carga.estado_actual)} · Pedido #${carga.numero}${revisarMaterial ? ' · Revisar disponibilidad' : ''}</small>
+      </summary>
+      <p><strong>Materiales para esta carga</strong> · ${bodegaNumero.format(carga.volumen_m3)} m³ · ${esc(carga.resistencia)}</p>
+      ${carga.provisional ? '<p class="notice warn">Dosificación provisional · requiere validación.</p>' : ''}
+      <dl class="bodega-materiales">${filas}</dl>
+    </details>`;
+  }).join('');
+  $('#bodega-materiales').innerHTML = datos.inventario.map(m => `<article class="card">
+    <strong>${esc(m.nombre)}</strong>
+    <dl class="bodega-materiales">
+      <div><dt>Disponible proyectado</dt><dd>${bodegaCantidad(m.disponible == null ? null : Math.max(m.disponible, 0), m.unidad)}</dd></div>
+      <div><dt>Consumo teórico desde el conteo</dt><dd>${bodegaCantidad(m.consumo_desde_conteo, m.unidad)}</dd></div>
+      <div><dt>Último conteo</dt><dd>${m.ultimo_levantamiento_at ? esc(new Date(m.ultimo_levantamiento_at).toLocaleDateString('es-EC', {timeZone:'America/Guayaquil'})) : 'Por confirmar'}</dd></div>
+    </dl></article>`).join('') || '<p>Sin materiales registrados.</p>';
+}
+
+async function bodegaCargar(fecha, actualizar = false) {
+  const solicitud = ++bodegaEstado.solicitud;
+  if (!actualizar) $('#bodega-estado').textContent = 'Cargando…';
+  try {
+    const datos = await api('/api/v1/bodega/tareas' + (fecha ? '?fecha=' + encodeURIComponent(fecha) : ''));
+    if (solicitud !== bodegaEstado.solicitud || !puedeVista('bodega')) return;
+    if (!actualizar || JSON.stringify(datos) !== JSON.stringify(bodegaEstado.datos)) bodegaRender(datos);
+    bodegaEstado.datos = datos;
+    renderNotificaciones();
+  } catch {
+    if (solicitud !== bodegaEstado.solicitud || actualizar) return;
+    $('#bodega-lista').replaceChildren();
+    $('#bodega-estado').textContent = 'No se pudieron cargar los encargos. Vuelve a elegir el día.';
+    $('#bodega-materiales').textContent = 'No se pudo cargar el inventario.';
+  }
+}
+
+async function bodegaCargarFaltantes() {
+  const perfil = state.perfil;
+  try {
+    const datos = await api('/api/v1/bodega/faltantes');
+    if (perfil !== state.perfil || puedeVista('bodega')) return;
+    bodegaEstado.faltantes = datos.faltantes;
+    renderNotificaciones();
+  } catch { /* Los avisos existentes siguen disponibles. */ }
+}
+
+setInterval(() => {
+  if (document.hidden) return;
+  if (state.view === 'bodega') {
+    const datos = bodegaEstado.datos;
+    bodegaCargar(datos?.fecha === datos?.hoy ? undefined : datos?.fecha, true);
+  } else if (state.view === 'dashboard' && puedeModulo('dashboard_gerencial')) bodegaCargarFaltantes();
+}, 30000);
 
 /* ----------------------------- AGENDA ----------------------------- */
 const AG_TABS = {
@@ -4589,7 +5147,7 @@ const AG_TABS = {
 };
 const AG_DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const AG_MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const agState = {hoy: null, mes: null, tab: 'mixers', eventos: [], conteo: {}, seleccion: null};
+const agState = {hoy: null, mes: null, tab: 'mixers', eventos: [], conteo: {}, seleccion: null, tipos: [], solicitud: 0};
 
 function agDosDigitos(n) { return String(n).padStart(2, '0'); }
 function agKey(anio, mes, dia) { return anio + '-' + agDosDigitos(mes + 1) + '-' + agDosDigitos(dia); }
@@ -4611,14 +5169,37 @@ function agHoy() {
   agCargar();
 }
 function agCambiarTab(tab) {
-  if (!AG_TABS[tab]) return;
+  if (!agState.tipos.includes(tab)) return;
   agState.tab = tab;
-  document.querySelectorAll('[data-ag-tab]').forEach(el => el.classList.toggle('active', el.dataset.agTab === tab));
+  agPintarTabs();
   agRender();
+}
+function agPintarTabs() {
+  $$('[data-ag-tab]').forEach(el => {
+    const activa = el.dataset.agTab === agState.tab;
+    el.hidden = !agState.tipos.includes(el.dataset.agTab);
+    el.classList.toggle('active', activa);
+    el.setAttribute('aria-selected', String(activa));
+    el.tabIndex = activa ? 0 : -1;
+  });
+}
+async function agVerEvento(evento) {
+  if (!puedeVista('agenda')) return;
+  gatoToggle(false, null, false);
+  const cargada = await setView('agenda', evento.fecha);
+  if (!cargada || state.view !== 'agenda') return;
+  const vigente = agState.eventos.find(e => e.id === evento.id && e.tipo === evento.tipo && e.fecha === evento.fecha);
+  if (!vigente) {
+    toast('El evento ya no aparece en esa fecha. Revisa la agenda vigente.', 'warn');
+    return;
+  }
+  agCambiarTab(vigente.tipo);
+  agAbrirDia(vigente.fecha, vigente.id);
 }
 async function agCargar() {
   const grid = document.getElementById('ag-grid');
   if (!grid) return;
+  const solicitud = ++agState.solicitud;
   const nota = document.getElementById('ag-nota');
   const base = agState.mes || (agState.hoy ? new Date(agState.hoy + 'T12:00:00') : new Date());
   agState.mes = new Date(base.getFullYear(), base.getMonth(), 1);
@@ -4628,16 +5209,26 @@ async function agCargar() {
   const hasta = agKey(anio, mes, new Date(anio, mes + 1, 0).getDate());
   try {
     const r = await api('/api/v1/agenda/eventos?desde=' + desde + '&hasta=' + hasta);
+    if (solicitud !== agState.solicitud) return false;
     agState.hoy = r.hoy || agState.hoy;
     agState.eventos = Array.isArray(r.eventos) ? r.eventos : [];
     agState.conteo = r.conteo || {};
-    if (nota) nota.textContent = 'Vista de solo lectura · zona ' + (r.zona || 'America/Guayaquil') + '. Pulsa un día para ver sus eventos.';
+    agState.tipos = (r.tipos || []).filter(tipo => Object.hasOwn(AG_TABS, tipo));
+    if (!agState.tipos.includes(agState.tab)) agState.tab = agState.tipos[0] || 'mixers';
+    agPintarTabs();
+    if (nota) nota.textContent = 'Zona ' + (r.zona || 'America/Guayaquil') + '. Pulsa un día para ver sus eventos.';
   } catch (e) {
+    if (solicitud !== agState.solicitud) return false;
     agState.eventos = [];
     agState.conteo = {};
+    agState.tipos = [];
+    agPintarTabs();
     if (nota) nota.textContent = 'No pude leer la agenda: ' + (e.message || e);
+    agRender();
+    return false;
   }
   agRender();
+  return true;
 }
 function agRender() {
   const grid = document.getElementById('ag-grid');
@@ -4667,7 +5258,7 @@ function agRender() {
     const clases = ['ag-day'];
     if (fecha === agState.seleccion) clases.push('selected');
     if (fecha === agState.hoy) clases.push('today');
-    html += '<button type="button" class="' + clases.join(' ') + '" onclick="agAbrirDia(\'' + fecha + '\')">'
+    html += '<button type="button" data-ag-fecha="' + fecha + '" class="' + clases.join(' ') + '" onclick="agAbrirDia(\'' + fecha + '\')">'
       + '<div class="num">' + dia + '</div><div class="ag-dots">' + dots + '</div>' + pill + '</button>';
   }
   grid.innerHTML = html;
@@ -4679,7 +5270,7 @@ function agFormatoDia(fecha) {
   const d = new Date(fecha + 'T12:00:00');
   return AG_DIAS[d.getDay()] + ' ' + d.getDate() + ' ' + AG_MESES[d.getMonth()].slice(0, 3);
 }
-function agAbrirDia(fecha) {
+function agAbrirDia(fecha, eventoId) {
   agState.seleccion = fecha;
   agRender();
   const list = agEventosDia(fecha);
@@ -4698,20 +5289,51 @@ function agAbrirDia(fecha) {
   } else {
     body.innerHTML = '<div class="ag-list">' + list.map(e => {
       const detalle = e.detalle ? '<small>' + agEscapar(e.detalle) + '</small>' : '';
-      const estado = e.estado ? '<span class="ag-chip">' + agEscapar(e.estado) + '</span>' : '';
+      const etiquetaEstado = e.estado === 'RESERVA_CAMPO' ? 'Reservado'
+        : ['AGENDADO', 'CONFIRMADA'].includes(e.estado) ? 'Agendado' : e.estado;
+      const estado = e.estado ? '<span class="ag-chip">' + agEscapar(etiquetaEstado) + '</span>' : '';
+      const editaHorario = e.editable && state.perfil?.modo_acceso !== 'SOLO_LECTURA'
+        && ['SUPERADMIN', 'SECRETARIA'].includes(state.perfil?.rol_base);
       const editar = agState.tab === 'mixers'
         ? '<button class="btn small ghost" type="button" style="margin-top:6px" onclick="agEditarMixer(\'' + e.id + '\')">Editar</button>'
-        : '';
-      return '<div class="ag-event ' + agState.tab + '"><div class="bar"></div>'
+        : editaHorario ? `<details style="margin-top:6px"><summary>Corregir horario</summary>
+            <form class="row" style="gap:8px;flex-wrap:wrap" onsubmit="agGuardarHorario(event,'${agEscapar(e.tipo)}','${agEscapar(e.id)}')">
+              <label>Fecha <input name="fecha" type="date" value="${agEscapar(e.fecha)}" required></label>
+              <label>Hora <input name="hora" type="time" value="${agEscapar(e.hora)}" required></label>
+              <button class="btn small" type="submit">Guardar</button>
+            </form></details>` : '';
+      return '<div class="ag-event ' + agState.tab + (e.id === eventoId ? ' destacado' : '') + '"><div class="bar"></div>'
         + '<div class="time">' + agEscapar(e.hora || '—') + '</div>'
         + '<div class="info"><strong>' + agEscapar(e.titulo) + '</strong>' + detalle + estado + editar + '</div></div>';
     }).join('') + '</div>';
   }
-  if (modal) modal.hidden = false;
+  if (!modal.open) modal.showModal();
+  modal.querySelector('.destacado')?.scrollIntoView({block: 'nearest'});
 }
+async function agGuardarHorario(evento, tipo, id) {
+  evento.preventDefault();
+  const form = evento.currentTarget;
+  const boton = form.querySelector('button[type="submit"]');
+  if (boton.disabled) return;
+  boton.disabled = true;
+  try {
+    const fecha = form.elements.fecha.value;
+    await api(`/api/v1/agenda/eventos/${tipo}/${id}/horario`, {
+      method: 'PATCH', body: {fecha, hora: form.elements.hora.value}
+    });
+    agCerrarDia();
+    await agVerEvento({tipo, id, fecha});
+    toast('Horario actualizado.', 'ok');
+  } catch (error) {
+    toast(error.message || 'No pude guardar el horario.', 'error');
+  } finally {
+    boton.disabled = false;
+  }
+}
+
 function agCerrarDia() {
   const modal = document.getElementById('ag-modal');
-  if (modal) modal.hidden = true;
+  if (modal.open) modal.close();
 }
 function agNuevoMixer() {
   const fecha = agState.seleccion || agState.hoy || undefined;
@@ -4723,11 +5345,26 @@ function agEditarMixer(id) {
 }
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-ag-tab]').forEach(el => {
-    el.addEventListener('click', () => agCambiarTab(el.dataset.agTab));
+    el.addEventListener('click', () => {
+      agCambiarTab(el.dataset.agTab);
+      movilMostrarModulo(el.closest('[data-view]'));
+    });
   });
-  const modal = document.getElementById('ag-modal');
-  if (modal) modal.addEventListener('click', e => { if (e.target === modal) agCerrarDia(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') agCerrarDia(); });
+  $('.ag-tabs').addEventListener('keydown', e => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    const tabs = $$('[data-ag-tab]:not([hidden])');
+    const actual = tabs.indexOf(e.target);
+    if (actual < 0) return;
+    e.preventDefault();
+    const siguiente = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1
+      : (actual + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    agCambiarTab(tabs[siguiente].dataset.agTab);
+    tabs[siguiente].focus();
+    movilMostrarModulo(e.target.closest('[data-view]'));
+  });
+  $('#ag-modal').addEventListener('close', () => {
+    $('[data-ag-fecha="' + agState.seleccion + '"]')?.focus({preventScroll: true});
+  });
 });
 
 /* ----------------------------- PERFIL SIMULADO / ACL ----------------------------- */
@@ -4752,7 +5389,7 @@ const MODULO_POR_VISTA = {
   secretaria: ['secretaria_ventanilla', 'secretaria_cobros_gastos', 'secretaria_cierre_caja', 'agenda_despachos', 'compras_materiales'],
   clientes: ['clientes_cartera'],
   cotizaciones: ['cotizaciones'],
-  agenda: ['agenda_despachos', 'clientes_cartera', 'secretaria_ventanilla', 'cerebro'],
+  agenda: ['agenda_despachos', 'clientes_cartera', 'secretaria_ventanilla', 'cerebro', 'cotizaciones'],
   planta: ['planta_kardex', 'compras_materiales'],
   banca: ['finanzas_balance_auditoria'],
   superadmin: ['superadmin_config']
@@ -4764,6 +5401,7 @@ function puedeModulo(modulo) {
 }
 
 function puedeVista(v) {
+  if (v === 'bodega') return state.perfil?.rol_base === 'BODEGA';
   const modulos = MODULO_POR_VISTA[v] || [];
   return !modulos.length || modulos.some(puedeModulo);
 }
@@ -4774,7 +5412,17 @@ function _primerVistaPermitida() {
 }
 
 function aplicarPerfilUI(perfil) {
+  const cambiaPerfil = state.perfil?.id !== perfil?.id || state.perfil?.rol_base !== perfil?.rol_base;
   state.perfil = perfil;
+  if (cambiaPerfil) {
+    bodegaEstado.solicitud++;
+    bodegaEstado.datos = null;
+    bodegaEstado.faltantes = [];
+    $('#bodega-lista').replaceChildren();
+    $('#bodega-materiales').replaceChildren();
+    $('#bodega-estado').textContent = '';
+  }
+  document.body.classList.toggle('perfil-bodega', puedeVista('bodega'));
   const soloLectura = !!(perfil && perfil.modo_acceso === 'SOLO_LECTURA');
   document.body.classList.toggle('perfil-solo-lectura', soloLectura);
 
@@ -4789,7 +5437,12 @@ function aplicarPerfilUI(perfil) {
     nuevoAgenda.style.display =
       puedeModulo('agenda_despachos') && !soloLectura ? '' : 'none';
   }
-  if (!puedeVista(state.view)) setView(_primerVistaPermitida());
+  if (puedeVista('bodega') && cambiaPerfil) setView('bodega');
+  else if (!puedeVista(state.view)) setView(_primerVistaPermitida());
+  const nombre = perfil?.nombre || 'Julio';
+  $('#movil-saludo').textContent = 'Hola, ' + nombre;
+  if (state.view === 'dashboard' && pantallaMovil.matches) movilCargarProximo();
+  if (state.view === 'agenda') agCargar();
   if (state.view === 'dashboard') montarAgendaDashboard();
   if (state.view === 'secretaria') montarAgendaSecretaria();
   if (state.view === 'planta') montarAgendaPlanta();
@@ -4894,6 +5547,7 @@ function buscarGlobal(q) {
 }
 
 function cerrarBusqueda() {
+  movilBuscar(false);
   const s = $('#search-results');
   if (s) { s.hidden = true; s.innerHTML = ''; }
   const i = $('#busqueda-global');
@@ -4904,6 +5558,7 @@ async function irACliente(id) {
   cerrarBusqueda();
   state.view = 'clientes';
   _activarVista('clientes');
+  movilMostrarModulo($('.view[data-view="clientes"]'));
   await cargarClientes(id);
 }
 
@@ -4956,6 +5611,11 @@ async function irAOrden(nombreCliente) {
 
 /* ----------------------------- NOTIFICACIONES ----------------------------- */
 function construirNotifs() {
+  if (puedeVista('bodega')) return (bodegaEstado.datos?.avisos || []).map(aviso => ({
+    ico: '🚚', kind: 'ok',
+    t: (aviso.actualizado ? 'Entrega actualizada' : 'Pedido confirmado') + ' · #' + aviso.numero,
+    s: bodegaTextoAviso(aviso), fechaBodega: aviso.fecha_entrega, pedidoBodega: aviso.numero
+  }));
   const n = [];
   (state.tareas || []).forEach(t => n.push({
     ico:'📲', kind:'warn', t:'Recordatorio: ' + (t.destinatario || t.telefono),
@@ -4988,6 +5648,10 @@ function construirNotifs() {
     t:'Tarea interna · ' + (t.asignado_a || t.asignado_rol || 'Secretaría'),
     s: (t.instruccion || '') + ' · ' + (t.estado || '') + (t.acusada_en ? ' · acusada' : ' · sin acuse')
   }));
+  (bodegaEstado.faltantes || []).forEach(falta => n.push({
+    ico:'▣', kind:'bad', t:'Faltante proyectado · ' + falta.nombre,
+    s:bodegaNumero.format(falta.cantidad) + ' ' + falta.unidad + ' para cubrir el consumo registrado'
+  }));
   if (!n.length) n.push({ico:'✅', kind:'ok', t:'Sin alertas activas', s:'Bodega, flota y cartera dentro de umbral.'});
   return n;
 }
@@ -4995,11 +5659,27 @@ function construirNotifs() {
 function renderNotificaciones() {
   state.notifs = construirNotifs();
   const b = $('#notif-badge');
-  if (b) { b.textContent = state.notifs.length; b.hidden = false; }
+  if (b) { b.textContent = state.notifs.length; b.hidden = state.notifs.length === 0; }
   const l = $('#notif-list');
   if (l) l.innerHTML = state.notifs.map(n => `
     <div class="notif-item"><span class="ni-ico ${n.kind}">${n.ico}</span>
-      <div><strong>${esc(n.t)}</strong><span>${esc(n.s)}</span></div></div>`).join('');
+      <div><strong>${esc(n.t)}</strong><span>${esc(n.s)}</span>
+        ${n.fechaBodega ? `<button type="button" class="btn small" data-bodega-fecha="${esc(n.fechaBodega)}" data-bodega-pedido="${esc(n.pedidoBodega)}">Ver carga</button>` : ''}
+      </div></div>`).join('');
+  l?.querySelectorAll('[data-bodega-fecha]').forEach(btn => {
+    btn.onclick = async () => {
+      const {bodegaFecha, bodegaPedido} = btn.dataset;
+      if (state.view !== 'bodega') setView('bodega');
+      toggleNotif(false);
+      bodegaVista(false);
+      await bodegaCargar(bodegaFecha);
+      const carga = $$('#bodega-lista details').find(el => el.dataset.pedido === bodegaPedido);
+      if (!carga) return;
+      carga.open = true;
+      carga.scrollIntoView({block:'center'});
+      carga.querySelector('summary').focus({preventScroll:true});
+    };
+  });
 }
 
 function toggleNotif(force) {
@@ -5126,6 +5806,9 @@ function renderTareasDialog() {
     else chips.push(chipInterno('SIN CONFIRMAR RECEPCIÓN', 'warn'));
 
     const botones = [];
+    if (t.metadatos?.agenda && puedeVista('agenda')) {
+      botones.push(`<button class="btn small" onclick="verAgendaDeTarea('${esc(t.id)}')">Ver en Agenda</button>`);
+    }
     botones.push(`<button class="btn small ghost" onclick="verTareaInterna('${esc(t.id)}')" title="Abre la ficha de la tarea y registra que la consultaste">Ver la tarea</button>`);
     if (!t.acusada_en) {
       botones.push(`<button class="btn small" onclick="acusarTareaInterna('${esc(t.id)}')" title="Confirma que recibiste el encargo; no cambia el estado de la tarea">Confirmar que recibí la tarea</button>`);
@@ -5156,6 +5839,13 @@ function renderTareasDialog() {
       </div>`);
   });
   lista.innerHTML = piezas.join('');
+}
+
+function verAgendaDeTarea(id) {
+  const referencia = state.tareasInternas.find(t => t.id === id)?.metadatos?.agenda;
+  if (!referencia) return;
+  document.getElementById('dlg-tareas')?.close();
+  agVerEvento(referencia);
 }
 
 function verTareaInterna(id) {
@@ -5446,6 +6136,7 @@ function renderObras() {
 }
 
 function setDashTab(tab) {
+  $('#julio-resultados').classList.add('desplegado');
   document.querySelectorAll('[data-dash-tab]').forEach(b => {
     const on = b.dataset.dashTab === tab;
     b.classList.toggle('primary', on);
@@ -5469,6 +6160,9 @@ function setDashTab(tab) {
   if (nav) nav.querySelectorAll('button').forEach((b, i) => b.classList.toggle('active', i === 0));
   if (tab === 'operacion') montarAgendaDashboard();
   renderChartsDash(tab);
+  if (pantallaMovil.matches) {
+    movilDesplazarA($('#julio-ventanilla'));
+  }
 }
 
 function setDashSub(tab, sub, btn) {
@@ -5901,6 +6595,7 @@ function renderDashboard() {
 }
 
 async function cargarDashboard() {
+  if (puedeModulo('dashboard_gerencial')) bodegaCargarFaltantes();
   if (state.cargando) return;
   state.cargando = true;
   try {
@@ -6017,17 +6712,17 @@ function renderCotLista() {
       : '<p class="muted small">Todavía no hay cotizaciones. Crea la primera con “Nueva cotización”.</p>';
     return;
   }
-  host.innerHTML = `<table class="tabla-editor"><thead><tr>
-    <th>Número</th><th>Cliente</th><th>Obra</th><th>Emisión</th><th>m³</th><th>Total</th><th>Estado</th><th>Vence</th>
-  </tr></thead><tbody>${filas.map(c => `<tr data-cot-id="${esc(c.id)}" onclick="seleccionarCotizacion('${esc(c.id)}')" style="cursor:pointer">
-    <td><strong>${esc(c.numero)}</strong></td>
-    <td>${esc(c.cliente_nombre)}</td>
-    <td class="small">${esc(c.obra_direccion)}</td>
-    <td class="small">${esc(String(c.created_at || '').slice(0, 10))}</td>
-    <td>${num(c.volumen_m3)}</td>
-    <td>${money(Number(c.total || 0))}</td>
-    <td><span class="badge neutral">${esc(String(c.estado || '').replace(/_/g, ' '))}</span></td>
-    <td class="small">${esc(c.valida_hasta || '—')}</td>
+  host.innerHTML = `<table class="tabla-editor" role="table"><thead role="rowgroup"><tr role="row">
+    <th role="columnheader" scope="col">Número</th><th role="columnheader" scope="col">Cliente</th><th role="columnheader" scope="col">Obra</th><th role="columnheader" scope="col">Emisión</th><th role="columnheader" scope="col">m³</th><th role="columnheader" scope="col">Total</th><th role="columnheader" scope="col">Estado</th><th role="columnheader" scope="col">Vence</th>
+  </tr></thead><tbody role="rowgroup">${filas.map(c => `<tr role="row" data-cot-id="${esc(c.id)}" onclick="seleccionarCotizacion('${esc(c.id)}')" style="cursor:pointer">
+    <td role="cell" data-cot-etiqueta="Número"><strong>${esc(c.numero)}</strong></td>
+    <td role="cell" data-cot-etiqueta="Cliente">${esc(c.cliente_nombre)}</td>
+    <td role="cell" data-cot-etiqueta="Obra" class="small">${esc(c.obra_direccion)}</td>
+    <td role="cell" data-cot-etiqueta="Emisión" class="small">${esc(String(c.created_at || '').slice(0, 10))}</td>
+    <td role="cell" data-cot-etiqueta="m³">${num(c.volumen_m3)}</td>
+    <td role="cell" data-cot-etiqueta="Total">${money(Number(c.total || 0))}</td>
+    <td role="cell" data-cot-etiqueta="Estado"><span class="badge neutral">${esc(String(c.estado || '').replace(/_/g, ' '))}</span></td>
+    <td role="cell" data-cot-etiqueta="Vence" class="small">${esc(c.valida_hasta || '—')}</td>
   </tr>`).join('')}</tbody></table>`;
 }
 
@@ -6570,6 +7265,8 @@ async function abrirConvertirCotizacion(id) {
     set('#cot-conv-vencimiento', factura.fecha_vencimiento || '');
     cotConvertirPagoCambio();
     const resultado = $('#cot-conv-resultado'); if (resultado) resultado.innerHTML = '';
+    $('#cot-conv-fecha-entrega').value = '';
+    $('#cot-conv-hora-entrega').value = '';
     const dlg = document.getElementById('dlg-cot-convertir');
     if (dlg && !dlg.open) dlg.showModal();
   } catch (e) {
@@ -6588,6 +7285,8 @@ async function convertirCotizacionCliente() {
     forma_pago: pago,
     abono_inicial_monto: pago === 'ABONO' ? num('#cot-conv-abono-monto') : null,
     abono_inicial_metodo: pago === 'ABONO' ? (($('#cot-conv-abono-metodo') || {}).value || null) : null,
+    fecha_entrega: $('#cot-conv-fecha-entrega').value || null,
+    hora_entrega: $('#cot-conv-hora-entrega').value || null,
     factura: {
       razon_social: (($('#cot-conv-razon') || {}).value || '').trim() || null,
       ruc: (($('#cot-conv-ruc') || {}).value || '').trim() || null,
@@ -6752,6 +7451,7 @@ function onBuscarClientes(valor) {
 function setGrupoClientes(grupo) {
   state.cliGrupo = grupo || 'TODOS';
   state.cliPagina = 1;
+  movilMostrarModulo($('.view[data-view="clientes"]'));
   buscarClientes();
 }
 
@@ -8186,6 +8886,7 @@ async function abrirOrden() {
   if (cl) cl.value = id;
   const res = $('#ord-resultado');
   if (res) res.innerHTML = '';
+  ['ord-fecha-entrega', 'ord-hora-entrega', 'ord-obra'].forEach(id => { document.getElementById(id).value = ''; });
   const dlg = $('#dlg-orden');
   if (dlg && dlg.showModal) dlg.showModal();
   calcularOrden();
@@ -8237,6 +8938,9 @@ async function crearOrden() {
     mixer_codigo: $('#ord-mixer').value || null,
     chofer_nombre: $('#ord-chofer').value || null,
     notas: $('#ord-notas').value || null,
+    fecha_entrega: $('#ord-fecha-entrega').value || null,
+    hora_entrega: $('#ord-hora-entrega').value || null,
+    direccion_obra: $('#ord-obra').value.trim() || null,
     creada_por: 'Secretaría (panel)'
   };
   const submit = $('#ord-submit');
@@ -8979,7 +9683,10 @@ async function seleccionarBanco(slug, silencioso) {
   if (!panel) return;
   panel.hidden = false;
   panel.dataset.banco = slug;
-  if (!silencioso) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (!silencioso) {
+    if (pantallaMovil.matches) movilMostrarModulo(panel.closest('[data-view]'));
+    else panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
   const seq = (seleccionarBanco.seq = (seleccionarBanco.seq || 0) + 1);
   try {
     const datos = await api('/api/v1/dashboard/bancos/' + encodeURIComponent(slug));
@@ -9845,12 +10552,13 @@ document.addEventListener('keydown', e => {
 });
 
 temaInicial();
+prepararNavegacionMovil();
 const chipFecha = $('#page-date');
 if (chipFecha) chipFecha.textContent = fechaLarga();
 renderModulosACL();
 cargarPerfilesUI().finally(() => {
   if (!state.view || !puedeVista(state.view)) setView(_primerVistaPermitida());
-  else setView(state.view);
+  else if (state.view === 'dashboard') setView('dashboard');
 });
 cargarTareas();
 setInterval(cargarTareas, 60000);
@@ -9874,7 +10582,7 @@ chatEventosConectar();
     <button type="button" class="gato-cerrar" onclick="gatoNuevaConversacion()" aria-label="Nueva conversación" title="Nueva conversación">↺</button>
     <button type="button" class="gato-cerrar" onclick="gatoToggle(false)" aria-label="Cerrar">×</button>
   </div>
-  <div class="chat-hilo gato-hilo" id="gato-hilo">
+  <div class="chat-hilo gato-hilo" id="gato-hilo" role="log" aria-label="Conversación de Gato">
     <div class="chat-dia">Hoy</div>
     <div class="chat-msg in">
       <div class="chat-burbuja">Miau. Soy Gato. Pregúntame por cartera, caja, bodega, bancos, agenda, órdenes, facturas o precios.</div>
@@ -9891,26 +10599,58 @@ chatEventosConectar();
 </aside>
 <script>
 let gatoConversacionId = '';
-let gatoCargando = false;
+let gatoCarga = null;
 let gatoActorActual = '';
 
-function gatoToggle(force) {
+let gatoControlApertura = null;
+
+function gatoToggle(force, control = document.getElementById('gato-fab'), enfocar = true) {
   const panel = document.getElementById('gato-panel');
   const fab = document.getElementById('gato-fab');
   if (!panel || !fab) return;
   const abrir = typeof force === 'boolean' ? force : panel.hidden;
+  if (abrir === !panel.hidden) return;
   panel.hidden = !abrir;
   fab.setAttribute('aria-expanded', String(abrir));
+  document.getElementById('movil-dictar').setAttribute('aria-expanded', String(abrir));
   if (abrir) {
+    gatoControlApertura = control;
     gatoCargarConversacion();
     if (window.matchMedia('(pointer: coarse)').matches) {
       panel.querySelector('.gato-cerrar:last-child')?.focus();
     } else {
       document.getElementById('gato-input').focus();
     }
-  } else if (state.view === 'agenda') {
-    agCargar();
+  } else {
+    if (gatoRecorder?.state === 'recording') gatoRecorder.stop();
+    if (enfocar) gatoControlApertura?.focus();
+    if (state.view === 'agenda' && enfocar) agCargar();
+    if (state.view === 'dashboard' && pantallaMovil.matches && enfocar) movilCargarProximo();
   }
+}
+
+function gatoPintarRespuesta(destino, data) {
+  destino.innerHTML = gatoMarkdown(data.respuesta);
+  destino.classList.toggle('error', Boolean(data.estado && data.estado !== 'OK'));
+  const operacion = data.operacion_agenda;
+  if (data.estado !== 'OK' || !operacion) return;
+  const reserva = operacion.tipo === 'mixers' && operacion.estado === 'RESERVA_CAMPO';
+  const cita = operacion.tipo === 'julio' && ['SOLICITADA', 'CONFIRMADA'].includes(operacion.estado);
+  const recordatorio = operacion.tipo === 'recordatorios' && operacion.estado === 'AGENDADO';
+  if (!reserva && !cita && !recordatorio) return;
+  const titulo = document.createElement('strong');
+  titulo.className = 'gato-resultado';
+  titulo.textContent = reserva ? 'Mixer reservado'
+    : recordatorio ? 'Recordatorio agendado'
+    : operacion.estado === 'CONFIRMADA' ? 'Visita agendada' : 'Cita solicitada';
+  destino.prepend(titulo);
+  if (!puedeVista('agenda')) return;
+  const boton = document.createElement('button');
+  boton.type = 'button';
+  boton.className = 'btn small gato-ver-agenda';
+  boton.textContent = reserva ? 'Ver reserva' : 'Ver en Agenda';
+  boton.addEventListener('click', () => agVerEvento(operacion));
+  destino.append(boton);
 }
 function gatoEsc(texto) {
   return String(texto).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10004,12 +10744,16 @@ function gatoAgregar(clase, texto, cuando) {
   return burbuja;
 }
 
-async function gatoCargarConversacion() {
-  if (gatoCargando) return;
+function gatoCargarConversacion() {
+  const {headers} = gatoSesion();
   if (gatoConversacionId) return;
-  gatoCargando = true;
+  if (!gatoCarga) {
+    gatoCarga = gatoLeerConversacion(headers).finally(() => { gatoCarga = null; });
+  }
+  return gatoCarga;
+}
+async function gatoLeerConversacion(headers) {
   try {
-    const {headers} = gatoSesion();
     const res = await fetch('/api/v1/gato/conversacion/actual', {headers});
     const texto = await res.text();
     let data = null;
@@ -10035,8 +10779,6 @@ async function gatoCargarConversacion() {
     }
   } catch (e) {
     gatoAgregar('error', 'No pude cargar la conversación: ' + e.message);
-  } finally {
-    gatoCargando = false;
   }
 }
 async function gatoNuevaConversacion() {
@@ -10101,7 +10843,11 @@ async function gatoGrabarAudio() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({audio: true});
     gatoChunks = [];
-    const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+    if ($('#gato-panel').hidden) {
+      stream.getTracks().forEach(t => t.stop());
+      return;
+    }
+    const mime = ['audio/webm', 'audio/mp4', 'audio/ogg'].find(tipo => MediaRecorder.isTypeSupported(tipo));
     gatoRecorder = new MediaRecorder(stream, mime ? {mimeType: mime} : undefined);
     gatoRecorder.ondataavailable = e => { if (e.data && e.data.size) gatoChunks.push(e.data); };
     gatoRecorder.onstop = async () => {
@@ -10117,8 +10863,10 @@ async function gatoGrabarAudio() {
       const blob = new Blob(gatoChunks, {type: tipo});
       gatoRecorder = null;
       gatoChunks = [];
+      if ($('#gato-panel').hidden) return;
       if (blob.size > 1200) {
-        await gatoEnviarAudio(new File([blob], 'audio.webm', {type: tipo}));
+        const extension = tipo.split('/')[1].split(';')[0];
+        await gatoEnviarAudio(new File([blob], 'audio.' + extension, {type: tipo}));
       } else {
         gatoAgregar('error', 'La nota de voz quedó demasiado corta.');
       }
@@ -10140,10 +10888,10 @@ async function gatoGrabarAudio() {
 }
 
 async function gatoEnviarAudio(file) {
+  const {headers} = gatoSesion();
+  await gatoCargarConversacion();
   const burbuja = gatoAgregar('user', '🎤 Enviando nota de voz…');
   const esperando = gatoAgregar('bot', 'Transcribiendo…');
-  const {headers} = gatoSesion();
-  if (!gatoConversacionId) await gatoCargarConversacion();
   const datos = new FormData();
   datos.append('archivo', file);
   datos.append('modo', 'dictado');
@@ -10166,9 +10914,15 @@ async function gatoEnviarAudio(file) {
       gatoConversacionId = data.conversacion_id;
       localStorage.setItem('horminor.gato.conv.' + (gatoActorActual || 'julio'), data.conversacion_id);
     }
-    if (data.transcripcion) burbuja.textContent = '🎤 ' + data.transcripcion;
-    esperando.innerHTML = gatoMarkdown(data.respuesta);
-    if (data.estado && data.estado !== 'OK') esperando.classList.add('error');
+    if (data.transcripcion) {
+      const detalle = document.createElement('details');
+      const titulo = document.createElement('summary');
+      titulo.textContent = 'Transcripción';
+      detalle.append(titulo, document.createTextNode(data.transcripcion));
+      detalle.open = true;
+      burbuja.replaceChildren(detalle);
+    }
+    gatoPintarRespuesta(esperando, data);
   } catch (e) {
     if (String(e.message).includes('CONVERSACION_CERRADA') || String(e.message).includes('409')) {
       gatoConversacionId = '';
@@ -10189,11 +10943,11 @@ async function gatoEnviar(ev) {
   const input = document.getElementById('gato-input');
   const texto = input.value.trim();
   if (!texto) return;
-  gatoAgregar('user', texto);
   input.value = '';
-  const esperando = gatoAgregar('bot', 'Consultando…');
   const {headers} = gatoSesion();
-  if (!gatoConversacionId) await gatoCargarConversacion();
+  await gatoCargarConversacion();
+  gatoAgregar('user', texto);
+  const esperando = gatoAgregar('bot', 'Consultando…');
   try {
     const r = await api('/api/v1/asistente/chat', {
       method: 'POST',
@@ -10208,8 +10962,7 @@ async function gatoEnviar(ev) {
       gatoConversacionId = r.conversacion_id;
       localStorage.setItem('horminor.gato.conv.' + (gatoActorActual || 'julio'), r.conversacion_id);
     }
-    esperando.innerHTML = gatoMarkdown(r.respuesta);
-    if (r.estado && r.estado !== 'OK') esperando.classList.add('error');
+    gatoPintarRespuesta(esperando, r);
   } catch (e) {
     if (String(e.message).includes('CONVERSACION_CERRADA') || String(e.message).includes('409')) {
       gatoConversacionId = '';

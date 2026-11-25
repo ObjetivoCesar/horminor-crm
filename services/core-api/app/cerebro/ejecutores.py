@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
 import asyncpg
@@ -408,11 +409,11 @@ async def crear_cliente_desde_accion(
 # ---------------------------------------------------------------------------
 # Campos del borrador que no son del alta (son rastro de como se armo).
 _CAMPOS_NO_COTIZACION = (
-    "precio_estado",
     "descuento_pct",
     "plazo_entrega",
     "fecha_entrega_tentativa",
     "hora_entrega_tentativa",
+    "extras_aclarados",
 )
 
 
@@ -439,6 +440,36 @@ async def crear_cotizacion_desde_accion(
         if clave not in _CAMPOS_NO_COTIZACION
     }
     datos["creado_por"] = creado_por or datos.get("creado_por")
+    notas_extra: list[str] = []
+    if datos.get("notas"):
+        notas_extra.append(str(datos["notas"]))
+    if parametros.get("fecha_entrega_tentativa") or parametros.get("hora_entrega_tentativa"):
+        entrega = " ".join(
+            str(x)
+            for x in (
+                parametros.get("fecha_entrega_tentativa"),
+                parametros.get("hora_entrega_tentativa"),
+            )
+            if x
+        )
+        if entrega and entrega not in str(datos.get("notas") or ""):
+            notas_extra.append(f"Entrega tentativa: {entrega}")
+    if notas_extra:
+        datos["notas"] = "; ".join(notas_extra)[:1000]
+    descuento = parametros.get("descuento_pct")
+    if descuento is not None:
+        try:
+            porcentaje = Decimal(str(descuento))
+            precio_base = Decimal(str(datos.get("precio_m3")))
+            if not porcentaje.is_finite() or not Decimal("0") <= porcentaje <= Decimal("100"):
+                raise InvalidOperation
+            if not precio_base.is_finite() or precio_base < 0:
+                raise InvalidOperation
+            datos["precio_m3"] = (
+                precio_base * (Decimal("1") - porcentaje / Decimal("100"))
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, ValueError):
+            return Resultado(COTIZACION, "ERROR", nota="Revisa el precio base y el porcentaje de descuento.")
     try:
         cuerpo = CotizacionIn(**datos)
     except ValidationError as exc:

@@ -108,6 +108,8 @@ async def interpretar(
     nombre: str,
     contexto: str | None = None,
     conversacion_id: str | None = None,
+    borrador_previo_id: str | None = None,
+    intencion_tarea: str | None = None,
 ) -> dict[str, Any]:
     """Entrega el dictado al Cerebro con la identidad y el hilo de la sesion."""
     cuerpo = texto_limpio(texto)
@@ -136,10 +138,14 @@ async def interpretar(
             )
         headers.pop("X-Panel-User", None)
     cuerpo_json: dict[str, Any] = {"texto": cuerpo}
-    if contexto and contexto.strip():
-        cuerpo_json["contexto"] = contexto.strip()[:8000]
+    if contexto and contexto.strip() and not borrador_previo_id:
+        cuerpo_json["contexto"] = contexto.strip()
     if conversacion_id:
         cuerpo_json["conversacion_id"] = conversacion_id
+    if borrador_previo_id:
+        cuerpo_json["borrador_previo_id"] = borrador_previo_id
+    if intencion_tarea:
+        cuerpo_json["intencion_tarea"] = intencion_tarea
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SEGUNDOS) as cliente:
             respuesta = await cliente.post(
@@ -152,7 +158,15 @@ async def interpretar(
             status_code=503, detail=f"no pude hablar con el Cerebro: {exc}"
         ) from exc
     if respuesta.status_code >= 400:
-        detalle = respuesta.text[:300]
+        try:
+            error = respuesta.json()
+            detalle = error.get("detail") if isinstance(error, dict) else None
+        except ValueError:
+            detalle = None
+        if isinstance(detalle, dict):
+            detalle = detalle.get("message") or detalle.get("detail")
+        if not isinstance(detalle, str):
+            detalle = f"Cerebro respondió con el código {respuesta.status_code}."
         raise HTTPException(status_code=respuesta.status_code, detail=detalle)
     datos = respuesta.json()
     if not isinstance(datos, dict):

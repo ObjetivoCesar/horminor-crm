@@ -25,6 +25,9 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Sequence
 from zoneinfo import ZoneInfo
 
+from .. import tiempo
+from ..agenda.seguimiento import notificar_secretaria
+from ..transacciones import transaccion
 from ..m1_whatsapp.models import formato_whatsapp
 from .bibliotecario import Bibliotecario
 from .fichas import Resultado
@@ -523,6 +526,54 @@ def _clave_idempotencia(
     return hashlib.sha256(base.encode("utf-8")).hexdigest()
 
 
+async def agendar_personal(
+    pool, *, actor: Any, asunto_id: str, mensaje: str, cuando: datetime,
+) -> Resultado:
+    """Registra un recordatorio interno y su revisión en la misma transacción."""
+    cuerpo = mensaje.strip()
+    if getattr(actor, "rol", "") not in ROLES_ESCRITURA:
+        return Resultado("recordatorio_agenda", "ACL", nota="Tu perfil no puede agendar recordatorios.")
+    if not cuerpo or cuando.tzinfo is None or cuando <= tiempo.ahora():
+        return Resultado("recordatorio_agenda", "FALTA_PARAMETRO", nota="Indica el texto y una hora futura.")
+
+    con_zona = cuando.astimezone(tiempo.ZONA)
+    clave = f"gato:recordatorio:{asunto_id}"
+    async with transaccion(pool) as conn:
+        fila = await conn.fetchrow(
+            """
+            INSERT INTO gato_recordatorios (
+                creado_por, rol_actor, conversacion_id, destinatario_nombre, mensaje,
+                programado_at, zona, estado, origen_destino, clave_idempotencia,
+                confirmado_por, confirmado_at
+            ) VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, 'AGENDADO', 'PANEL', $8, $1, now())
+            ON CONFLICT (clave_idempotencia) WHERE clave_idempotencia IS NOT NULL
+            DO NOTHING
+            RETURNING id::text AS id, estado, programado_at
+            """,
+            actor.actor_id, actor.rol, actor.conversacion_id, actor.nombre, cuerpo,
+            cuando, str(tiempo.ZONA), clave,
+        )
+        if fila is None:
+            fila = await conn.fetchrow(
+                "SELECT id::text AS id, estado, programado_at FROM gato_recordatorios WHERE clave_idempotencia = $1",
+                clave,
+            )
+            if not fila or fila["estado"] != "AGENDADO":
+                return Resultado("recordatorio_agenda", "ERROR", nota="Ese recordatorio ya fue cancelado.")
+            con_zona = fila["programado_at"].astimezone(tiempo.ZONA)
+        await notificar_secretaria(
+            conn, tipo="recordatorios", entidad_id=fila["id"],
+            fecha=con_zona.date().isoformat(), hora=con_zona.strftime("%H:%M"),
+            actor_id=actor.actor_id, actor=actor.nombre, rol=actor.rol,
+        )
+    return Resultado(
+        "recordatorio_agenda", "OK",
+        datos={"id": fila["id"], "estado": fila["estado"], "fecha": con_zona.date().isoformat()},
+        nota=f"Recordatorio agendado para el {con_zona:%Y-%m-%d} a las {con_zona:%H:%M}. "
+             "Secretaría recibió la tarea de revisión.",
+    )
+
+
 async def crear(
     biblio: Bibliotecario,
     *,
@@ -869,7 +920,7 @@ async def listar(
     incluir_historicos: bool = False,
     limite: int = 20,
 ) -> Resultado:
-    where = "" if incluir_historicos else "WHERE estado IN ('BORRADOR', 'PENDIENTE')"
+    where = "" if incluir_historicos else "WHERE estado IN ('BORRADOR', 'AGENDADO', 'PENDIENTE')"
     filas = await biblio.pool.fetch(
         f"""
         SELECT id, destinatario_nombre, telefono, mensaje, programado_at,
@@ -915,8 +966,9 @@ async def cancelar(biblio: Bibliotecario, *, actor: Any, recordatorio_id: str) -
         UPDATE gato_recordatorios
            SET estado = 'CANCELADO', updated_at = now()
          WHERE id = $1::uuid
-           AND estado IN ('BORRADOR', 'PENDIENTE')
-           AND (creado_por = $2 OR $3 = 'SUPERADMIN')
+           AND estado IN ('BORRADOR', 'AGENDADO', 'PENDIENTE')
+           AND (creado_por = $2 OR $3 = 'SUPERADMIN'
+                OR (origen_destino = 'PANEL' AND $3 = 'SECRETARIA'))
         RETURNING id, destinatario_nombre, telefono, programado_at
         """,
         recordatorio_id,
@@ -965,7 +1017,7 @@ async def ultimo_de(biblio: Bibliotecario, *, actor: Any) -> dict[str, Any] | No
                programado_at, estado
           FROM gato_recordatorios
          WHERE creado_por = $1
-           AND estado IN ('BORRADOR', 'PENDIENTE')
+           AND estado IN ('BORRADOR', 'AGENDADO', 'PENDIENTE')
          ORDER BY created_at DESC
          LIMIT 1
         """,
@@ -1001,7 +1053,8 @@ async def actualizar(
                    programado_at, estado
               FROM gato_recordatorios
              WHERE id = $1::uuid
-               AND (creado_por = $2 OR $3 = 'SUPERADMIN')
+               AND (creado_por = $2 OR $3 = 'SUPERADMIN'
+                    OR (origen_destino = 'PANEL' AND $3 = 'SECRETARIA'))
             """,
             recordatorio_id,
             str(getattr(actor, "actor_id", "") or ""),
@@ -1014,7 +1067,7 @@ async def actualizar(
             "VACIO",
             nota="No hay un recordatorio pendiente que pueda corregir.",
         )
-    if str(actual["estado"]) not in ("BORRADOR", "PENDIENTE"):
+    if str(actual["estado"]) not in ("BORRADOR", "AGENDADO", "PENDIENTE"):
         return Resultado(
             "recordatorio_actualizar",
             "ERROR",
@@ -1039,7 +1092,7 @@ async def actualizar(
         UPDATE gato_recordatorios
            SET mensaje = $2, programado_at = $3, updated_at = now()
          WHERE id = $1::uuid
-           AND estado IN ('BORRADOR', 'PENDIENTE')
+           AND estado IN ('BORRADOR', 'AGENDADO', 'PENDIENTE')
         RETURNING id::text AS id, destinatario_nombre, telefono, mensaje,
                   programado_at, estado
         """,

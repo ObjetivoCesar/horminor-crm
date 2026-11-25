@@ -43,13 +43,16 @@
 | Manual Vivo + skill de consulta | Funciona (documento) | `test_v93_manual_funcional.py` |
 | Router conversacional (laboratorio aislado) | **Cerrado, `router-1.7`**; no conectado al CRM | 21/21 `tests_core`; `docs/ROUTER_CONVERSACIONAL_CIERRE.md` |
 
+**Actualización local del 2026-11-24.** Gato usa un razonador semántico para
+identificar el asunto, la acción y las dudas de cada turno. Los asuntos se
+guardan en la conversación del panel con referencia a la revisión vigente del
+Cerebro. La selección del asunto y los datos citados se validan antes de
+conectar las acciones existentes. El resultado del servicio sostiene el estado
+que se muestra en el chat.
+
 **No implementado todavía** (y así debe decirse):
 
 - Conversación por WhatsApp (entrantes no persistidos).
-- **Hilos de conversación y asuntos que sobreviven entre mensajes.** El
-  laboratorio separa los encargos *dentro de un dictado*; mantener ese hilo
-  cuando Julio responde «cancela el segundo» en otro audio exige conversación
-  persistida (siguiente fase).
 - Confirmación por el mismo chat de WhatsApp: cuando se conecte, Julio enviará un
   audio, leerá el resumen, corregirá y confirmará en el hilo; exige persistir
   entrantes y autorizar por riesgo, no solo por el número de teléfono.
@@ -87,7 +90,7 @@ no con frentes individuales:
 - En la arquitectura final, el Cerebro es la **inteligencia interna del CRM**: interpreta, recuerda, estructura y propone.
 - **Gato** será la **interfaz conversacional** por la que Julio y la secretaría usan esas capacidades.
 - Gato ya tiene herramientas operativas; **no se duplican dentro del Cerebro**.
-- **Decisión explícita:** por ahora **no** se conecta Gato con el Cerebro y **no** se reemplazan funciones existentes. Primero se termina de probar y documentar el comportamiento interno.
+- En el panel se conecta Gato con el Cerebro mediante el puente que mantiene el borrador asociado al asunto. Las operaciones de negocio conservan sus servicios y comprobantes.
 
 ### 2.2 Dos flujos con permisos y conocimientos distintos
 

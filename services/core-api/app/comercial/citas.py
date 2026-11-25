@@ -11,6 +11,9 @@ from typing import Any
 
 import asyncpg
 
+from ..agenda.seguimiento import notificar_secretaria
+from ..transacciones import transaccion
+
 from .. import tiempo
 
 TIPOS = ("VISITA", "REUNION", "MEDICION", "ENTREGA")
@@ -143,6 +146,9 @@ async def crear(
     solicitada_por_id: str | None = None,
     notas: str | None = None,
     permite_sin_contacto: bool = False,
+    contacto_agenda: str | None = None,
+    clave_gato: str | None = None,
+    rol_actor: str | None = None,
 ) -> dict[str, Any]:
     if not cliente_id and not lead_id and not permite_sin_contacto:
         raise ValueError("la cita necesita cliente_id o lead_id")
@@ -154,57 +160,74 @@ async def crear(
         if minutos_nuevos < ahora.hour * 60 + ahora.minute:
             raise ValueError("la hora ya pasó hoy; elige una hora futura")
 
-    async with pool.acquire() as conn:
-        async with conn.transaction():
-            # Dos solicitudes simultáneas de la misma fecha no pueden pasar
-            # ambas la revisión de choque.
-            await conn.fetchval(
-                "SELECT pg_advisory_xact_lock(hashtext($1))",
-                f"citas:{fecha.isoformat()}",
+    async with transaccion(pool) as conn:
+        # Dos solicitudes simultáneas de la misma fecha no pueden pasar
+        # ambas la revisión de choque.
+        await conn.fetchval(
+            "SELECT pg_advisory_xact_lock(hashtext($1))",
+            f"citas:{fecha.isoformat()}",
+        )
+        if clave_gato:
+            existente = await conn.fetchrow(
+                "SELECT *, id::text AS id FROM citas WHERE clave_gato = $1", clave_gato
             )
-            choque = await _choque(
-                conn,
-                fecha=fecha,
-                hora=hora,
-                duracion_min=duracion_min,
-                lead_id=lead_id,
-                cliente_id=cliente_id,
-                global_=permite_sin_contacto,
+            if existente:
+                return dict(existente)
+        estado_inicial = "CONFIRMADA" if clave_gato else "SOLICITADA"
+        choque = await _choque(
+            conn,
+            fecha=fecha,
+            hora=hora,
+            duracion_min=duracion_min,
+            lead_id=lead_id,
+            cliente_id=cliente_id,
+            global_=permite_sin_contacto,
+        )
+        if choque is not None:
+            raise ValueError(
+                "ya hay una cita que se solapa a esa hora "
+                f"(cita {choque['id']}, {choque['hora_inicio']})"
             )
-            if choque is not None:
-                raise ValueError(
-                    "ya hay una cita que se solapa a esa hora "
-                    f"(cita {choque['id']}, {choque['hora_inicio']})"
-                )
-            fila = await conn.fetchrow(
-                """
-                INSERT INTO citas (
-                    cliente_id, lead_id, tipo, fecha, hora_inicio, duracion_min,
-                    origen, solicitada_por, solicitada_por_id, notas
-                ) VALUES ($1, $2, $3, $4, $5::time, $6, $7, $8, $9::uuid, $10)
-                RETURNING id::text AS id, cliente_id::text, lead_id::text, tipo,
-                          fecha, hora_inicio, duracion_min, estado, origen,
-                          solicitada_por, solicitada_por_id::text, notas,
-                          created_at
-                """,
-                cliente_id,
-                lead_id,
-                tipo,
-                fecha,
-                hora,
-                duracion_min,
-                origen,
-                solicitada_por,
-                solicitada_por_id,
-                notas,
-            )
-            datos = dict(fila)
-            await _evento(
-                conn,
-                datos["id"],
-                "SOLICITADA",
-                {"origen": origen},
-                solicitada_por,
+        fila = await conn.fetchrow(
+            """
+            INSERT INTO citas (
+                cliente_id, lead_id, tipo, fecha, hora_inicio, duracion_min,
+                origen, solicitada_por, solicitada_por_id, notas,
+                estado, contacto_agenda, clave_gato
+            ) VALUES ($1, $2, $3, $4, $5::time, $6, $7, $8, $9::uuid, $10, $11, $12, $13)
+            RETURNING id::text AS id, cliente_id::text, lead_id::text, tipo,
+                      fecha, hora_inicio, duracion_min, estado, origen,
+                      solicitada_por, solicitada_por_id::text, notas,
+                      created_at
+            """,
+            cliente_id,
+            lead_id,
+            tipo,
+            fecha,
+            hora,
+            duracion_min,
+            origen,
+            solicitada_por,
+            solicitada_por_id,
+            notas,
+            estado_inicial,
+            contacto_agenda,
+            clave_gato,
+        )
+        datos = dict(fila)
+        await _evento(
+            conn,
+            datos["id"],
+            estado_inicial,
+            {"origen": origen},
+            solicitada_por,
+        )
+        if clave_gato:
+            await notificar_secretaria(
+                conn, tipo="julio", entidad_id=datos["id"], fecha=fecha.isoformat(),
+                hora=hora.strftime("%H:%M"), referencia=contacto_agenda,
+                actor_id=solicitada_por_id, actor=solicitada_por or "Gato",
+                rol=rol_actor or "SUPERADMIN",
             )
     return datos
 
@@ -232,6 +255,7 @@ async def reagendar(
     duracion_min: int | None = None,
     motivo: str | None = None,
     actor: str | None = None,
+    mantener_confirmada: bool = False,
 ) -> dict[str, Any]:
     """Mueve una cita existente. Solo cambia lo que se pide.
 
@@ -281,15 +305,13 @@ async def reagendar(
                     f"(cita {choque['id']}, {choque['hora_inicio']})"
                 )
 
-            nuevo_estado = (
-                "REAGENDADA" if actual["estado"] != "REAGENDADA" else actual["estado"]
-            )
+            nuevo_estado = "CONFIRMADA" if mantener_confirmada else "REAGENDADA"
             fila = await conn.fetchrow(
                 """
                 UPDATE citas
                    SET fecha = $2, hora_inicio = $3::time, duracion_min = $4,
                        estado = $5, updated_at = now()
-                 WHERE id = $1::uuid
+                 WHERE id = $1::uuid AND estado NOT IN ('CANCELADA', 'REALIZADA')
                 RETURNING id::text AS id, cliente_id::text, lead_id::text, tipo,
                           fecha, hora_inicio, duracion_min, estado, origen,
                           solicitada_por, solicitada_por_id::text, notas,
@@ -301,6 +323,8 @@ async def reagendar(
                 nueva_duracion,
                 nuevo_estado,
             )
+            if fila is None:
+                raise ValueError("La cita cambió mientras se revisaba. Consulta su estado.")
             datos = dict(fila)
             await _evento(
                 conn,

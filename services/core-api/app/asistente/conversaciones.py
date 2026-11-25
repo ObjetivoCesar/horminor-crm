@@ -242,7 +242,7 @@ async def turno_por_client_id(
 
 
 async def texto_ultimo_borrador(
-    pool: asyncpg.Pool, conversacion_id: str
+    pool: asyncpg.Pool, conversacion_id: str, borrador_id: str | None = None
 ) -> str | None:
     """Texto completo del último borrador de la conversación.
 
@@ -256,10 +256,12 @@ async def texto_ultimo_borrador(
           FROM cerebro_borradores b
           JOIN cerebro_extracciones e ON e.id = b.extraccion_id
          WHERE b.conversacion_id = $1::uuid
+           AND ($2::uuid IS NULL OR b.id = $2::uuid)
          ORDER BY b.creado_en DESC
          LIMIT 1
         """,
         conversacion_id,
+        _uuid_o_none(borrador_id),
     )
     if fila is None or not fila["texto_directo"]:
         return None
@@ -275,6 +277,8 @@ async def actualizar_estado(
     preguntas: Any = None,
     ultima_cita_id: str | None = None,
     limpiar_ultima_cita: bool = False,
+    asunto_id: str | None = None,
+    asunto: dict[str, Any] | None = None,
 ) -> None:
     payload: dict[str, Any] = {"estado": estado}
     if borrador_id:
@@ -288,13 +292,21 @@ async def actualizar_estado(
         UPDATE gato_conversaciones
            SET estado_dialogo_json =
                    (COALESCE(estado_dialogo_json, '{}'::jsonb) || $2::jsonb)
-                   - CASE WHEN $3::boolean THEN 'ultima_cita_id' ELSE '__nada__' END,
+                   - CASE WHEN $3::boolean THEN 'ultima_cita_id' ELSE '__nada__' END
+                   || CASE WHEN $4::text IS NULL THEN '{}'::jsonb ELSE
+                       jsonb_build_object(
+                           'foco_asunto', $4::text,
+                           'asuntos', COALESCE(estado_dialogo_json->'asuntos', '{}'::jsonb)
+                             || jsonb_build_object($4::text, $5::jsonb)
+                       ) END,
                lock_version = lock_version + 1
          WHERE id = $1::uuid
         """,
         conversacion_id,
         json.dumps(payload, ensure_ascii=False),
         limpiar_ultima_cita,
+        asunto_id,
+        json.dumps(asunto, ensure_ascii=False) if asunto is not None else None,
     )
 
 
